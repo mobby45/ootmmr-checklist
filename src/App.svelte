@@ -3614,81 +3614,12 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
   }
   .shop-edit-cancel:hover { background: #555; }
 
-  .slots-panel { padding: 0.4em 0; }
-  .slots-empty {
-    font-size: 0.85em;
-    opacity: 0.65;
-    margin: 0.3em 0;
-  }
-  .slots-list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 0.3em;
-  }
-  .slot-item {
-    display: flex;
-    align-items: center;
-    gap: 0.5em;
-    padding: 0.35em 0.6em;
-    border: 1px solid var(--color-border);
-    border-radius: 4px;
-    background: var(--color-unchecked);
-  }
-  .slot-item.slot-active {
-    border-color: var(--color-primary);
-    background: rgba(0, 120, 231, 0.08);
-  }
-  .slot-main {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 0.1em;
-    min-width: 0;
-  }
-  .slot-name {
-    font-size: 0.9em;
-    font-weight: bold;
-    cursor: default;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .slot-rename-input {
-    font-size: 0.9em;
-    font-weight: bold;
-    border: 1px solid var(--color-primary);
-    border-radius: 3px;
-    padding: 0 4px;
-    background: var(--color-bg);
-    color: var(--color-text);
-    width: 100%;
-  }
   .slot-meta {
     display: flex;
     gap: 0.6em;
     font-size: 0.75em;
     opacity: 0.6;
   }
-  .slot-actions {
-    display: flex;
-    gap: 0.2em;
-    flex-shrink: 0;
-  }
-  .slot-btn {
-    background: none;
-    border: 1px solid var(--color-border);
-    border-radius: 3px;
-    padding: 2px 7px;
-    cursor: pointer;
-    font-size: 0.82em;
-    color: var(--color-text);
-    opacity: 0.7;
-  }
-  .slot-btn:hover { opacity: 1; background: var(--color-unchecked); }
-  .slot-btn-danger:hover { background: rgba(180, 40, 40, 0.15); border-color: #b03030; color: #c04040; }
   .slots-current-badge {
     font-size: 0.75em;
     margin-left: 0.5em;
