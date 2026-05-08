@@ -16,6 +16,20 @@ export enum CheckType {
     sf,
     shop,
     sr,
+    crate,
+    barrel,
+    butterfly,
+    hive,
+    rock,
+    tree,
+    bush,
+    soil,
+    wonder,
+    snowball,
+    redboulder,
+    icicle,
+    redice,
+    
 }
 
 export interface RawPoolEntry {
@@ -31,11 +45,20 @@ export type RawPoolData = {
     [index: string]: RawPoolEntry[];
 };
 
+export interface ExtraCheck {
+    name: string;
+    type: string;
+    scene: string;
+}
+
 export interface GroupingEntry {
     canBeMq?: boolean;
-    replacements?: string[];
+    canBeVariant?: boolean;
+    replacements?: [string, string][];
     scenes: string[];
-    checks: string[];
+    checks?: string[];
+    exclude?: string[];
+    extraChecks?: ExtraCheck[];
 }
 
 export type GroupingData = {
@@ -55,7 +78,6 @@ export enum Tag {
     special_scrub,
     setting_tcg,
     setting_hideout_shuffle,
-    mm_skulltula,
     boss,
 }
 
@@ -65,8 +87,13 @@ export interface Check {
     type: CheckType;
     game: Game;
     canBeMq: boolean;
+    canHaveVariant: boolean;
     isMq: boolean;
+    variantNumber: number;
     tags: Tag[];
+    scene: string;
+    item: string;
+    id: string;
 }
 
 export enum CheckState {
@@ -78,5 +105,7 @@ export enum CheckState {
 export interface CheckGroup {
     groupName: string;
     canHaveMq: boolean;
+    canHaveVariant: boolean;
+    maxVariant?: number;
     checks: Check[];
 }

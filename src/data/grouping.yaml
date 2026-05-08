@@ -8,6 +8,7 @@ oot:
       - KOKIRI_SARIA
       - KOKIRI_TWINS
       - LINK_HOUSE
+      - KOKIRI_SHOP
     checks:
       - ^Kokiri Forest Storms Grotto
   Lost Woods:
@@ -43,6 +44,7 @@ oot:
       - BOMBCHU_BOWLING_ALLEY
       - BOMBCHU_SHOP
       - MARKET_CHILD_DAY
+      - MARKET_CHILD_NIGHT
       - MARKET_POTION_SHOP
       - GUARD_HOUSE
       - TREASURE_SHOP
@@ -63,6 +65,9 @@ oot:
       - ^Great Fairy Din's Fire
       - ^Great Fairy Defense Upgrade
       - ^Hatch Chicken
+      - ^Hyrule Castle GS Grotto
+      - ^Hyrule Castle Grotto Pot
+      - ^Hyrule Castle Grotto Rock Circle
   Kakariko Village:
     replacements:
       - ['^Kakariko', '']
@@ -117,6 +122,7 @@ oot:
   Goron City:
     scenes:
       - GORON_CITY
+      - GORON_SHOP
     checks:
       - ^Goron City Grotto
   Death Mountain Crater:
@@ -125,6 +131,7 @@ oot:
     checks:
       - ^Great Fairy Magic Upgrade 2
       - ^Death Mountain Crater Grotto
+      - ^Death Mountain Crater Scrub Grotto
   Lake Hylia:
     scenes:
       - FISHING_POND
@@ -137,6 +144,8 @@ oot:
       - GERUDO_VALLEY
     checks:
       - ^Gerudo Valley.*Grotto
+    exclude:
+      - ^Gerudo Valley Crate Child Unreachable
   Gerudo Fortress:
     scenes:
       - GERUDO_FORTRESS
@@ -155,7 +164,7 @@ oot:
   Deku Tree:
     canBeMq: true
     scenes:
-      - INSIDE_DEKU_TREE
+      - DEKU_TREE
       - LAIR_GOHMA
   Dodongo's Cavern:
     canBeMq: true
@@ -224,6 +233,8 @@ mm:
     scenes:
       - CLOCK_TOWN_SOUTH
       - CLOCK_TOWER_ROOFTOP
+    exclude:
+      - ^Tingle Map
   Laundry Pool:
     replacements:
       - ['^Clock Town', '']
@@ -236,7 +247,11 @@ mm:
       - CLOCK_TOWN_NORTH
       - DEKU_PLAYGROUND
     checks:
+      - ^Tingle Map Clock Town
+      - ^Tingle Map Woodfall
       - ^Clock Town Great Fairy
+
+      
   East Clock Town:
     replacements:
       - ['^Clock Town', '']
@@ -247,6 +262,9 @@ mm:
       - SHOOTING_GALLERY
       - TREASURE_SHOP
       - HONEY_DARLING
+      - OBSERVATORY
+    exclude:
+      - ^Astral Observatory Moon Tear
   Stock Pot Inn:
     scenes:
       - STOCK_POT_INN
@@ -260,10 +278,10 @@ mm:
       - CURIOSITY_SHOP
       - POST_OFFICE
       - SWORDSMAN_SCHOOL
+      - LOTTERY
   Termina Field:
     scenes:
       - TERMINA_FIELD
-      - OBSERVATORY
     checks:
       # Should be 134 checks!
       - ^Termina Field Gossip Stones HP
@@ -272,10 +290,14 @@ mm:
       - ^Termina Field.*Grotto
       - ^(Ocean|Canyon) Gossip Grotto
       - ^(Bio Baba|Peahat) Grotto
+      - ^Astral Observatory Moon Tear
   Milk Road:
     scenes:
       - MILK_ROAD
       - GORMAN_TRACK
+    checks:
+      - ^Tingle Map Ranch
+      - ^Tingle Map Great Bay
   Romani Ranch:
     scenes:
       - ROMANI_RANCH
@@ -287,7 +309,10 @@ mm:
       - ROAD_SOUTHERN_SWAMP
       - SHOOTING_GALLERY_SWAMP
     checks:
+      - ^Tingle Map Woodfall
+      - ^Tingle Map Snowhead
       - ^Road to Southern Swamp Grotto
+      
   Southern Swamp:
     scenes:
       - SOUTHERN_SWAMP
@@ -304,6 +329,8 @@ mm:
       - DEKU_SHRINE
     checks:
       - ^Deku Palace Grotto
+      - ^Deku Palace JP Line Grotto
+      - ^Beans Grotto Soil
   Woodfall:
     scenes:
       - WOODFALL
@@ -314,6 +341,11 @@ mm:
       - ['^Swamp', '']
     scenes:
       - SPIDER_HOUSE_SWAMP
+  Path To Mountain Village:
+    scenes:
+      - PATH_MOUNTAIN_VILLAGE
+    checks:
+      - 
   Mountain Village:
     scenes:
       - MOUNTAIN_VILLAGE_WINTER
@@ -328,7 +360,10 @@ mm:
       - TWIN_ISLANDS_SPRING
       - GORON_RACETRACK
     checks:
+      - ^Tingle Map Snowhead
+      - ^Tingle Map Ranch
       - ^Twin Islands (Frozen|Ramp) Grotto
+      
   Goron Village:
     replacements:
       - ['^(Goron Shrine|Goron)', '']
@@ -341,10 +376,11 @@ mm:
   Path To Snowhead:
     scenes:
       - PATH_SNOWHEAD
+      - SNOWHEAD
     checks:
       - ^Snowhead Great Fairy
       - ^Snowhead Owl Statue$
-      - ^Path To Snowhead Grotto
+      - ^Path to Snowhead Grotto
   Great Bay Coast:
     replacements:
       - ['^(Great Bay Coast|Great Bay)', '']
@@ -352,8 +388,11 @@ mm:
       - GREAT_BAY_COAST
       - LABORATORY
     checks:
+      - ^Tingle Map Great Bay
+      - ^Tingle Map Ikana
       - ^Great Bay Coast Fisherman Grotto
       - ^Great Bay Cow Grotto
+      
   Zora Cape:
     scenes:
       - ZORA_CAPE
@@ -369,6 +408,8 @@ mm:
   Pinnacle Rock:
     scenes:
       - PINNACLE_ROCK
+    exclude:
+      - ^Pinnacle Rock Rock Unreachable
   Pirates Fortress:
     replacements:
       - ['^Pirate Fortress', '']
@@ -385,7 +426,7 @@ mm:
     scenes:
       - ROAD_IKANA
     checks:
-      - ^Road To Ikana Grotto
+      - ^Road to Ikana Grotto
   Ikana Graveyard:
     replacements:
       - ['^Ikana Graveyard', '']
@@ -405,8 +446,11 @@ mm:
       - MUSIC_BOX_HOUSE
       - SAKON_HIDEOUT
     checks:
+      - ^Tingle Map Ikana
+      - ^Tingle Map Clock Town
       - ^Ikana Great Fairy
       - ^Ikana Valley Grotto
+      
   Secret Shrine:
     scenes:
       - SECRET_SHRINE
@@ -444,6 +488,7 @@ mm:
     replacements:
       - ['^Moon', '']
     scenes:
+      - MOON
       - MOON_DEKU
       - MOON_GORON
       - MOON_ZORA

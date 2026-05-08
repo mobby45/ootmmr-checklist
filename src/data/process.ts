@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync, mkdirSync } from 'fs';
+import { readFileSync, writeFileSync } from 'fs';
 import * as yaml from 'yaml';
 import { join } from 'path';
 import { fileURLToPath } from 'url';
@@ -7,20 +7,39 @@ import { parse as parseCsv } from 'csv-parse/sync';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
-// Get the freshest item pools directly from the OoTMM repo!
+// Correct known typos / name differences in the local CSV vs what OoTMM spoiler output uses
+const LOCATION_CORRECTIONS: Record<string, string> = {
+    'Secret Shrine Dinalfos Chest': 'Secret Shrine Dinolfos Chest',
+};
 
-const poolCsvUrls = [
-    'https://github.com/OoTMM/OoTMM/raw/master/packages/data/src/pool/pool_oot.csv',
-    'https://github.com/OoTMM/OoTMM/raw/master/packages/data/src/pool/pool_mm.csv',
-];
+function parseLocalPool(filePath: string, gamePrefix: string, scenePrefix: string): T.RawPoolEntry[] {
+    const content = readFileSync(filePath, 'utf-8');
+    const records: Record<string, string>[] = parseCsv(content, { columns: true, skip_empty_lines: true, trim: true, delimiter: ';' });
+    const seen = new Set<string>();
+    const entries: T.RawPoolEntry[] = [];
+    for (const record of records) {
+        if (!record.type || record.type === 'none') continue;
+        if (!(record.type in T.CheckType)) continue;
+        const raw = record.location.replace(new RegExp(`^${gamePrefix} `), '');
+        const location = LOCATION_CORRECTIONS[raw] ?? raw;
+        if (seen.has(location)) continue;
+        seen.add(location);
+        entries.push({
+            location,
+            type: record.type as keyof typeof T.CheckType,
+            hint: '',
+            scene: record.scene.replace(new RegExp(`^${scenePrefix}_`), ''),
+            id: record.id ?? '',
+            item: '',
+        });
+    }
+    return entries;
+}
 
-const POOL: T.RawPoolData = await Promise.all(
-    poolCsvUrls.map(async u => {
-        const response = await fetch(u);
-        const csv = await response.text();
-        return parseCsv(csv, { columns: true, skip_empty_lines: true, trim: true });
-    }),
-).then(([oot, mm]) => ({ oot, mm }));
+const POOL: T.RawPoolData = {
+    oot: parseLocalPool(join(__dirname, 'pool_oot.csv'), 'OOT', 'OOT'),
+    mm:  parseLocalPool(join(__dirname, 'pool_mm.csv'),  'MM',  'MM'),
+};
 
 // This is a human-constructed/human-readable description of how to process
 // and organize the checks in the pool
@@ -28,16 +47,7 @@ const groupingFile = readFileSync(join(__dirname, 'grouping.yaml'), 'utf-8');
 const GROUPING: T.GroupingData = yaml.parse(groupingFile);
 
 // The all-sanity checks to exclude for the lite version
-const liteBlacklist = [
-    T.CheckType.fairy,
-    T.CheckType.fairy_spot,
-    T.CheckType.fish,
-    T.CheckType.grass,
-    T.CheckType.heart,
-    T.CheckType.pot,
-    T.CheckType.rupee,
-    T.CheckType.sr,
-];
+const liteBlacklist: T.CheckType[] = [];
 
 const structuredChecks: T.CheckGroup[] = [];
 const liteChecks: T.CheckGroup[] = [];
@@ -53,12 +63,23 @@ function createCheckEntry(
     const canBeMq = mqScene != null && poolEntry.scene == mqScene;
     const isMq = poolEntry.location.startsWith('MQ');
 
+    // JP Line variant detection — ONLY for Deku Palace
+    // Variant 0 (US): Normal Deku Palace Grottos (NO JP Line)
+    // Variant 1 (JP): Deku Palace JP Line Grotto (NO normal ones)
+    let canHaveVariant = false;
+    let variantNumber = 0;
+
+    // Check whether this is a Deku Palace JP Line check
+    const isDekuPalaceJpLine = /^Deku Palace JP Line Grotto/.test(poolEntry.location);
+
+    if (isDekuPalaceJpLine) {
+        canHaveVariant = true;
+        variantNumber = 1; // JP Line checks use variant 1 (JP)
+     } 
+
     const tags: T.Tag[] = [];
-    if (/^Treasure Chest Game [^H]/.test(poolEntry.location)) tags.push(T.Tag.setting_tcg);
     if (/^Lost Woods.*Scrub.*Upgrade/.test(poolEntry.location)) tags.push(T.Tag.special_scrub);
     if (/^Hyrule Field Grotto Scrub HP/.test(poolEntry.location)) tags.push(T.Tag.special_scrub);
-    if (/^Gerudo Fortress Jail [0-9]/.test(poolEntry.location)) tags.push(T.Tag.setting_hideout_shuffle);
-    if (/^(Swamp|Ocean) Skulltula/.test(poolEntry.location)) tags.push(T.Tag.mm_skulltula);
 
     let shortName = poolEntry.location;
 
@@ -66,6 +87,7 @@ function createCheckEntry(
     shortName = shortName.replace('MQ ', '');
     shortName = shortName.replace('HP', 'Heart Piece');
     shortName = shortName.replace('HC', 'Heart Container');
+    shortName = shortName.replace('SR', 'Silver Rupee');
 
     // If the entry has specified replacements, use those.
     // Otherwise, it is assumed by default that we will remove the group's name
@@ -77,7 +99,7 @@ function createCheckEntry(
 
     shortName = shortName.trim();
 
-    return { shortName, name: poolEntry.location, type: T.CheckType[poolEntry.type], game, canBeMq, isMq, tags };
+    return { shortName, name: poolEntry.location, type: T.CheckType[poolEntry.type], game, canBeMq, isMq, canHaveVariant, variantNumber, tags, scene: poolEntry.scene, item: poolEntry.item, id: poolEntry.id };
 }
 
 for (let game in T.Game) {
@@ -104,32 +126,56 @@ for (let game in T.Game) {
                 return gamePool.filter(x => rx.test(x.location));
             }) ?? [];
 
-        const poolEntries = [...sceneEntries, ...otherEntries];
+        // Build the excluded set from 'exclude' patterns
+        const excludePatterns = group.exclude ?? [];
+        const excluded = new Set(
+            excludePatterns.flatMap((pattern: string) =>
+                gamePool.filter(x => new RegExp(pattern).test(x.location)).map(x => x.location)
+            )
+        );
 
-        // const prefix = group.checkNamePrefix != null ? new RegExp(group.checkNamePrefix) : new RegExp(`^${groupName}`);
+        // Apply exclusions to both sceneEntries and otherEntries
+        const poolEntries = [...sceneEntries, ...otherEntries]
+            .filter(x => !excluded.has(x.location));
+
+        poolEntries.sort((a, b) => {
+            const aIsTingle = a.location.startsWith('Tingle Map');
+            const bIsTingle = b.location.startsWith('Tingle Map');
+            if (aIsTingle && !bIsTingle) return -1;
+            if (!aIsTingle && bIsTingle) return 1;
+            return 0;
+        });
+
+        const extraEntries = (group.extraChecks ?? []).map(extra => ({
+            shortName: extra.name.replace(new RegExp(group.replacements?.[0]?.[0] ?? `^${groupName}`), group.replacements?.[0]?.[1] ?? '').trim(),
+            name: extra.name,
+            type: T.CheckType[extra.type as keyof typeof T.CheckType],
+            game: T.Game[game as T.Game],
+            canBeMq: false,
+            isMq: false,
+            canHaveVariant: false,
+            variantNumber: 0,
+            tags: [],
+            scene: extra.scene,
+            item: '',
+            id: extra.name.replace(/\s+/g, '_').toUpperCase(),
+        }));
+
         const mqScene = group.canBeMq ? firstScene : null;
-        let entries = poolEntries.map(c => createCheckEntry(c, T.Game[game as T.Game], groupName, group, mqScene));
-
-        // "Crush" shop entries like '.... Item n' down to a single check '.... Items'
-        let shopIndex = entries.findIndex(x => x.type == T.CheckType.shop);
-        while (shopIndex >= 0) {
-            const itemRx = /Item [0-9]+/;
-            let firstShopEntry = entries[shopIndex];
-            let shopPrefix = firstShopEntry.shortName.replace(itemRx, '').trim();
-            let endIndex = entries.findLastIndex(x => x.shortName.startsWith(shopPrefix));
-            entries.splice(shopIndex, endIndex - shopIndex + 1, {
-                ...firstShopEntry,
-                shortName: firstShopEntry.shortName.replace(itemRx, 'Items').trim(),
-                name: firstShopEntry.name.replace(itemRx, 'Items').trim(),
-            });
-            shopIndex = entries.findIndex((x, i) => i > shopIndex && x.type == T.CheckType.shop);
-        }
+        let entries = [
+            ...poolEntries.map(c => createCheckEntry(c, T.Game[game as T.Game], groupName, group, mqScene)),
+            ...extraEntries,
+        ];
 
         const canHaveMq = entries.some(c => c.canBeMq);
+        const canHaveVariant = entries.some(c => c.canHaveVariant);
+        // For US/JP, maxVariant is always 1 (0=US, 1=JP)
+        const maxVariant = canHaveVariant ? 1 : 0;
+
         const liteEntries = entries.filter(x => !liteBlacklist.includes(x.type));
 
-        structuredChecks.push({ groupName, canHaveMq, checks: entries });
-        liteChecks.push({ groupName, canHaveMq, checks: liteEntries });
+        structuredChecks.push({ groupName, canHaveMq, canHaveVariant, maxVariant, checks: entries });
+        liteChecks.push({ groupName, canHaveMq, canHaveVariant, maxVariant, checks: liteEntries });
     }
 }
 
