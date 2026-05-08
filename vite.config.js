@@ -10,5 +10,5 @@ export default defineConfig({
         handler(warning);
       }
     })],
-    base: 'https://cemulate.github.io/ootmmr-checklist/',
+    base: '/ootmmr-checklist/',
 });
