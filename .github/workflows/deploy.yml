@@ -24,6 +24,7 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci --legacy-peer-deps
+      - run: mkdir -p src/data/dist
       - run: npm run process-data
       - run: npm run build
       - uses: actions/upload-pages-artifact@v3
