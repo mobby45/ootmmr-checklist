@@ -306,10 +306,18 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
 
   // fullCode may be "basecode" or "basecode-password"
   function joinCoopRoom(name?: string, password?: string) {
-    const base = name ?? new Date().getTime().toString(36);
+    const base = name ?? crypto.randomUUID();
     const full = password ? `${base}-${password}` : base;
     roomName = full;
-    const dashIdx = full.lastIndexOf('-');
+
+    // UUID codes are 36 chars (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx).
+    // For UUID rooms, password is appended after position 36 with a '-'.
+    // For legacy short codes, split on the last '-' as before.
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/;
+    const isUUID = UUID_RE.test(full);
+    const dashIdx = isUUID
+      ? (full.length > 36 && full.charAt(36) === '-' ? 36 : -1)
+      : full.lastIndexOf('-');
     roomBaseCode = dashIdx !== -1 ? full.slice(0, dashIdx) : full;
     const hasPassword = dashIdx !== -1;
 
@@ -332,8 +340,26 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
     connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anonymous', color: pingColor });
   }
 
+  function autoSaveRoomSlot() {
+    if (!roomBaseCode) return;
+    const slotName = `Room: ${roomBaseCode}`;
+    const existing = saveSlots.find(s => s.name === slotName);
+    if (existing) {
+      saveSlots = saveSlots.map(s =>
+        s.id === existing.id ? { ...s, ...snapshotCurrentState(), updatedAt: Date.now() } : s
+      );
+    } else {
+      const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+      saveSlots = [...saveSlots, { id, name: slotName, createdAt: Date.now(), updatedAt: Date.now(), ...snapshotCurrentState() }];
+      currentSlotId = id;
+      localStorage.setItem('currentSlotId', id);
+    }
+    persistSlots();
+  }
+
   function leaveCoopRoom() {
     if (window.confirm('Are you sure you want to disconnect? Your progress will be preserved as it is now.')) {
+      autoSaveRoomSlot();
       connectionProvider?.disconnect();
       connectionProvider = null;
       watchRelayProvider?.disconnect();
@@ -343,6 +369,9 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
       connectedUsers = [];
     }
   }
+
+  // Auto-save room slot on page close/refresh while connected
+  window.addEventListener('beforeunload', () => { if (connectionProvider) autoSaveRoomSlot(); });
 
   // Watch mode (read-only): ?watch=baseCode — joins watch relay room only
   const _watchParam = new URLSearchParams(window.location.search).get('watch');
@@ -1595,6 +1624,139 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
   }
 
   // ==========================================
+  // SAVE SLOTS
+  // Snapshots of full run state stored in localStorage.
+  // Current slot = last saved/loaded. Yjs doc is always the live state.
+  // ==========================================
+  interface SaveSlot {
+    id: string;
+    name: string;
+    createdAt: number;
+    updatedAt: number;
+    checks: Record<string, T.CheckState>;
+    settings: Record<string, any>;
+    mqSettings: Record<string, boolean>;
+    variantSettings: Record<string, number>;
+    shopItems: Record<string, string>;
+    shopPrices: Record<string, number>;
+    notes: Record<string, string>;
+    items: Record<string, number>;
+    entrances: Record<string, string>;
+    hints: any[];
+    spoilerLocations: Record<string, string>;
+    spoilerSeedInfo: SeedInfo | null;
+    spoilerErSettings: ErSettings | null;
+  }
+
+  let saveSlots: SaveSlot[] = JSON.parse(localStorage.getItem('saveSlots') ?? '[]');
+  let currentSlotId: string | null = localStorage.getItem('currentSlotId');
+  let slotRenameId: string | null = null;
+  let slotRenameValue = '';
+
+  function formatSlotDate(ts: number): string {
+    const d = new Date(ts);
+    return `${d.toLocaleDateString()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  }
+
+  function snapshotCurrentState(): Omit<SaveSlot, 'id' | 'name' | 'createdAt' | 'updatedAt'> {
+    return {
+      checks: Object.fromEntries(yChecks.entries()),
+      settings: Object.fromEntries(ySettings.entries()),
+      mqSettings: Object.fromEntries(yMqSettings.entries()),
+      variantSettings: Object.fromEntries(yVariantSettings.entries()),
+      shopItems: Object.fromEntries(yShopItems.entries()),
+      shopPrices: Object.fromEntries(yShopPrices.entries()),
+      notes: Object.fromEntries(yNotes.entries()),
+      items: Object.fromEntries(yItems.entries()),
+      entrances: Object.fromEntries(yEntrances.entries()),
+      hints: yHints.toArray(),
+      spoilerLocations,
+      spoilerSeedInfo,
+      spoilerErSettings,
+    };
+  }
+
+  function persistSlots() {
+    localStorage.setItem('saveSlots', JSON.stringify(saveSlots));
+  }
+
+  function newSlot() {
+    const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    const slot: SaveSlot = {
+      id,
+      name: `Slot ${saveSlots.length + 1}`,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      ...snapshotCurrentState(),
+    };
+    saveSlots = [...saveSlots, slot];
+    currentSlotId = id;
+    localStorage.setItem('currentSlotId', id);
+    persistSlots();
+  }
+
+  function saveToSlot(id: string) {
+    saveSlots = saveSlots.map(s =>
+      s.id === id ? { ...s, ...snapshotCurrentState(), updatedAt: Date.now() } : s
+    );
+    currentSlotId = id;
+    localStorage.setItem('currentSlotId', id);
+    persistSlots();
+  }
+
+  function loadSlot(slot: SaveSlot) {
+    if (!window.confirm(`Load slot "${slot.name}"? This will replace the current state.`)) return;
+    [...yChecks.keys()].forEach(k => yChecks.delete(k));
+    Object.entries(slot.checks).forEach(([k, v]) => yChecks.set(k, v));
+    [...ySettings.keys()].forEach(k => ySettings.delete(k));
+    Object.entries(slot.settings).forEach(([k, v]) => ySettings.set(k, v));
+    [...yMqSettings.keys()].forEach(k => yMqSettings.delete(k));
+    Object.entries(slot.mqSettings).forEach(([k, v]) => yMqSettings.set(k, v));
+    [...yVariantSettings.keys()].forEach(k => yVariantSettings.delete(k));
+    Object.entries(slot.variantSettings).forEach(([k, v]) => yVariantSettings.set(k, v));
+    [...yShopItems.keys()].forEach(k => yShopItems.delete(k));
+    Object.entries(slot.shopItems).forEach(([k, v]) => yShopItems.set(k, v));
+    [...yShopPrices.keys()].forEach(k => yShopPrices.delete(k));
+    Object.entries(slot.shopPrices).forEach(([k, v]) => yShopPrices.set(k, v));
+    [...yNotes.keys()].forEach(k => yNotes.delete(k));
+    Object.entries(slot.notes).forEach(([k, v]) => yNotes.set(k, v));
+    [...yItems.keys()].forEach(k => yItems.delete(k));
+    Object.entries(slot.items).forEach(([k, v]) => yItems.set(k, v));
+    [...yEntrances.keys()].forEach(k => yEntrances.delete(k));
+    Object.entries(slot.entrances).forEach(([k, v]) => yEntrances.set(k, v));
+    yHints.delete(0, yHints.length);
+    if (slot.hints.length > 0) yHints.push(slot.hints);
+    spoilerLocations = slot.spoilerLocations ?? {};
+    localStorage.setItem('spoilerLocations', JSON.stringify(spoilerLocations));
+    spoilerSeedInfo = slot.spoilerSeedInfo ?? null;
+    localStorage.setItem('spoilerSeedInfo', JSON.stringify(spoilerSeedInfo));
+    spoilerErSettings = slot.spoilerErSettings ?? null;
+    localStorage.setItem('spoilerErSettings', JSON.stringify(spoilerErSettings));
+    currentSlotId = slot.id;
+    localStorage.setItem('currentSlotId', slot.id);
+  }
+
+  function deleteSlot(id: string) {
+    const slot = saveSlots.find(s => s.id === id);
+    if (!slot || !window.confirm(`Delete slot "${slot.name}"?`)) return;
+    saveSlots = saveSlots.filter(s => s.id !== id);
+    if (currentSlotId === id) {
+      currentSlotId = saveSlots[0]?.id ?? null;
+      localStorage.setItem('currentSlotId', currentSlotId ?? '');
+    }
+    persistSlots();
+  }
+
+  function renameSlot(id: string, name: string) {
+    const trimmed = name.trim();
+    if (trimmed) saveSlots = saveSlots.map(s => s.id === id ? { ...s, name: trimmed } : s);
+    slotRenameId = null;
+    persistSlots();
+  }
+
+  $: currentSlot = saveSlots.find(s => s.id === currentSlotId) ?? null;
+
+  // ==========================================
   // UI PREFERENCES
   // ==========================================
   type Theme = 'light' | 'dark' | 'oot' | 'oot-light' | 'mm' | 'mm-light' | 'forest' | 'forest-light';
@@ -1660,6 +1822,7 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
   let secItem    = _loadSec('sec_item');
   let secHint    = _loadSec('sec_hint');
   let secShuffle = _loadSec('sec_shuffle');
+  let secSlots   = _loadSec('sec_slots');
 
 
   function toggleYmap(map: Y.Map<boolean>, key: string) {
@@ -2233,6 +2396,35 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
                 {/if}
               </div>
             </details>
+
+            <!-- Save Slots -->
+            <details class="spoiler-panel" style="margin-top: 0.4em;"
+              bind:open={secSlots}
+              on:toggle={() => localStorage.setItem('sec_slots', String(secSlots))}
+            >
+              <summary class="spoiler-panel-summary">Save Slots</summary>
+              <div style="margin-top: 0.4em;">
+                {#if saveSlots.length > 0}
+                  <div style="display:flex; gap:0.4em; margin-bottom:0.4em; align-items:center;">
+                    <select class="dropdown-select" style="flex:1" bind:value={currentSlotId}>
+                      {#each saveSlots as slot}
+                        <option value={slot.id}>{slot.name} ({Object.values(slot.checks).filter(v => v === T.CheckState.checked).length}✓)</option>
+                      {/each}
+                    </select>
+                    <button class="pure-button bg-primary" title="Save current state to this slot" on:click={() => currentSlotId && saveToSlot(currentSlotId)}>💾</button>
+                    <button class="pure-button bg-primary" title="Load this slot" on:click={() => { const s = saveSlots.find(x => x.id === currentSlotId); if (s) loadSlot(s); }}>📂</button>
+                    <button class="pure-button" title="Rename slot" on:click={() => { const s = saveSlots.find(x => x.id === currentSlotId); if (!s) return; const n = window.prompt('Rename slot:', s.name); if (n != null) renameSlot(s.id, n); }}>✎</button>
+                    <button class="pure-button bg-danger" title="Delete slot" on:click={() => currentSlotId && deleteSlot(currentSlotId)}>✕</button>
+                  </div>
+                  {#if currentSlot}
+                    <p class="spoiler-no-log" style="margin:0 0 0.4em;">{formatSlotDate(currentSlot.updatedAt)}</p>
+                  {/if}
+                {:else}
+                  <p class="spoiler-no-log">No slots yet.</p>
+                {/if}
+                <button class="pure-button" style="font-size:0.82em;" on:click={newSlot}>+ New Slot</button>
+              </div>
+            </details>
           </form>
 
           <div class="flex flex-col">
@@ -2641,7 +2833,7 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
                     priceEditIds.has(check.id)}
                   showPrice={!itemOnlyIds.has(check.id)}
                   spoilerItem={showSpoilerItems ? (spoilerLocations[check.name] ?? '') : ''}
-                  author={$sCheckAuthors.get(check.name) ?? ''}
+                  author={connectionProvider ? ($sCheckAuthors.get(check.name) ?? '') : ''}
                   pingColor={pinnedChecks.get(check.name) ?? ''}
                   note={$sNotes.get(check.name) ?? ''}
                   {compact}
@@ -3421,4 +3613,90 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
     padding: 0.4em 1em; cursor: pointer;
   }
   .shop-edit-cancel:hover { background: #555; }
+
+  .slots-panel { padding: 0.4em 0; }
+  .slots-empty {
+    font-size: 0.85em;
+    opacity: 0.65;
+    margin: 0.3em 0;
+  }
+  .slots-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3em;
+  }
+  .slot-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+    padding: 0.35em 0.6em;
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    background: var(--color-unchecked);
+  }
+  .slot-item.slot-active {
+    border-color: var(--color-primary);
+    background: rgba(0, 120, 231, 0.08);
+  }
+  .slot-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.1em;
+    min-width: 0;
+  }
+  .slot-name {
+    font-size: 0.9em;
+    font-weight: bold;
+    cursor: default;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .slot-rename-input {
+    font-size: 0.9em;
+    font-weight: bold;
+    border: 1px solid var(--color-primary);
+    border-radius: 3px;
+    padding: 0 4px;
+    background: var(--color-bg);
+    color: var(--color-text);
+    width: 100%;
+  }
+  .slot-meta {
+    display: flex;
+    gap: 0.6em;
+    font-size: 0.75em;
+    opacity: 0.6;
+  }
+  .slot-actions {
+    display: flex;
+    gap: 0.2em;
+    flex-shrink: 0;
+  }
+  .slot-btn {
+    background: none;
+    border: 1px solid var(--color-border);
+    border-radius: 3px;
+    padding: 2px 7px;
+    cursor: pointer;
+    font-size: 0.82em;
+    color: var(--color-text);
+    opacity: 0.7;
+  }
+  .slot-btn:hover { opacity: 1; background: var(--color-unchecked); }
+  .slot-btn-danger:hover { background: rgba(180, 40, 40, 0.15); border-color: #b03030; color: #c04040; }
+  .slots-current-badge {
+    font-size: 0.75em;
+    margin-left: 0.5em;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: rgba(0, 120, 231, 0.15);
+    color: var(--color-primary);
+    font-weight: bold;
+    vertical-align: middle;
+  }
 </style>
