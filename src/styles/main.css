@@ -4,6 +4,109 @@
     --color-unchecked: #fff2cc;
     --color-marked: gold;
     --color-checked: #eeeeee;
+    --color-bg: #ffffff;
+    --color-text: #000000;
+    --color-border: lightgray;
+    --color-header: #777;
+}
+
+.dark {
+    --color-primary: rgb(0, 120, 180);
+    --color-danger: #c0392b;
+    --color-unchecked: #2d2d2d;
+    --color-marked: #9a7000;
+    --color-checked: #1a1a1a;
+    --color-bg: #1a1a1a;
+    --color-text: #e0e0e0;
+    --color-border: #444;
+    --color-header: #aaa;
+}
+
+body.dark {
+    background-color: var(--color-bg);
+    color: var(--color-text);
+}
+
+.theme-oot {
+    --color-primary: #c8960a;
+    --color-danger: #c0392b;
+    --color-unchecked: #2a2000;
+    --color-marked: #8a6a00;
+    --color-checked: #141000;
+    --color-bg: #1a1500;
+    --color-text: #e8d890;
+    --color-border: #5a4500;
+    --color-header: #c0a060;
+}
+
+.theme-mm {
+    --color-primary: #8a3acc;
+    --color-danger: #c0392b;
+    --color-unchecked: #1a1530;
+    --color-marked: #5a2080;
+    --color-checked: #0d0a18;
+    --color-bg: #0d0a1a;
+    --color-text: #d0c0f0;
+    --color-border: #3a2a5a;
+    --color-header: #9878c8;
+}
+
+.theme-forest {
+    --color-primary: #38b838;
+    --color-danger: #c0392b;
+    --color-unchecked: #0e1e0e;
+    --color-marked: #2a6a20;
+    --color-checked: #080e08;
+    --color-bg: #0a120a;
+    --color-text: #c0e0b0;
+    --color-border: #1a3a1a;
+    --color-header: #70b070;
+}
+
+.theme-oot-light {
+    --color-primary: #f0c840;
+    --color-danger: #c0392b;
+    --color-unchecked: #fffae0;
+    --color-marked: #f5c000;
+    --color-checked: #f0e8c0;
+    --color-bg: #fffef5;
+    --color-text: #2a1800;
+    --color-border: #ddb830;
+    --color-header: #8a6010;
+}
+
+.theme-mm-light {
+    --color-primary: #c090f0;
+    --color-danger: #c0392b;
+    --color-unchecked: #f5eeff;
+    --color-marked: #b060e0;
+    --color-checked: #e8d8ff;
+    --color-bg: #fdf8ff;
+    --color-text: #1a0030;
+    --color-border: #d0b0f0;
+    --color-header: #7030a8;
+}
+
+.theme-forest-light {
+    --color-primary: #70d070;
+    --color-danger: #c0392b;
+    --color-unchecked: #eafcea;
+    --color-marked: #50c050;
+    --color-checked: #d0f0d0;
+    --color-bg: #f5fff5;
+    --color-text: #001a00;
+    --color-border: #90d890;
+    --color-header: #308030;
+}
+
+body.theme-oot, body.theme-mm, body.theme-forest,
+body.theme-oot-light, body.theme-mm-light, body.theme-forest-light {
+    background-color: var(--color-bg);
+    color: var(--color-text);
+}
+
+body.modal-open {
+  overflow: hidden;
 }
 
 .bg-primary {

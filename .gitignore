@@ -22,3 +22,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Local personal files
+.claude/
+build/
+Ce qui serait cool.txt
+Docu_run.txt

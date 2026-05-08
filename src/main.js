@@ -15,4 +15,8 @@ const app = new App({
     target: document.getElementById('app'),
 });
 
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/ootmmr-checklist/sw.js').catch(() => {});
+}
+
 export default app;

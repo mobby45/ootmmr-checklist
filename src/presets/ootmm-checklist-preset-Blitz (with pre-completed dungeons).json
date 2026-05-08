@@ -1,0 +1,12 @@
+{
+  "checks": {},
+  "settings": {
+    "TerminaGrassShuffleMM": false,
+    "DungeonChestSFShuffleMM": "starting",
+    "TingleMapShuffleMM": "starting_items",
+    "GrassShuffleMM": "none",
+    "SkipChildZeldaOOT": true
+  },
+  "mqSettings": {},
+  "variantSettings": {}
+}
