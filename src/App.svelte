@@ -353,32 +353,6 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
       }
     };
     connectionProvider = new WebrtcProvider(full, ydoc, rtcOpts);
-    connectionProvider.on('peers', (e: any) => {
-      console.log('[coop] peers event', JSON.stringify(e));
-      const room = (connectionProvider as any).room;
-      if (room) {
-        room.webrtcConns.forEach((conn: any, peerId: string) => {
-          const sp = conn.peer;
-          if (!sp) { console.warn('[coop] peer', peerId.slice(0,8), 'SimplePeer is null'); return; }
-          console.log('[coop] SimplePeer initiator:', sp.initiator, 'destroyed:', sp.destroyed);
-          sp.on('signal', (s: any) => console.log('[coop] SimplePeer signal emitted type:', s?.type));
-          sp.on('error', (err: any) => console.error('[coop] SimplePeer error:', err));
-          sp.on('connect', () => console.log('[coop] SimplePeer CONNECTED!'));
-          const pc: RTCPeerConnection = sp._pc;
-          if (pc) {
-            console.log('[coop] peer', peerId.slice(0,8), 'iceState:', pc.iceConnectionState, 'sigState:', pc.signalingState);
-            pc.oniceconnectionstatechange = () => console.log('[coop] ICE state ->', pc.iceConnectionState);
-            pc.onicegatheringstatechange = () => console.log('[coop] ICE gathering ->', pc.iceGatheringState);
-            pc.onicecandidate = (ev) => console.log('[coop] local ICE candidate:', ev.candidate ? ev.candidate.candidate.slice(0, 60) : 'null (done)');
-            pc.onicecandidateerror = (ev: any) => console.warn('[coop] ICE error', ev.errorCode, ev.errorText, ev.url);
-            setTimeout(() => console.log('[coop] 5s check - iceState:', pc.iceConnectionState, 'gatherState:', pc.iceGatheringState), 5000);
-          } else {
-            console.warn('[coop] peer', peerId.slice(0,8), 'no RTCPeerConnection (_pc is null)');
-          }
-        });
-      }
-    });
-    connectionProvider.on('synced', (e: any) => console.log('[coop] synced', e));
     connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anonymous', color: pingColor });
     connectionProvider.awareness.on('change', refreshConnectedUsers);
     refreshConnectedUsers();
