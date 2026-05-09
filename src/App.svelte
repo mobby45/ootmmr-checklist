@@ -341,14 +341,14 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
     roomBaseCode = dashIdx !== -1 ? full.slice(0, dashIdx) : full;
     const hasPassword = dashIdx !== -1;
 
-    connectionProvider = new WebrtcProvider(full, ydoc, { signaling: ['SIGNALING_URL'] });
+    connectionProvider = new WebrtcProvider(full, ydoc, { signaling: ['wss://ootmmr-checklist.mobby45.deno.net'] });
     connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anonymous', color: pingColor });
     connectionProvider.awareness.on('change', refreshConnectedUsers);
     refreshConnectedUsers();
 
     // Bridge to watch room so viewers in ?watch=baseCode receive updates
     if (hasPassword && !isWatchMode) {
-      watchRelayProvider = new WebrtcProvider(roomBaseCode, ydoc, { signaling: ['SIGNALING_URL'] });
+      watchRelayProvider = new WebrtcProvider(roomBaseCode, ydoc, { signaling: ['wss://ootmmr-checklist.mobby45.deno.net'] });
     }
   }
 
