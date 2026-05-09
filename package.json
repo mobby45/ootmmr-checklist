@@ -30,6 +30,7 @@
         "tsx": "^4.21.0",
         "typescript": "^5.4.3",
         "vite": "^7.3.1",
+        "vite-plugin-node-polyfills": "^0.26.0",
         "y-indexeddb": "^9.0.12",
         "y-webrtc": "^10.3.0",
         "yaml": "^2.8.2",
