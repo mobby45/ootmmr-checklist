@@ -5,8 +5,7 @@
   import * as Y from 'yjs';
   import { readableArray, readableMap } from 'svelt-yjs';
   import { writable } from 'svelte/store';
-  import { TrysteroProvider } from '@winstonfassett/y-webrtc-trystero';
-  import { joinRoom as mqttJoinRoom } from '@trystero-p2p/mqtt';
+  import { WebrtcProvider } from 'y-webrtc';
   import { IndexeddbPersistence } from 'y-indexeddb';
 
   import { initializeStructuredChecks } from './util/util';
@@ -309,8 +308,8 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
   // ==========================================
   let roomName: string | null = null;      // full edit code (includes password)
   let roomBaseCode: string | null = null;  // public base code (for watch URL)
-  let connectionProvider: TrysteroProvider | null = null;
-  let watchRelayProvider: TrysteroProvider | null = null;
+  let connectionProvider: WebrtcProvider | null = null;
+  let watchRelayProvider: WebrtcProvider | null = null;
   let connectedUsers: { name: string; color: string }[] = [];
   let newRoomPassword = '';
   $: isSynced = connectedUsers.length > 1;
@@ -342,14 +341,14 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
     roomBaseCode = dashIdx !== -1 ? full.slice(0, dashIdx) : full;
     const hasPassword = dashIdx !== -1;
 
-    connectionProvider = new TrysteroProvider(full, ydoc, { appId: 'ootmmr-checklist', joinRoom: mqttJoinRoom });
+    connectionProvider = new WebrtcProvider(full, ydoc, { signaling: ['SIGNALING_URL'] });
     connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anonymous', color: pingColor });
     connectionProvider.awareness.on('change', refreshConnectedUsers);
     refreshConnectedUsers();
 
     // Bridge to watch room so viewers in ?watch=baseCode receive updates
     if (hasPassword && !isWatchMode) {
-      watchRelayProvider = new TrysteroProvider(roomBaseCode, ydoc, { appId: 'ootmmr-checklist', joinRoom: mqttJoinRoom });
+      watchRelayProvider = new WebrtcProvider(roomBaseCode, ydoc, { signaling: ['SIGNALING_URL'] });
     }
   }
 
