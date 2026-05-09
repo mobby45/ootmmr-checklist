@@ -312,7 +312,7 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
   let watchRelayProvider: WebrtcProvider | null = null;
   let connectedUsers: { name: string; color: string }[] = [];
   let newRoomPassword = '';
-  let isSynced = false;
+  $: isSynced = connectedUsers.length > 1;
 
   // Only set hash for edit mode (never leak password via watch-mode hash)
   $: if (!isWatchMode) window.location.hash = roomName ?? '';
@@ -344,8 +344,6 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
     connectionProvider = new WebrtcProvider(full, ydoc, {
       signaling: ['https://ootmmr-checklist-signaling.fly.dev/'],
     });
-    isSynced = false;
-    connectionProvider.on('synced', ({ synced }: { synced: boolean }) => { isSynced = synced; });
     connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anonymous', color: pingColor });
     connectionProvider.awareness.on('change', refreshConnectedUsers);
     refreshConnectedUsers();
@@ -389,7 +387,6 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
       roomName = null;
       roomBaseCode = null;
       connectedUsers = [];
-      isSynced = false;
     }
   }
 
@@ -2573,7 +2570,7 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
               </form>
               <div class="sync-status" class:synced={isSynced}>
                 <span class="sync-dot"></span>
-                <span>{isSynced ? 'Connected' : 'Connecting...'}</span>
+                <span>{isSynced ? 'Connected' : 'Waiting for peers...'}</span>
               </div>
               {#if connectedUsers.length > 0}
                 <div class="connected-users">
