@@ -342,7 +342,7 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
     const hasPassword = dashIdx !== -1;
 
     connectionProvider = new WebrtcProvider(full, ydoc, {
-      signaling: ['https://ootmmr-checklist-signaling.fly.dev/'],
+      signaling: ['wss://signaling.yjs.dev', 'wss://y-webrtc-signaling-eu.herokuapp.com'],
     });
     connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anonymous', color: pingColor });
     connectionProvider.awareness.on('change', refreshConnectedUsers);
@@ -351,7 +351,7 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
     // Bridge to watch room so viewers in ?watch=baseCode receive updates
     if (hasPassword && !isWatchMode) {
       watchRelayProvider = new WebrtcProvider(roomBaseCode, ydoc, {
-        signaling: ['https://ootmmr-checklist-signaling.fly.dev/'],
+        signaling: ['wss://signaling.yjs.dev', 'wss://y-webrtc-signaling-eu.herokuapp.com'],
       });
     }
   }
