@@ -27,6 +27,7 @@ function setupConn(ws: WebSocket) {
     try { data = JSON.parse(e.data as string); } catch { return; }
 
     if (data.type === 'pong') { pongReceived = true; return; }
+    if (data.type === 'ping') { try { ws.send(JSON.stringify({ type: 'pong' })); } catch { /* closed */ } return; }
 
     if (data.type === 'subscribe') {
       for (const t of (data.topics ?? [])) {
