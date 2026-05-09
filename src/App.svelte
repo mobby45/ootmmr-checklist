@@ -341,14 +341,25 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
     roomBaseCode = dashIdx !== -1 ? full.slice(0, dashIdx) : full;
     const hasPassword = dashIdx !== -1;
 
-    connectionProvider = new WebrtcProvider(full, ydoc, { signaling: ['wss://ootmmr-checklist.mobby45.deno.net'] });
+    const rtcOpts = {
+      signaling: ['wss://ootmmr-checklist.mobby45.deno.net'],
+      peerOpts: {
+        config: {
+          iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' },
+          ]
+        }
+      }
+    };
+    connectionProvider = new WebrtcProvider(full, ydoc, rtcOpts);
     connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anonymous', color: pingColor });
     connectionProvider.awareness.on('change', refreshConnectedUsers);
     refreshConnectedUsers();
 
     // Bridge to watch room so viewers in ?watch=baseCode receive updates
     if (hasPassword && !isWatchMode) {
-      watchRelayProvider = new WebrtcProvider(roomBaseCode, ydoc, { signaling: ['wss://ootmmr-checklist.mobby45.deno.net'] });
+      watchRelayProvider = new WebrtcProvider(roomBaseCode, ydoc, rtcOpts);
     }
   }
 
