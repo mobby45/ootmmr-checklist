@@ -362,9 +362,11 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
 
   function refreshConnectedUsers() {
     if (!connectionProvider) { connectedUsers = []; return; }
+    const seen = new Set<string>();
     connectedUsers = Array.from(connectionProvider.awareness.states.values())
       .filter((s: any) => s?.user)
-      .map((s: any) => ({ name: s.user.name as string, color: s.user.color as string }));
+      .map((s: any) => ({ name: s.user.name as string, color: s.user.color as string }))
+      .filter(u => seen.has(u.name) ? false : (seen.add(u.name), true));
   }
 
   // fullCode may be "basecode" or "basecode-password"
