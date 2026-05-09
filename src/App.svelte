@@ -312,6 +312,7 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
   let watchRelayProvider: WebrtcProvider | null = null;
   let connectedUsers: { name: string; color: string }[] = [];
   let newRoomPassword = '';
+  let isSynced = false;
 
   // Only set hash for edit mode (never leak password via watch-mode hash)
   $: if (!isWatchMode) window.location.hash = roomName ?? '';
@@ -343,6 +344,8 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
     connectionProvider = new WebrtcProvider(full, ydoc, {
       signaling: ['https://ootmmr-checklist-signaling.fly.dev/'],
     });
+    isSynced = false;
+    connectionProvider.on('synced', ({ synced }: { synced: boolean }) => { isSynced = synced; });
     connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anonymous', color: pingColor });
     connectionProvider.awareness.on('change', refreshConnectedUsers);
     refreshConnectedUsers();
@@ -386,6 +389,7 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
       roomName = null;
       roomBaseCode = null;
       connectedUsers = [];
+      isSynced = false;
     }
   }
 
@@ -2567,6 +2571,10 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
                   <button class="bg-primary pure-button" on:click={leaveCoopRoom}>Disconnect</button>
                 </fieldset>
               </form>
+              <div class="sync-status" class:synced={isSynced}>
+                <span class="sync-dot"></span>
+                <span>{isSynced ? 'Connected' : 'Connecting...'}</span>
+              </div>
               {#if connectedUsers.length > 0}
                 <div class="connected-users">
                   {#each connectedUsers as u}
@@ -3651,6 +3659,24 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
     padding: 1px 5px;
     font-weight: bold;
   }
+
+  .sync-status {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.82em;
+    opacity: 0.7;
+    margin: 4px 0 2px;
+    color: var(--color-text);
+  }
+  .sync-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #aaa;
+    flex-shrink: 0;
+  }
+  .sync-status.synced .sync-dot { background: #44cc66; }
+  .sync-status.synced { opacity: 1; }
 
   .connected-users {
     display: flex;
