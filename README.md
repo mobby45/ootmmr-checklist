@@ -90,3 +90,4 @@ npm run build   # production build
 ---
 
 *Built with the help of [Claude](https://claude.ai) (Anthropic).*
+*Built with the help of Loupimo Map Tracker, link [here](https://github.com/Loupimo/OoTMMCombo-Tracker)*
