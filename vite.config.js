@@ -12,7 +12,7 @@ export default defineConfig({
             handler(warning);
           }
         }),
-        nodePolyfills({ include: ['process'] }),
+        nodePolyfills(),
     ],
     base: '/ootmmr-checklist/',
 });
