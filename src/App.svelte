@@ -353,6 +353,23 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
       }
     };
     connectionProvider = new WebrtcProvider(full, ydoc, rtcOpts);
+    connectionProvider.on('peers', (e: any) => {
+      console.log('[coop] peers event', JSON.stringify(e));
+      const room = (connectionProvider as any).room;
+      if (room) {
+        room.webrtcConns.forEach((conn: any, peerId: string) => {
+          const pc: RTCPeerConnection = conn.peer?._pc;
+          if (pc) {
+            console.log('[coop] peer', peerId.slice(0,8), 'iceState:', pc.iceConnectionState, 'sigState:', pc.signalingState);
+            pc.oniceconnectionstatechange = () => console.log('[coop] ICE state ->', pc.iceConnectionState);
+            pc.onicecandidateerror = (ev: any) => console.warn('[coop] ICE error', ev.errorCode, ev.errorText, ev.url);
+          } else {
+            console.warn('[coop] peer', peerId.slice(0,8), 'has no RTCPeerConnection');
+          }
+        });
+      }
+    });
+    connectionProvider.on('synced', (e: any) => console.log('[coop] synced', e));
     connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anonymous', color: pingColor });
     connectionProvider.awareness.on('change', refreshConnectedUsers);
     refreshConnectedUsers();
