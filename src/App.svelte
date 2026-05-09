@@ -4,6 +4,7 @@
   // ==========================================
   import * as Y from 'yjs';
   import { readableArray, readableMap } from 'svelt-yjs';
+  import { writable } from 'svelte/store';
   import { WebrtcProvider } from 'y-webrtc';
   import { IndexeddbPersistence } from 'y-indexeddb';
 
@@ -235,6 +236,24 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
   const sCheckAuthors = readableMap(yCheckAuthors);
   let hints: any[] = yHints.toArray();
   yHints.observe(() => { hints = yHints.toArray(); });
+  // Writable store incremented on every yChecks mutation so that reactive
+  // count statements (groupCheckCounts, ootCheckCount, …) are guaranteed to
+  // re-run — plain `let` increments in external observers are not reliably
+  // wrapped by Svelte's $$invalidate.
+  const _checksRevStore = writable(0);
+  // Defer the store update to a microtask so it fires AFTER the current Svelte
+  // flush cycle. Without this, $$invalidate called during a reactive block has
+  // dirty[0] !== -1, so make_dirty skips re-adding the component to dirty_components.
+  let _checksRevPending = false;
+  yChecks.observe(() => {
+    if (!_checksRevPending) {
+      _checksRevPending = true;
+      Promise.resolve().then(() => {
+        _checksRevPending = false;
+        _checksRevStore.update(n => n + 1);
+      });
+    }
+  });
   const sSettings = readableMap(ySettings);
   const sMqSettings = readableMap(yMqSettings);
   const sVariantSettings = readableMap(yVariantSettings);
@@ -394,7 +413,9 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
     OOTMM: 'both', OOTMMDungeons: 'both',
     showUnshuffledGS: false, showUnshuffledDungeonSF: false,
     showUnshuffledFreeSF: false, showUnshuffledTownSF: false,
+    showTypeColors: true,
   };
+  $: showTypeColors = ($sSettings.get('showTypeColors') ?? true) as boolean;
   // Migrate old localStorage values on first load
   Object.entries(_displayDefaults).forEach(([k, def]) => {
     if (!ySettings.has(k)) {
@@ -1321,55 +1342,53 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
     return filtered.length === 0 ? [] : [{ ...group, checks: filtered }];
   });
 
-  $: groupCompletionStatus =
-    filteredChecks?.reduce(
-      (acc, group) => {
-        acc[group.groupName] = group.checks.every(c => $sChecks.get(c.name) === T.CheckState.checked);
-        return acc;
-      },
-      {} as Record<string, boolean>,
-    ) ?? {};
-
-  $: groupCheckCounts =
-    filteredChecks?.reduce(
-      (acc, group) => {
-        acc[group.groupName] = {
-          checked: group.checks.filter(c => $sChecks.get(c.name) === T.CheckState.checked).length,
-          total: group.checks.length,
-        };
-        return acc;
-      },
-      {} as Record<string, { checked: number; total: number }>,
-    ) ?? {};
-
-  $: totalCheckCount = filteredChecks?.reduce(
+  $: groupCompletionStatus = ($_checksRevStore, filteredChecks?.reduce(
     (acc, group) => {
-      acc.checked += group.checks.filter(c => $sChecks.get(c.name) === T.CheckState.checked).length;
+      acc[group.groupName] = group.checks.every(c => yChecks.get(c.name) === T.CheckState.checked);
+      return acc;
+    },
+    {} as Record<string, boolean>,
+  ) ?? {});
+
+  $: groupCheckCounts = ($_checksRevStore, filteredChecks?.reduce(
+    (acc, group) => {
+      acc[group.groupName] = {
+        checked: group.checks.filter(c => yChecks.get(c.name) === T.CheckState.checked).length,
+        total: group.checks.length,
+      };
+      return acc;
+    },
+    {} as Record<string, { checked: number; total: number }>,
+  ) ?? {});
+
+  $: totalCheckCount = ($_checksRevStore, filteredChecks?.reduce(
+    (acc, group) => {
+      acc.checked += group.checks.filter(c => yChecks.get(c.name) === T.CheckState.checked).length;
       acc.total += group.checks.length;
       return acc;
     },
     { checked: 0, total: 0 },
-  ) ?? { checked: 0, total: 0 };
+  ) ?? { checked: 0, total: 0 });
 
-  $: ootCheckCount = filteredChecks?.reduce(
+  $: ootCheckCount = ($_checksRevStore, filteredChecks?.reduce(
     (acc, group) => {
       const oot = group.checks.filter(c => c.game === T.Game.oot);
-      acc.checked += oot.filter(c => $sChecks.get(c.name) === T.CheckState.checked).length;
+      acc.checked += oot.filter(c => yChecks.get(c.name) === T.CheckState.checked).length;
       acc.total += oot.length;
       return acc;
     },
     { checked: 0, total: 0 },
-  ) ?? { checked: 0, total: 0 };
+  ) ?? { checked: 0, total: 0 });
 
-  $: mmCheckCount = filteredChecks?.reduce(
+  $: mmCheckCount = ($_checksRevStore, filteredChecks?.reduce(
     (acc, group) => {
       const mm = group.checks.filter(c => c.game === T.Game.mm);
-      acc.checked += mm.filter(c => $sChecks.get(c.name) === T.CheckState.checked).length;
+      acc.checked += mm.filter(c => yChecks.get(c.name) === T.CheckState.checked).length;
       acc.total += mm.length;
       return acc;
     },
     { checked: 0, total: 0 },
-  ) ?? { checked: 0, total: 0 };
+  ) ?? { checked: 0, total: 0 });
 
   let sortMode: 'default' | 'alpha' = 'default';
   $: sortedChecks = filteredChecks
@@ -1395,19 +1414,81 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
     setTimeout(() => { spoilerHighlight = ''; }, 6000);
   }
 
+  const HINT_STOPWORDS = new Set(['the', 'of', 'in', 'at', 'on', 'and', 'or', 'a', 'an', 'to', 'for', 'is', 'are', 'was', 'were']);
+  function sigWords(s: string): string[] {
+    return [...new Set(s.toLowerCase().split(/[\s'',.\-_/]+/).filter(w => w.length > 2 && !HINT_STOPWORDS.has(w)))];
+  }
+
+  // Abbreviation → exact group name (as in structured-checks.json)
+  // HC/OGC both map to the combined exterior group; Ext/Sew/Int map to the single Pirates Fortress group
+  const HINT_ABBREVS: Record<string, string> = {
+    // OoT overworld
+    'kf': 'Kokiri Forest', 'lw': 'Lost Woods', 'sfm': 'Sacred Forest Meadow',
+    'hf': 'Hyrule Field', 'llr': 'Lon Lon Ranch', 'market': 'Market',
+    'tot': 'Temple of Time',
+    'hc': "Hyrule/Ganon's Castle Exterior", 'ogc': "Hyrule/Ganon's Castle Exterior",
+    'kak': 'Kakariko Village', 'gy': 'Graveyard', 'botw': 'Bottom of the Well',
+    'dmt': 'Death Mountain Trail', 'gc': 'Goron City', 'dmc': 'Death Mountain Crater',
+    'lh': 'Lake Hylia', 'zr': "Zora's River", 'zd': "Zora's Domain",
+    'zf': "Zora's Fountain", 'ic': 'Ice Cavern', 'gv': 'Gerudo Valley',
+    'gf': 'Gerudo Fortress', 'wasteland': 'Haunted Wasteland', 'dc': 'Desert Colossus',
+    'gtg': 'Gerudo Training Grounds', 'ganon': "Ganon's Castle",
+    // MM overworld
+    'sct': 'South Clock Town', 'nct': 'North Clock Town',
+    'wct': 'West Clock Town', 'ect': 'East Clock Town',
+    'lau': 'Laundry Pool', 'inn': 'Stock Pot Inn',
+    'tf': 'Termina Field', 'rsw': 'Road To Southern Swamp',
+    'swa': 'Southern Swamp', 'pal': 'Deku Palace',
+    'mil': 'Milk Road', 'ran': 'Romani Ranch', 'mou': 'Mountain Village',
+    'twi': 'Twin Islands', 'gor': 'Goron Village', 'psn': 'Path To Snowhead',
+    'gre': 'Great Bay Coast', 'cap': 'Zora Cape', 'hal': 'Zora Hall',
+    'ext': 'Pirates Fortress', 'sew': 'Pirates Fortress', 'int': 'Pirates Fortress',
+    'pin': 'Pinnacle Rock', 'rik': 'Road To Ikana',
+    'gra': 'Ikana Graveyard', 'can': 'Ikana Canyon', 'shr': 'Secret Shrine',
+    'wel': 'Beneath The Well', 'cas': 'Ikana Castle',
+    // MM dungeons
+    'wf': 'Woodfall Temple', 'sh': 'Snowhead Temple',
+    'gb': 'Great Bay Temple', 'stt': 'Stone Tower Temple', 'st': 'Stone Tower',
+  };
+
+  // Map: significant word → list of group names that contain it
+  $: hintWordGroups = (() => {
+    const map = new Map<string, string[]>();
+    for (const g of (sortedChecks ?? [])) {
+      for (const w of sigWords(g.groupName)) {
+        if (!map.has(w)) map.set(w, []);
+        map.get(w)!.push(g.groupName);
+      }
+    }
+    return map;
+  })();
+
+  function hintMatchesGroup(hintText: string, groupName: string, wordGroups: Map<string, string[]>): boolean {
+    const t = hintText.trim().toLowerCase();
+    const gn = groupName.toLowerCase();
+    if (t.includes(gn) || gn.includes(t)) return true;
+    // Check abbreviations: whole hint or any whitespace-separated token
+    for (const token of t.split(/\s+/)) {
+      const target = HINT_ABBREVS[token];
+      if (target && target.toLowerCase() === gn) return true;
+    }
+    const hw = sigWords(hintText);
+    const gw = sigWords(groupName);
+    // Only word-match on words that uniquely identify this group (avoids e.g. "Forest" matching both Forest Temple and Sacred Forest Meadow)
+    return hw.some(w => gw.includes(w) && (wordGroups.get(w)?.length ?? 0) === 1);
+  }
+
   $: wothGroups = new Set(
     hints.filter(h => h.type === 'woth').flatMap(h => {
-      const text = h.text.toLowerCase();
       return (sortedChecks ?? [])
-        .filter(g => { const gn = g.groupName.toLowerCase(); return text.includes(gn) || gn.includes(text); })
+        .filter(g => hintMatchesGroup(h.text, g.groupName, hintWordGroups))
         .map(g => g.groupName);
     })
   );
   $: barrenGroups = new Set(
     hints.filter(h => h.type === 'barren').flatMap(h => {
-      const text = h.text.toLowerCase();
       return (sortedChecks ?? [])
-        .filter(g => { const gn = g.groupName.toLowerCase(); return text.includes(gn) || gn.includes(text); })
+        .filter(g => hintMatchesGroup(h.text, g.groupName, hintWordGroups))
         .map(g => g.groupName);
     }).filter(gn => !wothGroups.has(gn))
   );
@@ -1817,12 +1898,12 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
   ];
 
   const _loadSec = (k: string) => localStorage.getItem(k) === 'true';
-  let secGeneral = _loadSec('sec_general');
-  let secEr      = _loadSec('sec_er');
-  let secItem    = _loadSec('sec_item');
-  let secHint    = _loadSec('sec_hint');
-  let secShuffle = _loadSec('sec_shuffle');
-  let secSlots   = _loadSec('sec_slots');
+  let secGeneral    = _loadSec('sec_general');
+  let secEr         = _loadSec('sec_er');
+  let secItem       = _loadSec('sec_item');
+  let secHint       = _loadSec('sec_hint');
+  let secShuffle    = _loadSec('sec_shuffle');
+  let secSlots      = _loadSec('sec_slots');
 
 
   function toggleYmap(map: Y.Map<boolean>, key: string) {
@@ -2739,6 +2820,13 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
               on:click={() => (compact = !compact)}
               title="Alt+C"
             >Compact</button>
+            <button
+              class="pure-button"
+              type="button"
+              class:pure-button-active={showTypeColors}
+              on:click={() => ySettings.set('showTypeColors', !showTypeColors)}
+              title="Toggle type colors on checks"
+            >Colors</button>
             <span class="check-stat">{visibleGroupCount} zones · {visibleCheckCount} checks</span>
             <button
               class="pure-button legend-toggle-btn"
@@ -2839,6 +2927,7 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
                   {compact}
                   woth={wothCheckNames.has(check.name)}
                   barren={barrenCheckNames.has(check.name)}
+                  disableTypeColor={!showTypeColors}
                   highlighted={spoilerHighlight === check.name}
                   checkName={check.name}
                   zone={group.groupName}
@@ -2979,6 +3068,7 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
     <div class="shop-edit-modal" on:keydown={e => { if (e.key === 'Enter' && !e.shiftKey) confirmNoteEdit(); if (e.key === 'Escape') noteEditOpen = false; }}>
       <div class="shop-edit-title">Note — {noteEditKey}</div>
       <label class="shop-edit-label">
+        <!-- svelte-ignore a11y-autofocus -->
         <textarea
           rows="3"
           bind:value={noteEditValue}
@@ -3002,6 +3092,7 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
       <div class="shop-edit-title">Edit Shop Item</div>
       <label class="shop-edit-label">
         Item
+        <!-- svelte-ignore a11y-autofocus -->
         <input type="text" bind:value={shopEditItem} placeholder="empty to clear" autofocus />
       </label>
       {#if shopEditAllowPrice}
@@ -3291,6 +3382,7 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
     gap: 0.2em 2em;
     margin-top: 0.5em;
   }
+
   @media screen and (max-width: 768px) {
     .unshuffled-grid {
       grid-template-columns: 1fr;
@@ -3386,7 +3478,6 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
   .seed-table td { padding: 0.1em 0.5em 0.1em 0; vertical-align: top; }
   .seed-table td:first-child { opacity: 0.55; white-space: nowrap; width: 1%; }
   .seed-table td:last-child { font-family: monospace; }
-  .seed-table td[title] { cursor: help; }
   .copy-hash-btn { cursor: pointer; opacity: 0.45; font-size: 0.9em; user-select: none; }
   .copy-hash-btn:hover { opacity: 1; }
 
@@ -3614,20 +3705,4 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
   }
   .shop-edit-cancel:hover { background: #555; }
 
-  .slot-meta {
-    display: flex;
-    gap: 0.6em;
-    font-size: 0.75em;
-    opacity: 0.6;
-  }
-  .slots-current-badge {
-    font-size: 0.75em;
-    margin-left: 0.5em;
-    padding: 1px 6px;
-    border-radius: 4px;
-    background: rgba(0, 120, 231, 0.15);
-    color: var(--color-primary);
-    font-weight: bold;
-    vertical-align: middle;
-  }
 </style>

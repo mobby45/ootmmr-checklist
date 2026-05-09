@@ -34,7 +34,7 @@
 
   const hintTypes: { id: HintType; label: string; color: string }[] = [
     { id: 'woth',     label: 'WotH',     color: '#3a7bd5' },
-    { id: 'barren',   label: 'Barren',   color: '#888' },
+    { id: 'barren',   label: 'Barren',   color: '#cc3333' },
     { id: 'location', label: 'Location', color: '#2ecc71' },
     { id: 'item',     label: 'Item',     color: '#e67e22' },
     { id: 'junk',     label: 'Junk',     color: '#555' },

@@ -19,6 +19,7 @@ export let note: string = '';
 export let compact: boolean = false;
 export let woth: boolean = false;
 export let barren: boolean = false;
+export let disableTypeColor: boolean = false;
 export let highlighted: boolean = false;
 export let checkName: string = '';
 export let zone: string = '';
@@ -64,8 +65,8 @@ function typeColors(t: T.CheckType): TypeColors {
 }
 
 $: tc = typeColors(type);
-$: typeBg     = woth ? 'rgba(58,123,213,0.14)' : barren ? 'rgba(100,100,100,0.12)' : (tc?.bg ?? '');
-$: typeBorder = woth ? '#3a7bd5'               : barren ? '#666'                   : (tc?.border ?? '');
+$: typeBg     = disableTypeColor ? '' : (tc?.bg ?? '');
+$: typeBorder = disableTypeColor ? '' : (tc?.border ?? '');
 
 const typeLabels: Partial<Record<T.CheckType, string>> = {
   [T.CheckType.chest]: 'Chest', [T.CheckType.gs]: 'Gold Skulltula',
@@ -132,6 +133,8 @@ $: tooltip = [
   class="check-item interactable"
   class:checked
   class:marked
+  class:woth
+  class:barren
   class:pinged={!!pingColor}
   class:highlighted
   class:compact
@@ -182,6 +185,19 @@ $: tooltip = [
     &.checked {
       background-color: var(--color-checked);
       opacity: 0.6;
+    }
+
+    &.woth {
+      border-left-color: #3a7bd5;
+    }
+    &.woth:not(.checked) {
+      background-image: linear-gradient(rgba(58,123,213,0.13), rgba(58,123,213,0.13));
+    }
+    &.barren {
+      border-left-color: #cc3333;
+    }
+    &.barren:not(.checked) {
+      background-image: linear-gradient(rgba(200,50,50,0.11), rgba(200,50,50,0.11));
     }
 
     &:focus {

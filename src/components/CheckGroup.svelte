@@ -152,5 +152,5 @@
     letter-spacing: 0.02em;
   }
   .woth-pill   { background: #1a4a8a; color: #7eb8ff; }
-  .barren-pill { background: #333; color: #888; }
+  .barren-pill { background: #6a1a1a; color: #ff8888; }
 </style>
