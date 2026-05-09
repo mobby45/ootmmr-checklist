@@ -368,8 +368,10 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
           if (pc) {
             console.log('[coop] peer', peerId.slice(0,8), 'iceState:', pc.iceConnectionState, 'sigState:', pc.signalingState);
             pc.oniceconnectionstatechange = () => console.log('[coop] ICE state ->', pc.iceConnectionState);
+            pc.onicegatheringstatechange = () => console.log('[coop] ICE gathering ->', pc.iceGatheringState);
+            pc.onicecandidate = (ev) => console.log('[coop] local ICE candidate:', ev.candidate ? ev.candidate.candidate.slice(0, 60) : 'null (done)');
             pc.onicecandidateerror = (ev: any) => console.warn('[coop] ICE error', ev.errorCode, ev.errorText, ev.url);
-            setTimeout(() => console.log('[coop] 2s check - iceState:', pc.iceConnectionState, 'sigState:', pc.signalingState), 2000);
+            setTimeout(() => console.log('[coop] 5s check - iceState:', pc.iceConnectionState, 'gatherState:', pc.iceGatheringState), 5000);
           } else {
             console.warn('[coop] peer', peerId.slice(0,8), 'no RTCPeerConnection (_pc is null)');
           }
