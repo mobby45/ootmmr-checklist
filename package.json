@@ -34,5 +34,9 @@
         "y-webrtc": "^10.3.0",
         "yaml": "^2.8.2",
         "yjs": "^13.6.14"
+    },
+    "dependencies": {
+        "@winstonfassett/y-webrtc-trystero": "^0.1.0-beta.3",
+        "trystero": "^0.24.0"
     }
 }
