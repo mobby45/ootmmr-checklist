@@ -2,20 +2,8 @@ const topics = new Map<string, Set<WebSocket>>();
 
 function setupConn(ws: WebSocket) {
   const subscribedTopics = new Set<string>();
-  let pongReceived = true;
-
-  const pingInterval = setInterval(() => {
-    if (!pongReceived) {
-      ws.close();
-      clearInterval(pingInterval);
-    } else {
-      pongReceived = false;
-      try { ws.send(JSON.stringify({ type: 'ping' })); } catch { /* closed */ }
-    }
-  }, 30000);
 
   ws.onclose = () => {
-    clearInterval(pingInterval);
     subscribedTopics.forEach(t => {
       topics.get(t)?.delete(ws);
       if (topics.get(t)?.size === 0) topics.delete(t);
@@ -26,7 +14,6 @@ function setupConn(ws: WebSocket) {
     let data: any;
     try { data = JSON.parse(e.data as string); } catch { return; }
 
-    if (data.type === 'pong') { pongReceived = true; return; }
     if (data.type === 'ping') { try { ws.send(JSON.stringify({ type: 'pong' })); } catch { /* closed */ } return; }
 
     if (data.type === 'subscribe') {
