@@ -342,14 +342,14 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
     roomBaseCode = dashIdx !== -1 ? full.slice(0, dashIdx) : full;
     const hasPassword = dashIdx !== -1;
 
-    connectionProvider = new TrysteroProvider(full, ydoc, { appId: 'ootmmr-checklist', joinRoom: torrentJoinRoom });
+    connectionProvider = new TrysteroProvider(full, ydoc, { appId: 'ootmmr-checklist', joinRoom: torrentJoinRoom, relayConfig: { urls: ['wss://tracker.webtorrent.dev', 'wss://tracker.openwebtorrent.com'], redundancy: 2 } });
     connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anonymous', color: pingColor });
     connectionProvider.awareness.on('change', refreshConnectedUsers);
     refreshConnectedUsers();
 
     // Bridge to watch room so viewers in ?watch=baseCode receive updates
     if (hasPassword && !isWatchMode) {
-      watchRelayProvider = new TrysteroProvider(roomBaseCode, ydoc, { appId: 'ootmmr-checklist', joinRoom: torrentJoinRoom });
+      watchRelayProvider = new TrysteroProvider(roomBaseCode, ydoc, { appId: 'ootmmr-checklist', joinRoom: torrentJoinRoom, relayConfig: { urls: ['wss://tracker.webtorrent.dev', 'wss://tracker.openwebtorrent.com'], redundancy: 2 } });
     }
   }
 
