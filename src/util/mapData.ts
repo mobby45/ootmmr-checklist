@@ -1,6 +1,8 @@
 import { OoTRooms, MMRooms } from '../data/roomMapping';
 import { zoneMapping } from '../data/zoneMapping';
 import { extraChecks } from '../data/extraChecks';
+import ootCSVRaw from '../data/pool_oot.csv?raw';
+import mmCSVRaw from '../data/pool_mm.csv?raw';
 
 export interface MapCheck {
   id: string;
@@ -215,14 +217,8 @@ export function rendersceneToDisplayName(renderscene: string): string {
 
 export async function buildMapData(mqSettings?: Map<string, boolean>): Promise<MapData> {
 
-  const ootResponse = await fetch('/ootmmr-checklist/src/data/pool_oot.csv');
-  const mmResponse = await fetch('/ootmmr-checklist/src/data/pool_mm.csv');
-
-  const ootCSV = await ootResponse.text();
-  const mmCSV = await mmResponse.text();
-
-  const ootChecks = parseCSV(ootCSV, 'oot');
-  const mmChecks = parseCSV(mmCSV, 'mm');
+  const ootChecks = parseCSV(ootCSVRaw, 'oot');
+  const mmChecks = parseCSV(mmCSVRaw, 'mm');
   const allChecks = [...ootChecks, ...mmChecks];
 
   const validChecks = allChecks.filter(check => check.type !== 'none');
