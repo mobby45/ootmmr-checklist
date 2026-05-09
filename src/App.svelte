@@ -1445,7 +1445,7 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
   // GROUP OPEN/CLOSE STATE (persisted in localStorage)
   // ==========================================
   let allGroupStatesMemory = new Map<string, boolean>(JSON.parse(localStorage.getItem('groupStates') || '[]'));
-  let allGroupsExpanded = true;
+  let allGroupsExpanded = false;
   let groupStates = new Map<string, boolean>();
   let forceOpenTimestamp = Date.now();
 
