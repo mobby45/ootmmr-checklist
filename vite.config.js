@@ -11,4 +11,8 @@ export default defineConfig({
       }
     })],
     base: '/ootmmr-checklist/',
+    define: {
+        'process.env': {},
+        'process.browser': true,
+    },
 });
