@@ -303,6 +303,8 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
   // SPOILER CO-OP SYNC
   // ==========================================
   const isOpera = navigator.userAgent.includes('OPR/');
+  let showOperaWarning = false;
+  let operaWarningTimer: ReturnType<typeof setTimeout> | null = null;
   let spoilerSyncedFromPeer = false;
 
   // Migrate existing localStorage spoiler into ySpoiler once IndexedDB is ready
@@ -353,6 +355,7 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
   let connectedUsers: { name: string; color: string }[] = [];
   let newRoomPassword = '';
   $: isSynced = connectedUsers.length > 1;
+  $: if (isSynced) { showOperaWarning = false; if (operaWarningTimer) { clearTimeout(operaWarningTimer); operaWarningTimer = null; } }
 
   // Only set hash for edit mode (never leak password via watch-mode hash)
   $: if (!isWatchMode) window.location.hash = roomName ?? '';
@@ -397,6 +400,14 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
     connectionProvider.awareness.on('change', refreshConnectedUsers);
     refreshConnectedUsers();
 
+    if (isOpera) {
+      if (operaWarningTimer) clearTimeout(operaWarningTimer);
+      showOperaWarning = false;
+      operaWarningTimer = setTimeout(() => {
+        if (!isSynced) showOperaWarning = true;
+      }, 20000);
+    }
+
     // Bridge to watch room so viewers in ?watch=baseCode receive updates
     if (hasPassword && !isWatchMode) {
       watchRelayProvider = new WebrtcProvider(roomBaseCode, ydoc, rtcOpts);
@@ -434,6 +445,8 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
       roomName = null;
       roomBaseCode = null;
       connectedUsers = [];
+      if (operaWarningTimer) { clearTimeout(operaWarningTimer); operaWarningTimer = null; }
+      showOperaWarning = false;
     }
   }
 
@@ -2636,7 +2649,7 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
                 <span class="sync-dot"></span>
                 <span>{isSynced ? 'Connected' : 'Waiting for peers...'}</span>
               </div>
-              {#if isOpera && !isSynced}
+              {#if showOperaWarning}
                 <div class="webrtc-warning">
                   ⚠ Opera: enable WebRTC in <code>opera://settings</code> → Advanced → Privacy → WebRTC IP handling → <em>Use my default public and private interfaces</em>
                 </div>
