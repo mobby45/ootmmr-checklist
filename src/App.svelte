@@ -6,9 +6,7 @@
   import { readableArray, readableMap } from 'svelt-yjs';
   import { writable } from 'svelte/store';
   import { TrysteroProvider } from '@winstonfassett/y-webrtc-trystero';
-  import { joinRoom as _torrentJoinRoom } from '@trystero-p2p/torrent';
-  const torrentJoinRoom = (config: any, roomId: string) =>
-    _torrentJoinRoom({ ...config, relayConfig: { urls: ['wss://tracker.webtorrent.dev', 'wss://tracker.openwebtorrent.com'], redundancy: 2 } }, roomId);
+  import { joinRoom as mqttJoinRoom } from '@trystero-p2p/mqtt';
   import { IndexeddbPersistence } from 'y-indexeddb';
 
   import { initializeStructuredChecks } from './util/util';
@@ -344,14 +342,14 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
     roomBaseCode = dashIdx !== -1 ? full.slice(0, dashIdx) : full;
     const hasPassword = dashIdx !== -1;
 
-    connectionProvider = new TrysteroProvider(full, ydoc, { appId: 'ootmmr-checklist', joinRoom: torrentJoinRoom });
+    connectionProvider = new TrysteroProvider(full, ydoc, { appId: 'ootmmr-checklist', joinRoom: mqttJoinRoom });
     connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anonymous', color: pingColor });
     connectionProvider.awareness.on('change', refreshConnectedUsers);
     refreshConnectedUsers();
 
     // Bridge to watch room so viewers in ?watch=baseCode receive updates
     if (hasPassword && !isWatchMode) {
-      watchRelayProvider = new TrysteroProvider(roomBaseCode, ydoc, { appId: 'ootmmr-checklist', joinRoom: torrentJoinRoom });
+      watchRelayProvider = new TrysteroProvider(roomBaseCode, ydoc, { appId: 'ootmmr-checklist', joinRoom: mqttJoinRoom });
     }
   }
 
