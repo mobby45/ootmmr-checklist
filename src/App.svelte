@@ -49,6 +49,7 @@
   const persistenceProvider = new IndexeddbPersistence('local', ydoc);
 
   const yChecks: Y.Map<T.CheckState> = ydoc.getMap('checks');
+  const ySpoiler: Y.Map<any> = ydoc.getMap('spoiler');
   const ySettings: Y.Map<any> = ydoc.getMap('settings');
   const yMqSettings: Y.Map<boolean> = ydoc.getMap('mqSettings');
   const yVariantSettings: Y.Map<number> = ydoc.getMap('variantSettings');
@@ -299,6 +300,45 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
   };
 
   // ==========================================
+  // SPOILER CO-OP SYNC
+  // ==========================================
+  const isOpera = navigator.userAgent.includes('OPR/');
+  let spoilerSyncedFromPeer = false;
+
+  // Migrate existing localStorage spoiler into ySpoiler once IndexedDB is ready
+  persistenceProvider.on('synced', () => {
+    if (ySpoiler.size === 0) {
+      const locStr = localStorage.getItem('spoilerLocations');
+      const siStr = localStorage.getItem('spoilerSeedInfo');
+      const erStr = localStorage.getItem('spoilerErSettings');
+      if (locStr) ySpoiler.set('locations', locStr);
+      if (siStr) ySpoiler.set('seedInfo', siStr);
+      if (erStr) ySpoiler.set('erSettings', erStr);
+    }
+  });
+
+  ySpoiler.observe((event: any) => {
+    if (event.transaction?.local) return;
+    const locStr = ySpoiler.get('locations');
+    if (locStr !== undefined) {
+      spoilerLocations = applyAliases(JSON.parse(locStr));
+      localStorage.setItem('spoilerLocations', locStr);
+    }
+    const siStr = ySpoiler.get('seedInfo');
+    if (siStr !== undefined) {
+      spoilerSeedInfo = siStr === 'null' ? null : JSON.parse(siStr);
+      localStorage.setItem('spoilerSeedInfo', siStr);
+    }
+    const erStr = ySpoiler.get('erSettings');
+    if (erStr !== undefined) {
+      spoilerErSettings = erStr === 'null' ? null : JSON.parse(erStr);
+      localStorage.setItem('spoilerErSettings', erStr);
+    }
+    spoilerSyncedFromPeer = true;
+    setTimeout(() => { spoilerSyncedFromPeer = false; }, 4000);
+  });
+
+  // ==========================================
   // CO-OP (WebRTC)
   // Two-room security model:
   //   Edit room  = fullCode (e.g. "abc123-secret") — shared privately
@@ -441,6 +481,14 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
   // Known spoiler name → pool name differences (OoTMM spoiler output vs local CSV naming)
   const SPOILER_ALIASES: Record<string, string> = {
     'Kakariko Potion Shop Buy Blue Potion': 'Kakariko Potion Shop Odd Potion',
+    'MQ Shadow Temple SR Spikes Northwest Corner': 'MQ Shadow Temple SR Spikes Left Corner',
+    'MQ Shadow Temple SR Spikes Southwest Wall':   'MQ Shadow Temple SR Spikes Left Wall',
+    'MQ Shadow Temple SR Spikes West Midair':      'MQ Shadow Temple SR Spikes Left Midair',
+    'MQ Shadow Temple SR Spikes Ceiling':          'MQ Shadow Temple SR Spikes Center Midair',
+    'MQ Shadow Temple SR Spikes South Midair':     'MQ Shadow Temple SR Spikes Front Midair',
+    'MQ Shadow Temple SR Spikes East Ground':      'MQ Shadow Temple SR Spikes Right Ground',
+    'MQ Shadow Temple SR Spikes Northeast Wall':   'MQ Shadow Temple SR Spikes Right Back Wall',
+    'MQ Shadow Temple SR Spikes East Wall':        'MQ Shadow Temple SR Spikes Right Lateral Wall',
   };
 
   function applyAliases(raw: Record<string, string>): Record<string, string> {
@@ -518,13 +566,19 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
         raw[key.replace(/^(OOT|MM) /, '')] = value;
       }
       spoilerLocations = applyAliases(raw);
-      localStorage.setItem('spoilerLocations', JSON.stringify(spoilerLocations));
+      const locStr = JSON.stringify(raw);
+      localStorage.setItem('spoilerLocations', locStr);
+      ySpoiler.set('locations', locStr);
 
       spoilerErSettings = data.erSettings;
-      localStorage.setItem('spoilerErSettings', JSON.stringify(data.erSettings));
+      const erStr = JSON.stringify(data.erSettings);
+      localStorage.setItem('spoilerErSettings', erStr);
+      ySpoiler.set('erSettings', erStr);
 
       spoilerSeedInfo = data.seedInfo;
-      localStorage.setItem('spoilerSeedInfo', JSON.stringify(data.seedInfo));
+      const siStr = JSON.stringify(data.seedInfo);
+      localStorage.setItem('spoilerSeedInfo', siStr);
+      ySpoiler.set('seedInfo', siStr);
     };
     input.click();
   }
@@ -1628,6 +1682,9 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
     localStorage.removeItem('spoilerErSettings');
     spoilerSeedInfo = null;
     localStorage.removeItem('spoilerSeedInfo');
+    ySpoiler.delete('locations');
+    ySpoiler.delete('seedInfo');
+    ySpoiler.delete('erSettings');
   }
 
   function resetSettings() {
@@ -2579,6 +2636,11 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
                 <span class="sync-dot"></span>
                 <span>{isSynced ? 'Connected' : 'Waiting for peers...'}</span>
               </div>
+              {#if isOpera && !isSynced}
+                <div class="webrtc-warning">
+                  ⚠ Opera: enable WebRTC in <code>opera://settings</code> → Advanced → Privacy → WebRTC IP handling → <em>Use my default public and private interfaces</em>
+                </div>
+              {/if}
               {#if connectedUsers.length > 0}
                 <div class="connected-users">
                   {#each connectedUsers as u}
@@ -2613,6 +2675,7 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
                 <button class="bg-primary pure-button" on:click|preventDefault={exportData}>Export Save</button>
                 <button class="bg-primary pure-button" on:click|preventDefault={importData}>Import Save</button>
                 <button class="bg-primary pure-button" on:click|preventDefault={importSpoilerLog}>Import Spoiler</button>
+                {#if spoilerSyncedFromPeer}<span class="spoiler-sync-notice">📥 Spoiler received from co-op partner</span>{/if}
                 <button class="pure-button" on:click|preventDefault={() => { randoImportOpen = !randoImportOpen; randoImportError = ''; randoImportOk = false; }}>🎲 Import Hash</button>
                 <button class="bg-danger pure-button" on:click|preventDefault={reset}>Clear Checks</button>
                 <button class="bg-danger pure-button" on:click|preventDefault={resetSettings}>Reset Settings</button>
@@ -3681,6 +3744,30 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
   }
   .sync-status.synced .sync-dot { background: #44cc66; }
   .sync-status.synced { opacity: 1; }
+
+  .webrtc-warning {
+    margin-top: 0.4em;
+    padding: 0.4em 0.6em;
+    background: #fffbe6;
+    border: 1px solid #f0c040;
+    border-radius: 4px;
+    font-size: 0.78em;
+    color: #5a4200;
+    line-height: 1.4;
+  }
+  .webrtc-warning code { font-size: 0.95em; }
+
+  .spoiler-sync-notice {
+    display: inline-block;
+    margin-left: 0.5em;
+    font-size: 0.82em;
+    color: #2a7a2a;
+    animation: fadeOut 4s forwards;
+  }
+  @keyframes fadeOut {
+    0%, 70% { opacity: 1; }
+    100% { opacity: 0; }
+  }
 
   .connected-users {
     display: flex;
