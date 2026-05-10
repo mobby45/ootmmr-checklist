@@ -433,12 +433,14 @@ yKeepalive.observe((event: any) => {
   const P2P_FLAP_THRESHOLD = 5;
   const FORCE_TURN_RELAY = false;
   const DEBUG = true;
+  const initialHash = window.location.hash;
   function dbg(...args: any[]) { if (DEBUG) console.log('[coop]', ...args); }
   $: isSynced = connectedUsers.length > 1;
   $: if (isSynced) { showOperaWarning = false; if (operaWarningTimer) { clearTimeout(operaWarningTimer); operaWarningTimer = null; } }
 
-  // Only set hash for edit mode (never leak password via watch-mode hash)
-  $: if (!isWatchMode) window.location.hash = roomName ?? '';
+  // Only set hash for edit mode (never leak password via watch-mode hash).
+  // Guard with roomName so it never clears the hash on mount before auto-join reads it.
+  $: if (!isWatchMode && roomName) window.location.hash = roomName;
 
   function refreshConnectedUsers() {
     if (!connectionProvider) { connectedUsers = []; return; }
@@ -695,6 +697,7 @@ yKeepalive.observe((event: any) => {
       watchRelayProvider = null;
       roomName = null;
       roomBaseCode = null;
+      window.location.hash = '';
       connectedUsers = [];
       if (operaWarningTimer) { clearTimeout(operaWarningTimer); operaWarningTimer = null; }
       showOperaWarning = false;
@@ -719,9 +722,10 @@ yKeepalive.observe((event: any) => {
     joinCoopRoom(_watchParam);
   }
 
-  // Auto-join from URL hash on load (hash may include password: #baseCode-secret)
-  if (!isWatchMode && window.location.hash.length > 0 && /#[a-z0-9-]+/.test(window.location.hash)) {
-    joinCoopRoom(window.location.hash.slice(1));
+  // Auto-join from URL hash on load (hash may include password: #baseCode-secret).
+  // Use initialHash captured before any reactive statement could modify it.
+  if (!isWatchMode && initialHash.length > 0 && /#[a-z0-9-]+/.test(initialHash)) {
+    joinCoopRoom(initialHash.slice(1));
   }
 
   // ==========================================
