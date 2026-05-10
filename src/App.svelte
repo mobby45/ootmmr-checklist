@@ -106,8 +106,9 @@
 const yMessages: Y.Array<any> = ydoc.getArray('messages');
   const yPings: Y.Map<any> = ydoc.getMap('pings');
 const yKeepalive: Y.Map<number> = ydoc.getMap('keepalive');
+let lastRemoteKeepalive = 0;
 yKeepalive.observe((event: any) => {
-  if (!event.transaction?.local) dbg('keepalive received from remote');
+  if (!event.transaction?.local) { lastRemoteKeepalive = Date.now(); dbg('keepalive received from remote'); }
 });
 
   // ==========================================
@@ -428,11 +429,11 @@ yKeepalive.observe((event: any) => {
   let healthVerifyTimer: ReturnType<typeof setTimeout> | null = null;
   const MAX_FAILED_RECONNECTS = 2;
   const RECONNECT_DEBOUNCE_MS = 10000;
-  const VERIFY_DELAY_MS = 8000;
+  const VERIFY_DELAY_MS = 12000;
   let dcMonInterval: any = null;
   let p2pFlapCounter = 0;
   const P2P_FLAP_THRESHOLD = 5;
-  const FORCE_TURN_RELAY = true;
+  const FORCE_TURN_RELAY = false;
   const DEBUG = true;
   function dbg(...args: any[]) { if (DEBUG) console.log('[coop]', ...args); }
   $: isSynced = connectedUsers.length > 1;
@@ -579,19 +580,21 @@ yKeepalive.observe((event: any) => {
       const awDropped = prevAwCount > 1 && awCount <= 1 && p2pState > 0;
       const awZeroWithP2p = awCount === 0 && p2pState > 0;
       const p2pFlapping = p2pFlapCounter > P2P_FLAP_THRESHOLD;
+      const remoteDataStale = lastRemoteKeepalive > 0 && p2pState > 0 && Date.now() - lastRemoteKeepalive > 30000;
       prevAwCount = awCount;
-      dbg('health check — aware users:', awCount, '| P2P count:', p2pState, '| awDropped:', awDropped, '| awZeroWithP2p:', awZeroWithP2p, '| flap counter:', p2pFlapCounter);
+      dbg('health check — aware users:', awCount, '| P2P count:', p2pState, '| awDropped:', awDropped, '| awZeroWithP2p:', awZeroWithP2p, '| flap counter:', p2pFlapCounter, '| remoteDataStale:', remoteDataStale);
       p2pFlapCounter = 0;
-      if ((awCount > 1 && p2pState === 0) || awDropped || awZeroWithP2p || p2pFlapping) {
+      if ((awCount > 1 && p2pState === 0) || awDropped || awZeroWithP2p || p2pFlapping || remoteDataStale) {
         const now = Date.now();
         if (now - lastHealthReconnect < RECONNECT_DEBOUNCE_MS) {
           dbg('⏱️ health debounced (last reconnect:', (now - lastHealthReconnect) + 'ms ago)');
           return;
         }
-        const reason = awDropped ? 'remote timed out despite P2P (broken data channel)' : (awZeroWithP2p ? 'self awareness lost, P2P stuck' : 'P2P missing');
+        const reason = awDropped ? 'remote timed out despite P2P' : (awZeroWithP2p ? 'self awareness lost, P2P stuck' : (p2pFlapping ? 'P2P flapping' : (remoteDataStale ? 'remote data stale' : 'P2P missing')));
         dbg('⚠️ ' + reason + ' — reconnect #' + (failedReconnects + 1));
         p2pHealthTriggerCount++;
         lastHealthReconnect = now;
+        lastRemoteKeepalive = 0;
         connectionProvider.disconnect();
         setTimeout(() => {
           if (!connectionProvider || !roomName) return;
@@ -611,10 +614,10 @@ yKeepalive.observe((event: any) => {
       const awareUsers = Array.from(connectionProvider.awareness.states.values()).filter((s: any) => s?.user);
       const awCount = awareUsers.length;
       const p2pState = p2pPeerCount;
-      const p2pFlapping = p2pFlapCounter > P2P_FLAP_THRESHOLD;
-      dbg('health verify — aware:', awCount, '| P2P:', p2pState, '| flap counter:', p2pFlapCounter);
+      const recentRemoteData = lastRemoteKeepalive > 0 && Date.now() - lastRemoteKeepalive < 25000;
+      dbg('health verify — aware:', awCount, '| P2P:', p2pState, '| flap counter:', p2pFlapCounter, '| recentRemoteData:', recentRemoteData);
       p2pFlapCounter = 0;
-      const stillBroken = (awCount > 1 && p2pState === 0) || (awCount <= 1 && p2pState > 0) || (awCount === 0 && p2pState > 0) || p2pFlapping;
+      const stillBroken = p2pState === 0 || (awCount <= 1 && !recentRemoteData);
       if (stillBroken) {
         failedReconnects++;
         dbg('❌ verify FAIL #' + failedReconnects);
@@ -623,6 +626,7 @@ yKeepalive.observe((event: any) => {
           destroyAndRecreateProvider();
         } else {
           lastHealthReconnect = Date.now();
+          lastRemoteKeepalive = 0;
           connectionProvider.disconnect();
           setTimeout(() => {
             if (!connectionProvider || !roomName) return;
@@ -684,6 +688,7 @@ yKeepalive.observe((event: any) => {
       dbg('provider recreated, room:', full);
       refreshConnectedUsers();
       failedReconnects = 0;
+      lastRemoteKeepalive = 0;
       lastHealthReconnect = Date.now();
     }
 
