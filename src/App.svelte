@@ -372,6 +372,7 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
   let connectedUsers: { name: string; color: string }[] = [];
   let newRoomPassword = '';
   let p2pHealthInterval: ReturnType<typeof setInterval> | null = null;
+  let p2pPeerCount = 0;
   $: isSynced = connectedUsers.length > 1;
   $: if (isSynced) { showOperaWarning = false; if (operaWarningTimer) { clearTimeout(operaWarningTimer); operaWarningTimer = null; } }
 
@@ -412,27 +413,24 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
             { urls: 'stun:stun.l.google.com:19302' },
             { urls: 'stun:stun1.l.google.com:19302' },
           ]
-        },
-        keepalive: 10000,
+        }
       }
     };
     connectionProvider = new WebrtcProvider(full, ydoc, rtcOpts);
     connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anonymous', color: pingColor });
     connectionProvider.awareness.on('change', refreshConnectedUsers);
-    connectionProvider.on('peers', () => { refreshConnectedUsers(); });
+    connectionProvider.on('peers', (ev: any) => { refreshConnectedUsers(); p2pPeerCount = ev.webrtcPeers?.length ?? 0; });
     refreshConnectedUsers();
 
-    // Periodic health check: if awareness shows other users but P2P is gone, reconnect
+    // Periodic health check: if P2P dropped but awareness shows other peers, force reconnect
     p2pHealthInterval = setInterval(() => {
       if (!connectionProvider) { if (p2pHealthInterval) clearInterval(p2pHealthInterval); return; }
-      const p2pCount = (connectionProvider as any).webrtcPeers?.size ?? 0;
       const awareUsers = Array.from(connectionProvider.awareness.states.values()).filter((s: any) => s?.user);
-      if (awareUsers.length > 1 && p2pCount === 0) {
-        console.log('[coop] P2P missing, reconnecting signaling…');
+      if (awareUsers.length > 1 && p2pPeerCount === 0) {
         connectionProvider.disconnect();
         setTimeout(() => connectionProvider?.connect(), 500);
       }
-    }, 20000);
+    }, 15000);
 
     if (isOpera) {
       if (operaWarningTimer) clearTimeout(operaWarningTimer);
@@ -472,6 +470,7 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
   function leaveCoopRoom() {
     if (window.confirm('Are you sure you want to disconnect? Your progress will be preserved as it is now.')) {
       if (p2pHealthInterval) { clearInterval(p2pHealthInterval); p2pHealthInterval = null; }
+      p2pPeerCount = 0;
       autoSaveRoomSlot();
       connectionProvider?.disconnect();
       connectionProvider = null;
