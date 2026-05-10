@@ -255,8 +255,8 @@ yKeepalive.observe((event: any) => {
   const updateUndoRedo = () => { canUndo = undoManager.canUndo(); canRedo = undoManager.canRedo(); };
   undoManager.on('stack-item-added', updateUndoRedo);
   undoManager.on('stack-item-popped', updateUndoRedo);
-  function undo() { undoManager.undo(); }
-  function redo() { undoManager.redo(); }
+  function undo() { if (isWatchMode) return; undoManager.undo(); }
+  function redo() { if (isWatchMode) return; undoManager.redo(); }
   let filterInputEl: HTMLInputElement | undefined;
   let spoilerSearchEl: HTMLInputElement | undefined;
   let spoilerSearchDetailsEl: HTMLDetailsElement | undefined;
@@ -422,6 +422,7 @@ yKeepalive.observe((event: any) => {
   // ==========================================
   let roomName: string | null = null;      // full edit code (includes password)
   let roomBaseCode: string | null = null;  // public base code (for watch URL)
+  let roomHasPassword = false;
   let connectionProvider: WebrtcProvider | null = null;
   let watchRelayProvider: WebrtcProvider | null = null;
   let connectedUsers: { name: string; color: string }[] = [];
@@ -497,6 +498,7 @@ yKeepalive.observe((event: any) => {
       : full.lastIndexOf('-');
     roomBaseCode = dashIdx !== -1 ? full.slice(0, dashIdx) : full;
     const hasPassword = dashIdx !== -1;
+    roomHasPassword = hasPassword;
 
     const rtcOpts = {
       signaling: ['wss://ootmmr-checklist.mobby45.deno.net'],
@@ -717,6 +719,7 @@ yKeepalive.observe((event: any) => {
       watchRelayProvider = null;
       roomName = null;
       roomBaseCode = null;
+      roomHasPassword = false;
       window.location.hash = '';
       connectedUsers = [];
       if (operaWarningTimer) { clearTimeout(operaWarningTimer); operaWarningTimer = null; }
@@ -1028,6 +1031,7 @@ yKeepalive.observe((event: any) => {
   }
 
   function confirmShopEdit() {
+    if (isWatchMode) return;
     if (shopEditItem.trim()) yShopItems.set(shopEditKey, shopEditItem.trim());
     else yShopItems.delete(shopEditKey);
     if (shopEditAllowPrice) {
@@ -2278,10 +2282,12 @@ yKeepalive.observe((event: any) => {
 
 
   function toggleYmap(map: Y.Map<boolean>, key: string) {
+    if (isWatchMode) return;
     map.set(key, !(map.get(key) ?? false));
   }
 
   function cycleVariant(groupName: string, maxVariant: number) {
+    if (isWatchMode) return;
     yVariantSettings.set(groupName, ((yVariantSettings.get(groupName) ?? 0) + 1) % (maxVariant + 1));
   }
 
@@ -2674,14 +2680,14 @@ yKeepalive.observe((event: any) => {
           <button class="undo-btn" on:click|stopPropagation={redo} disabled={!canRedo} title="Redo (Ctrl+Y)">↪ Redo</button>
           <span class="summary-sep"></span>
           <span class="game-filter-label">Overworld</span>
-          <button class="game-filter-btn" class:active={($sSettings.get('OOTMM') ?? 'both') === 'both'} on:click|stopPropagation={() => ySettings.set('OOTMM', 'both')}>Both</button>
-          <button class="game-filter-btn" class:active={($sSettings.get('OOTMM') ?? 'both') === 'oot'} on:click|stopPropagation={() => ySettings.set('OOTMM', 'oot')}>OoT</button>
-          <button class="game-filter-btn" class:active={($sSettings.get('OOTMM') ?? 'both') === 'mm'} on:click|stopPropagation={() => ySettings.set('OOTMM', 'mm')}>MM</button>
+          <button class="game-filter-btn" class:active={($sSettings.get('OOTMM') ?? 'both') === 'both'} on:click|stopPropagation={() => { if (isWatchMode) return; ySettings.set('OOTMM', 'both'); }}>Both</button>
+          <button class="game-filter-btn" class:active={($sSettings.get('OOTMM') ?? 'both') === 'oot'} on:click|stopPropagation={() => { if (isWatchMode) return; ySettings.set('OOTMM', 'oot'); }}>OoT</button>
+          <button class="game-filter-btn" class:active={($sSettings.get('OOTMM') ?? 'both') === 'mm'} on:click|stopPropagation={() => { if (isWatchMode) return; ySettings.set('OOTMM', 'mm'); }}>MM</button>
           <span class="summary-sep"></span>
           <span class="game-filter-label">Dungeons</span>
-          <button class="game-filter-btn" class:active={($sSettings.get('OOTMMDungeons') ?? 'both') === 'both'} on:click|stopPropagation={() => ySettings.set('OOTMMDungeons', 'both')}>Both</button>
-          <button class="game-filter-btn" class:active={($sSettings.get('OOTMMDungeons') ?? 'both') === 'ootdungeons'} on:click|stopPropagation={() => ySettings.set('OOTMMDungeons', 'ootdungeons')}>OoT</button>
-          <button class="game-filter-btn" class:active={($sSettings.get('OOTMMDungeons') ?? 'both') === 'mmdungeons'} on:click|stopPropagation={() => ySettings.set('OOTMMDungeons', 'mmdungeons')}>MM</button>
+          <button class="game-filter-btn" class:active={($sSettings.get('OOTMMDungeons') ?? 'both') === 'both'} on:click|stopPropagation={() => { if (isWatchMode) return; ySettings.set('OOTMMDungeons', 'both'); }}>Both</button>
+          <button class="game-filter-btn" class:active={($sSettings.get('OOTMMDungeons') ?? 'both') === 'ootdungeons'} on:click|stopPropagation={() => { if (isWatchMode) return; ySettings.set('OOTMMDungeons', 'ootdungeons'); }}>OoT</button>
+          <button class="game-filter-btn" class:active={($sSettings.get('OOTMMDungeons') ?? 'both') === 'mmdungeons'} on:click|stopPropagation={() => { if (isWatchMode) return; ySettings.set('OOTMMDungeons', 'mmdungeons'); }}>MM</button>
         </summary>
         <div id="general-container" class="flex flex-wrap" style="margin-top: 0.8em">
           <form class="pure-form pure-form-stacked">
@@ -2693,8 +2699,9 @@ yKeepalive.observe((event: any) => {
                 Show OOT/MM Overworld
                 <select
                   value={$sSettings.get('OOTMM') ?? 'both'}
-                  on:change={e => ySettings.set('OOTMM', e.target.value)}
+                  on:change={e => { if (isWatchMode) return; ySettings.set('OOTMM', e.target.value); }}
                   class="dropdown-select"
+                  disabled={isWatchMode}
                 >
                   <option value="both">Both</option>
                   <option value="oot">OoT</option>
@@ -2706,8 +2713,9 @@ yKeepalive.observe((event: any) => {
                 Show OOT/MM Dungeons
                 <select
                   value={$sSettings.get('OOTMMDungeons') ?? 'both'}
-                  on:change={e => ySettings.set('OOTMMDungeons', e.currentTarget.value)}
+                  on:change={e => { if (isWatchMode) return; ySettings.set('OOTMMDungeons', e.currentTarget.value); }}
                   class="dropdown-select"
+                  disabled={isWatchMode}
                 >
                   <option value="both">Both</option>
                   <option value="ootdungeons">OoT</option>
@@ -2722,7 +2730,8 @@ yKeepalive.observe((event: any) => {
                   <input
                     type="checkbox"
                     checked={$sSettings.get('showUnshuffledGS') ?? false}
-                    on:change={() => ySettings.set('showUnshuffledGS', !($sSettings.get('showUnshuffledGS') ?? false))}
+                    disabled={isWatchMode}
+                    on:change={() => { if (isWatchMode) return; ySettings.set('showUnshuffledGS', !($sSettings.get('showUnshuffledGS') ?? false)); }}
                   />
                   Show Unshuffled Gold Skulltulas
                 </label>
@@ -2730,7 +2739,8 @@ yKeepalive.observe((event: any) => {
                   <input
                     type="checkbox"
                     checked={$sSettings.get('showUnshuffledDungeonSF') ?? false}
-                    on:change={() => ySettings.set('showUnshuffledDungeonSF', !($sSettings.get('showUnshuffledDungeonSF') ?? false))}
+                    disabled={isWatchMode}
+                    on:change={() => { if (isWatchMode) return; ySettings.set('showUnshuffledDungeonSF', !($sSettings.get('showUnshuffledDungeonSF') ?? false)); }}
                   />
                   Show Unshuffled Dungeon Stray Fairies (Chest)
                 </label>
@@ -2738,7 +2748,8 @@ yKeepalive.observe((event: any) => {
                   <input
                     type="checkbox"
                     checked={$sSettings.get('showUnshuffledFreeSF') ?? false}
-                    on:change={() => ySettings.set('showUnshuffledFreeSF', !($sSettings.get('showUnshuffledFreeSF') ?? false))}
+                    disabled={isWatchMode}
+                    on:change={() => { if (isWatchMode) return; ySettings.set('showUnshuffledFreeSF', !($sSettings.get('showUnshuffledFreeSF') ?? false)); }}
                   />
                   Show Unshuffled Dungeon Freestanding Fairies
                 </label>
@@ -2746,7 +2757,8 @@ yKeepalive.observe((event: any) => {
                   <input
                     type="checkbox"
                     checked={$sSettings.get('showUnshuffledTownSF') ?? false}
-                    on:change={() => ySettings.set('showUnshuffledTownSF', !($sSettings.get('showUnshuffledTownSF') ?? false))}
+                    disabled={isWatchMode}
+                    on:change={() => { if (isWatchMode) return; ySettings.set('showUnshuffledTownSF', !($sSettings.get('showUnshuffledTownSF') ?? false)); }}
                   />
                   Show Unshuffled Town Stray Fairy
                 </label>
@@ -2918,6 +2930,7 @@ yKeepalive.observe((event: any) => {
                     autocomplete="new-password"
                   />
                 </div>
+                <div style="font-size:0.78em; opacity:0.65; margin-bottom:0.4em;">Set a password to enable the <strong>Watch Link</strong> feature</div>
                 <button type="submit" class="bg-primary fullwidth pure-button">Create new co-op room</button>
               </form>
             {:else}
@@ -2929,12 +2942,14 @@ yKeepalive.observe((event: any) => {
                     title="Share with co-op editors (includes password)"
                     >Copy Room Link</button
                   >
+                  {#if roomHasPassword}
                   <button
                     class="pure-button"
                     on:click|preventDefault={() => window.navigator.clipboard.writeText(`${location.origin}${location.pathname}?watch=${roomBaseCode}`)}
                     title="Share a read-only view — viewers cannot edit even if they modify the URL"
                     >👁 Watch Link</button
                   >
+                  {/if}
                   <button class="bg-primary pure-button" on:click={leaveCoopRoom}>Disconnect</button>
                 </fieldset>
               </form>
@@ -2978,15 +2993,17 @@ yKeepalive.observe((event: any) => {
                 >
                   {sortMode === 'alpha' ? '↩️ Default' : '🔤 A-Z'}
                 </button>
-                <button class="bg-primary pure-button" on:click|preventDefault={exportData}>Export Save</button>
-                <button class="bg-primary pure-button" on:click|preventDefault={importData}>Import Save</button>
-                <button class="bg-primary pure-button" on:click|preventDefault={importSpoilerLog}>Import Spoiler</button>
+                {#if !isWatchMode}
+                  <button class="bg-primary pure-button" on:click|preventDefault={exportData}>Export Save</button>
+                  <button class="bg-primary pure-button" on:click|preventDefault={importData}>Import Save</button>
+                  <button class="bg-primary pure-button" on:click|preventDefault={importSpoilerLog}>Import Spoiler</button>
+                  <button class="pure-button" on:click|preventDefault={() => { randoImportOpen = !randoImportOpen; randoImportError = ''; randoImportOk = false; }}>🎲 Import Hash</button>
+                  <button class="bg-danger pure-button" on:click|preventDefault={reset}>Clear Checks</button>
+                  <button class="bg-danger pure-button" on:click|preventDefault={resetSettings}>Reset Settings</button>
+                {/if}
                 {#if spoilerSyncedFromPeer}<span class="spoiler-sync-notice">📥 Spoiler received from co-op partner</span>{/if}
-                <button class="pure-button" on:click|preventDefault={() => { randoImportOpen = !randoImportOpen; randoImportError = ''; randoImportOk = false; }}>🎲 Import Hash</button>
-                <button class="bg-danger pure-button" on:click|preventDefault={reset}>Clear Checks</button>
-                <button class="bg-danger pure-button" on:click|preventDefault={resetSettings}>Reset Settings</button>
               </div>
-              {#if randoImportOpen}
+              {#if !isWatchMode && randoImportOpen}
                 <div class="rando-import-panel">
                   <p style="font-size:0.78em; opacity:0.7; margin:0 0 0.4em">Paste the randomizer settings string (v2.x):</p>
                   <textarea
@@ -3064,7 +3081,9 @@ yKeepalive.observe((event: any) => {
       <!-- Item Tracker -->
       <details style="margin-top: 0.8em" id="item-tracker-details" bind:open={secItem} on:toggle={() => localStorage.setItem('sec_item', String(secItem))}>
         <summary><strong class="interactable">Item Tracker</strong></summary>
-        <ItemTracker {yItems} {ySettings} {roomName} />
+        {#if !isWatchMode}
+          <ItemTracker {yItems} {ySettings} {roomName} />
+        {/if}
       </details>
 
       <!-- Hint Tracker -->
@@ -3100,78 +3119,82 @@ yKeepalive.observe((event: any) => {
               >Other Settings</button
             >
           </div>
-          <form class="pure-form pure-form-stacked">
-            <fieldset>
-              {#if activeTab === 'oot'}
-                <div class="dropdown-grid">
-                  {#each ootOptions as option}
-                    {#if option.type === 'dropdown'}
-                      <label>
-                        {option.label}
-                        <select
-                          value={$sSettings.get(option.id) ?? option.default}
-                          on:change={e => ySettings.set(option.id, e.target.value)}
-                          class="dropdown-select"
-                        >
-                          {#each option.options ?? [] as opt}<option value={opt.value}>{opt.label}</option>{/each}
-                        </select>
-                      </label>
-                    {:else if option.type === 'checkbox'}
-                      <label class="checkbox-option">
-                        <input
-                          type="checkbox"
-                          checked={$sSettings.get(option.id) ?? false}
-                          on:change|preventDefault={() => toggleYmap(ySettings, option.id)}
-                        />
-                        {option.label}
-                      </label>
-                    {/if}
-                  {/each}
-                </div>
-              {:else if activeTab === 'mm'}
-                <div class="dropdown-grid">
-                  {#each mmOptions as option}
-                    {#if option.type === 'dropdown'}
-                      <label>
-                        {option.label}
-                        <select
-                          value={$sSettings.get(option.id) ?? option.default}
-                          on:change={e => ySettings.set(option.id, e.target.value)}
-                          class="dropdown-select"
-                        >
-                          {#each option.options ?? [] as opt}<option value={opt.value}>{opt.label}</option>{/each}
-                        </select>
-                      </label>
-                    {:else if option.type === 'checkbox'}
-                      <label class="checkbox-option">
-                        <input
-                          type="checkbox"
-                          checked={$sSettings.get(option.id) ?? false}
-                          on:change|preventDefault={() => toggleYmap(ySettings, option.id)}
-                        />
-                        {option.label}
-                      </label>
-                    {/if}
-                  {/each}
-                </div>
-              {:else if activeTab === 'other'}
-                <div class="dropdown-grid">
-                  {#each otherOptions as option}
-                    {#if option.type === 'checkbox'}
-                      <label class="checkbox-option">
-                        <input
-                          type="checkbox"
-                          checked={$sSettings.get(option.id) ?? false}
-                          on:change|preventDefault={() => toggleYmap(ySettings, option.id)}
-                        />
-                        {option.label}
-                      </label>
-                    {/if}
-                  {/each}
-                </div>
-              {/if}
-            </fieldset>
-          </form>
+          {#if !isWatchMode}
+            <form class="pure-form pure-form-stacked">
+              <fieldset>
+                {#if activeTab === 'oot'}
+                  <div class="dropdown-grid">
+                    {#each ootOptions as option}
+                      {#if option.type === 'dropdown'}
+                        <label>
+                          {option.label}
+                          <select
+                            value={$sSettings.get(option.id) ?? option.default}
+                            on:change={e => ySettings.set(option.id, e.target.value)}
+                            class="dropdown-select"
+                          >
+                            {#each option.options ?? [] as opt}<option value={opt.value}>{opt.label}</option>{/each}
+                          </select>
+                        </label>
+                      {:else if option.type === 'checkbox'}
+                        <label class="checkbox-option">
+                          <input
+                            type="checkbox"
+                            checked={$sSettings.get(option.id) ?? false}
+                            on:change|preventDefault={() => toggleYmap(ySettings, option.id)}
+                          />
+                          {option.label}
+                        </label>
+                      {/if}
+                    {/each}
+                  </div>
+                {:else if activeTab === 'mm'}
+                  <div class="dropdown-grid">
+                    {#each mmOptions as option}
+                      {#if option.type === 'dropdown'}
+                        <label>
+                          {option.label}
+                          <select
+                            value={$sSettings.get(option.id) ?? option.default}
+                            on:change={e => ySettings.set(option.id, e.target.value)}
+                            class="dropdown-select"
+                          >
+                            {#each option.options ?? [] as opt}<option value={opt.value}>{opt.label}</option>{/each}
+                          </select>
+                        </label>
+                      {:else if option.type === 'checkbox'}
+                        <label class="checkbox-option">
+                          <input
+                            type="checkbox"
+                            checked={$sSettings.get(option.id) ?? false}
+                            on:change|preventDefault={() => toggleYmap(ySettings, option.id)}
+                          />
+                          {option.label}
+                        </label>
+                      {/if}
+                    {/each}
+                  </div>
+                {:else if activeTab === 'other'}
+                  <div class="dropdown-grid">
+                    {#each otherOptions as option}
+                      {#if option.type === 'checkbox'}
+                        <label class="checkbox-option">
+                          <input
+                            type="checkbox"
+                            checked={$sSettings.get(option.id) ?? false}
+                            on:change|preventDefault={() => toggleYmap(ySettings, option.id)}
+                          />
+                          {option.label}
+                        </label>
+                      {/if}
+                    {/each}
+                  </div>
+                {/if}
+              </fieldset>
+            </form>
+          {:else}
+            <p class="readonly-notice">Settings are read-only in watch mode</p>
+          {/if}
         </div>
       </details>
     </section>
@@ -3205,7 +3228,7 @@ yKeepalive.observe((event: any) => {
               class="pure-button"
               type="button"
               class:pure-button-active={showTypeColors}
-              on:click={() => ySettings.set('showTypeColors', !showTypeColors)}
+              on:click={() => { if (isWatchMode) return; ySettings.set('showTypeColors', !showTypeColors); }}
               title="Toggle type colors on checks"
             >Colors</button>
             <span class="check-stat">{visibleGroupCount} zones · {visibleCheckCount} checks</span>
@@ -3834,6 +3857,7 @@ yKeepalive.observe((event: any) => {
   .spoiler-empty     { font-size: 0.85em; opacity: 0.5; margin: 0.3em 0 0; }
   .spoiler-no-log    { font-size: 0.85em; opacity: 0.6; margin: 0.2em 0 0; font-style: italic; }
   .spoiler-warn      { font-size: 0.8em; color: #e0a030; margin: 0.2em 0 0.4em; }
+  .readonly-notice   { font-size: 0.85em; opacity: 0.6; margin: 0.5em 0; font-style: italic; text-align: center; }
 
   .spoiler-panel { border: none; padding: 0; }
   .spoiler-panel-summary {
