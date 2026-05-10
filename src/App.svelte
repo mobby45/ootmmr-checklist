@@ -64,6 +64,9 @@
 const yMessages: Y.Array<any> = ydoc.getArray('messages');
   const yPings: Y.Map<any> = ydoc.getMap('pings');
 const yKeepalive: Y.Map<number> = ydoc.getMap('keepalive');
+yKeepalive.observe((event: any) => {
+  if (!event.transaction?.local) dbg('keepalive received from remote');
+});
 
   // ==========================================
   // PSEUDO (co-op attribution)
@@ -375,6 +378,11 @@ const yKeepalive: Y.Map<number> = ydoc.getMap('keepalive');
   let p2pHealthInterval: ReturnType<typeof setInterval> | null = null;
   let dcKeepaliveInterval: ReturnType<typeof setInterval> | null = null;
   let p2pPeerCount = 0;
+  let dcKeepaliveTick = 0;
+  let prevP2pPeerCount = 0;
+  let p2pHealthTriggerCount = 0;
+  const DEBUG = true;
+  function dbg(...args: any[]) { if (DEBUG) console.log('[coop]', ...args); }
   $: isSynced = connectedUsers.length > 1;
   $: if (isSynced) { showOperaWarning = false; if (operaWarningTimer) { clearTimeout(operaWarningTimer); operaWarningTimer = null; } }
 
@@ -383,11 +391,14 @@ const yKeepalive: Y.Map<number> = ydoc.getMap('keepalive');
 
   function refreshConnectedUsers() {
     if (!connectionProvider) { connectedUsers = []; return; }
+    const prev = connectedUsers.map(u => u.name).join(',');
     const seen = new Set<string>();
     connectedUsers = Array.from(connectionProvider.awareness.states.values())
       .filter((s: any) => s?.user)
       .map((s: any) => ({ name: s.user.name as string, color: s.user.color as string }))
       .filter(u => seen.has(u.name) ? false : (seen.add(u.name), true));
+    const cur = connectedUsers.map(u => u.name).join(',');
+    if (prev !== cur) dbg('users:', prev, '->', cur);
   }
 
   // fullCode may be "basecode" or "basecode-password"
@@ -421,21 +432,45 @@ const yKeepalive: Y.Map<number> = ydoc.getMap('keepalive');
     connectionProvider = new WebrtcProvider(full, ydoc, rtcOpts);
     connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anonymous', color: pingColor });
     connectionProvider.awareness.on('change', refreshConnectedUsers);
-    connectionProvider.on('peers', (ev: any) => { refreshConnectedUsers(); p2pPeerCount = ev.webrtcPeers?.length ?? 0; });
+    connectionProvider.awareness.on('update', ({ added, updated, removed }: any, origin: any) => {
+      if (added.length || updated.length || removed.length) {
+        dbg('awareness update — added:', added, '| updated:', updated, '| removed:', removed, '| origin:', origin);
+      }
+    });
+    connectionProvider.on('peers', (ev: any) => {
+      const newCount = ev.webrtcPeers?.length ?? 0;
+      if (newCount !== p2pPeerCount) dbg('P2P peers:', p2pPeerCount, '->', newCount, '| webrtcPeers:', ev.webrtcPeers);
+      prevP2pPeerCount = p2pPeerCount;
+      p2pPeerCount = newCount;
+      refreshConnectedUsers();
+    });
+    connectionProvider.on('status', (ev: any) => dbg('status event — connected:', ev.connected));
+    connectionProvider.on('synced', (ev: any) => dbg('synced event — synced:', ev.synced));
+    dbg('provider created, room:', full, '| pseudo:', pseudo, '| color:', pingColor);
     refreshConnectedUsers();
 
     // Periodic health check: if P2P dropped but awareness shows other peers, force reconnect
     p2pHealthInterval = setInterval(() => {
       if (!connectionProvider) { if (p2pHealthInterval) clearInterval(p2pHealthInterval); return; }
       const awareUsers = Array.from(connectionProvider.awareness.states.values()).filter((s: any) => s?.user);
-      if (awareUsers.length > 1 && p2pPeerCount === 0) {
+      const awCount = awareUsers.length;
+      const p2pState = p2pPeerCount;
+      dbg('health check — aware users:', awCount, '| P2P count:', p2pState, '| prev:', prevP2pPeerCount);
+      if (awCount > 1 && p2pState === 0) {
+        dbg('⚠️ P2P missing! Disconnecting and reconnecting in 500ms…');
+        p2pHealthTriggerCount++;
         connectionProvider.disconnect();
-        setTimeout(() => connectionProvider?.connect(), 500);
+        setTimeout(() => {
+          dbg('reconnecting…');
+          connectionProvider?.connect();
+        }, 500);
       }
     }, 15000);
 
     // Keep the WebRTC data channel alive by sending small Yjs updates every 10s
     dcKeepaliveInterval = setInterval(() => {
+      dcKeepaliveTick++;
+      if (dcKeepaliveTick % 3 === 0) dbg('keepalive tick #' + dcKeepaliveTick, '| P2P:', p2pPeerCount, '| users:', connectedUsers.length);
       yKeepalive.set('t', Date.now());
     }, 10000);
 
@@ -454,6 +489,8 @@ const yKeepalive: Y.Map<number> = ydoc.getMap('keepalive');
   }
 
   $: if (connectionProvider) {
+    pseudo; pingColor; // ensure Svelte reactivity tracks these
+    dbg('updating awareness user — pseudo:', pseudo, '| color:', pingColor);
     connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anonymous', color: pingColor });
   }
 
@@ -476,6 +513,7 @@ const yKeepalive: Y.Map<number> = ydoc.getMap('keepalive');
 
   function leaveCoopRoom() {
     if (window.confirm('Are you sure you want to disconnect? Your progress will be preserved as it is now.')) {
+      dbg('leaving coop room — disconnecting providers…');
       if (p2pHealthInterval) { clearInterval(p2pHealthInterval); p2pHealthInterval = null; }
       if (dcKeepaliveInterval) { clearInterval(dcKeepaliveInterval); dcKeepaliveInterval = null; }
       p2pPeerCount = 0;
@@ -489,6 +527,7 @@ const yKeepalive: Y.Map<number> = ydoc.getMap('keepalive');
       connectedUsers = [];
       if (operaWarningTimer) { clearTimeout(operaWarningTimer); operaWarningTimer = null; }
       showOperaWarning = false;
+      dbg('coop room left');
     }
   }
 
