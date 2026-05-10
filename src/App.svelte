@@ -399,9 +399,11 @@ yKeepalive.observe((event: any) => {
       spoilerSyncedFromPeer = true;
       setTimeout(() => { spoilerSyncedFromPeer = false; }, 4000);
     }
-    const relocated = ySpoiler.get('relocatedTo');
-    if (relocated !== undefined) {
-      relocationCode = relocated;
+    if (!isWatchMode) {
+      const relocated = ySpoiler.get('relocatedTo');
+      if (relocated !== undefined) {
+        relocationCode = relocated;
+      }
     }
   });
 
