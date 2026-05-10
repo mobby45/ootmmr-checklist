@@ -21,11 +21,11 @@
       const pc = this._pc;
       pc.ondatachannel = (evt: RTCDataChannelEvent) => {
         const ch = evt.channel;
+        console.log('📥 RAW ondatachannel — label:', ch.label, '| id:', ch.id, '| state:', ch.readyState);
         ch.binaryType = 'arraybuffer';
         ch.onmessage = (msgEvt: MessageEvent) => {
-          if (!this.destroyed) {
-            this.push(new Uint8Array(msgEvt.data as ArrayBuffer));
-          }
+          console.log('📥 RAW remote channel message — len:', (msgEvt.data as ArrayBuffer).byteLength);
+          this._onChannelMessage(msgEvt);
         };
       };
     }

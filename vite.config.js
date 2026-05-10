@@ -3,6 +3,9 @@ import { svelte } from '@sveltejs/vite-plugin-svelte';
 
 // https://vitejs.dev/config/
 export default defineConfig({
+    define: {
+        global: 'globalThis',
+    },
     plugins: [
         svelte({
           onwarn: (warning, handler) => {
