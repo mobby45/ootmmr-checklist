@@ -7,6 +7,38 @@
   import { writable } from 'svelte/store';
   import { WebrtcProvider } from 'y-webrtc';
   import { IndexeddbPersistence } from 'y-indexeddb';
+  import Peer from 'simple-peer';
+
+  // Patch RTCPeerConnection to always set ondatachannel before setRemoteDescription.
+  // Without this, when both peers act as initiators (y-webrtc glare), neither
+  // listens for the remote data channel — data flows only unidirectionally.
+  const origSetRemoteDescription = RTCPeerConnection.prototype.setRemoteDescription;
+  RTCPeerConnection.prototype.setRemoteDescription = function (this: RTCPeerConnection, ...args: any[]) {
+    if (!this.__ocOndcPatched) {
+      this.__ocOndcPatched = true;
+      this.ondatachannel = (evt: RTCDataChannelEvent) => {
+        const ch = evt.channel;
+        ch.binaryType = 'arraybuffer';
+        ch.onmessage = (msgEvt: MessageEvent) => {
+          // Find the SimplePeer instance that owns this PC and forward the message
+          if ((this as any).__ocPeer && !(this as any).__ocPeer.destroyed) {
+            (this as any).__ocPeer._onChannelMessage(msgEvt);
+          }
+        };
+      };
+    }
+    return origSetRemoteDescription.apply(this, args);
+  };
+  // Also set __ocPeer when SimplePeer stores _pc
+  const origPeerPCSet = Object.getOwnPropertyDescriptor(Peer.prototype, '_pc')?.set;
+  if (!origPeerPCSet) {
+    // SimplePeer sets this._pc directly (no setter), so we patch _setupData
+    const origSetupData = (Peer.prototype as any)._setupData;
+    (Peer.prototype as any)._setupData = function (this: any, event: any) {
+      origSetupData.call(this, event);
+      if (this._pc) this._pc.__ocPeer = this;
+    };
+  }
 
   import { initializeStructuredChecks } from './util/util';
   import { parseSpoilerLog } from './util/spoilerParser';
@@ -422,7 +454,6 @@ yKeepalive.observe((event: any) => {
     const rtcOpts = {
       signaling: ['wss://ootmmr-checklist.mobby45.deno.net'],
       peerOpts: {
-        channelConfig: { negotiated: true, id: 0 },
         config: {
           iceServers: [
             { urls: 'stun:stun.l.google.com:19302' },
