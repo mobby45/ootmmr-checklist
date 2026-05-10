@@ -395,6 +395,10 @@ yKeepalive.observe((event: any) => {
       spoilerSyncedFromPeer = true;
       setTimeout(() => { spoilerSyncedFromPeer = false; }, 4000);
     }
+    const relocated = ySpoiler.get('relocatedTo');
+    if (relocated !== undefined) {
+      relocationCode = relocated;
+    }
   });
 
   // Backward compat observer for old clients that write to ySpoilerLocations directly
@@ -426,6 +430,7 @@ yKeepalive.observe((event: any) => {
   let connectionProvider: WebrtcProvider | null = null;
   let watchRelayProvider: WebrtcProvider | null = null;
   let connectedUsers: { name: string; color: string }[] = [];
+  let relocationCode: string | null = null;
   let newRoomPassword = '';
   let p2pHealthInterval: ReturnType<typeof setInterval> | null = null;
   let dcKeepaliveInterval: ReturnType<typeof setInterval> | null = null;
@@ -751,19 +756,27 @@ yKeepalive.observe((event: any) => {
     if (!pw || !pw.trim()) return;
     const newBase = crypto.randomUUID();
     const newFull = `${newBase}-${pw.trim()}`;
-    // Disconnect from current room (no confirm — user explicitly clicked Set Password)
-    autoSaveRoomSlot();
-    connectionProvider.disconnect();
-    connectionProvider = null;
-    watchRelayProvider?.disconnect();
-    watchRelayProvider = null;
-    roomName = null;
-    roomBaseCode = null;
-    roomHasPassword = false;
-    connectedUsers = [];
-    // Join new room with password
-    joinCoopRoom(newBase, pw.trim());
-    dbg('room recreated with password — new base:', newBase);
+    // Announce the new room to connected peers before leaving
+    ydoc.transact(() => {
+      ySpoiler.set('relocatedTo', newFull);
+    });
+    // Give Yjs time to propagate the relocation to peers over WebRTC
+    setTimeout(() => {
+      autoSaveRoomSlot();
+      connectionProvider?.disconnect();
+      connectionProvider = null;
+      watchRelayProvider?.disconnect();
+      watchRelayProvider = null;
+      roomName = null;
+      roomBaseCode = null;
+      roomHasPassword = false;
+      connectedUsers = [];
+      // Clean up relocated key so it doesn't persist into the new room
+      ySpoiler.delete('relocatedTo');
+      // Join new room with password
+      joinCoopRoom(newBase, pw.trim());
+      dbg('room recreated with password — new base:', newBase);
+    }, 1000);
   }
 
   // Auto-save room slot on page close/refresh while connected
@@ -2715,6 +2728,13 @@ yKeepalive.observe((event: any) => {
   {#if isWatchMode}
     <div class="watch-banner">👁 Watch mode — read only</div>
   {/if}
+  {#if relocationCode}
+    <div class="relocation-banner">
+      🔒 Room password changed by host
+      <button class="pure-button" on:click={() => { joinCoopRoom(relocationCode); relocationCode = null; }}>Join new room</button>
+      <button class="pure-button" on:click={() => relocationCode = null}>Dismiss</button>
+    </div>
+  {/if}
   <main class:modal-active={showMapModal}>
     <!-- ===== TOP BAR ===== -->
     <section class="top-bar">
@@ -3597,6 +3617,24 @@ yKeepalive.observe((event: any) => {
     font-size: 0.9em;
     font-weight: bold;
     letter-spacing: 0.05em;
+  }
+
+  .relocation-banner {
+    background: rgba(255, 180, 50, 0.15);
+    border-bottom: 2px solid #e8a020;
+    color: #e8a020;
+    text-align: center;
+    padding: 0.4em;
+    font-size: 0.9em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6em;
+    flex-wrap: wrap;
+  }
+  .relocation-banner .pure-button {
+    font-size: 0.85em;
+    padding: 0.2em 0.6em;
   }
 
   main {
