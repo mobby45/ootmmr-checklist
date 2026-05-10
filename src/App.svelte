@@ -28,7 +28,6 @@
       (this as any).__ocOndcPatched = true;
       const existingOndc = this.ondatachannel; // SimplePeer's handler for non-initiators
       this.ondatachannel = (evt: RTCDataChannelEvent) => {
-        console.log('📥 ONDATACHANNEL FIRED — label:', evt.channel.label, '| id:', evt.channel.id, '| state:', evt.channel.readyState, '| hasExisting:', !!existingOndc, '| hasPeer:', !!(this as any).__ocPeer);
         // CRITICAL: call SimplePeer's handler FIRST — it calls _setupData which
         // sets _channel and __ocPeer (for non-initiators). BUT _setupData also
         // OVERWRITES ch.onmessage, so we must re-apply our handler AFTER.
@@ -40,7 +39,6 @@
           (ch as any).__ocMsgPatched = true;
           ch.binaryType = 'arraybuffer';
           ch.onmessage = (msgEvt: MessageEvent) => {
-            console.log('📥 REMOTE CHANNEL MESSAGE — len:', (msgEvt.data as ArrayBuffer).byteLength);
             const peer = (this as any).__ocPeer;
             if (peer && !peer.destroyed) peer._onChannelMessage(msgEvt);
           };
@@ -456,61 +454,17 @@ yKeepalive.observe((event: any) => {
 
   function startDcMonitor() {
     if (dcMonInterval) { clearInterval(dcMonInterval); dcMonInterval = null; }
-    let dcMonAttempt = 0;
     dcMonInterval = setInterval(() => {
       try {
-        dcMonAttempt++;
         const room = (connectionProvider as any)?.room;
-        if (!room) { return; }
+        if (!room) return;
         const connCount = room.webrtcConns?.size ?? 0;
-        if (connCount === 0) { return; }
-        for (const [, conn] of room.webrtcConns) {
-          const ch = conn.peer?._channel;
-          const chState = ch?.readyState ?? 'no _channel';
-          if (dcMonAttempt % 5 === 0) {
-            dbg('dcMon #' + dcMonAttempt + ' — conn channel state:', chState, '| buffered:', ch?.bufferedAmount, '| label:', ch?.label, '| id:', ch?.id, '| negotiated:', ch?.negotiated);
-            try {
-              const pc = conn.peer._pc;
-              if (pc) {
-                dbg('ICE — connState:', pc.connectionState, '| iceConnState:', pc.iceConnectionState, '| gathering:', pc.iceGatheringState, '| signaling:', pc.signalingState);
-                pc.getStats().then((stats: RTCStatsReport) => {
-                  stats.forEach((s: any) => {
-                    if (s.type === 'candidate-pair' && s.state === 'succeeded') dbg('ICE pair OK — local:', s.localCandidateId, '| remote:', s.remoteCandidateId, '| nominated:', s.nominated);
-                    if (s.type === 'local-candidate' || s.type === 'remote-candidate') dbg('ICE ' + s.type + ' —', (s.address || s.ip) + ':' + s.port, '| type:', s.candidateType, '| protocol:', s.protocol, '| relay:', s.relayProtocol);
-                  });
-                }).catch((e: any) => dbg('getStats error:', e));
-              }
-            } catch (e) { dbg('ICE check error:', e); }
-          }
-          if (!conn.__dcMon) {
-            conn.__dcMon = true;
-            const rawCh = conn.peer._channel;
-            if (rawCh && !rawCh.__dcMon) {
-              rawCh.__dcMon = true;
-              const origMsg = rawCh.onmessage;
-              rawCh.onmessage = (evt: MessageEvent) => {
-                dbg('📥 RAW channel onmessage — data type:', typeof evt.data, '| size:', (evt.data as any)?.byteLength ?? (evt.data as any)?.size ?? '?');
-                if (origMsg) origMsg.call(rawCh, evt);
-              };
-            }
-            conn.peer.on('data', (data: any) => {
-              const view = new Uint8Array(data);
-              const type = view[0];
-              dbg('📥 data channel recv — type:', type, '| len:', view.length, '| first bytes:', Array.from(view.slice(0, Math.min(8, view.length))));
-            });
-            const origSend = conn.peer.send.bind(conn.peer);
-            conn.peer.send = (data: any) => {
-              const view = new Uint8Array(data);
-              const type = view[0];
-              if (type === 1 || type === 0) {
-                dbg('📤 data channel send — type:', type, '| len:', view.length, '| first bytes:', Array.from(view.slice(0, Math.min(8, view.length))));
-              }
-              return origSend(data);
-            };
-          }
-        }
+        if (connCount === 0) return;
+        const ch = [...room.webrtcConns.values()][0]?.peer?._channel;
+        const chState = ch?.readyState ?? 'no _channel';
+        if (chState !== 'open') dbg('dcMon — channel not open:', chState);
       } catch (e) { /* internals access failed */ }
-    }, 3000);
+    }, 15000);
   }
 
   // fullCode may be "basecode" or "basecode-password"
@@ -549,16 +503,11 @@ yKeepalive.observe((event: any) => {
     connectionProvider = new WebrtcProvider(full, ydoc, rtcOpts);
     connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anonymous', color: pingColor });
     connectionProvider.awareness.on('change', refreshConnectedUsers);
-    connectionProvider.awareness.on('update', ({ added, updated, removed }: any, origin: any) => {
-      if (added.length || updated.length || removed.length) {
-        dbg('awareness update — added:', added, '| updated:', updated, '| removed:', removed, '| origin:', origin);
-      }
-    });
     connectionProvider.on('peers', (ev: any) => {
       const newCount = ev.webrtcPeers?.length ?? 0;
       if (newCount !== p2pPeerCount) {
         p2pFlapCounter++;
-        dbg('P2P peers:', p2pPeerCount, '->', newCount, '| flapping:', p2pFlapCounter, '| webrtcPeers:', ev.webrtcPeers);
+        dbg('P2P peers:', p2pPeerCount, '->', newCount, '| flapping:', p2pFlapCounter);
       }
       prevP2pPeerCount = p2pPeerCount;
       p2pPeerCount = newCount;
@@ -667,16 +616,11 @@ yKeepalive.observe((event: any) => {
       connectionProvider = new WebrtcProvider(full, ydoc, rtcOpts);
       connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anonymous', color: pingColor });
       connectionProvider.awareness.on('change', refreshConnectedUsers);
-      connectionProvider.awareness.on('update', ({ added, updated, removed }: any, origin: any) => {
-        if (added.length || updated.length || removed.length) {
-          dbg('awareness update — added:', added, '| updated:', updated, '| removed:', removed, '| origin:', origin);
-        }
-      });
       connectionProvider.on('peers', (ev: any) => {
         const newCount = ev.webrtcPeers?.length ?? 0;
         if (newCount !== p2pPeerCount) {
           p2pFlapCounter++;
-          dbg('P2P peers:', p2pPeerCount, '->', newCount, '| flapping:', p2pFlapCounter, '| webrtcPeers:', ev.webrtcPeers);
+          dbg('P2P peers:', p2pPeerCount, '->', newCount, '| flapping:', p2pFlapCounter);
         }
         prevP2pPeerCount = p2pPeerCount;
         p2pPeerCount = newCount;
