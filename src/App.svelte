@@ -453,7 +453,8 @@ yKeepalive.observe((event: any) => {
 
   // Store only baseCode in URL hash (never the password). The full code
   // (with password if any) is kept in sessionStorage for auto-rejoin.
-  $: if (!isWatchMode && roomBaseCode) window.location.hash = roomBaseCode;
+  // Note: we intentionally do NOT set hash reactively — the hash is cleaned
+  // after auto-join so the URL stays clean.
 
   function refreshConnectedUsers() {
     if (!connectionProvider) { connectedUsers = []; return; }
@@ -484,6 +485,13 @@ yKeepalive.observe((event: any) => {
 
   // fullCode may be "basecode" or "basecode-password"
   function joinCoopRoom(name?: string, password?: string) {
+    // Disconnect any existing provider before creating a new one
+    if (connectionProvider) {
+      connectionProvider.disconnect();
+      connectionProvider = null;
+      watchRelayProvider?.disconnect();
+      watchRelayProvider = null;
+    }
     const base = name ?? crypto.randomUUID();
     const full = password ? `${base}-${password}` : base;
     roomName = full;
@@ -771,10 +779,26 @@ yKeepalive.observe((event: any) => {
 
   // Auto-join from URL hash (baseCode only) + sessionStorage (password, if any).
   // Password is never stored in the URL to avoid leaking.
-  if (!isWatchMode && initialHash.length > 0 && /#[a-z0-9-]+/.test(initialHash)) {
+  function joinFromHash(hash: string) {
+    if (!hash || isWatchMode) return;
     const storedPw = sessionStorage.getItem('coopRoomPassword') || undefined;
-    joinCoopRoom(initialHash.slice(1), storedPw);
+    joinCoopRoom(hash, storedPw);
   }
+  if (initialHash.length > 0 && /#[a-z0-9-]+/.test(initialHash)) {
+    joinFromHash(initialHash.slice(1));
+  }
+  // Clean hash so it doesn't linger in the URL after auto-join
+  if (!isWatchMode && window.location.hash) {
+    history.replaceState(null, '', window.location.pathname + window.location.search);
+  }
+  // Handle paste-over in address bar (hash-only change doesn't reload the page)
+  window.addEventListener('hashchange', () => {
+    const h = window.location.hash;
+    if (!isWatchMode && h.length > 0 && /#[a-z0-9-]+/.test(h)) {
+      joinFromHash(h.slice(1));
+      history.replaceState(null, '', window.location.pathname + window.location.search);
+    }
+  });
 
   // ==========================================
   // DISPLAY SETTINGS (synced via Yjs)
