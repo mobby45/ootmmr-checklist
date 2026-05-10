@@ -810,10 +810,11 @@ yKeepalive.observe((event: any) => {
     history.replaceState(null, '', window.location.pathname + window.location.search);
   }
   // Auto-rejoin from sessionStorage when no hash in URL (page refresh without hash)
+  // Delay slightly to let IndexedDB/Yjs persistence initialize
   if (!isWatchMode && !window.location.hash) {
     const storedCode = sessionStorage.getItem('coopRoomCode');
     if (storedCode) {
-      joinCoopRoom(storedCode);
+      setTimeout(() => joinCoopRoom(storedCode), 200);
     }
   }
   // Handle paste-over in address bar (hash-only change doesn't reload the page)
@@ -2973,21 +2974,20 @@ yKeepalive.observe((event: any) => {
           </form>
 
           <div class="flex flex-col">
-            <!-- Pseudo + ping color — only shown when connected to a room -->
-            {#if connectionProvider != null}
-              <form class="pure-form" style="margin-bottom: 0.5em;" on:submit|preventDefault={handlePseudoSubmit}>
-                <fieldset style="display:flex; gap:0.4em; align-items:center; flex-wrap:wrap;">
-                  <input type="text" placeholder="Your pseudo" value={pseudo} maxlength="20" style="width: 120px;" />
-                  <input
-                    type="color"
-                    bind:value={pingColor}
-                    title="Ping color"
-                    style="width:28px; height:28px; padding:2px; cursor:pointer; border:1px solid var(--color-border); border-radius:4px; background:transparent;"
-                  />
-                  <button type="submit" class="bg-primary pure-button">Set</button>
-                </fieldset>
-              </form>
-            {/if}
+            <!-- Pseudo + ping color -->
+            <form class="pure-form" style="margin-bottom: 0.5em;" on:submit|preventDefault={handlePseudoSubmit}>
+              <fieldset style="display:flex; gap:0.4em; align-items:center; flex-wrap:wrap;">
+                <input type="text" placeholder="Your name (optional)" value={pseudo} maxlength="20" style="width: 120px;" />
+                <input
+                  type="color"
+                  bind:value={pingColor}
+                  title="Ping color"
+                  style="width:28px; height:28px; padding:2px; cursor:pointer; border:1px solid var(--color-border); border-radius:4px; background:transparent;"
+                />
+                <button type="submit" class="bg-primary pure-button">Set</button>
+                {#if !pseudo}<span style="font-size:0.78em; opacity:0.65;">Set a name so others can identify you</span>{/if}
+              </fieldset>
+            </form>
 
             <!-- Co-op room controls -->
             {#if connectionProvider == null}
