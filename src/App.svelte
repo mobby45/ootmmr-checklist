@@ -292,6 +292,10 @@ yKeepalive.observe((event: any) => {
   // flush cycle. Without this, $$invalidate called during a reactive block has
   // dirty[0] !== -1, so make_dirty skips re-adding the component to dirty_components.
   let _checksRevPending = false;
+  let _connectedUsersRev = 0;
+  function bumpConnectedUsersRev() {
+    _connectedUsersRev++;
+  }
   yChecks.observe(() => {
     if (!_checksRevPending) {
       _checksRevPending = true;
@@ -462,7 +466,7 @@ yKeepalive.observe((event: any) => {
   // after auto-join so the URL stays clean.
 
   function refreshConnectedUsers() {
-    if (!connectionProvider) { connectedUsers = []; return; }
+    if (!connectionProvider) { connectedUsers = []; bumpConnectedUsersRev(); return; }
     const prev = connectedUsers.map(u => u.name).join(',');
     const seen = new Set<string>();
     connectedUsers = Array.from(connectionProvider.awareness.states.values())
@@ -471,6 +475,7 @@ yKeepalive.observe((event: any) => {
       .filter(u => seen.has(u.name) ? false : (seen.add(u.name), true));
     const cur = connectedUsers.map(u => u.name).join(',');
     if (prev !== cur) dbg('users:', prev, '->', cur);
+    bumpConnectedUsersRev();
   }
 
   function startDcMonitor() {
@@ -3037,9 +3042,10 @@ yKeepalive.observe((event: any) => {
                   <button class="bg-primary pure-button" on:click={leaveCoopRoom}>Disconnect</button>
                 </fieldset>
               </form>
-              <div class="sync-status" class:synced={isSynced}>
+              <div class="sync-status" class:synced={connectedUsers.length > 1}>
                 <span class="sync-dot"></span>
-                <span>{isSynced ? 'Connected' : 'Waiting for peers...'}</span>
+                <span>{connectedUsers.length > 1 ? 'Synced' : (connectedUsers.length >= 1 ? 'Connected' : 'Waiting for peers...')}</span>
+                <span style="display:none">{_connectedUsersRev}</span>
               </div>
               {#if showOperaWarning}
                 <div class="webrtc-warning">
