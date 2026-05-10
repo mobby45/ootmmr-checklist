@@ -7,6 +7,7 @@
   export let yEntrances: YMap<string>;
   export let entranceValues: Map<string, string>;
   export let spoilerErSettings: ErSettings | null = null;
+  export let isWatchMode = false;
 
   let manualErSettings: ErSettings = JSON.parse(
     localStorage.getItem('erSettings') ?? JSON.stringify(defaultErSettings)
@@ -59,10 +60,12 @@
   }
 
   function clearValue(id: string) {
+    if (isWatchMode) return;
     yEntrances.delete(id);
   }
 
   function clearAll() {
+    if (isWatchMode) return;
     if (!confirm('Clear all entrance connections?')) return;
     Array.from(yEntrances.keys()).forEach(k => yEntrances.delete(k));
   }
@@ -99,7 +102,7 @@
           class:from-spoiler={spoilerErSettings !== null && key !== 'erMixed'}
           class:always-manual={key === 'erMixed'}
           disabled={spoilerErSettings !== null && key !== 'erMixed'}
-          on:click={() => (key === 'erMixed' || spoilerErSettings === null) && toggleErSetting(key)}
+          on:click={() => !isWatchMode && (key === 'erMixed' || spoilerErSettings === null) && toggleErSetting(key)}
           title={key === 'erMixed' ? 'Always manual — show both games as destinations' : spoilerErSettings ? 'Set by spoiler log' : 'Click to toggle'}
         >
           {label}
@@ -128,7 +131,7 @@
     </div>
     <div class="er-stats">
       <span>{knownCount}/{totalActive} known</span>
-      <button class="er-clear-btn" on:click={clearAll}>Clear all</button>
+      <button class="er-clear-btn" on:click={clearAll} disabled={isWatchMode}>Clear all</button>
     </div>
   </div>
 
@@ -149,6 +152,7 @@
       options={allEntrances.filter(e => (gameFilter === 'both' || manualErSettings.erMixed || e.game === entrance.game) && (!usedDestinations.has(e.name) || e.name === currentValue))}
       value={currentValue}
       on:change={e => {
+        if (isWatchMode) return;
         if (e.detail.trim() === '') clearValue(entrance.id);
         else yEntrances.set(entrance.id, e.detail);
       }}

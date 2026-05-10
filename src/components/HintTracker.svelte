@@ -56,6 +56,7 @@
   }
 
   function addHint() {
+    if (isWatchMode) return;
     const text = newText.trim();
     if (!text) return;
 
@@ -77,11 +78,13 @@
   }
 
   function removeHint(id: string) {
+    if (isWatchMode) return;
     const idx = hints.findIndex(h => h.id === id);
     if (idx !== -1) yHints.delete(idx, 1);
   }
 
   function clearAll() {
+    if (isWatchMode) return;
     if (!confirm('Clear all hints?')) return;
     yHints.delete(0, yHints.length);
   }
@@ -128,7 +131,6 @@
   </div>
 
   {#if view === 'hints'}
-    {#if !isWatchMode}
     <!-- Add form -->
     <div class="hint-add">
       <div class="type-row">
@@ -138,6 +140,7 @@
             class:active={newType === t.id}
             style="--tc: {t.color}"
             on:click={() => newType = t.id}
+            disabled={isWatchMode}
           >{t.label}</button>
         {/each}
       </div>
@@ -148,11 +151,11 @@
           bind:value={newText}
           on:keydown={handleKey}
           rows="2"
+          disabled={isWatchMode}
         ></textarea>
-        <button class="add-btn" on:click={addHint} disabled={!newText.trim()}>Add</button>
+        <button class="add-btn" on:click={addHint} disabled={!newText.trim() || isWatchMode}>Add</button>
       </div>
     </div>
-    {/if}
 
     <!-- Filter + Clear -->
     <div class="filter-row">
@@ -169,8 +172,8 @@
           >{t.label} ({count})</button>
         {/if}
       {/each}
-      {#if hints.length > 0 && !isWatchMode}
-        <button class="clear-all-btn" on:click={clearAll}>Clear all</button>
+      {#if hints.length > 0}
+        <button class="clear-all-btn" on:click={clearAll} disabled={isWatchMode}>Clear all</button>
       {/if}
     </div>
 
@@ -186,9 +189,7 @@
             <span class="hint-text" on:click={() => copyHint(hint.id, hint.type, hint.text)} title="Click to copy" style="cursor:copy">
               {#if copiedId === hint.id}<span class="hint-copied">✓ Copied</span>{:else}{hint.text}{/if}
             </span>
-            {#if !isWatchMode}
-            <button class="del-btn" on:click={() => removeHint(hint.id)} title="Delete">✕</button>
-            {/if}
+            <button class="del-btn" on:click={() => removeHint(hint.id)} title="Delete" disabled={isWatchMode}>✕</button>
           </li>
         {/each}
       </ul>

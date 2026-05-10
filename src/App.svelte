@@ -2954,7 +2954,6 @@ yKeepalive.observe((event: any) => {
               </div>
             </details>
 
-            {#if !isWatchMode}
             <!-- Save Slots -->
             <details class="spoiler-panel" style="margin-top: 0.4em;"
               bind:open={secSlots}
@@ -2964,15 +2963,15 @@ yKeepalive.observe((event: any) => {
               <div style="margin-top: 0.4em;">
                 {#if saveSlots.length > 0}
                   <div style="display:flex; gap:0.4em; margin-bottom:0.4em; align-items:center;">
-                    <select class="dropdown-select" style="flex:1" bind:value={currentSlotId}>
+                    <select class="dropdown-select" style="flex:1" bind:value={currentSlotId} disabled={isWatchMode}>
                       {#each saveSlots as slot}
                         <option value={slot.id}>{slot.name} ({Object.values(slot.checks).filter(v => v === T.CheckState.checked).length}✓)</option>
                       {/each}
                     </select>
-                    <button class="pure-button bg-primary" title="Save current state to this slot" on:click={() => currentSlotId && saveToSlot(currentSlotId)}>💾</button>
-                    <button class="pure-button bg-primary" title="Load this slot" on:click={() => { const s = saveSlots.find(x => x.id === currentSlotId); if (s) loadSlot(s); }}>📂</button>
-                    <button class="pure-button" title="Rename slot" on:click={() => { const s = saveSlots.find(x => x.id === currentSlotId); if (!s) return; const n = window.prompt('Rename slot:', s.name); if (n != null) renameSlot(s.id, n); }}>✎</button>
-                    <button class="pure-button bg-danger" title="Delete slot" on:click={() => currentSlotId && deleteSlot(currentSlotId)}>✕</button>
+                    <button class="pure-button bg-primary" title="Save current state to this slot" on:click={() => { if (isWatchMode) return; currentSlotId && saveToSlot(currentSlotId); }} disabled={isWatchMode}>💾</button>
+                    <button class="pure-button bg-primary" title="Load this slot" on:click={() => { if (isWatchMode) return; const s = saveSlots.find(x => x.id === currentSlotId); if (s) loadSlot(s); }} disabled={isWatchMode}>📂</button>
+                    <button class="pure-button" title="Rename slot" on:click={() => { if (isWatchMode) return; const s = saveSlots.find(x => x.id === currentSlotId); if (!s) return; const n = window.prompt('Rename slot:', s.name); if (n != null) renameSlot(s.id, n); }} disabled={isWatchMode}>✎</button>
+                    <button class="pure-button bg-danger" title="Delete slot" on:click={() => { if (isWatchMode) return; currentSlotId && deleteSlot(currentSlotId); }} disabled={isWatchMode}>✕</button>
                   </div>
                   {#if currentSlot}
                     <p class="spoiler-no-log" style="margin:0 0 0.4em;">{formatSlotDate(currentSlot.updatedAt)}</p>
@@ -2980,10 +2979,9 @@ yKeepalive.observe((event: any) => {
                 {:else}
                   <p class="spoiler-no-log">No slots yet.</p>
                 {/if}
-                <button class="pure-button" style="font-size:0.82em;" on:click={newSlot}>+ New Slot</button>
+                <button class="pure-button" style="font-size:0.82em;" on:click={() => { if (isWatchMode) return; newSlot(); }} disabled={isWatchMode}>+ New Slot</button>
               </div>
             </details>
-            {/if}
           </form>
 
           <div class="flex flex-col">
@@ -3044,8 +3042,8 @@ yKeepalive.observe((event: any) => {
                     >👁 Watch Link</button
                   >
                   {/if}
-                  {#if !roomHasPassword && !isWatchMode}
-                  <button class="pure-button" on:click={setRoomPassword} title="Create a new room with a password — current peers will lose edit access">🔒 Set Password</button>
+                  {#if !roomHasPassword}
+                  <button class="pure-button" on:click={() => { if (isWatchMode) return; setRoomPassword(); }} title="Create a new room with a password — current peers will lose edit access" disabled={isWatchMode}>🔒 Set Password</button>
                   {/if}
                   <button class="bg-primary pure-button" on:click={leaveCoopRoom}>Disconnect</button>
                 </fieldset>
@@ -3094,17 +3092,15 @@ yKeepalive.observe((event: any) => {
                 >
                   {sortMode === 'alpha' ? '↩️ Default' : '🔤 A-Z'}
                 </button>
-                {#if !isWatchMode}
-                  <button class="bg-primary pure-button" on:click|preventDefault={exportData}>Export Save</button>
-                  <button class="bg-primary pure-button" on:click|preventDefault={importData}>Import Save</button>
-                  <button class="bg-primary pure-button" on:click|preventDefault={importSpoilerLog}>Import Spoiler</button>
-                  <button class="pure-button" on:click|preventDefault={() => { randoImportOpen = !randoImportOpen; randoImportError = ''; randoImportOk = false; }}>🎲 Import Hash</button>
-                  <button class="bg-danger pure-button" on:click|preventDefault={reset}>Clear Checks</button>
-                  <button class="bg-danger pure-button" on:click|preventDefault={resetSettings}>Reset Settings</button>
-                {/if}
+                  <button class="bg-primary pure-button" on:click|preventDefault={exportData} disabled={isWatchMode}>Export Save</button>
+                  <button class="bg-primary pure-button" on:click|preventDefault={importData} disabled={isWatchMode}>Import Save</button>
+                  <button class="bg-primary pure-button" on:click|preventDefault={importSpoilerLog} disabled={isWatchMode}>Import Spoiler</button>
+                  <button class="pure-button" on:click|preventDefault={() => { if (isWatchMode) return; randoImportOpen = !randoImportOpen; randoImportError = ''; randoImportOk = false; }} disabled={isWatchMode}>🎲 Import Hash</button>
+                  <button class="bg-danger pure-button" on:click|preventDefault={reset} disabled={isWatchMode}>Clear Checks</button>
+                  <button class="bg-danger pure-button" on:click|preventDefault={resetSettings} disabled={isWatchMode}>Reset Settings</button>
                 {#if spoilerSyncedFromPeer}<span class="spoiler-sync-notice">📥 Spoiler received from co-op partner</span>{/if}
               </div>
-              {#if !isWatchMode && randoImportOpen}
+              {#if randoImportOpen}
                 <div class="rando-import-panel">
                   <p style="font-size:0.78em; opacity:0.7; margin:0 0 0.4em">Paste the randomizer settings string (v2.x):</p>
                   <textarea
@@ -3112,10 +3108,12 @@ yKeepalive.observe((event: any) => {
                     rows="3"
                     placeholder="v2.7Vh..."
                     bind:value={randoImportStr}
+                    disabled={isWatchMode}
                   ></textarea>
                   <button
                     class="bg-primary pure-button fullwidth"
                     style="margin-top:0.35em; font-size:0.85em;"
+                    disabled={isWatchMode}
                     disabled={!randoImportStr.trim()}
                     on:click={applyRandomizerSettings}
                   >Apply</button>
@@ -3125,13 +3123,12 @@ yKeepalive.observe((event: any) => {
               {/if}
             </div>
 
-            {#if !isWatchMode}
             <!-- Presets -->
             <fieldset style="margin-top: 1em;">
               <legend>Presets</legend>
               <div style="display: flex; gap: 0.4em; margin-bottom: 0.5em; flex-wrap: wrap;">
-                <button class="pure-button" style="font-size:0.8em; padding:0.2em 0.6em" on:click={exportPresets}>↗ Export</button>
-                <button class="pure-button" style="font-size:0.8em; padding:0.2em 0.6em" on:click={importPresets}>↙ Import</button>
+                <button class="pure-button" style="font-size:0.8em; padding:0.2em 0.6em" on:click={exportPresets} disabled={isWatchMode}>↗ Export</button>
+                <button class="pure-button" style="font-size:0.8em; padding:0.2em 0.6em" on:click={importPresets} disabled={isWatchMode}>↙ Import</button>
               </div>
               <div style="display: flex; gap: 0.5em; margin-bottom: 0.5em;">
                 <input
@@ -3140,24 +3137,26 @@ yKeepalive.observe((event: any) => {
                   bind:value={newPresetName}
                   class="dropdown-select"
                   style="flex: 1"
+                  disabled={isWatchMode}
                 />
-                <button class="pure-button bg-primary" on:click={savePreset}>💾 Save</button>
+                <button class="pure-button bg-primary" on:click={() => { if (isWatchMode) return; savePreset(); }} disabled={isWatchMode}>💾 Save</button>
               </div>
               {#if Object.keys(allPresets).length > 0}
                 <div style="display: flex; gap: 0.5em; align-items: center;">
-                  <select bind:value={selectedPreset} class="dropdown-select" style="flex: 1">
+                  <select bind:value={selectedPreset} class="dropdown-select" style="flex: 1" disabled={isWatchMode}>
                     {#each Object.keys(allPresets) as name}
                       <option value={name}>{defaultPresetNames.has(name) ? '⭐ ' : ''}{name}</option>
                     {/each}
                   </select>
-                  <button class="pure-button bg-primary" on:click={() => selectedPreset && loadPreset(selectedPreset)}
-                    >Load</button
+                  <button class="pure-button bg-primary" on:click={() => { if (isWatchMode) return; selectedPreset && loadPreset(selectedPreset); }}
+                    disabled={isWatchMode}>Load</button
                   >
                   <button
                     class="pure-button bg-danger"
-                    disabled={defaultPresetNames.has(selectedPreset)}
+                    disabled={defaultPresetNames.has(selectedPreset) || isWatchMode}
                     title={defaultPresetNames.has(selectedPreset) ? 'Default presets cannot be deleted' : ''}
                     on:click={() => {
+                      if (isWatchMode) return;
                       if (selectedPreset && !defaultPresetNames.has(selectedPreset)) deletePreset(selectedPreset);
                     }}>✕</button
                   >
@@ -3167,7 +3166,6 @@ yKeepalive.observe((event: any) => {
                 {/if}
               {/if}
             </fieldset>
-            {/if}
           </div>
         </div>
       </details>
@@ -3178,15 +3176,13 @@ yKeepalive.observe((event: any) => {
           <strong class="interactable">Entrance Rando Tracker</strong>
           {#if $sEntrances.size > 0}<span class="section-badge">{$sEntrances.size}</span>{/if}
         </summary>
-        <ERTracker {yEntrances} entranceValues={entranceValuesMap} {spoilerErSettings} />
+        <ERTracker {yEntrances} entranceValues={entranceValuesMap} {spoilerErSettings} {isWatchMode} />
       </details>
 
       <!-- Item Tracker -->
       <details style="margin-top: 0.8em" id="item-tracker-details" bind:open={secItem} on:toggle={() => localStorage.setItem('sec_item', String(secItem))}>
         <summary><strong class="interactable">Item Tracker</strong></summary>
-        {#if !isWatchMode}
-          <ItemTracker {yItems} {ySettings} {roomName} />
-        {/if}
+          <ItemTracker {yItems} {ySettings} {roomName} isWatchMode={isWatchMode} />
       </details>
 
       <!-- Hint Tracker -->
@@ -3223,8 +3219,10 @@ yKeepalive.observe((event: any) => {
               >Other Settings</button
             >
           </div>
-          {#if !isWatchMode}
-            <form class="pure-form pure-form-stacked">
+            {#if isWatchMode}
+              <p class="readonly-notice">Settings are read-only in watch mode</p>
+            {/if}
+            <form class="pure-form pure-form-stacked" class:watch-disabled={isWatchMode}>
               <fieldset>
                 {#if activeTab === 'oot'}
                   <div class="dropdown-grid">
@@ -3234,8 +3232,9 @@ yKeepalive.observe((event: any) => {
                           {option.label}
                           <select
                             value={$sSettings.get(option.id) ?? option.default}
-                            on:change={e => ySettings.set(option.id, e.target.value)}
+                            on:change={e => { if (isWatchMode) return; ySettings.set(option.id, e.target.value); }}
                             class="dropdown-select"
+                            disabled={isWatchMode}
                           >
                             {#each option.options ?? [] as opt}<option value={opt.value}>{opt.label}</option>{/each}
                           </select>
@@ -3245,7 +3244,8 @@ yKeepalive.observe((event: any) => {
                           <input
                             type="checkbox"
                             checked={$sSettings.get(option.id) ?? false}
-                            on:change|preventDefault={() => toggleYmap(ySettings, option.id)}
+                            on:change|preventDefault={() => { if (isWatchMode) return; toggleYmap(ySettings, option.id); }}
+                            disabled={isWatchMode}
                           />
                           {option.label}
                         </label>
@@ -3260,8 +3260,9 @@ yKeepalive.observe((event: any) => {
                           {option.label}
                           <select
                             value={$sSettings.get(option.id) ?? option.default}
-                            on:change={e => ySettings.set(option.id, e.target.value)}
+                            on:change={e => { if (isWatchMode) return; ySettings.set(option.id, e.target.value); }}
                             class="dropdown-select"
+                            disabled={isWatchMode}
                           >
                             {#each option.options ?? [] as opt}<option value={opt.value}>{opt.label}</option>{/each}
                           </select>
@@ -3271,7 +3272,8 @@ yKeepalive.observe((event: any) => {
                           <input
                             type="checkbox"
                             checked={$sSettings.get(option.id) ?? false}
-                            on:change|preventDefault={() => toggleYmap(ySettings, option.id)}
+                            on:change|preventDefault={() => { if (isWatchMode) return; toggleYmap(ySettings, option.id); }}
+                            disabled={isWatchMode}
                           />
                           {option.label}
                         </label>
@@ -3286,7 +3288,8 @@ yKeepalive.observe((event: any) => {
                           <input
                             type="checkbox"
                             checked={$sSettings.get(option.id) ?? false}
-                            on:change|preventDefault={() => toggleYmap(ySettings, option.id)}
+                            on:change|preventDefault={() => { if (isWatchMode) return; toggleYmap(ySettings, option.id); }}
+                            disabled={isWatchMode}
                           />
                           {option.label}
                         </label>
@@ -3296,9 +3299,6 @@ yKeepalive.observe((event: any) => {
                 {/if}
               </fieldset>
             </form>
-          {:else}
-            <p class="readonly-notice">Settings are read-only in watch mode</p>
-          {/if}
         </div>
       </details>
     </section>
@@ -3686,6 +3686,7 @@ yKeepalive.observe((event: any) => {
   }
   .undo-btn:disabled { opacity: 0.35; cursor: default; }
   .undo-btn:not(:disabled):hover { background: var(--color-primary); }
+  button:disabled, select:disabled, input:disabled, textarea:disabled { opacity: 0.5; cursor: default; pointer-events: none; }
 
   .summary-sep {
     display: inline-block;
@@ -3980,6 +3981,7 @@ yKeepalive.observe((event: any) => {
   .spoiler-no-log    { font-size: 0.85em; opacity: 0.6; margin: 0.2em 0 0; font-style: italic; }
   .spoiler-warn      { font-size: 0.8em; color: #e0a030; margin: 0.2em 0 0.4em; }
   .readonly-notice   { font-size: 0.85em; opacity: 0.6; margin: 0.5em 0; font-style: italic; text-align: center; }
+  .watch-disabled { opacity: 0.6; }
 
   .spoiler-panel { border: none; padding: 0; }
   .spoiler-panel-summary {

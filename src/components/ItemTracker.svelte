@@ -11,6 +11,7 @@
   export let yItems: YMap<number>;
   export let ySettings: YMap<any>;
   export let roomName: string | null = null;
+  export let isWatchMode = false;
 
   let activeTab: 'items' | 'settings' = 'items';
   let overlayStacked: boolean = JSON.parse(localStorage.getItem('overlayStacked') ?? 'false');
@@ -463,16 +464,19 @@
   ];
 
   function toggleSetting(key: string, checked: boolean) {
+    if (isWatchMode) return;
     if (checked) ySettings.set(key, true);
     else ySettings.delete(key);
   }
 
   function toggleVisibility(key: string, checked: boolean) {
+    if (isWatchMode) return;
     if (!checked) ySettings.set(key, false);
     else ySettings.delete(key);
   }
 
   function setStringSetting(key: string, value: string) {
+    if (isWatchMode) return;
     ySettings.set(key, value);
   }
 
@@ -500,7 +504,7 @@
   // ITEM INTERACTION
   // ==========================================
   function handleClick(e: MouseEvent, item: TrackerItem) {
-    if (item.maxLevel === 0) return;
+    if (isWatchMode || item.maxLevel === 0) return;
     if (e.shiftKey && item.showCount) {
       const now = Date.now();
       if (now - lastCounterTime < 300) return;
@@ -526,7 +530,7 @@
 
   function handleRightClick(e: MouseEvent, item: TrackerItem) {
     e.preventDefault();
-    if (item.maxLevel === 0) return;
+    if (isWatchMode || item.maxLevel === 0) return;
     const cur = $itemStore.get(item.id) ?? 0;
     const prev = Math.max(0, cur - 1);
     if (prev === 0) yItems.delete(item.id);
@@ -565,6 +569,7 @@
   $: mmTotal     = mmItems.filter(i => i.maxLevel !== 0).length;
 
   function clearAll() {
+    if (isWatchMode) return;
     if (!confirm('Clear all tracked items?')) return;
     Array.from(yItems.keys()).forEach(k => yItems.delete(k));
   }
