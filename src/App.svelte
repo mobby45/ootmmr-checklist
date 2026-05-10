@@ -355,12 +355,13 @@ yKeepalive.observe((event: any) => {
 
   // Migrate existing localStorage spoiler into ySpoiler once IndexedDB is ready
   persistenceProvider.on('synced', () => {
-    if (ySpoilerLocations.size === 0) {
+    if (ySpoilerLocations.size === 0 && !ySpoiler.get('locationsBlock')) {
       const locStr = localStorage.getItem('spoilerLocations');
       if (locStr) {
-        const raw = JSON.parse(locStr);
         ydoc.transact(() => {
-          for (const [loc, item] of Object.entries(raw)) {
+          ySpoiler.set('locationsBlock', locStr);
+          // Also populate individual entries for old clients
+          for (const [loc, item] of Object.entries(JSON.parse(locStr))) {
             ySpoilerLocations.set(loc, item as string);
           }
         });
@@ -386,8 +387,17 @@ yKeepalive.observe((event: any) => {
       spoilerErSettings = erStr === 'null' ? null : JSON.parse(erStr);
       localStorage.setItem('spoilerErSettings', erStr);
     }
+    const locStr = ySpoiler.get('locationsBlock');
+    if (locStr !== undefined) {
+      const raw = JSON.parse(locStr);
+      spoilerLocations = applyAliases(raw);
+      localStorage.setItem('spoilerLocations', locStr);
+      spoilerSyncedFromPeer = true;
+      setTimeout(() => { spoilerSyncedFromPeer = false; }, 4000);
+    }
   });
 
+  // Backward compat observer for old clients that write to ySpoilerLocations directly
   ySpoilerLocations.observe((event: any) => {
     if (event.transaction?.local) return;
     const raw: Record<string, string> = {};
@@ -831,15 +841,15 @@ yKeepalive.observe((event: any) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
       const data = parseSpoilerLog(await file.text());
-      dbg('spoiler parsed —', Object.keys(data.locations).length, 'locations,', Object.keys(data.settings).length, 'settings');
+      const locs = Object.keys(data.locations).length;
+      dbg('spoiler parsed —', locs, 'locations,', Object.keys(data.settings).length, 'settings');
 
       const raw: Record<string, string> = {};
       for (const [key, value] of Object.entries(data.locations)) {
         raw[key.replace(/^(OOT|MM) /, '')] = value;
       }
       spoilerLocations = applyAliases(raw);
-      const locStr = JSON.stringify(raw);
-      localStorage.setItem('spoilerLocations', locStr);
+      localStorage.setItem('spoilerLocations', JSON.stringify(raw));
       spoilerErSettings = data.erSettings;
       const erStr = JSON.stringify(data.erSettings);
       localStorage.setItem('spoilerErSettings', erStr);
@@ -851,11 +861,15 @@ yKeepalive.observe((event: any) => {
         Object.entries(data.settings).forEach(([k, v]) => ySettings.set(k, v));
         ySettings.set('OOTMM', data.OOTMM);
         ySettings.set('OOTMMDungeons', data.OOTMMDungeons);
-        for (const [loc, item] of Object.entries(raw)) {
-          ySpoilerLocations.set(loc, item);
-        }
+        // Store locations as a single JSON blob to avoid sending 4434
+        // individual Yjs operations over WebRTC (overwhelms SimplePeer).
+        ySpoiler.set('locationsBlock', JSON.stringify(raw));
         ySpoiler.set('erSettings', erStr);
         ySpoiler.set('seedInfo', siStr);
+        // Clear old per-location entries for backward compat
+        for (const [key] of ySpoilerLocations.entries()) {
+          ySpoilerLocations.delete(key);
+        }
       });
       dbg('spoiler synced to Yjs');
     };
@@ -1966,6 +1980,7 @@ yKeepalive.observe((event: any) => {
     }
     ySpoiler.delete('seedInfo');
     ySpoiler.delete('erSettings');
+    ySpoiler.delete('locationsBlock');
   }
 
   function resetSettings() {
