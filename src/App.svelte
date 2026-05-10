@@ -113,7 +113,11 @@ yKeepalive.observe((event: any) => {
   // PSEUDO (co-op attribution)
   // ==========================================
   let pseudo: string = localStorage.getItem('pseudo') ?? '';
-  let pingColor: string = localStorage.getItem('pingColor') ?? '#ff6b6b';
+  function randomHueColor(): string {
+    const hue = Math.floor(Math.random() * 360);
+    return `hsl(${hue}, 70%, 55%)`;
+  }
+  let pingColor: string = localStorage.getItem('pingColor') ?? randomHueColor();
   $: localStorage.setItem('pingColor', pingColor);
 
   function setPseudo(name: string) {
