@@ -309,6 +309,8 @@ yKeepalive.observe((event: any) => {
   // dirty[0] !== -1, so make_dirty skips re-adding the component to dirty_components.
   let _checksRevPending = false;
   let _connectedUsersRev = 0;
+  let showAloneHint = false;
+  let aloneHintTimer: ReturnType<typeof setTimeout> | undefined;
   function bumpConnectedUsersRev() {
     _connectedUsersRev++;
   }
@@ -484,7 +486,13 @@ yKeepalive.observe((event: any) => {
   // after auto-join so the URL stays clean.
 
   function refreshConnectedUsers() {
-    if (!connectionProvider) { connectedUsers = []; bumpConnectedUsersRev(); return; }
+    if (!connectionProvider) {
+      connectedUsers = [];
+      if (aloneHintTimer) { clearTimeout(aloneHintTimer); aloneHintTimer = undefined; }
+      showAloneHint = false;
+      bumpConnectedUsersRev();
+      return;
+    }
     const prev = connectedUsers.map(u => u.name).join(',');
     connectedUsers = Array.from(connectionProvider.awareness.states.values())
       .filter((s: any) => s?.user)
@@ -492,6 +500,13 @@ yKeepalive.observe((event: any) => {
     const cur = connectedUsers.map(u => u.name).join(',');
     if (prev !== cur) dbg('users:', prev, '->', cur);
     bumpConnectedUsersRev();
+    // Manage alone hint timer (show after 20s alone)
+    if (connectedUsers.length <= 1 && !aloneHintTimer) {
+      aloneHintTimer = setTimeout(() => { showAloneHint = true; aloneHintTimer = undefined; }, 20000);
+    } else if (connectedUsers.length > 1) {
+      if (aloneHintTimer) { clearTimeout(aloneHintTimer); aloneHintTimer = undefined; }
+      showAloneHint = false;
+    }
   }
 
   function startDcMonitor() {
@@ -512,6 +527,8 @@ yKeepalive.observe((event: any) => {
   // fullCode may be "basecode" or "basecode-password"
   function joinCoopRoom(name?: string, password?: string) {
     relocationCode = null;
+    if (aloneHintTimer) { clearTimeout(aloneHintTimer); aloneHintTimer = undefined; }
+    showAloneHint = false;
     // Disconnect any existing provider before creating a new one
     if (connectionProvider) {
       connectionProvider.disconnect();
@@ -761,6 +778,8 @@ yKeepalive.observe((event: any) => {
       roomName = null;
       roomBaseCode = null;
       relocationCode = null;
+      if (aloneHintTimer) { clearTimeout(aloneHintTimer); aloneHintTimer = undefined; }
+      showAloneHint = false;
       roomHasPassword = false;
       sessionStorage.removeItem('coopRoomPassword');
       sessionStorage.removeItem('coopRoomCode');
@@ -3087,6 +3106,9 @@ yKeepalive.observe((event: any) => {
               {#if connectionProvider && !pseudo}
                 <div class="pseudo-hint">Set a name above to sync with others</div>
               {/if}
+              {#if connectionProvider && connectedUsers.length === 1 && showAloneHint}
+                <div class="alone-hint">Share the room code so others can join</div>
+              {/if}
               {#if showOperaWarning && !isSynced}
                 <div class="webrtc-warning">
                   ⚠ Opera: enable WebRTC in <code>opera://settings</code> → Advanced → Privacy → WebRTC IP handling → <em>Use my default public and private interfaces</em>
@@ -4234,6 +4256,13 @@ yKeepalive.observe((event: any) => {
     opacity: 0.65;
     margin: 2px 0 0;
     color: var(--color-text);
+  }
+
+  .alone-hint {
+    font-size: 0.82em;
+    opacity: 0.7;
+    margin: 2px 0 0;
+    color: var(--color-accent);
   }
 
   .webrtc-warning {
