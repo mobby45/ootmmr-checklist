@@ -3113,8 +3113,7 @@ yKeepalive.observe((event: any) => {
                   <button
                     class="bg-primary pure-button fullwidth"
                     style="margin-top:0.35em; font-size:0.85em;"
-                    disabled={isWatchMode}
-                    disabled={!randoImportStr.trim()}
+                    disabled={isWatchMode || !randoImportStr.trim()}
                     on:click={applyRandomizerSettings}
                   >Apply</button>
                   {#if randoImportOk}<p class="rando-import-ok">✓ Settings imported</p>{/if}
