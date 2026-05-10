@@ -9,27 +9,12 @@
   import { IndexeddbPersistence } from 'y-indexeddb';
   import Peer from 'simple-peer';
 
-  // Patch SimplePeer to always handle incoming remote data channels.
-  // Without this, when both peers act as initiators (y-webrtc glare), neither
-  // sets ondatachannel, so each only receives its OWN channel — data flows
-  // unidirectionally and awareness times out at ~30s.
-  const origSetupData = (Peer.prototype as any)._setupData;
-  (Peer.prototype as any)._setupData = function (this: any, event: any) {
-    origSetupData.call(this, event);
-    if (this._pc && !this._pc.__opencOndc) {
-      this._pc.__opencOndc = true;
-      const pc = this._pc;
-      pc.ondatachannel = (evt: RTCDataChannelEvent) => {
-        const ch = evt.channel;
-        console.log('📥 RAW ondatachannel — label:', ch.label, '| id:', ch.id, '| state:', ch.readyState);
-        ch.binaryType = 'arraybuffer';
-        ch.onmessage = (msgEvt: MessageEvent) => {
-          console.log('📥 RAW remote channel message — len:', (msgEvt.data as ArrayBuffer).byteLength);
-          this._onChannelMessage(msgEvt);
-        };
-      };
-    }
-  };
+  // Force SimplePeer to use a single negotiated data channel (id: 0).
+  // In the default (non-negotiated) mode, both peers create separate channels
+  // and neither sets ondatachannel — data flows only unidirectionally, causing
+  // awareness timeouts at ~30s. With negotiated:true,id:0, both sides create
+  // the SAME data channel, avoiding the glare problem entirely.
+  Peer.channelConfig = { negotiated: true, id: 0 };
 
   import { initializeStructuredChecks } from './util/util';
   import { parseSpoilerLog } from './util/spoilerParser';
