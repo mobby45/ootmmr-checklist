@@ -3047,6 +3047,9 @@ yKeepalive.observe((event: any) => {
                 <span>{connectedUsers.length > 1 ? 'Synced' : (connectedUsers.length >= 1 ? 'Connected' : 'Waiting for peers...')}</span>
                 <span style="display:none">{_connectedUsersRev}</span>
               </div>
+              {#if connectionProvider && !pseudo}
+                <div class="pseudo-hint">Set a name above to sync with others</div>
+              {/if}
               {#if showOperaWarning}
                 <div class="webrtc-warning">
                   ⚠ Opera: enable WebRTC in <code>opera://settings</code> → Advanced → Privacy → WebRTC IP handling → <em>Use my default public and private interfaces</em>
@@ -4182,6 +4185,13 @@ yKeepalive.observe((event: any) => {
   }
   .sync-status.synced .sync-dot { background: #44cc66; }
   .sync-status.synced { opacity: 1; }
+
+  .pseudo-hint {
+    font-size: 0.78em;
+    opacity: 0.65;
+    margin: 2px 0 0;
+    color: var(--color-text);
+  }
 
   .webrtc-warning {
     margin-top: 0.4em;
