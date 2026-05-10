@@ -423,6 +423,12 @@ yKeepalive.observe((event: any) => {
   let dcKeepaliveTick = 0;
   let prevP2pPeerCount = 0;
   let p2pHealthTriggerCount = 0;
+  let lastHealthReconnect = 0;
+  let failedReconnects = 0;
+  let healthVerifyTimer: ReturnType<typeof setTimeout> | null = null;
+  const MAX_FAILED_RECONNECTS = 2;
+  const RECONNECT_DEBOUNCE_MS = 10000;
+  const VERIFY_DELAY_MS = 5000;
   let dcMonInterval: any = null;
   const DEBUG = true;
   function dbg(...args: any[]) { if (DEBUG) console.log('[coop]', ...args); }
@@ -442,6 +448,65 @@ yKeepalive.observe((event: any) => {
       .filter(u => seen.has(u.name) ? false : (seen.add(u.name), true));
     const cur = connectedUsers.map(u => u.name).join(',');
     if (prev !== cur) dbg('users:', prev, '->', cur);
+  }
+
+  function startDcMonitor() {
+    if (dcMonInterval) { clearInterval(dcMonInterval); dcMonInterval = null; }
+    let dcMonAttempt = 0;
+    dcMonInterval = setInterval(() => {
+      try {
+        dcMonAttempt++;
+        const room = (connectionProvider as any)?.room;
+        if (!room) { return; }
+        const connCount = room.webrtcConns?.size ?? 0;
+        if (connCount === 0) { return; }
+        for (const [, conn] of room.webrtcConns) {
+          const ch = conn.peer?._channel;
+          const chState = ch?.readyState ?? 'no _channel';
+          if (dcMonAttempt % 5 === 0) {
+            dbg('dcMon #' + dcMonAttempt + ' — conn channel state:', chState, '| buffered:', ch?.bufferedAmount, '| label:', ch?.label, '| id:', ch?.id, '| negotiated:', ch?.negotiated);
+            try {
+              const pc = conn.peer._pc;
+              if (pc) {
+                dbg('ICE — connState:', pc.connectionState, '| iceConnState:', pc.iceConnectionState, '| gathering:', pc.iceGatheringState, '| signaling:', pc.signalingState);
+                pc.getStats().then((stats: RTCStatsReport) => {
+                  stats.forEach((s: any) => {
+                    if (s.type === 'candidate-pair' && s.state === 'succeeded') dbg('ICE pair OK — local:', s.localCandidateId, '| remote:', s.remoteCandidateId, '| nominated:', s.nominated);
+                    if (s.type === 'local-candidate' || s.type === 'remote-candidate') dbg('ICE ' + s.type + ' —', (s.address || s.ip) + ':' + s.port, '| type:', s.candidateType, '| protocol:', s.protocol, '| relay:', s.relayProtocol);
+                  });
+                }).catch((e: any) => dbg('getStats error:', e));
+              }
+            } catch (e) { dbg('ICE check error:', e); }
+          }
+          if (!conn.__dcMon) {
+            conn.__dcMon = true;
+            const rawCh = conn.peer._channel;
+            if (rawCh && !rawCh.__dcMon) {
+              rawCh.__dcMon = true;
+              const origMsg = rawCh.onmessage;
+              rawCh.onmessage = (evt: MessageEvent) => {
+                dbg('📥 RAW channel onmessage — data type:', typeof evt.data, '| size:', (evt.data as any)?.byteLength ?? (evt.data as any)?.size ?? '?');
+                if (origMsg) origMsg.call(rawCh, evt);
+              };
+            }
+            conn.peer.on('data', (data: any) => {
+              const view = new Uint8Array(data);
+              const type = view[0];
+              dbg('📥 data channel recv — type:', type, '| len:', view.length, '| first bytes:', Array.from(view.slice(0, Math.min(8, view.length))));
+            });
+            const origSend = conn.peer.send.bind(conn.peer);
+            conn.peer.send = (data: any) => {
+              const view = new Uint8Array(data);
+              const type = view[0];
+              if (type === 1 || type === 0) {
+                dbg('📤 data channel send — type:', type, '| len:', view.length, '| first bytes:', Array.from(view.slice(0, Math.min(8, view.length))));
+              }
+              return origSend(data);
+            };
+          }
+        }
+      } catch (e) { /* internals access failed */ }
+    }, 3000);
   }
 
   // fullCode may be "basecode" or "basecode-password"
@@ -484,75 +549,13 @@ yKeepalive.observe((event: any) => {
         dbg('awareness update — added:', added, '| updated:', updated, '| removed:', removed, '| origin:', origin);
       }
     });
-    // Monitor ALL incoming data channel messages to see if messageAwareness (type=1) arrives
     connectionProvider.on('peers', (ev: any) => {
       const newCount = ev.webrtcPeers?.length ?? 0;
       if (newCount !== p2pPeerCount) dbg('P2P peers:', p2pPeerCount, '->', newCount, '| webrtcPeers:', ev.webrtcPeers);
       prevP2pPeerCount = p2pPeerCount;
       p2pPeerCount = newCount;
       refreshConnectedUsers();
-      // Attach data channel monitor to the provider's room
-      if (dcMonInterval) { clearInterval(dcMonInterval); dcMonInterval = null; }
-      let dcMonAttempt = 0;
-      dcMonInterval = setInterval(() => {
-        try {
-          dcMonAttempt++;
-          const room = (connectionProvider as any).room;
-          if (!room) { return; }
-          const connCount = room.webrtcConns?.size ?? 0;
-          if (connCount === 0) { return; }
-          for (const [, conn] of room.webrtcConns) {
-            // Log SimplePeer internal state
-            const ch = conn.peer?._channel;
-            const chState = ch?.readyState ?? 'no _channel';
-            if (dcMonAttempt % 5 === 0) {
-              dbg('dcMon #' + dcMonAttempt + ' — conn channel state:', chState, '| buffered:', ch?.bufferedAmount, '| label:', ch?.label, '| id:', ch?.id, '| negotiated:', ch?.negotiated);
-              // Check ICE connection state
-              try {
-                const pc = conn.peer._pc;
-                if (pc) {
-                  dbg('ICE — connState:', pc.connectionState, '| iceConnState:', pc.iceConnectionState, '| gathering:', pc.iceGatheringState, '| signaling:', pc.signalingState);
-                  pc.getStats().then((stats: RTCStatsReport) => {
-                    stats.forEach((s: any) => {
-                      if (s.type === 'candidate-pair' && s.state === 'succeeded') dbg('ICE pair OK — local:', s.localCandidateId, '| remote:', s.remoteCandidateId, '| nominated:', s.nominated);
-                      if (s.type === 'local-candidate' || s.type === 'remote-candidate') dbg('ICE ' + s.type + ' —', (s.address || s.ip) + ':' + s.port, '| type:', s.candidateType, '| protocol:', s.protocol, '| relay:', s.relayProtocol);
-                    });
-                  }).catch((e: any) => dbg('getStats error:', e));
-                }
-              } catch (e) { dbg('ICE check error:', e); }
-            }
-            if (!conn.__dcMon) {
-              conn.__dcMon = true;
-              // Direct RTC data channel listener — bypasses SimplePeer stream
-              const rawCh = conn.peer._channel;
-              if (rawCh && !rawCh.__dcMon) {
-                rawCh.__dcMon = true;
-                const origMsg = rawCh.onmessage;
-                rawCh.onmessage = (evt: MessageEvent) => {
-                  dbg('📥 RAW channel onmessage — data type:', typeof evt.data, '| size:', (evt.data as any)?.byteLength ?? (evt.data as any)?.size ?? '?');
-                  if (origMsg) origMsg.call(rawCh, evt);
-                };
-              }
-              // Monitor received messages via SimplePeer stream
-              conn.peer.on('data', (data: any) => {
-                const view = new Uint8Array(data);
-                const type = view[0];
-                dbg('📥 data channel recv — type:', type, '| len:', view.length, '| first bytes:', Array.from(view.slice(0, Math.min(8, view.length))));
-              });
-              // Monitor sent messages
-              const origSend = conn.peer.send.bind(conn.peer);
-              conn.peer.send = (data: any) => {
-                const view = new Uint8Array(data);
-                const type = view[0];
-                if (type === 1 || type === 0) {
-                  dbg('📤 data channel send — type:', type, '| len:', view.length, '| first bytes:', Array.from(view.slice(0, Math.min(8, view.length))));
-                }
-                return origSend(data);
-              };
-            }
-          }
-        } catch (e) { /* internals access failed */ }
-      }, 3000);
+      startDcMonitor();
     });
     connectionProvider.on('status', (ev: any) => dbg('status event — connected:', ev.connected));
     connectionProvider.on('synced', (ev: any) => dbg('synced event — synced:', ev.synced));
@@ -570,16 +573,101 @@ yKeepalive.observe((event: any) => {
       prevAwCount = awCount;
       dbg('health check — aware users:', awCount, '| P2P count:', p2pState, '| awDropped:', awDropped);
       if ((awCount > 1 && p2pState === 0) || awDropped) {
+        const now = Date.now();
+        if (now - lastHealthReconnect < RECONNECT_DEBOUNCE_MS) {
+          dbg('⏱️ health debounced (last reconnect:', (now - lastHealthReconnect) + 'ms ago)');
+          return;
+        }
         const reason = awDropped ? 'remote timed out despite P2P (broken data channel)' : 'P2P missing';
-        dbg('⚠️ ' + reason + ' — reconnecting in 500ms…');
+        dbg('⚠️ ' + reason + ' — reconnect #' + (failedReconnects + 1));
         p2pHealthTriggerCount++;
+        lastHealthReconnect = now;
         connectionProvider.disconnect();
         setTimeout(() => {
+          if (!connectionProvider || !roomName) return;
           dbg('reconnecting…');
-          connectionProvider?.connect();
+          connectionProvider.connect();
+          if (healthVerifyTimer) clearTimeout(healthVerifyTimer);
+          healthVerifyTimer = setTimeout(() => verifyHealthAfterReconnect(), VERIFY_DELAY_MS);
         }, 500);
+      } else {
+        if (failedReconnects > 0) { failedReconnects = 0; dbg('health — OK, reset'); }
       }
     }, 15000);
+
+    function verifyHealthAfterReconnect() {
+      if (!connectionProvider || !roomName) return;
+      const awareUsers = Array.from(connectionProvider.awareness.states.values()).filter((s: any) => s?.user);
+      const awCount = awareUsers.length;
+      const p2pState = p2pPeerCount;
+      dbg('health verify — aware:', awCount, '| P2P:', p2pState);
+      const stillBroken = (awCount <= 1 && p2pState > 0) || (awCount > 1 && p2pState === 0);
+      if (stillBroken) {
+        failedReconnects++;
+        dbg('❌ verify FAIL #' + failedReconnects);
+        if (failedReconnects >= MAX_FAILED_RECONNECTS) {
+          dbg('escalating — destroy & recreate provider');
+          destroyAndRecreateProvider();
+        } else {
+          lastHealthReconnect = Date.now();
+          connectionProvider.disconnect();
+          setTimeout(() => {
+            if (!connectionProvider || !roomName) return;
+            connectionProvider.connect();
+            if (healthVerifyTimer) clearTimeout(healthVerifyTimer);
+            healthVerifyTimer = setTimeout(() => verifyHealthAfterReconnect(), VERIFY_DELAY_MS);
+          }, 500);
+        }
+      } else {
+        dbg('✅ verify OK');
+        failedReconnects = 0;
+      }
+    }
+
+    function destroyAndRecreateProvider() {
+      if (!connectionProvider || !roomName) return;
+      const full = roomName;
+      const old = connectionProvider;
+      connectionProvider = null;
+      old.disconnect();
+      old.destroy();
+      const rtcOpts = {
+        signaling: ['wss://ootmmr-checklist.mobby45.deno.net'],
+        peerOpts: {
+          config: {
+            iceServers: [
+              { urls: 'stun:stun.l.google.com:19302' },
+              { urls: 'stun:stun1.l.google.com:19302' },
+              { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+              { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+              { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
+            ]
+          }
+        }
+      };
+      connectionProvider = new WebrtcProvider(full, ydoc, rtcOpts);
+      connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anonymous', color: pingColor });
+      connectionProvider.awareness.on('change', refreshConnectedUsers);
+      connectionProvider.awareness.on('update', ({ added, updated, removed }: any, origin: any) => {
+        if (added.length || updated.length || removed.length) {
+          dbg('awareness update — added:', added, '| updated:', updated, '| removed:', removed, '| origin:', origin);
+        }
+      });
+      connectionProvider.on('peers', (ev: any) => {
+        const newCount = ev.webrtcPeers?.length ?? 0;
+        if (newCount !== p2pPeerCount) dbg('P2P peers:', p2pPeerCount, '->', newCount, '| webrtcPeers:', ev.webrtcPeers);
+        prevP2pPeerCount = p2pPeerCount;
+        p2pPeerCount = newCount;
+        refreshConnectedUsers();
+        startDcMonitor();
+      });
+      connectionProvider.on('status', (ev: any) => dbg('status event — connected:', ev.connected));
+      connectionProvider.on('synced', (ev: any) => dbg('synced event — synced:', ev.synced));
+      dbg('provider recreated, room:', full);
+      refreshConnectedUsers();
+      failedReconnects = 0;
+      lastHealthReconnect = Date.now();
+    }
 
     // Keep the WebRTC data channel alive by sending small Yjs updates every 10s
     dcKeepaliveInterval = setInterval(() => {
@@ -631,6 +719,7 @@ yKeepalive.observe((event: any) => {
       if (p2pHealthInterval) { clearInterval(p2pHealthInterval); p2pHealthInterval = null; }
       if (dcKeepaliveInterval) { clearInterval(dcKeepaliveInterval); dcKeepaliveInterval = null; }
       if (dcMonInterval) { clearInterval(dcMonInterval); dcMonInterval = null; }
+      if (healthVerifyTimer) { clearTimeout(healthVerifyTimer); healthVerifyTimer = null; }
       p2pPeerCount = 0;
       autoSaveRoomSlot();
       connectionProvider?.disconnect();
