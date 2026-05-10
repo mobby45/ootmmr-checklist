@@ -9,41 +9,35 @@
   import { IndexeddbPersistence } from 'y-indexeddb';
   import Peer from 'simple-peer';
 
-  // Patch RTCPeerConnection to always set ondatachannel before setRemoteDescription.
-  // Without this, when both peers act as initiators (y-webrtc glare), neither
-  // listens for the remote data channel — data flows only unidirectionally.
-  const origSetRemoteDescription = RTCPeerConnection.prototype.setRemoteDescription;
-  RTCPeerConnection.prototype.setRemoteDescription = function (this: RTCPeerConnection, ...args: any[]) {
-    if (!this.__ocOndcPatched) {
-      this.__ocOndcPatched = true;
-      this.ondatachannel = (evt: RTCDataChannelEvent) => {
-        console.log('📥 ONDATACHANNEL FIRED — label:', evt.channel.label, '| id:', evt.channel.id, '| state:', evt.channel.readyState, '| peer._pc match:', (this as any).__ocPeer?._pc === this);
+  // Patch SimplePeer._setupData to ensure ondatachannel is ALWAYS set on the
+  // RTCPeerConnection, even when both peers act as initiators (y-webrtc glare).
+  // Without this, initiators never create ondatachannel, so remote data channels
+  // are never processed — data flows only unidirectionally.
+  // We preserve any existing ondatachannel handler (needed for non-initiators).
+  const origSetupData = (Peer.prototype as any)._setupData;
+  (Peer.prototype as any)._setupData = function (this: any, event: any) {
+    const pc = this._pc;
+    const existingOndc = pc ? pc.ondatachannel : null;
+    origSetupData.call(this, event);
+    if (this._pc && !this._pc.__ocOndcPatched) {
+      this._pc.__ocOndcPatched = true;
+      this._pc.ondatachannel = (evt: RTCDataChannelEvent) => {
+        console.log('📥 ONDATACHANNEL FIRED — label:', evt.channel.label, '| id:', evt.channel.id, '| state:', evt.channel.readyState, '| initiator:', this.initiator, '| existing:', !!existingOndc);
+        // Let SimplePeer's normal handler run first (needed for non-initiator)
+        if (existingOndc) existingOndc.call(this._pc, evt);
+        // Also feed remote channel messages into this peer's stream
         const ch = evt.channel;
-        ch.binaryType = 'arraybuffer';
-        ch.onmessage = (msgEvt: MessageEvent) => {
-          console.log('📥 REMOTE CHANNEL MESSAGE — len:', (msgEvt.data as ArrayBuffer).byteLength);
-          // Find the SimplePeer instance that owns this PC and forward the message
-          if ((this as any).__ocPeer && !(this as any).__ocPeer.destroyed) {
-            (this as any).__ocPeer._onChannelMessage(msgEvt);
-          }
-        };
+        if (ch && !ch.__ocMsgPatched) {
+          ch.__ocMsgPatched = true;
+          ch.binaryType = 'arraybuffer';
+          ch.onmessage = (msgEvt: MessageEvent) => {
+            console.log('📥 REMOTE CHANNEL MESSAGE — len:', (msgEvt.data as ArrayBuffer).byteLength);
+            if (!this.destroyed) this._onChannelMessage(msgEvt);
+          };
+        }
       };
     }
-    return origSetRemoteDescription.apply(this, args);
   };
-  // Also set __ocPeer when SimplePeer stores _pc
-  const origPeerPCSet = Object.getOwnPropertyDescriptor(Peer.prototype, '_pc')?.set;
-  if (!origPeerPCSet) {
-    // SimplePeer sets this._pc directly (no setter), so we patch _setupData
-    const origSetupData = (Peer.prototype as any)._setupData;
-    (Peer.prototype as any)._setupData = function (this: any, event: any) {
-      origSetupData.call(this, event);
-      if (this._pc) {
-        this._pc.__ocPeer = this;
-        console.log('📥 _setupData patched — channel label:', this._channel?.label, '| id:', this._channel?.id, '| initiator:', this.initiator, '| peerId:', this._id);
-      }
-    };
-  }
 
   import { initializeStructuredChecks } from './util/util';
   import { parseSpoilerLog } from './util/spoilerParser';
