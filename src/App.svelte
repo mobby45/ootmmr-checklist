@@ -470,11 +470,9 @@ yKeepalive.observe((event: any) => {
   function refreshConnectedUsers() {
     if (!connectionProvider) { connectedUsers = []; bumpConnectedUsersRev(); return; }
     const prev = connectedUsers.map(u => u.name).join(',');
-    const seen = new Set<string>();
     connectedUsers = Array.from(connectionProvider.awareness.states.values())
       .filter((s: any) => s?.user)
-      .map((s: any) => ({ name: s.user.name as string, color: s.user.color as string }))
-      .filter(u => seen.has(u.name) ? false : (seen.add(u.name), true));
+      .map((s: any) => ({ name: s.user.name as string, color: s.user.color as string }));
     const cur = connectedUsers.map(u => u.name).join(',');
     if (prev !== cur) dbg('users:', prev, '->', cur);
     bumpConnectedUsersRev();
@@ -3049,9 +3047,6 @@ yKeepalive.observe((event: any) => {
                 <span>{connectedUsers.length > 1 ? 'Synced' : (connectedUsers.length >= 1 ? 'Connected' : 'Waiting for peers...')}</span>
                 <span style="display:none">{_connectedUsersRev}</span>
               </div>
-              {#if connectionProvider && connectedUsers.length === 1}
-                <div class="alone-hint">Connected — share the code so others can join</div>
-              {/if}
               {#if connectionProvider && !pseudo}
                 <div class="pseudo-hint">Set a name above to sync with others</div>
               {/if}
@@ -4196,13 +4191,6 @@ yKeepalive.observe((event: any) => {
     opacity: 0.65;
     margin: 2px 0 0;
     color: var(--color-text);
-  }
-
-  .alone-hint {
-    font-size: 0.82em;
-    opacity: 0.7;
-    margin: 2px 0 0;
-    color: var(--color-accent);
   }
 
   .webrtc-warning {
