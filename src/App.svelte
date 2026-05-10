@@ -500,6 +500,7 @@ yKeepalive.observe((event: any) => {
     const base = name ?? crypto.randomUUID();
     const full = password ? `${base}-${password}` : base;
     roomName = full;
+    sessionStorage.setItem('coopRoomCode', full);
 
     // UUID codes are 36 chars (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx).
     // For UUID rooms, password is appended after position 36 with a '-'.
@@ -512,7 +513,10 @@ yKeepalive.observe((event: any) => {
     roomBaseCode = dashIdx !== -1 ? full.slice(0, dashIdx) : full;
     const hasPassword = dashIdx !== -1;
     roomHasPassword = hasPassword;
-    if (password) sessionStorage.setItem('coopRoomPassword', password);
+    // Store password when provided explicitly or embedded in the name
+    const embeddedPw = hasPassword ? full.slice(dashIdx + 1) : undefined;
+    const actualPassword = password ?? embeddedPw;
+    if (actualPassword) sessionStorage.setItem('coopRoomPassword', actualPassword);
     else sessionStorage.removeItem('coopRoomPassword');
 
     const rtcOpts = {
@@ -736,6 +740,7 @@ yKeepalive.observe((event: any) => {
       roomBaseCode = null;
       roomHasPassword = false;
       sessionStorage.removeItem('coopRoomPassword');
+      sessionStorage.removeItem('coopRoomCode');
       window.location.hash = '';
       connectedUsers = [];
       if (operaWarningTimer) { clearTimeout(operaWarningTimer); operaWarningTimer = null; }
@@ -803,6 +808,13 @@ yKeepalive.observe((event: any) => {
   // Clean hash so it doesn't linger in the URL after auto-join
   if (!isWatchMode && window.location.hash) {
     history.replaceState(null, '', window.location.pathname + window.location.search);
+  }
+  // Auto-rejoin from sessionStorage when no hash in URL (page refresh without hash)
+  if (!isWatchMode && !window.location.hash) {
+    const storedCode = sessionStorage.getItem('coopRoomCode');
+    if (storedCode) {
+      joinCoopRoom(storedCode);
+    }
   }
   // Handle paste-over in address bar (hash-only change doesn't reload the page)
   window.addEventListener('hashchange', () => {
@@ -3007,7 +3019,7 @@ yKeepalive.observe((event: any) => {
                 <fieldset>
                   <button
                     class="bg-primary pure-button"
-                    on:click|preventDefault={() => window.navigator.clipboard.writeText(window.location.href)}
+                    on:click|preventDefault={() => window.navigator.clipboard.writeText(`${location.origin}${location.pathname}#${roomBaseCode}`)}
                     title="Share this link — editors need the password to join (password is NOT in the URL)"
                     >Copy Room Link</button
                   >
