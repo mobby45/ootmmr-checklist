@@ -63,6 +63,7 @@
   const yHints: Y.Array<any> = ydoc.getArray('hints');
 const yMessages: Y.Array<any> = ydoc.getArray('messages');
   const yPings: Y.Map<any> = ydoc.getMap('pings');
+const yKeepalive: Y.Map<number> = ydoc.getMap('keepalive');
 
   // ==========================================
   // PSEUDO (co-op attribution)
@@ -372,6 +373,7 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
   let connectedUsers: { name: string; color: string }[] = [];
   let newRoomPassword = '';
   let p2pHealthInterval: ReturnType<typeof setInterval> | null = null;
+  let dcKeepaliveInterval: ReturnType<typeof setInterval> | null = null;
   let p2pPeerCount = 0;
   $: isSynced = connectedUsers.length > 1;
   $: if (isSynced) { showOperaWarning = false; if (operaWarningTimer) { clearTimeout(operaWarningTimer); operaWarningTimer = null; } }
@@ -432,6 +434,11 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
       }
     }, 15000);
 
+    // Keep the WebRTC data channel alive by sending small Yjs updates every 10s
+    dcKeepaliveInterval = setInterval(() => {
+      yKeepalive.set('t', Date.now());
+    }, 10000);
+
     if (isOpera) {
       if (operaWarningTimer) clearTimeout(operaWarningTimer);
       showOperaWarning = false;
@@ -470,6 +477,7 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
   function leaveCoopRoom() {
     if (window.confirm('Are you sure you want to disconnect? Your progress will be preserved as it is now.')) {
       if (p2pHealthInterval) { clearInterval(p2pHealthInterval); p2pHealthInterval = null; }
+      if (dcKeepaliveInterval) { clearInterval(dcKeepaliveInterval); dcKeepaliveInterval = null; }
       p2pPeerCount = 0;
       autoSaveRoomSlot();
       connectionProvider?.disconnect();
@@ -2650,7 +2658,7 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
                 on:submit|preventDefault={e => joinCoopRoom(e.target?.querySelector('#room-code-input').value)}
               >
                 <fieldset>
-                  <input id="room-code-input" type="text" placeholder="Room code (or code-password)" required pattern={`[a-z0-9][a-z0-9-]{3,}`} />
+                  <input id="room-code-input" type="text" placeholder="Room code (or code-password)" required />
                   <button type="submit" class="bg-primary pure-button">Join room</button>
                 </fieldset>
               </form>
