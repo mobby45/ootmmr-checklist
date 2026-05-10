@@ -781,10 +781,9 @@ yKeepalive.observe((event: any) => {
     const pw = window.prompt('Enter a password to protect this room:');
     if (!pw || !pw.trim()) return;
     const newBase = crypto.randomUUID();
-    const newFull = `${newBase}-${pw.trim()}`;
-    // Announce the new room to connected peers before leaving
+    // Store only the base code — peers will be prompted for password
     ydoc.transact(() => {
-      ySpoiler.set('relocatedTo', newFull);
+      ySpoiler.set('relocatedTo', newBase);
     });
     // Give Yjs time to propagate the relocation to peers over WebRTC
     setTimeout(() => {
@@ -2782,7 +2781,7 @@ yKeepalive.observe((event: any) => {
   {#if relocationCode}
     <div class="relocation-banner">
       🔒 Room password changed by host
-      <button class="pure-button" on:click={() => { joinCoopRoom(relocationCode); relocationCode = null; }}>Join new room</button>
+      <button class="pure-button" on:click={() => { const pw = window.prompt('Enter the new room password:'); if (pw != null) { joinCoopRoom(relocationCode, pw.trim() || undefined); relocationCode = null; } }}>Join new room</button>
       <button class="pure-button" on:click={() => relocationCode = null}>Dismiss</button>
     </div>
   {/if}
