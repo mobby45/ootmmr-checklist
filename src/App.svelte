@@ -456,11 +456,29 @@ yKeepalive.observe((event: any) => {
         try {
           dcMonAttempt++;
           const room = (connectionProvider as any).room;
-          if (!room) { dbg('dcMon #' + dcMonAttempt + ' — no room yet'); return; }
+          if (!room) { return; }
           const connCount = room.webrtcConns?.size ?? 0;
           if (connCount === 0) { return; }
-          dbg('dcMon #' + dcMonAttempt + ' — room found, webrtcConns:', connCount);
           for (const [, conn] of room.webrtcConns) {
+            // Log SimplePeer internal state
+            const ch = conn.peer?._channel;
+            const chState = ch?.readyState ?? 'no _channel';
+            if (dcMonAttempt % 5 === 0) {
+              dbg('dcMon #' + dcMonAttempt + ' — conn channel state:', chState, '| buffered:', ch?.bufferedAmount, '| label:', ch?.label, '| id:', ch?.id, '| negotiated:', ch?.negotiated);
+              // Check ICE connection state
+              try {
+                const pc = conn.peer._pc;
+                if (pc) {
+                  dbg('ICE — connState:', pc.connectionState, '| iceConnState:', pc.iceConnectionState, '| gathering:', pc.iceGatheringState, '| signaling:', pc.signalingState);
+                  pc.getStats().then((stats: RTCStatsReport) => {
+                    stats.forEach((s: any) => {
+                      if (s.type === 'candidate-pair' && s.state === 'succeeded') dbg('ICE pair OK — local:', s.localCandidateId, '| remote:', s.remoteCandidateId, '| nominated:', s.nominated);
+                      if (s.type === 'local-candidate' || s.type === 'remote-candidate') dbg('ICE ' + s.type + ' —', (s.address || s.ip) + ':' + s.port, '| type:', s.candidateType, '| protocol:', s.protocol, '| relay:', s.relayProtocol);
+                    });
+                  }).catch((e: any) => dbg('getStats error:', e));
+                }
+              } catch (e) { dbg('ICE check error:', e); }
+            }
             if (!conn.__dcMon) {
               conn.__dcMon = true;
               // Monitor received messages
