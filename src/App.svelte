@@ -422,6 +422,7 @@ yKeepalive.observe((event: any) => {
     const rtcOpts = {
       signaling: ['wss://ootmmr-checklist.mobby45.deno.net'],
       peerOpts: {
+        channelConfig: { negotiated: true, id: 0 },
         config: {
           iceServers: [
             { urls: 'stun:stun.l.google.com:19302' },
