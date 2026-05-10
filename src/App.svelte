@@ -17,9 +17,11 @@
     if (!this.__ocOndcPatched) {
       this.__ocOndcPatched = true;
       this.ondatachannel = (evt: RTCDataChannelEvent) => {
+        console.log('📥 ONDATACHANNEL FIRED — label:', evt.channel.label, '| id:', evt.channel.id, '| state:', evt.channel.readyState, '| peer._pc match:', (this as any).__ocPeer?._pc === this);
         const ch = evt.channel;
         ch.binaryType = 'arraybuffer';
         ch.onmessage = (msgEvt: MessageEvent) => {
+          console.log('📥 REMOTE CHANNEL MESSAGE — len:', (msgEvt.data as ArrayBuffer).byteLength);
           // Find the SimplePeer instance that owns this PC and forward the message
           if ((this as any).__ocPeer && !(this as any).__ocPeer.destroyed) {
             (this as any).__ocPeer._onChannelMessage(msgEvt);
@@ -36,7 +38,10 @@
     const origSetupData = (Peer.prototype as any)._setupData;
     (Peer.prototype as any)._setupData = function (this: any, event: any) {
       origSetupData.call(this, event);
-      if (this._pc) this._pc.__ocPeer = this;
+      if (this._pc) {
+        this._pc.__ocPeer = this;
+        console.log('📥 _setupData patched — channel label:', this._channel?.label, '| id:', this._channel?.id, '| initiator:', this.initiator, '| peerId:', this._id);
+      }
     };
   }
 
