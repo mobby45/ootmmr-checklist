@@ -426,6 +426,10 @@ yKeepalive.observe((event: any) => {
           iceServers: [
             { urls: 'stun:stun.l.google.com:19302' },
             { urls: 'stun:stun1.l.google.com:19302' },
+            // TURN relay for symmetric NATs — without this, data channels are one-way
+            { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+            { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+            { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
           ]
         }
       }
@@ -485,15 +489,19 @@ yKeepalive.observe((event: any) => {
     dbg('provider created, room:', full, '| pseudo:', pseudo, '| color:', pingColor);
     refreshConnectedUsers();
 
-    // Periodic health check: if P2P dropped but awareness shows other peers, force reconnect
+    // Periodic health check: detect broken data channels (half-open, one-way, etc.)
+    let prevAwCount = 0;
     p2pHealthInterval = setInterval(() => {
       if (!connectionProvider) { if (p2pHealthInterval) clearInterval(p2pHealthInterval); return; }
       const awareUsers = Array.from(connectionProvider.awareness.states.values()).filter((s: any) => s?.user);
       const awCount = awareUsers.length;
       const p2pState = p2pPeerCount;
-      dbg('health check — aware users:', awCount, '| P2P count:', p2pState, '| prev:', prevP2pPeerCount);
-      if (awCount > 1 && p2pState === 0) {
-        dbg('⚠️ P2P missing! Disconnecting and reconnecting in 500ms…');
+      const awDropped = prevAwCount > 1 && awCount <= 1 && p2pState > 0;
+      prevAwCount = awCount;
+      dbg('health check — aware users:', awCount, '| P2P count:', p2pState, '| awDropped:', awDropped);
+      if ((awCount > 1 && p2pState === 0) || awDropped) {
+        const reason = awDropped ? 'remote timed out despite P2P (broken data channel)' : 'P2P missing';
+        dbg('⚠️ ' + reason + ' — reconnecting in 500ms…');
         p2pHealthTriggerCount++;
         connectionProvider.disconnect();
         setTimeout(() => {
