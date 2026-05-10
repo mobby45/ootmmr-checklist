@@ -428,7 +428,7 @@ yKeepalive.observe((event: any) => {
   let healthVerifyTimer: ReturnType<typeof setTimeout> | null = null;
   const MAX_FAILED_RECONNECTS = 2;
   const RECONNECT_DEBOUNCE_MS = 10000;
-  const VERIFY_DELAY_MS = 5000;
+  const VERIFY_DELAY_MS = 8000;
   let dcMonInterval: any = null;
   const DEBUG = true;
   function dbg(...args: any[]) { if (DEBUG) console.log('[coop]', ...args); }
@@ -570,15 +570,16 @@ yKeepalive.observe((event: any) => {
       const awCount = awareUsers.length;
       const p2pState = p2pPeerCount;
       const awDropped = prevAwCount > 1 && awCount <= 1 && p2pState > 0;
+      const awZeroWithP2p = awCount === 0 && p2pState > 0;
       prevAwCount = awCount;
-      dbg('health check — aware users:', awCount, '| P2P count:', p2pState, '| awDropped:', awDropped);
-      if ((awCount > 1 && p2pState === 0) || awDropped) {
+      dbg('health check — aware users:', awCount, '| P2P count:', p2pState, '| awDropped:', awDropped, '| awZeroWithP2p:', awZeroWithP2p);
+      if ((awCount > 1 && p2pState === 0) || awDropped || awZeroWithP2p) {
         const now = Date.now();
         if (now - lastHealthReconnect < RECONNECT_DEBOUNCE_MS) {
           dbg('⏱️ health debounced (last reconnect:', (now - lastHealthReconnect) + 'ms ago)');
           return;
         }
-        const reason = awDropped ? 'remote timed out despite P2P (broken data channel)' : 'P2P missing';
+        const reason = awDropped ? 'remote timed out despite P2P (broken data channel)' : (awZeroWithP2p ? 'self awareness lost, P2P stuck' : 'P2P missing');
         dbg('⚠️ ' + reason + ' — reconnect #' + (failedReconnects + 1));
         p2pHealthTriggerCount++;
         lastHealthReconnect = now;
@@ -587,6 +588,7 @@ yKeepalive.observe((event: any) => {
           if (!connectionProvider || !roomName) return;
           dbg('reconnecting…');
           connectionProvider.connect();
+          connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anonymous', color: pingColor });
           if (healthVerifyTimer) clearTimeout(healthVerifyTimer);
           healthVerifyTimer = setTimeout(() => verifyHealthAfterReconnect(), VERIFY_DELAY_MS);
         }, 500);
@@ -601,7 +603,7 @@ yKeepalive.observe((event: any) => {
       const awCount = awareUsers.length;
       const p2pState = p2pPeerCount;
       dbg('health verify — aware:', awCount, '| P2P:', p2pState);
-      const stillBroken = (awCount <= 1 && p2pState > 0) || (awCount > 1 && p2pState === 0);
+      const stillBroken = (awCount > 1 && p2pState === 0) || (awCount <= 1 && p2pState > 0) || (awCount === 0 && p2pState > 0);
       if (stillBroken) {
         failedReconnects++;
         dbg('❌ verify FAIL #' + failedReconnects);
@@ -614,6 +616,7 @@ yKeepalive.observe((event: any) => {
           setTimeout(() => {
             if (!connectionProvider || !roomName) return;
             connectionProvider.connect();
+            connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anonymous', color: pingColor });
             if (healthVerifyTimer) clearTimeout(healthVerifyTimer);
             healthVerifyTimer = setTimeout(() => verifyHealthAfterReconnect(), VERIFY_DELAY_MS);
           }, 500);
