@@ -451,9 +451,9 @@ yKeepalive.observe((event: any) => {
   $: isSynced = connectedUsers.length > 1;
   $: if (isSynced) { showOperaWarning = false; if (operaWarningTimer) { clearTimeout(operaWarningTimer); operaWarningTimer = null; } }
 
-  // Only set hash for edit mode (never leak password via watch-mode hash).
-  // Guard with roomName so it never clears the hash on mount before auto-join reads it.
-  $: if (!isWatchMode && roomName) window.location.hash = roomName;
+  // Store only baseCode in URL hash (never the password). The full code
+  // (with password if any) is kept in sessionStorage for auto-rejoin.
+  $: if (!isWatchMode && roomBaseCode) window.location.hash = roomBaseCode;
 
   function refreshConnectedUsers() {
     if (!connectionProvider) { connectedUsers = []; return; }
@@ -499,6 +499,8 @@ yKeepalive.observe((event: any) => {
     roomBaseCode = dashIdx !== -1 ? full.slice(0, dashIdx) : full;
     const hasPassword = dashIdx !== -1;
     roomHasPassword = hasPassword;
+    if (password) sessionStorage.setItem('coopRoomPassword', password);
+    else sessionStorage.removeItem('coopRoomPassword');
 
     const rtcOpts = {
       signaling: ['wss://ootmmr-checklist.mobby45.deno.net'],
@@ -720,6 +722,7 @@ yKeepalive.observe((event: any) => {
       roomName = null;
       roomBaseCode = null;
       roomHasPassword = false;
+      sessionStorage.removeItem('coopRoomPassword');
       window.location.hash = '';
       connectedUsers = [];
       if (operaWarningTimer) { clearTimeout(operaWarningTimer); operaWarningTimer = null; }
@@ -734,6 +737,27 @@ yKeepalive.observe((event: any) => {
     }
   }
 
+  function setRoomPassword() {
+    if (!roomName || !connectionProvider) return;
+    const pw = window.prompt('Enter a password to protect this room:');
+    if (!pw || !pw.trim()) return;
+    const newBase = crypto.randomUUID();
+    const newFull = `${newBase}-${pw.trim()}`;
+    // Disconnect from current room (no confirm — user explicitly clicked Set Password)
+    autoSaveRoomSlot();
+    connectionProvider.disconnect();
+    connectionProvider = null;
+    watchRelayProvider?.disconnect();
+    watchRelayProvider = null;
+    roomName = null;
+    roomBaseCode = null;
+    roomHasPassword = false;
+    connectedUsers = [];
+    // Join new room with password
+    joinCoopRoom(newBase, pw.trim());
+    dbg('room recreated with password — new base:', newBase);
+  }
+
   // Auto-save room slot on page close/refresh while connected
   window.addEventListener('beforeunload', () => { if (connectionProvider) autoSaveRoomSlot(); });
 
@@ -745,10 +769,11 @@ yKeepalive.observe((event: any) => {
     joinCoopRoom(_watchParam);
   }
 
-  // Auto-join from URL hash on load (hash may include password: #baseCode-secret).
-  // Use initialHash captured before any reactive statement could modify it.
+  // Auto-join from URL hash (baseCode only) + sessionStorage (password, if any).
+  // Password is never stored in the URL to avoid leaking.
   if (!isWatchMode && initialHash.length > 0 && /#[a-z0-9-]+/.test(initialHash)) {
-    joinCoopRoom(initialHash.slice(1));
+    const storedPw = sessionStorage.getItem('coopRoomPassword') || undefined;
+    joinCoopRoom(initialHash.slice(1), storedPw);
   }
 
   // ==========================================
@@ -2939,7 +2964,7 @@ yKeepalive.observe((event: any) => {
                   <button
                     class="bg-primary pure-button"
                     on:click|preventDefault={() => window.navigator.clipboard.writeText(window.location.href)}
-                    title="Share with co-op editors (includes password)"
+                    title="Share this link — editors need the password to join (password is NOT in the URL)"
                     >Copy Room Link</button
                   >
                   {#if roomHasPassword}
@@ -2949,6 +2974,9 @@ yKeepalive.observe((event: any) => {
                     title="Share a read-only view — viewers cannot edit even if they modify the URL"
                     >👁 Watch Link</button
                   >
+                  {/if}
+                  {#if !roomHasPassword}
+                  <button class="pure-button" on:click={setRoomPassword} title="Create a new room with a password — current peers will lose edit access">🔒 Set Password</button>
                   {/if}
                   <button class="bg-primary pure-button" on:click={leaveCoopRoom}>Disconnect</button>
                 </fieldset>
