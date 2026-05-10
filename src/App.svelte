@@ -447,18 +447,34 @@ yKeepalive.observe((event: any) => {
       refreshConnectedUsers();
       // Attach data channel monitor to the provider's room
       if (dcMonInterval) { clearInterval(dcMonInterval); dcMonInterval = null; }
+      let dcMonAttempt = 0;
       dcMonInterval = setInterval(() => {
         try {
+          dcMonAttempt++;
           const room = (connectionProvider as any).room;
-          if (!room) return;
+          if (!room) { dbg('dcMon #' + dcMonAttempt + ' — no room yet'); return; }
+          const connCount = room.webrtcConns?.size ?? 0;
+          if (connCount === 0) { return; }
+          dbg('dcMon #' + dcMonAttempt + ' — room found, webrtcConns:', connCount);
           for (const [, conn] of room.webrtcConns) {
             if (!conn.__dcMon) {
               conn.__dcMon = true;
+              // Monitor received messages
               conn.peer.on('data', (data: any) => {
                 const view = new Uint8Array(data);
                 const type = view[0];
                 dbg('📥 data channel recv — type:', type, '| len:', view.length, '| first bytes:', Array.from(view.slice(0, Math.min(8, view.length))));
               });
+              // Monitor sent messages
+              const origSend = conn.peer.send.bind(conn.peer);
+              conn.peer.send = (data: any) => {
+                const view = new Uint8Array(data);
+                const type = view[0];
+                if (type === 1 || type === 0) {
+                  dbg('📤 data channel send — type:', type, '| len:', view.length, '| first bytes:', Array.from(view.slice(0, Math.min(8, view.length))));
+                }
+                return origSend(data);
+              };
             }
           }
         } catch (e) { /* internals access failed */ }
