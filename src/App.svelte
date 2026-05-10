@@ -430,6 +430,9 @@ yKeepalive.observe((event: any) => {
   const RECONNECT_DEBOUNCE_MS = 10000;
   const VERIFY_DELAY_MS = 8000;
   let dcMonInterval: any = null;
+  let p2pFlapCounter = 0;
+  const P2P_FLAP_THRESHOLD = 5;
+  const FORCE_TURN_RELAY = true;
   const DEBUG = true;
   function dbg(...args: any[]) { if (DEBUG) console.log('[coop]', ...args); }
   $: isSynced = connectedUsers.length > 1;
@@ -537,7 +540,8 @@ yKeepalive.observe((event: any) => {
             { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
             { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
             { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
-          ]
+          ],
+          iceTransportPolicy: FORCE_TURN_RELAY ? 'relay' : undefined,
         }
       }
     };
@@ -551,7 +555,10 @@ yKeepalive.observe((event: any) => {
     });
     connectionProvider.on('peers', (ev: any) => {
       const newCount = ev.webrtcPeers?.length ?? 0;
-      if (newCount !== p2pPeerCount) dbg('P2P peers:', p2pPeerCount, '->', newCount, '| webrtcPeers:', ev.webrtcPeers);
+      if (newCount !== p2pPeerCount) {
+        p2pFlapCounter++;
+        dbg('P2P peers:', p2pPeerCount, '->', newCount, '| flapping:', p2pFlapCounter, '| webrtcPeers:', ev.webrtcPeers);
+      }
       prevP2pPeerCount = p2pPeerCount;
       p2pPeerCount = newCount;
       refreshConnectedUsers();
@@ -571,9 +578,11 @@ yKeepalive.observe((event: any) => {
       const p2pState = p2pPeerCount;
       const awDropped = prevAwCount > 1 && awCount <= 1 && p2pState > 0;
       const awZeroWithP2p = awCount === 0 && p2pState > 0;
+      const p2pFlapping = p2pFlapCounter > P2P_FLAP_THRESHOLD;
       prevAwCount = awCount;
-      dbg('health check — aware users:', awCount, '| P2P count:', p2pState, '| awDropped:', awDropped, '| awZeroWithP2p:', awZeroWithP2p);
-      if ((awCount > 1 && p2pState === 0) || awDropped || awZeroWithP2p) {
+      dbg('health check — aware users:', awCount, '| P2P count:', p2pState, '| awDropped:', awDropped, '| awZeroWithP2p:', awZeroWithP2p, '| flap counter:', p2pFlapCounter);
+      p2pFlapCounter = 0;
+      if ((awCount > 1 && p2pState === 0) || awDropped || awZeroWithP2p || p2pFlapping) {
         const now = Date.now();
         if (now - lastHealthReconnect < RECONNECT_DEBOUNCE_MS) {
           dbg('⏱️ health debounced (last reconnect:', (now - lastHealthReconnect) + 'ms ago)');
@@ -602,8 +611,10 @@ yKeepalive.observe((event: any) => {
       const awareUsers = Array.from(connectionProvider.awareness.states.values()).filter((s: any) => s?.user);
       const awCount = awareUsers.length;
       const p2pState = p2pPeerCount;
-      dbg('health verify — aware:', awCount, '| P2P:', p2pState);
-      const stillBroken = (awCount > 1 && p2pState === 0) || (awCount <= 1 && p2pState > 0) || (awCount === 0 && p2pState > 0);
+      const p2pFlapping = p2pFlapCounter > P2P_FLAP_THRESHOLD;
+      dbg('health verify — aware:', awCount, '| P2P:', p2pState, '| flap counter:', p2pFlapCounter);
+      p2pFlapCounter = 0;
+      const stillBroken = (awCount > 1 && p2pState === 0) || (awCount <= 1 && p2pState > 0) || (awCount === 0 && p2pState > 0) || p2pFlapping;
       if (stillBroken) {
         failedReconnects++;
         dbg('❌ verify FAIL #' + failedReconnects);
@@ -644,7 +655,8 @@ yKeepalive.observe((event: any) => {
               { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
               { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
               { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
-            ]
+            ],
+            iceTransportPolicy: FORCE_TURN_RELAY ? 'relay' : undefined,
           }
         }
       };
@@ -658,7 +670,10 @@ yKeepalive.observe((event: any) => {
       });
       connectionProvider.on('peers', (ev: any) => {
         const newCount = ev.webrtcPeers?.length ?? 0;
-        if (newCount !== p2pPeerCount) dbg('P2P peers:', p2pPeerCount, '->', newCount, '| webrtcPeers:', ev.webrtcPeers);
+        if (newCount !== p2pPeerCount) {
+          p2pFlapCounter++;
+          dbg('P2P peers:', p2pPeerCount, '->', newCount, '| flapping:', p2pFlapCounter, '| webrtcPeers:', ev.webrtcPeers);
+        }
         prevP2pPeerCount = p2pPeerCount;
         p2pPeerCount = newCount;
         refreshConnectedUsers();
