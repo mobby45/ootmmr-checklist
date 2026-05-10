@@ -821,11 +821,11 @@ yKeepalive.observe((event: any) => {
     // Auto-assign watchX name where X is next available integer
     setTimeout(() => {
       if (!connectionProvider) return;
-      const existing = Array.from(connectionProvider.awareness.states.values())
+      const used = new Set(Array.from(connectionProvider.awareness.states.values())
         .filter((s: any) => s?.user?.name?.startsWith('watch'))
-        .map((s: any) => parseInt(s.user.name.slice(5)) || 0);
-      const maxNum = existing.length > 0 ? Math.max(...existing) : 0;
-      setPseudo(`watch${maxNum + 1}`);
+        .map((s: any) => parseInt(s.user.name.slice(5)) || 0));
+      let next = 1; while (used.has(next)) next++;
+      setPseudo(`watch${next}`);
       connectionProvider.awareness.setLocalStateField('user', { name: pseudo, color: pingColor });
     }, 500);
   }
