@@ -422,7 +422,6 @@ yKeepalive.observe((event: any) => {
     const rtcOpts = {
       signaling: ['wss://ootmmr-checklist.mobby45.deno.net'],
       peerOpts: {
-        channelConfig: { negotiated: true, id: 0 },
         config: {
           iceServers: [
             { urls: 'stun:stun.l.google.com:19302' },
@@ -482,7 +481,17 @@ yKeepalive.observe((event: any) => {
             }
             if (!conn.__dcMon) {
               conn.__dcMon = true;
-              // Monitor received messages
+              // Direct RTC data channel listener — bypasses SimplePeer stream
+              const rawCh = conn.peer._channel;
+              if (rawCh && !rawCh.__dcMon) {
+                rawCh.__dcMon = true;
+                const origMsg = rawCh.onmessage;
+                rawCh.onmessage = (evt: MessageEvent) => {
+                  dbg('📥 RAW channel onmessage — data type:', typeof evt.data, '| size:', (evt.data as any)?.byteLength ?? (evt.data as any)?.size ?? '?');
+                  if (origMsg) origMsg.call(rawCh, evt);
+                };
+              }
+              // Monitor received messages via SimplePeer stream
               conn.peer.on('data', (data: any) => {
                 const view = new Uint8Array(data);
                 const type = view[0];
