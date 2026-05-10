@@ -7,7 +7,7 @@
   import { writable } from 'svelte/store';
   import { WebrtcProvider } from 'y-webrtc';
   import { IndexeddbPersistence } from 'y-indexeddb';
-  import Peer from 'simple-peer';
+  import Peer from 'simple-peer/simplepeer.min.js';
 
   // Two complementary patches to fix unidirectional data in glare scenario:
   // 1. _setupData — links each SimplePeer instance to its RTCPeerConnection (__ocPeer)
@@ -29,9 +29,12 @@
       const existingOndc = this.ondatachannel; // SimplePeer's handler for non-initiators
       this.ondatachannel = (evt: RTCDataChannelEvent) => {
         console.log('📥 ONDATACHANNEL FIRED — label:', evt.channel.label, '| id:', evt.channel.id, '| state:', evt.channel.readyState, '| hasExisting:', !!existingOndc, '| hasPeer:', !!(this as any).__ocPeer);
-        // Let SimplePeer's normal handler run first (critical for non-initiators)
+        // CRITICAL: call SimplePeer's handler FIRST — it calls _setupData which
+        // sets _channel and __ocPeer (for non-initiators). BUT _setupData also
+        // OVERWRITES ch.onmessage, so we must re-apply our handler AFTER.
         if (existingOndc) existingOndc.call(this, evt);
-        // Feed remote channel messages into the linked SimplePeer's stream
+        // Now __ocPeer should be set (by _setupData via existingOndc or by our
+        // _setupData patch for initiators). Apply OUR onmessage AFTER _setupData.
         const ch = evt.channel;
         if (ch && !(ch as any).__ocMsgPatched) {
           (ch as any).__ocMsgPatched = true;
