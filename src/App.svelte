@@ -371,6 +371,7 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
   let watchRelayProvider: WebrtcProvider | null = null;
   let connectedUsers: { name: string; color: string }[] = [];
   let newRoomPassword = '';
+  let p2pHealthInterval: ReturnType<typeof setInterval> | null = null;
   $: isSynced = connectedUsers.length > 1;
   $: if (isSynced) { showOperaWarning = false; if (operaWarningTimer) { clearTimeout(operaWarningTimer); operaWarningTimer = null; } }
 
@@ -411,7 +412,8 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
             { urls: 'stun:stun.l.google.com:19302' },
             { urls: 'stun:stun1.l.google.com:19302' },
           ]
-        }
+        },
+        keepalive: 10000,
       }
     };
     connectionProvider = new WebrtcProvider(full, ydoc, rtcOpts);
@@ -419,6 +421,18 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
     connectionProvider.awareness.on('change', refreshConnectedUsers);
     connectionProvider.on('peers', () => { refreshConnectedUsers(); });
     refreshConnectedUsers();
+
+    // Periodic health check: if awareness shows other users but P2P is gone, reconnect
+    p2pHealthInterval = setInterval(() => {
+      if (!connectionProvider) { if (p2pHealthInterval) clearInterval(p2pHealthInterval); return; }
+      const p2pCount = (connectionProvider as any).webrtcPeers?.size ?? 0;
+      const awareUsers = Array.from(connectionProvider.awareness.states.values()).filter((s: any) => s?.user);
+      if (awareUsers.length > 1 && p2pCount === 0) {
+        console.log('[coop] P2P missing, reconnecting signaling…');
+        connectionProvider.disconnect();
+        setTimeout(() => connectionProvider?.connect(), 500);
+      }
+    }, 20000);
 
     if (isOpera) {
       if (operaWarningTimer) clearTimeout(operaWarningTimer);
@@ -457,6 +471,7 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
 
   function leaveCoopRoom() {
     if (window.confirm('Are you sure you want to disconnect? Your progress will be preserved as it is now.')) {
+      if (p2pHealthInterval) { clearInterval(p2pHealthInterval); p2pHealthInterval = null; }
       autoSaveRoomSlot();
       connectionProvider?.disconnect();
       connectionProvider = null;
