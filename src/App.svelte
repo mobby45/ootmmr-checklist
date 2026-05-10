@@ -511,6 +511,7 @@ yKeepalive.observe((event: any) => {
 
   // fullCode may be "basecode" or "basecode-password"
   function joinCoopRoom(name?: string, password?: string) {
+    relocationCode = null;
     // Disconnect any existing provider before creating a new one
     if (connectionProvider) {
       connectionProvider.disconnect();
@@ -759,6 +760,7 @@ yKeepalive.observe((event: any) => {
       watchRelayProvider = null;
       roomName = null;
       roomBaseCode = null;
+      relocationCode = null;
       roomHasPassword = false;
       sessionStorage.removeItem('coopRoomPassword');
       sessionStorage.removeItem('coopRoomCode');
@@ -778,6 +780,7 @@ yKeepalive.observe((event: any) => {
 
   function setRoomPassword() {
     if (!roomName || !connectionProvider) return;
+    relocationCode = null;
     const pw = window.prompt('Enter a password to protect this room:');
     if (!pw || !pw.trim()) return;
     const newBase = crypto.randomUUID();
