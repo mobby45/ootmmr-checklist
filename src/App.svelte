@@ -7,14 +7,6 @@
   import { writable } from 'svelte/store';
   import { WebrtcProvider } from 'y-webrtc';
   import { IndexeddbPersistence } from 'y-indexeddb';
-  import Peer from 'simple-peer';
-
-  // Force SimplePeer to use a single negotiated data channel (id: 0).
-  // In the default (non-negotiated) mode, both peers create separate channels
-  // and neither sets ondatachannel — data flows only unidirectionally, causing
-  // awareness timeouts at ~30s. With negotiated:true,id:0, both sides create
-  // the SAME data channel, avoiding the glare problem entirely.
-  Peer.channelConfig = { negotiated: true, id: 0 };
 
   import { initializeStructuredChecks } from './util/util';
   import { parseSpoilerLog } from './util/spoilerParser';
@@ -430,6 +422,7 @@ yKeepalive.observe((event: any) => {
     const rtcOpts = {
       signaling: ['wss://ootmmr-checklist.mobby45.deno.net'],
       peerOpts: {
+        channelConfig: { negotiated: true, id: 0 },
         config: {
           iceServers: [
             { urls: 'stun:stun.l.google.com:19302' },
