@@ -125,8 +125,20 @@ yKeepalive.observe((event: any) => {
     localStorage.setItem('pseudo', pseudo);
   }
   function handlePseudoSubmit(e: Event) {
+    if (isWatchMode) return;
     const input = (e.target as HTMLFormElement).querySelector('input') as HTMLInputElement;
-    if (input) setPseudo(input.value);
+    if (!input) return;
+    const newName = input.value.trim().slice(0, 20);
+    if (!newName) { setPseudo(''); return; }
+    const selfName = pseudo || 'Anonymous';
+    for (const u of connectedUsers) {
+      if (u.name === selfName && u.color === pingColor) continue;
+      if (u.name === newName && u.color === pingColor) {
+        alert('Another peer already has this name and color. Change your name or color to distinguish yourself.');
+        return;
+      }
+    }
+    setPseudo(newName);
   }
   function setAuthor(checkName: string, state: T.CheckState) {
     if (state === T.CheckState.unchecked) yCheckAuthors.delete(checkName);
@@ -794,7 +806,12 @@ yKeepalive.observe((event: any) => {
   }
 
   // Auto-save room slot on page close/refresh while connected
-  window.addEventListener('beforeunload', () => { if (connectionProvider) autoSaveRoomSlot(); });
+  window.addEventListener('beforeunload', () => {
+    if (connectionProvider) {
+      if (isWatchMode) leaveCoopRoom();
+      else autoSaveRoomSlot();
+    }
+  });
 
   // Watch mode (read-only): ?watch=baseCode — joins watch relay room only
   const _watchParam = new URLSearchParams(window.location.search).get('watch');
@@ -802,6 +819,16 @@ yKeepalive.observe((event: any) => {
   if (isWatchMode && _watchParam) {
     roomBaseCode = _watchParam;
     joinCoopRoom(_watchParam);
+    // Auto-assign watchX name where X is next available integer
+    setTimeout(() => {
+      if (!connectionProvider) return;
+      const existing = Array.from(connectionProvider.awareness.states.values())
+        .filter((s: any) => s?.user?.name?.startsWith('watch'))
+        .map((s: any) => parseInt(s.user.name.slice(5)) || 0);
+      const maxNum = existing.length > 0 ? Math.max(...existing) : 0;
+      setPseudo(`watch${maxNum + 1}`);
+      connectionProvider.awareness.setLocalStateField('user', { name: pseudo, color: pingColor });
+    }, 500);
   }
 
   // Auto-join from URL hash (baseCode only) + sessionStorage (password, if any).
@@ -2856,7 +2883,7 @@ yKeepalive.observe((event: any) => {
                   Show Unshuffled Town Stray Fairy
                 </label>
                 <label class="checkbox-option">
-                  <input type="checkbox" bind:checked={showSpoilerItems} />
+                  <input type="checkbox" bind:checked={showSpoilerItems} disabled={isWatchMode} />
                   Show found items (spoiler)
                 </label>
               </div>
@@ -2924,15 +2951,16 @@ yKeepalive.observe((event: any) => {
                     placeholder="Item or location… (e.g. Hookshot, Water Temple) — Ctrl+Shift+S"
                     bind:value={spoilerSearch}
                     bind:this={spoilerSearchEl}
+                    disabled={isWatchMode}
                   />
                   {#if spoilerSearchResults.length > 0}
                     <ul class="spoiler-results">
                       {#each spoilerSearchResults as r}
                         <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-noninteractive-element-interactions -->
                         <li
-                          on:click={() => jumpToCheck(r.loc)}
-                          style="cursor:pointer"
-                          title="Click to jump to check"
+                          on:click={() => { if (isWatchMode) return; jumpToCheck(r.loc); }}
+                          style={isWatchMode ? '' : 'cursor:pointer'}
+                          title={isWatchMode ? '' : 'Click to jump to check'}
                           class:spoiler-result-checked={($sChecks.get(r.loc) ?? T.CheckState.unchecked) === T.CheckState.checked}
                         >
                           {#if r.matchedLoc}
@@ -2988,14 +3016,15 @@ yKeepalive.observe((event: any) => {
             <!-- Pseudo + ping color -->
             <form class="pure-form" style="margin-bottom: 0.5em;" on:submit|preventDefault={handlePseudoSubmit}>
               <fieldset style="display:flex; gap:0.4em; align-items:center; flex-wrap:wrap;">
-                <input type="text" placeholder="Your name (optional)" value={pseudo} maxlength="20" style="width: 120px;" />
+                <input type="text" placeholder="Your name (optional)" value={pseudo} maxlength="20" style="width: 120px;" disabled={isWatchMode} />
                 <input
                   type="color"
                   bind:value={pingColor}
                   title="Ping color"
                   style="width:28px; height:28px; padding:2px; cursor:pointer; border:1px solid var(--color-border); border-radius:4px; background:transparent;"
+                  disabled={isWatchMode}
                 />
-                <button type="submit" class="bg-primary pure-button">Set</button>
+                <button type="submit" class="bg-primary pure-button" disabled={isWatchMode}>Set</button>
                 {#if !pseudo}<span style="font-size:0.78em; opacity:0.65;">Set a name so others can identify you</span>{/if}
               </fieldset>
             </form>
@@ -3045,7 +3074,7 @@ yKeepalive.observe((event: any) => {
                   {#if !roomHasPassword}
                   <button class="pure-button" on:click={() => { if (isWatchMode) return; setRoomPassword(); }} title="Create a new room with a password — current peers will lose edit access" disabled={isWatchMode}>🔒 Set Password</button>
                   {/if}
-                  <button class="bg-primary pure-button" on:click={leaveCoopRoom}>Disconnect</button>
+                  <button class="bg-primary pure-button" on:click={leaveCoopRoom} disabled={isWatchMode}>Disconnect</button>
                 </fieldset>
               </form>
               <div class="sync-status" class:synced={connectedUsers.length > 1}>

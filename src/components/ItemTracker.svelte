@@ -648,7 +648,7 @@
         <button class="tracker-btn" on:click={() => overlayStacked = !overlayStacked}>
           {overlayStacked ? '⬛ Side by side' : '☰ Stacked'}
         </button>
-        <button class="tracker-btn danger" on:click={clearAll}>Clear</button>
+        <button class="tracker-btn danger" on:click={clearAll} disabled={isWatchMode}>Clear</button>
       </div>
     </div>
 
@@ -1155,7 +1155,8 @@
               <label class="settings-select-row">
                 <span class="settings-select-name">{item.name}</span>
                 <select value={$settingsStore.get(item.key) ?? item.options[0].value}
-                  on:change={e => setStringSetting(item.key, e.currentTarget.value)}>
+                  on:change={e => setStringSetting(item.key, e.currentTarget.value)}
+                  disabled={isWatchMode}>
                   {#each item.options as opt}
                     <option value={opt.value}>{opt.label}</option>
                   {/each}
@@ -1166,6 +1167,7 @@
                 <input type="checkbox"
                   checked={$settingsStore.get(item.key) !== false}
                   on:change={() => toggleVisibility(item.key, $settingsStore.get(item.key) === false)}
+                  disabled={isWatchMode}
                 />
                 {item.name}
               </label>
@@ -1184,7 +1186,8 @@
               <label class="settings-select-row">
                 <span class="settings-select-name">{item.name}</span>
                 <select value={$settingsStore.get(item.key) ?? item.options[0].value}
-                  on:change={e => setStringSetting(item.key, e.currentTarget.value)}>
+                  on:change={e => setStringSetting(item.key, e.currentTarget.value)}
+                  disabled={isWatchMode}>
                   {#each item.options as opt}
                     <option value={opt.value}>{opt.label}</option>
                   {/each}
@@ -1195,6 +1198,7 @@
                 <input type="checkbox"
                   checked={$settingsStore.get(item.key) !== false}
                   on:change={() => toggleVisibility(item.key, $settingsStore.get(item.key) === false)}
+                  disabled={isWatchMode}
                 />
                 {item.name}
               </label>
@@ -1214,6 +1218,7 @@
                 <input type="checkbox"
                   checked={$settingsStore.get(item.key) === true}
                   on:change={() => toggleSetting(item.key, $settingsStore.get(item.key) !== true)}
+                  disabled={isWatchMode}
                 />
                 {item.name}
               </label>

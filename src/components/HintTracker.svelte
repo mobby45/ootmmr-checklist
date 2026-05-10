@@ -224,16 +224,16 @@
                   {entry.kind === 'note' ? 'Note' : 'Shop'}
                 </span>
                 <span class="annotation-name" title={entry.id}>{entry.id}</span>
-                {#if entry.kind === 'note' && onEditNote}
+                {#if entry.kind === 'note' && onEditNote && !isWatchMode}
                   <button class="annotation-edit" on:click={() => onEditNote?.(entry.id)} title="Edit">✎</button>
                 {/if}
-                {#if entry.kind === 'shop' && onEditShop}
+                {#if entry.kind === 'shop' && onEditShop && !isWatchMode}
                   <button class="annotation-edit" on:click={() => onEditShop?.(entry.id)} title="Edit">✎</button>
                 {/if}
-                {#if entry.kind === 'note' && onDeleteNote}
+                {#if entry.kind === 'note' && onDeleteNote && !isWatchMode}
                   <button class="annotation-del" on:click={() => onDeleteNote?.(entry.id)} title="Delete">✕</button>
                 {/if}
-                {#if entry.kind === 'shop' && onDeleteShop}
+                {#if entry.kind === 'shop' && onDeleteShop && !isWatchMode}
                   <button class="annotation-del" on:click={() => onDeleteShop?.(entry.id)} title="Delete">✕</button>
                 {/if}
               </div>
