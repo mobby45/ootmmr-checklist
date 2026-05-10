@@ -50,6 +50,7 @@
 
   const yChecks: Y.Map<T.CheckState> = ydoc.getMap('checks');
   const ySpoiler: Y.Map<any> = ydoc.getMap('spoiler');
+  const ySpoilerLocations: Y.Map<string> = ydoc.getMap('spoilerLocations');
   const ySettings: Y.Map<any> = ydoc.getMap('settings');
   const yMqSettings: Y.Map<boolean> = ydoc.getMap('mqSettings');
   const yVariantSettings: Y.Map<number> = ydoc.getMap('variantSettings');
@@ -309,11 +310,20 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
 
   // Migrate existing localStorage spoiler into ySpoiler once IndexedDB is ready
   persistenceProvider.on('synced', () => {
-    if (ySpoiler.size === 0) {
+    if (ySpoilerLocations.size === 0) {
       const locStr = localStorage.getItem('spoilerLocations');
+      if (locStr) {
+        const raw = JSON.parse(locStr);
+        ydoc.transact(() => {
+          for (const [loc, item] of Object.entries(raw)) {
+            ySpoilerLocations.set(loc, item as string);
+          }
+        });
+      }
+    }
+    if (ySpoiler.size === 0) {
       const siStr = localStorage.getItem('spoilerSeedInfo');
       const erStr = localStorage.getItem('spoilerErSettings');
-      if (locStr) ySpoiler.set('locations', locStr);
       if (siStr) ySpoiler.set('seedInfo', siStr);
       if (erStr) ySpoiler.set('erSettings', erStr);
     }
@@ -321,11 +331,6 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
 
   ySpoiler.observe((event: any) => {
     if (event.transaction?.local) return;
-    const locStr = ySpoiler.get('locations');
-    if (locStr !== undefined) {
-      spoilerLocations = applyAliases(JSON.parse(locStr));
-      localStorage.setItem('spoilerLocations', locStr);
-    }
     const siStr = ySpoiler.get('seedInfo');
     if (siStr !== undefined) {
       spoilerSeedInfo = siStr === 'null' ? null : JSON.parse(siStr);
@@ -336,8 +341,20 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
       spoilerErSettings = erStr === 'null' ? null : JSON.parse(erStr);
       localStorage.setItem('spoilerErSettings', erStr);
     }
-    spoilerSyncedFromPeer = true;
-    setTimeout(() => { spoilerSyncedFromPeer = false; }, 4000);
+  });
+
+  ySpoilerLocations.observe((event: any) => {
+    if (event.transaction?.local) return;
+    const raw: Record<string, string> = {};
+    for (const [loc, item] of ySpoilerLocations.entries()) {
+      raw[loc] = item;
+    }
+    if (Object.keys(raw).length > 0) {
+      spoilerLocations = applyAliases(raw);
+      localStorage.setItem('spoilerLocations', JSON.stringify(raw));
+      spoilerSyncedFromPeer = true;
+      setTimeout(() => { spoilerSyncedFromPeer = false; }, 4000);
+    }
   });
 
   // ==========================================
@@ -400,6 +417,7 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
     connectionProvider = new WebrtcProvider(full, ydoc, rtcOpts);
     connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anonymous', color: pingColor });
     connectionProvider.awareness.on('change', refreshConnectedUsers);
+    connectionProvider.on('peers', () => { refreshConnectedUsers(); });
     refreshConnectedUsers();
 
     if (isOpera) {
@@ -583,7 +601,11 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
       spoilerLocations = applyAliases(raw);
       const locStr = JSON.stringify(raw);
       localStorage.setItem('spoilerLocations', locStr);
-      ySpoiler.set('locations', locStr);
+      ydoc.transact(() => {
+        for (const [loc, item] of Object.entries(raw)) {
+          ySpoilerLocations.set(loc, item);
+        }
+      });
 
       spoilerErSettings = data.erSettings;
       const erStr = JSON.stringify(data.erSettings);
@@ -1697,7 +1719,9 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
     localStorage.removeItem('spoilerErSettings');
     spoilerSeedInfo = null;
     localStorage.removeItem('spoilerSeedInfo');
-    ySpoiler.delete('locations');
+    for (const [key] of ySpoilerLocations.entries()) {
+      ySpoilerLocations.delete(key);
+    }
     ySpoiler.delete('seedInfo');
     ySpoiler.delete('erSettings');
   }
