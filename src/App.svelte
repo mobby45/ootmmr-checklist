@@ -9,34 +9,42 @@
   import { IndexeddbPersistence } from 'y-indexeddb';
   import Peer from 'simple-peer';
 
-  // Patch SimplePeer._setupData to ensure ondatachannel is ALWAYS set on the
-  // RTCPeerConnection, even when both peers act as initiators (y-webrtc glare).
-  // Without this, initiators never create ondatachannel, so remote data channels
-  // are never processed — data flows only unidirectionally.
-  // We preserve any existing ondatachannel handler (needed for non-initiators).
+  // Two complementary patches to fix unidirectional data in glare scenario:
+  // 1. _setupData — links each SimplePeer instance to its RTCPeerConnection (__ocPeer)
+  // 2. setRemoteDescription — ensures ondatachannel is ALWAYS set when remote SDP arrives
+  //    (initiators never set it, so the remote channel is never received without this)
+
+  // Patch 1: Link SimplePeer → PC
   const origSetupData = (Peer.prototype as any)._setupData;
   (Peer.prototype as any)._setupData = function (this: any, event: any) {
-    const pc = this._pc;
-    const existingOndc = pc ? pc.ondatachannel : null;
     origSetupData.call(this, event);
-    if (this._pc && !this._pc.__ocOndcPatched) {
-      this._pc.__ocOndcPatched = true;
-      this._pc.ondatachannel = (evt: RTCDataChannelEvent) => {
-        console.log('📥 ONDATACHANNEL FIRED — label:', evt.channel.label, '| id:', evt.channel.id, '| state:', evt.channel.readyState, '| initiator:', this.initiator, '| existing:', !!existingOndc);
-        // Let SimplePeer's normal handler run first (needed for non-initiator)
-        if (existingOndc) existingOndc.call(this._pc, evt);
-        // Also feed remote channel messages into this peer's stream
+    if (this._pc) (this._pc as any).__ocPeer = this;
+  };
+
+  // Patch 2: Set ondatachannel right before remote description is applied
+  const origSetRemoteDescription = RTCPeerConnection.prototype.setRemoteDescription;
+  RTCPeerConnection.prototype.setRemoteDescription = function (this: RTCPeerConnection, ...args: any[]) {
+    if (!(this as any).__ocOndcPatched) {
+      (this as any).__ocOndcPatched = true;
+      const existingOndc = this.ondatachannel; // SimplePeer's handler for non-initiators
+      this.ondatachannel = (evt: RTCDataChannelEvent) => {
+        console.log('📥 ONDATACHANNEL FIRED — label:', evt.channel.label, '| id:', evt.channel.id, '| state:', evt.channel.readyState, '| hasExisting:', !!existingOndc, '| hasPeer:', !!(this as any).__ocPeer);
+        // Let SimplePeer's normal handler run first (critical for non-initiators)
+        if (existingOndc) existingOndc.call(this, evt);
+        // Feed remote channel messages into the linked SimplePeer's stream
         const ch = evt.channel;
-        if (ch && !ch.__ocMsgPatched) {
-          ch.__ocMsgPatched = true;
+        if (ch && !(ch as any).__ocMsgPatched) {
+          (ch as any).__ocMsgPatched = true;
           ch.binaryType = 'arraybuffer';
           ch.onmessage = (msgEvt: MessageEvent) => {
             console.log('📥 REMOTE CHANNEL MESSAGE — len:', (msgEvt.data as ArrayBuffer).byteLength);
-            if (!this.destroyed) this._onChannelMessage(msgEvt);
+            const peer = (this as any).__ocPeer;
+            if (peer && !peer.destroyed) peer._onChannelMessage(msgEvt);
           };
         }
       };
     }
+    return origSetRemoteDescription.apply(this, args);
   };
 
   import { initializeStructuredChecks } from './util/util';
