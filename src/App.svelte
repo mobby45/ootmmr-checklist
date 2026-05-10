@@ -432,7 +432,7 @@ yKeepalive.observe((event: any) => {
   let p2pFlapCounter = 0;
   const P2P_FLAP_THRESHOLD = 5;
   const FORCE_TURN_RELAY = false;
-  const DEBUG = true;
+  const DEBUG = false;
   const initialHash = window.location.hash;
   function dbg(...args: any[]) { if (DEBUG) console.log('[coop]', ...args); }
   $: isSynced = connectedUsers.length > 1;
