@@ -381,6 +381,7 @@ yKeepalive.observe((event: any) => {
   let dcKeepaliveTick = 0;
   let prevP2pPeerCount = 0;
   let p2pHealthTriggerCount = 0;
+  let dcMonInterval: any = null;
   const DEBUG = true;
   function dbg(...args: any[]) { if (DEBUG) console.log('[coop]', ...args); }
   $: isSynced = connectedUsers.length > 1;
@@ -437,12 +438,33 @@ yKeepalive.observe((event: any) => {
         dbg('awareness update — added:', added, '| updated:', updated, '| removed:', removed, '| origin:', origin);
       }
     });
+    // Monitor ALL incoming data channel messages to see if messageAwareness (type=1) arrives
     connectionProvider.on('peers', (ev: any) => {
       const newCount = ev.webrtcPeers?.length ?? 0;
       if (newCount !== p2pPeerCount) dbg('P2P peers:', p2pPeerCount, '->', newCount, '| webrtcPeers:', ev.webrtcPeers);
       prevP2pPeerCount = p2pPeerCount;
       p2pPeerCount = newCount;
       refreshConnectedUsers();
+      // Attach data channel monitor to new connections
+      if (dcMonInterval) { clearInterval(dcMonInterval); dcMonInterval = null; }
+      dcMonInterval = setInterval(() => {
+        try {
+          const rooms = (connectionProvider as any).rooms;
+          if (!rooms) return;
+          for (const [, room] of rooms) {
+            for (const [, conn] of room.webrtcConns) {
+              if (conn.peer && !conn.peer.__dcMon) {
+                conn.peer.__dcMon = true;
+                conn.peer.on('data', (data: any) => {
+                  const view = new Uint8Array(data);
+                  const type = view[0];
+                  dbg('📥 data channel recv — type:', type, '| len:', view.length, '| first bytes:', Array.from(view.slice(0, Math.min(8, view.length))));
+                });
+              }
+            }
+          }
+        } catch (e) { /* internals access failed */ }
+      }, 3000);
     });
     connectionProvider.on('status', (ev: any) => dbg('status event — connected:', ev.connected));
     connectionProvider.on('synced', (ev: any) => dbg('synced event — synced:', ev.synced));
@@ -516,6 +538,7 @@ yKeepalive.observe((event: any) => {
       dbg('leaving coop room — disconnecting providers…');
       if (p2pHealthInterval) { clearInterval(p2pHealthInterval); p2pHealthInterval = null; }
       if (dcKeepaliveInterval) { clearInterval(dcKeepaliveInterval); dcKeepaliveInterval = null; }
+      if (dcMonInterval) { clearInterval(dcMonInterval); dcMonInterval = null; }
       p2pPeerCount = 0;
       autoSaveRoomSlot();
       connectionProvider?.disconnect();
@@ -527,7 +550,13 @@ yKeepalive.observe((event: any) => {
       connectedUsers = [];
       if (operaWarningTimer) { clearTimeout(operaWarningTimer); operaWarningTimer = null; }
       showOperaWarning = false;
-      dbg('coop room left');
+      // Clear transient data from previous room so it doesn't leak into the next connection
+      ydoc.transact(() => {
+        yMessages.delete(0, yMessages.length);
+        for (const key of yPings.keys()) yPings.delete(key);
+      });
+      messages = [];
+      dbg('coop room left — transient data cleared');
     }
   }
 
