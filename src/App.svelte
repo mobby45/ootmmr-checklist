@@ -445,22 +445,20 @@ yKeepalive.observe((event: any) => {
       prevP2pPeerCount = p2pPeerCount;
       p2pPeerCount = newCount;
       refreshConnectedUsers();
-      // Attach data channel monitor to new connections
+      // Attach data channel monitor to the provider's room
       if (dcMonInterval) { clearInterval(dcMonInterval); dcMonInterval = null; }
       dcMonInterval = setInterval(() => {
         try {
-          const rooms = (connectionProvider as any).rooms;
-          if (!rooms) return;
-          for (const [, room] of rooms) {
-            for (const [, conn] of room.webrtcConns) {
-              if (conn.peer && !conn.peer.__dcMon) {
-                conn.peer.__dcMon = true;
-                conn.peer.on('data', (data: any) => {
-                  const view = new Uint8Array(data);
-                  const type = view[0];
-                  dbg('📥 data channel recv — type:', type, '| len:', view.length, '| first bytes:', Array.from(view.slice(0, Math.min(8, view.length))));
-                });
-              }
+          const room = (connectionProvider as any).room;
+          if (!room) return;
+          for (const [, conn] of room.webrtcConns) {
+            if (!conn.__dcMon) {
+              conn.__dcMon = true;
+              conn.peer.on('data', (data: any) => {
+                const view = new Uint8Array(data);
+                const type = view[0];
+                dbg('📥 data channel recv — type:', type, '| len:', view.length, '| first bytes:', Array.from(view.slice(0, Math.min(8, view.length))));
+              });
             }
           }
         } catch (e) { /* internals access failed */ }
