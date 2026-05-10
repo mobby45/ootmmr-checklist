@@ -7,6 +7,29 @@
   import { writable } from 'svelte/store';
   import { WebrtcProvider } from 'y-webrtc';
   import { IndexeddbPersistence } from 'y-indexeddb';
+  import Peer from 'simple-peer';
+
+  // Patch SimplePeer to always handle incoming remote data channels.
+  // Without this, when both peers act as initiators (y-webrtc glare), neither
+  // sets ondatachannel, so each only receives its OWN channel — data flows
+  // unidirectionally and awareness times out at ~30s.
+  const origSetupData = (Peer.prototype as any)._setupData;
+  (Peer.prototype as any)._setupData = function (this: any, event: any) {
+    origSetupData.call(this, event);
+    if (this._pc && !this._pc.__opencOndc) {
+      this._pc.__opencOndc = true;
+      const pc = this._pc;
+      pc.ondatachannel = (evt: RTCDataChannelEvent) => {
+        const ch = evt.channel;
+        ch.binaryType = 'arraybuffer';
+        ch.onmessage = (msgEvt: MessageEvent) => {
+          if (!this.destroyed) {
+            this.push(new Uint8Array(msgEvt.data as ArrayBuffer));
+          }
+        };
+      };
+    }
+  };
 
   import { initializeStructuredChecks } from './util/util';
   import { parseSpoilerLog } from './util/spoilerParser';
