@@ -432,7 +432,7 @@ yKeepalive.observe((event: any) => {
   let p2pFlapCounter = 0;
   const P2P_FLAP_THRESHOLD = 5;
   const FORCE_TURN_RELAY = false;
-  const DEBUG = false;
+  const DEBUG = true;
   const initialHash = window.location.hash;
   function dbg(...args: any[]) { if (DEBUG) console.log('[coop]', ...args); }
   $: isSynced = connectedUsers.length > 1;
@@ -831,10 +831,7 @@ yKeepalive.observe((event: any) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
       const data = parseSpoilerLog(await file.text());
-
-      Object.entries(data.settings).forEach(([k, v]) => ySettings.set(k, v));
-      ySettings.set('OOTMM', data.OOTMM);
-      ySettings.set('OOTMMDungeons', data.OOTMMDungeons);
+      dbg('spoiler parsed —', Object.keys(data.locations).length, 'locations,', Object.keys(data.settings).length, 'settings');
 
       const raw: Record<string, string> = {};
       for (const [key, value] of Object.entries(data.locations)) {
@@ -843,21 +840,24 @@ yKeepalive.observe((event: any) => {
       spoilerLocations = applyAliases(raw);
       const locStr = JSON.stringify(raw);
       localStorage.setItem('spoilerLocations', locStr);
-      ydoc.transact(() => {
-        for (const [loc, item] of Object.entries(raw)) {
-          ySpoilerLocations.set(loc, item);
-        }
-      });
-
       spoilerErSettings = data.erSettings;
       const erStr = JSON.stringify(data.erSettings);
       localStorage.setItem('spoilerErSettings', erStr);
-      ySpoiler.set('erSettings', erStr);
-
       spoilerSeedInfo = data.seedInfo;
       const siStr = JSON.stringify(data.seedInfo);
       localStorage.setItem('spoilerSeedInfo', siStr);
-      ySpoiler.set('seedInfo', siStr);
+
+      ydoc.transact(() => {
+        Object.entries(data.settings).forEach(([k, v]) => ySettings.set(k, v));
+        ySettings.set('OOTMM', data.OOTMM);
+        ySettings.set('OOTMMDungeons', data.OOTMMDungeons);
+        for (const [loc, item] of Object.entries(raw)) {
+          ySpoilerLocations.set(loc, item);
+        }
+        ySpoiler.set('erSettings', erStr);
+        ySpoiler.set('seedInfo', siStr);
+      });
+      dbg('spoiler synced to Yjs');
     };
     input.click();
   }
