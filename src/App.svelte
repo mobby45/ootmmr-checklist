@@ -440,7 +440,9 @@ yKeepalive.observe((event: any) => {
   const VERIFY_DELAY_MS = 12000;
   let dcMonInterval: any = null;
   let p2pFlapCounter = 0;
-  const P2P_FLAP_THRESHOLD = 5;
+  let lastFlapTime = 0;
+  const P2P_FLAP_MIN_INTERVAL = 2000;
+  const P2P_FLAP_THRESHOLD = 10;
   const FORCE_TURN_RELAY = false;
   const DEBUG = true;
   const initialHash = window.location.hash;
@@ -518,7 +520,11 @@ yKeepalive.observe((event: any) => {
     connectionProvider.on('peers', (ev: any) => {
       const newCount = ev.webrtcPeers?.length ?? 0;
       if (newCount !== p2pPeerCount) {
-        p2pFlapCounter++;
+        const now = Date.now();
+        if (now - lastFlapTime > P2P_FLAP_MIN_INTERVAL) {
+          p2pFlapCounter++;
+          lastFlapTime = now;
+        }
         dbg('P2P peers:', p2pPeerCount, '->', newCount, '| flapping:', p2pFlapCounter);
       }
       prevP2pPeerCount = p2pPeerCount;
@@ -631,7 +637,11 @@ yKeepalive.observe((event: any) => {
       connectionProvider.on('peers', (ev: any) => {
         const newCount = ev.webrtcPeers?.length ?? 0;
         if (newCount !== p2pPeerCount) {
-          p2pFlapCounter++;
+          const now = Date.now();
+          if (now - lastFlapTime > P2P_FLAP_MIN_INTERVAL) {
+            p2pFlapCounter++;
+            lastFlapTime = now;
+          }
           dbg('P2P peers:', p2pPeerCount, '->', newCount, '| flapping:', p2pFlapCounter);
         }
         prevP2pPeerCount = p2pPeerCount;
