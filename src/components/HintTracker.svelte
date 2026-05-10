@@ -9,6 +9,7 @@
   export let onEditShop: ((id: string) => void) | null = null;
   export let onDeleteNote: ((id: string) => void) | null = null;
   export let onDeleteShop: ((id: string) => void) | null = null;
+  export let isWatchMode = false;
 
   $: annotationCount = notesEntries.length + shopEntries.length;
 
@@ -127,6 +128,7 @@
   </div>
 
   {#if view === 'hints'}
+    {#if !isWatchMode}
     <!-- Add form -->
     <div class="hint-add">
       <div class="type-row">
@@ -150,6 +152,7 @@
         <button class="add-btn" on:click={addHint} disabled={!newText.trim()}>Add</button>
       </div>
     </div>
+    {/if}
 
     <!-- Filter + Clear -->
     <div class="filter-row">
@@ -166,7 +169,7 @@
           >{t.label} ({count})</button>
         {/if}
       {/each}
-      {#if hints.length > 0}
+      {#if hints.length > 0 && !isWatchMode}
         <button class="clear-all-btn" on:click={clearAll}>Clear all</button>
       {/if}
     </div>
@@ -183,7 +186,9 @@
             <span class="hint-text" on:click={() => copyHint(hint.id, hint.type, hint.text)} title="Click to copy" style="cursor:copy">
               {#if copiedId === hint.id}<span class="hint-copied">✓ Copied</span>{:else}{hint.text}{/if}
             </span>
+            {#if !isWatchMode}
             <button class="del-btn" on:click={() => removeHint(hint.id)} title="Delete">✕</button>
+            {/if}
           </li>
         {/each}
       </ul>

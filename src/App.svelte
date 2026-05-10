@@ -1095,6 +1095,7 @@ yKeepalive.observe((event: any) => {
   }
 
   function confirmNoteEdit() {
+    if (isWatchMode) return;
     if (noteEditValue.trim()) yNotes.set(noteEditKey, noteEditValue.trim());
     else yNotes.delete(noteEditKey);
     noteEditOpen = false;
@@ -1269,6 +1270,7 @@ yKeepalive.observe((event: any) => {
   }
 
   function handleMapToggle(event: CustomEvent) {
+    if (isWatchMode) return;
     const fromMap = event.detail.checkName;
     const actual = checkNameMappingReverse[fromMap] ?? fromMap.replace(/^(OOT|MM) /, '');
     const newState = toggleState(yChecks.get(actual) ?? T.CheckState.unchecked);
@@ -2952,6 +2954,7 @@ yKeepalive.observe((event: any) => {
               </div>
             </details>
 
+            {#if !isWatchMode}
             <!-- Save Slots -->
             <details class="spoiler-panel" style="margin-top: 0.4em;"
               bind:open={secSlots}
@@ -2980,6 +2983,7 @@ yKeepalive.observe((event: any) => {
                 <button class="pure-button" style="font-size:0.82em;" on:click={newSlot}>+ New Slot</button>
               </div>
             </details>
+            {/if}
           </form>
 
           <div class="flex flex-col">
@@ -3040,7 +3044,7 @@ yKeepalive.observe((event: any) => {
                     >👁 Watch Link</button
                   >
                   {/if}
-                  {#if !roomHasPassword}
+                  {#if !roomHasPassword && !isWatchMode}
                   <button class="pure-button" on:click={setRoomPassword} title="Create a new room with a password — current peers will lose edit access">🔒 Set Password</button>
                   {/if}
                   <button class="bg-primary pure-button" on:click={leaveCoopRoom}>Disconnect</button>
@@ -3121,6 +3125,7 @@ yKeepalive.observe((event: any) => {
               {/if}
             </div>
 
+            {#if !isWatchMode}
             <!-- Presets -->
             <fieldset style="margin-top: 1em;">
               <legend>Presets</legend>
@@ -3162,6 +3167,7 @@ yKeepalive.observe((event: any) => {
                 {/if}
               {/if}
             </fieldset>
+            {/if}
           </div>
         </div>
       </details>
@@ -3194,10 +3200,11 @@ yKeepalive.observe((event: any) => {
         <HintTracker
           {yHints} {hints}
           {notesEntries} {shopEntries}
+          {isWatchMode}
           onEditNote={handleEditNote}
           onEditShop={handleShopEditByName}
-          onDeleteNote={(id) => yNotes.delete(id)}
-          onDeleteShop={(id) => { yShopItems.delete(id); yShopPrices.delete(id); }}
+          onDeleteNote={(id) => { if (!isWatchMode) yNotes.delete(id); }}
+          onDeleteShop={(id) => { if (!isWatchMode) { yShopItems.delete(id); yShopPrices.delete(id); } }}
         />
       </details>
 
