@@ -568,6 +568,8 @@ yKeepalive.observe((event: any) => {
     }
     if (peerKeepaliveInterval) { clearInterval(peerKeepaliveInterval); peerKeepaliveInterval = null; }
     if (peerCleanupInterval) { clearInterval(peerCleanupInterval); peerCleanupInterval = null; }
+    // Clear all yPeerInfo to remove stale entries from the previous room
+    yPeerInfo.clear();
     const base = name ?? crypto.randomUUID();
     const full = password ? `${base}-${password}` : base;
     roomName = full;
