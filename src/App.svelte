@@ -503,7 +503,7 @@ yKeepalive.observe((event: any) => {
         if (id === peerId) continue;
         try {
           const d = JSON.parse(val as string);
-          if (!d.ts || now - d.ts > 120000) yPeerInfo.delete(id);
+          if (!d.ts || now - d.ts > 30000) yPeerInfo.delete(id);
         } catch { yPeerInfo.delete(id); }
       }
     });
@@ -615,7 +615,7 @@ yKeepalive.observe((event: any) => {
     if (peerKeepaliveInterval) clearInterval(peerKeepaliveInterval);
     peerKeepaliveInterval = setInterval(() => updatePeerInfo(), 15000);
     if (peerCleanupInterval) clearInterval(peerCleanupInterval);
-    peerCleanupInterval = setInterval(() => cleanupStalePeers(), 60000);
+    peerCleanupInterval = setInterval(() => cleanupStalePeers(), 15000);
     connectionProvider.on('peers', (ev: any) => {
       const newCount = ev.webrtcPeers?.length ?? 0;
       if (newCount !== p2pPeerCount) {
@@ -843,7 +843,11 @@ yKeepalive.observe((event: any) => {
   window.addEventListener('beforeunload', () => {
     if (connectionProvider) {
       if (isWatchMode) leaveCoopRoom();
-      else autoSaveRoomSlot();
+      else {
+        autoSaveRoomSlot();
+        if (peerId) { yPeerInfo.delete(peerId); peerId = ''; }
+        connectionProvider?.disconnect();
+      }
     }
   });
 
