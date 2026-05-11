@@ -559,7 +559,7 @@ yKeepalive.observe((event: any) => {
     else sessionStorage.removeItem('coopRoomPassword');
 
     const rtcOpts = {
-      signaling: ['wss://ootmmr-checklist.mobby45.deno.net', 'wss://y-signaling.yjs.dev'],
+      signaling: ['wss://ootmmr-checklist.mobby45.deno.net'],
       peerOpts: {
         config: {
           iceServers: [
