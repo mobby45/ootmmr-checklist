@@ -421,9 +421,7 @@ yKeepalive.observe((event: any) => {
     }
     if (!isWatchMode) {
       const relocated = ySpoiler.get('relocatedTo');
-      if (relocated !== undefined) {
-        relocationCode = relocated;
-      }
+      relocationCode = relocated !== undefined ? relocated : null;
     }
   });
 
