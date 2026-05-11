@@ -104,6 +104,8 @@
 const yMessages: Y.Array<any> = ydoc.getArray('messages');
   const yPings: Y.Map<any> = ydoc.getMap('pings');
 const yKeepalive: Y.Map<number> = ydoc.getMap('keepalive');
+const yPeerInfo: Y.Map<string> = ydoc.getMap('peerInfo');
+let peerId = '';
 let lastRemoteKeepalive = 0;
 yKeepalive.observe((event: any) => {
   if (!event.transaction?.local) { lastRemoteKeepalive = Date.now(); dbg('keepalive received from remote'); }
@@ -469,6 +471,8 @@ yKeepalive.observe((event: any) => {
   const RECONNECT_DEBOUNCE_MS = 10000;
   const VERIFY_DELAY_MS = 12000;
   let dcMonInterval: any = null;
+  let peerKeepaliveInterval: ReturnType<typeof setInterval> | null = null;
+  let peerCleanupInterval: ReturnType<typeof setInterval> | null = null;
   let p2pFlapCounter = 0;
   let lastFlapTime = 0;
   const P2P_FLAP_MIN_INTERVAL = 2000;
@@ -485,6 +489,26 @@ yKeepalive.observe((event: any) => {
   // Note: we intentionally do NOT set hash reactively — the hash is cleaned
   // after auto-join so the URL stays clean.
 
+  function updatePeerInfo() {
+    if (!peerId) return;
+    const name = pseudo || 'Anonymous';
+    const color = pingColor;
+    yPeerInfo.set(peerId, JSON.stringify({ name, color, ts: Date.now() }));
+  }
+
+  function cleanupStalePeers() {
+    const now = Date.now();
+    ydoc.transact(() => {
+      for (const [id, val] of yPeerInfo) {
+        if (id === peerId) continue;
+        try {
+          const d = JSON.parse(val as string);
+          if (!d.ts || now - d.ts > 120000) yPeerInfo.delete(id);
+        } catch { yPeerInfo.delete(id); }
+      }
+    });
+  }
+
   function refreshConnectedUsers() {
     if (!connectionProvider) {
       connectedUsers = [];
@@ -493,12 +517,17 @@ yKeepalive.observe((event: any) => {
       bumpConnectedUsersRev();
       return;
     }
+    const entries: { name: string; color: string }[] = [];
+    for (const [id, val] of yPeerInfo) {
+      try {
+        const d = JSON.parse(val as string);
+        entries.push({ name: d.name || 'Anonymous', color: d.color || '#888' });
+      } catch { /* skip malformed entries */ }
+    }
     const prev = connectedUsers.map(u => u.name).join(',');
-    connectedUsers = Array.from(connectionProvider.awareness.states.values())
-      .filter((s: any) => s?.user)
-      .map((s: any) => ({ name: s.user.name as string, color: s.user.color as string }));
-    const cur = connectedUsers.map(u => u.name).join(',');
+    const cur = entries.map(u => u.name).join(',');
     if (prev !== cur) dbg('users:', prev, '->', cur);
+    connectedUsers = entries;
     bumpConnectedUsersRev();
     // Manage alone hint timer (show after 20s alone)
     if (connectedUsers.length <= 1 && !aloneHintTimer) {
@@ -531,11 +560,14 @@ yKeepalive.observe((event: any) => {
     showAloneHint = false;
     // Disconnect any existing provider before creating a new one
     if (connectionProvider) {
+      if (peerId) { yPeerInfo.delete(peerId); peerId = ''; }
       connectionProvider.disconnect();
       connectionProvider = null;
       watchRelayProvider?.disconnect();
       watchRelayProvider = null;
     }
+    if (peerKeepaliveInterval) { clearInterval(peerKeepaliveInterval); peerKeepaliveInterval = null; }
+    if (peerCleanupInterval) { clearInterval(peerCleanupInterval); peerCleanupInterval = null; }
     const base = name ?? crypto.randomUUID();
     const full = password ? `${base}-${password}` : base;
     roomName = full;
@@ -574,9 +606,16 @@ yKeepalive.observe((event: any) => {
         }
       }
     };
+    peerId = crypto.randomUUID();
     connectionProvider = new WebrtcProvider(full, ydoc, rtcOpts);
     connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anonymous', color: pingColor });
-    connectionProvider.awareness.on('change', refreshConnectedUsers);
+    updatePeerInfo();
+    yPeerInfo.unobserve(refreshConnectedUsers);
+    yPeerInfo.observe(refreshConnectedUsers);
+    if (peerKeepaliveInterval) clearInterval(peerKeepaliveInterval);
+    peerKeepaliveInterval = setInterval(() => updatePeerInfo(), 15000);
+    if (peerCleanupInterval) clearInterval(peerCleanupInterval);
+    peerCleanupInterval = setInterval(() => cleanupStalePeers(), 60000);
     connectionProvider.on('peers', (ev: any) => {
       const newCount = ev.webrtcPeers?.length ?? 0;
       if (newCount !== p2pPeerCount) {
@@ -679,6 +718,7 @@ yKeepalive.observe((event: any) => {
         if (!connectionProvider || !roomName) return;
         connectionProvider.connect();
         connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anonymous', color: pingColor });
+        updatePeerInfo();
         if (healthVerifyTimer) clearTimeout(healthVerifyTimer);
         healthVerifyTimer = setTimeout(() => verifyHealthAfterReconnect(), VERIFY_DELAY_MS);
       }, 1000);
@@ -709,6 +749,7 @@ yKeepalive.observe((event: any) => {
     pseudo; pingColor; // ensure Svelte reactivity tracks these
     dbg('updating awareness user — pseudo:', pseudo, '| color:', pingColor);
     connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anonymous', color: pingColor });
+    updatePeerInfo();
   }
 
   function autoSaveRoomSlot() {
@@ -734,7 +775,10 @@ yKeepalive.observe((event: any) => {
       if (p2pHealthInterval) { clearInterval(p2pHealthInterval); p2pHealthInterval = null; }
       if (dcKeepaliveInterval) { clearInterval(dcKeepaliveInterval); dcKeepaliveInterval = null; }
       if (dcMonInterval) { clearInterval(dcMonInterval); dcMonInterval = null; }
+      if (peerKeepaliveInterval) { clearInterval(peerKeepaliveInterval); peerKeepaliveInterval = null; }
+      if (peerCleanupInterval) { clearInterval(peerCleanupInterval); peerCleanupInterval = null; }
       if (healthVerifyTimer) { clearTimeout(healthVerifyTimer); healthVerifyTimer = null; }
+      if (peerId) { yPeerInfo.delete(peerId); peerId = ''; }
       p2pPeerCount = 0;
       autoSaveRoomSlot();
       connectionProvider?.disconnect();
@@ -776,6 +820,9 @@ yKeepalive.observe((event: any) => {
     // Give Yjs time to propagate the relocation to peers over WebRTC
     setTimeout(() => {
       autoSaveRoomSlot();
+      if (peerId) { yPeerInfo.delete(peerId); peerId = ''; }
+      if (peerKeepaliveInterval) { clearInterval(peerKeepaliveInterval); peerKeepaliveInterval = null; }
+      if (peerCleanupInterval) { clearInterval(peerCleanupInterval); peerCleanupInterval = null; }
       connectionProvider?.disconnect();
       connectionProvider = null;
       watchRelayProvider?.disconnect();
