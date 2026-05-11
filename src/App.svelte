@@ -421,7 +421,7 @@ yKeepalive.observe((event: any) => {
     }
     if (!isWatchMode) {
       const relocated = ySpoiler.get('relocatedTo');
-      relocationCode = relocated !== undefined ? relocated : null;
+      if (relocated !== undefined) relocationCode = relocated;
     }
   });
 
@@ -813,16 +813,18 @@ yKeepalive.observe((event: any) => {
     const pw = window.prompt('Enter a password to protect this room:');
     if (!pw || !pw.trim()) return;
     const newBase = crypto.randomUUID();
-    // Store only the base code — peers will be prompted for password
-    ydoc.transact(() => {
-      ySpoiler.set('relocatedTo', newBase);
-    });
-    // Give Yjs time to propagate the relocation to peers over WebRTC
+    // Write relocation for peers (sends via current provider)
+    ySpoiler.set('relocatedTo', newBase);
+    // Give Yjs time to propagate to peers before we disconnect
     setTimeout(() => {
       autoSaveRoomSlot();
       if (peerId) { yPeerInfo.delete(peerId); peerId = ''; }
+      if (p2pHealthInterval) { clearInterval(p2pHealthInterval); p2pHealthInterval = null; }
+      if (dcKeepaliveInterval) { clearInterval(dcKeepaliveInterval); dcKeepaliveInterval = null; }
+      if (dcMonInterval) { clearInterval(dcMonInterval); dcMonInterval = null; }
       if (peerKeepaliveInterval) { clearInterval(peerKeepaliveInterval); peerKeepaliveInterval = null; }
       if (peerCleanupInterval) { clearInterval(peerCleanupInterval); peerCleanupInterval = null; }
+      if (healthVerifyTimer) { clearTimeout(healthVerifyTimer); healthVerifyTimer = null; }
       connectionProvider?.disconnect();
       connectionProvider = null;
       watchRelayProvider?.disconnect();
@@ -831,9 +833,10 @@ yKeepalive.observe((event: any) => {
       roomBaseCode = null;
       roomHasPassword = false;
       connectedUsers = [];
+      relocationCode = null;
       // Clean up relocated key so it doesn't persist into the new room
       ySpoiler.delete('relocatedTo');
-      // Join new room with password
+      // Host joins new room immediately
       joinCoopRoom(newBase, pw.trim());
       dbg('room recreated with password — new base:', newBase);
     }, 1000);
