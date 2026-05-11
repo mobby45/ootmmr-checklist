@@ -872,8 +872,10 @@ yKeepalive.observe((event: any) => {
     const storedPw = sessionStorage.getItem('coopRoomPassword') || undefined;
     joinCoopRoom(hash, storedPw);
   }
+  let joinedFromHash = false;
   if (initialHash.length > 0 && /#[a-z0-9-]+/.test(initialHash)) {
     joinFromHash(initialHash.slice(1));
+    joinedFromHash = true;
   }
   // Clean hash so it doesn't linger in the URL after auto-join
   if (!isWatchMode && window.location.hash) {
@@ -881,7 +883,7 @@ yKeepalive.observe((event: any) => {
   }
   // Auto-rejoin from sessionStorage when no hash in URL (page refresh without hash)
   // Delay slightly to let IndexedDB/Yjs persistence initialize
-  if (!isWatchMode && !window.location.hash) {
+  if (!isWatchMode && !joinedFromHash && !window.location.hash) {
     const storedCode = sessionStorage.getItem('coopRoomCode');
     if (storedCode) {
       setTimeout(() => joinCoopRoom(storedCode), 200);
