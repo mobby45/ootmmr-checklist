@@ -379,6 +379,7 @@ yKeepalive.observe((event: any) => {
 
   // Clean up stale relocation key from previous sessions
   persistenceProvider.on('synced', () => {
+    relocationCode = null;
     if (ySpoiler.get('relocatedTo') !== undefined) {
       ySpoiler.delete('relocatedTo');
     }
