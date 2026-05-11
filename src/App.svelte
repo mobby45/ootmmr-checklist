@@ -419,7 +419,7 @@ yKeepalive.observe((event: any) => {
       spoilerSyncedFromPeer = true;
       setTimeout(() => { spoilerSyncedFromPeer = false; }, 4000);
     }
-    if (!isWatchMode) {
+    if (!isWatchMode && !isSettingPassword) {
       const relocated = ySpoiler.get('relocatedTo');
       if (relocated !== undefined) relocationCode = relocated;
     }
@@ -455,6 +455,7 @@ yKeepalive.observe((event: any) => {
   let watchRelayProvider: WebrtcProvider | null = null;
   let connectedUsers: { name: string; color: string }[] = [];
   let relocationCode: string | null = null;
+  let isSettingPassword = false;
   let newRoomPassword = '';
   let p2pHealthInterval: ReturnType<typeof setInterval> | null = null;
   let dcKeepaliveInterval: ReturnType<typeof setInterval> | null = null;
@@ -808,37 +809,44 @@ yKeepalive.observe((event: any) => {
   }
 
   function setRoomPassword() {
-    if (!roomName || !connectionProvider) return;
+    if (!roomName || !connectionProvider) { dbg('setRoomPassword: early return — no room or provider'); return; }
+    isSettingPassword = true;
     relocationCode = null;
+    dbg('setRoomPassword: prompting for password…');
     const pw = window.prompt('Enter a password to protect this room:');
-    if (!pw || !pw.trim()) return;
+    if (!pw || !pw.trim()) { dbg('setRoomPassword: no password entered'); isSettingPassword = false; return; }
     const newBase = crypto.randomUUID();
+    dbg('setRoomPassword: writing relocatedTo, newBase:', newBase);
     // Write relocation for peers (sends via current provider)
     ySpoiler.set('relocatedTo', newBase);
     // Give Yjs time to propagate to peers before we disconnect
     setTimeout(() => {
-      autoSaveRoomSlot();
-      if (peerId) { yPeerInfo.delete(peerId); peerId = ''; }
-      if (p2pHealthInterval) { clearInterval(p2pHealthInterval); p2pHealthInterval = null; }
-      if (dcKeepaliveInterval) { clearInterval(dcKeepaliveInterval); dcKeepaliveInterval = null; }
-      if (dcMonInterval) { clearInterval(dcMonInterval); dcMonInterval = null; }
-      if (peerKeepaliveInterval) { clearInterval(peerKeepaliveInterval); peerKeepaliveInterval = null; }
-      if (peerCleanupInterval) { clearInterval(peerCleanupInterval); peerCleanupInterval = null; }
-      if (healthVerifyTimer) { clearTimeout(healthVerifyTimer); healthVerifyTimer = null; }
-      connectionProvider?.disconnect();
-      connectionProvider = null;
-      watchRelayProvider?.disconnect();
-      watchRelayProvider = null;
-      roomName = null;
-      roomBaseCode = null;
-      roomHasPassword = false;
-      connectedUsers = [];
-      relocationCode = null;
-      // Clean up relocated key so it doesn't persist into the new room
-      ySpoiler.delete('relocatedTo');
-      // Host joins new room immediately
-      joinCoopRoom(newBase, pw.trim());
-      dbg('room recreated with password — new base:', newBase);
+      try {
+        dbg('setRoomPassword: timeout fired, reconnecting…');
+        autoSaveRoomSlot();
+        if (peerId) { yPeerInfo.delete(peerId); peerId = ''; }
+        if (p2pHealthInterval) { clearInterval(p2pHealthInterval); p2pHealthInterval = null; }
+        if (dcKeepaliveInterval) { clearInterval(dcKeepaliveInterval); dcKeepaliveInterval = null; }
+        if (dcMonInterval) { clearInterval(dcMonInterval); dcMonInterval = null; }
+        if (peerKeepaliveInterval) { clearInterval(peerKeepaliveInterval); peerKeepaliveInterval = null; }
+        if (peerCleanupInterval) { clearInterval(peerCleanupInterval); peerCleanupInterval = null; }
+        if (healthVerifyTimer) { clearTimeout(healthVerifyTimer); healthVerifyTimer = null; }
+        connectionProvider?.disconnect();
+        connectionProvider = null;
+        watchRelayProvider?.disconnect();
+        watchRelayProvider = null;
+        roomName = null;
+        roomBaseCode = null;
+        roomHasPassword = false;
+        connectedUsers = [];
+        relocationCode = null;
+        // Clean up relocated key so it doesn't persist into the new room
+        ySpoiler.delete('relocatedTo');
+        // Host joins new room immediately
+        joinCoopRoom(newBase, pw.trim());
+        isSettingPassword = false;
+        dbg('room recreated with password — new base:', newBase);
+      } catch (e) { console.error('setRoomPassword: error in timeout', e); isSettingPassword = false; }
     }, 1000);
   }
 
