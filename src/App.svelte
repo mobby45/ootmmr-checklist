@@ -3099,8 +3099,8 @@ yKeepalive.observe((event: any) => {
                 <fieldset>
                   <button
                     class="bg-primary pure-button"
-                    on:click|preventDefault={() => window.navigator.clipboard.writeText(`${location.origin}${location.pathname}#${roomBaseCode}`)}
-                    title="Share this link — editors need the password to join (password is NOT in the URL)"
+                    on:click|preventDefault={() => window.navigator.clipboard.writeText(`${location.origin}${location.pathname}#${roomName}`)}
+                    title="Share this link — includes password for auto-connect"
                     >Copy Room Link</button
                   >
                   {#if roomHasPassword}
