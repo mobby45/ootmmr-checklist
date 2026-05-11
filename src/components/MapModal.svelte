@@ -125,7 +125,7 @@
     hoverTimer = setTimeout(() => {
       showTooltip = true;
       hoveredCheckName = check.name.replace(/^(OOT|MM) /, '');
-    }, 3000);
+    }, 1000);
   }
   function clearHoverTimer() {
     if (hoverTimer) { clearTimeout(hoverTimer); hoverTimer = undefined; }
