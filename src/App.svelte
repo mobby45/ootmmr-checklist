@@ -2853,7 +2853,7 @@ yKeepalive.observe((event: any) => {
         <summary>
           <strong class="interactable">General Settings</strong>
           {#if connectionProvider != null}
-            <span>&nbsp; (Connected to room: <code>{roomBaseCode}</code>)</span>
+            <span>&nbsp; (Connected to room: <code>{roomBaseCode}</code> {roomHasPassword ? '🔒' : '🔓'})</span>
           {/if}
           <button class="undo-btn" on:click|stopPropagation={undo} disabled={!canUndo} title="Undo (Ctrl+Z)">↩ Undo</button>
           <button class="undo-btn" on:click|stopPropagation={redo} disabled={!canRedo} title="Redo (Ctrl+Y)">↪ Redo</button>
