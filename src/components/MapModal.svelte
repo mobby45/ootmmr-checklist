@@ -111,6 +111,28 @@
 
   let typeDropdownOpen = false;
 
+  // Tooltip state
+  let hoveredCheckName = '';
+  let showTooltip = false;
+  let hoverTimer: ReturnType<typeof setTimeout> | undefined;
+  let tooltipX = 0;
+  let tooltipY = 0;
+  let tooltipEl: HTMLDivElement | undefined;
+
+  function startHoverTimer(check: MapCheck, e: MouseEvent) {
+    tooltipX = e.clientX; tooltipY = e.clientY;
+    clearHoverTimer();
+    hoverTimer = setTimeout(() => {
+      showTooltip = true;
+      hoveredCheckName = check.name.replace(/^(OOT|MM) /, '');
+    }, 3000);
+  }
+  function clearHoverTimer() {
+    if (hoverTimer) { clearTimeout(hoverTimer); hoverTimer = undefined; }
+    showTooltip = false;
+    hoveredCheckName = '';
+  }
+
   $: availableTypes = [...new Set(filteredChecks.map(c => c.type))].sort();
   $: displayedChecks = filteredChecks.filter(c => !$hiddenTypesStore.has(c.type));
 
@@ -401,7 +423,8 @@
               class:checked={state === T.CheckState.checked}
               class:marked={state === T.CheckState.marked}
               style="left: {left}%; top: {top}%; z-index: {zIndex};"
-              title={check.name}
+              on:mouseenter={e => startHoverTimer(check, e)}
+              on:mouseleave={clearHoverTimer}
               on:click|stopPropagation={() => { if (!hasDragged) toggleCheck(check); }}
               on:contextmenu={e => { if (!hasDragged) handleMarkerContextMenu(e, check); }}
             >
@@ -423,6 +446,12 @@
       </div> <!-- /map-outer -->
     {/key}
     </div> <!-- /map-scroll -->
+
+    {#if showTooltip}
+      <div class="map-tooltip" bind:this={tooltipEl} style="left: {tooltipX}px; top: {tooltipY}px;">
+        {hoveredCheckName}
+      </div>
+    {/if}
   </div>
 </div>
 
@@ -767,5 +796,20 @@
     white-space: nowrap;
     text-shadow: 0 0 3px black, 0 0 3px black;
     font-weight: bold;
+  }
+
+  .map-tooltip {
+    position: fixed;
+    z-index: 9999;
+    background: var(--color-bg);
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.85em;
+    pointer-events: none;
+    white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    transform: translate(8px, 8px);
   }
 </style>
