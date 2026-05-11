@@ -377,8 +377,11 @@ yKeepalive.observe((event: any) => {
   let operaWarningTimer: ReturnType<typeof setTimeout> | null = null;
   let spoilerSyncedFromPeer = false;
 
-  // Migrate existing localStorage spoiler into ySpoiler once IndexedDB is ready
+  // Clean up stale relocation key from previous sessions
   persistenceProvider.on('synced', () => {
+    if (ySpoiler.get('relocatedTo') !== undefined) {
+      ySpoiler.delete('relocatedTo');
+    }
     if (ySpoilerLocations.size === 0 && !ySpoiler.get('locationsBlock')) {
       const locStr = localStorage.getItem('spoilerLocations');
       if (locStr) {
@@ -419,7 +422,7 @@ yKeepalive.observe((event: any) => {
       spoilerSyncedFromPeer = true;
       setTimeout(() => { spoilerSyncedFromPeer = false; }, 4000);
     }
-    if (!isWatchMode && !isSettingPassword) {
+    if (!isWatchMode && !isSettingPassword && connectionProvider) {
       const relocated = ySpoiler.get('relocatedTo');
       if (relocated !== undefined) relocationCode = relocated;
     }
