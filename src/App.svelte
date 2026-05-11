@@ -422,9 +422,10 @@ yKeepalive.observe((event: any) => {
       spoilerSyncedFromPeer = true;
       setTimeout(() => { spoilerSyncedFromPeer = false; }, 4000);
     }
-    if (!isWatchMode && !isSettingPassword && connectionProvider) {
+    if (!isWatchMode && !isSettingPassword && connectionProvider && event.keysChanged?.has?.('relocatedTo')) {
       const relocated = ySpoiler.get('relocatedTo');
       if (relocated !== undefined) relocationCode = relocated;
+      else relocationCode = null;
     }
   });
 
@@ -514,6 +515,7 @@ yKeepalive.observe((event: any) => {
   function refreshConnectedUsers() {
     if (!connectionProvider) {
       connectedUsers = [];
+      relocationCode = null;
       if (aloneHintTimer) { clearTimeout(aloneHintTimer); aloneHintTimer = undefined; }
       showAloneHint = false;
       bumpConnectedUsersRev();
@@ -572,6 +574,8 @@ yKeepalive.observe((event: any) => {
     if (peerCleanupInterval) { clearInterval(peerCleanupInterval); peerCleanupInterval = null; }
     // Clear all yPeerInfo to remove stale entries from the previous room
     yPeerInfo.clear();
+    // Clean up stale relocation key from previous session (e.g., IndexedDB replay)
+    if (ySpoiler.get('relocatedTo') !== undefined) ySpoiler.delete('relocatedTo');
     const base = name ?? crypto.randomUUID();
     const full = password ? `${base}-${password}` : base;
     roomName = full;
