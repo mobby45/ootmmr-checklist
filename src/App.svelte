@@ -559,7 +559,7 @@ yKeepalive.observe((event: any) => {
     else sessionStorage.removeItem('coopRoomPassword');
 
     const rtcOpts = {
-      signaling: ['wss://ootmmr-checklist.mobby45.deno.net'],
+      signaling: ['wss://ootmmr-checklist.mobby45.deno.net', 'wss://y-signaling.yjs.dev'],
       peerOpts: {
         config: {
           iceServers: [
@@ -671,51 +671,17 @@ yKeepalive.observe((event: any) => {
 
     function destroyAndRecreateProvider() {
       if (!connectionProvider || !roomName) return;
-      const full = roomName;
-      const old = connectionProvider;
-      connectionProvider = null;
-      old.disconnect();
-      old.destroy();
-      const rtcOpts = {
-        signaling: ['wss://ootmmr-checklist.mobby45.deno.net'],
-        peerOpts: {
-          config: {
-            iceServers: [
-              { urls: 'stun:stun.l.google.com:19302' },
-              { urls: 'stun:stun1.l.google.com:19302' },
-              { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
-              { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
-              { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
-            ],
-            iceTransportPolicy: FORCE_TURN_RELAY ? 'relay' : undefined,
-          }
-        }
-      };
-      connectionProvider = new WebrtcProvider(full, ydoc, rtcOpts);
-      connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anonymous', color: pingColor });
-      connectionProvider.awareness.on('change', refreshConnectedUsers);
-      connectionProvider.on('peers', (ev: any) => {
-        const newCount = ev.webrtcPeers?.length ?? 0;
-        if (newCount !== p2pPeerCount) {
-          const now = Date.now();
-          if (now - lastFlapTime > P2P_FLAP_MIN_INTERVAL) {
-            p2pFlapCounter++;
-            lastFlapTime = now;
-          }
-          dbg('P2P peers:', p2pPeerCount, '->', newCount, '| flapping:', p2pFlapCounter);
-        }
-        prevP2pPeerCount = p2pPeerCount;
-        p2pPeerCount = newCount;
-        refreshConnectedUsers();
-        startDcMonitor();
-      });
-      connectionProvider.on('status', (ev: any) => dbg('status event — connected:', ev.connected));
-      connectionProvider.on('synced', (ev: any) => dbg('synced event — synced:', ev.synced));
-      dbg('provider recreated, room:', full);
-      refreshConnectedUsers();
+      dbg('destroyAndRecreateProvider — disconnecting and retrying');
       failedReconnects = 0;
       lastRemoteKeepalive = 0;
-      lastHealthReconnect = Date.now();
+      connectionProvider.disconnect();
+      setTimeout(() => {
+        if (!connectionProvider || !roomName) return;
+        connectionProvider.connect();
+        connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anonymous', color: pingColor });
+        if (healthVerifyTimer) clearTimeout(healthVerifyTimer);
+        healthVerifyTimer = setTimeout(() => verifyHealthAfterReconnect(), VERIFY_DELAY_MS);
+      }, 1000);
     }
 
     // Keep the WebRTC data channel alive by sending small Yjs updates every 10s
