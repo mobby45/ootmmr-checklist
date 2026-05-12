@@ -3115,7 +3115,7 @@ yKeepalive.observe((event: any) => {
                 <button type="submit" class="bg-primary fullwidth pure-button">Create new co-op room</button>
               </form>
             {:else}
-              <form class="pure-form" on:submit|preventDefault>
+              <div>
                 <fieldset>
                   <button
                     class="bg-primary pure-button"
@@ -3136,7 +3136,7 @@ yKeepalive.observe((event: any) => {
                   {/if}
                   <button type="button" class="bg-primary pure-button" on:click|preventDefault={leaveCoopRoom} disabled={isWatchMode}>Disconnect</button>
                 </fieldset>
-              </form>
+              </div>
               <div class="sync-status" class:synced={connectedUsers.length > 1}>
                 <span class="sync-dot"></span>
                 <span>{connectedUsers.length > 1 ? 'Synced' : (connectedUsers.length >= 1 ? 'Connected' : 'Waiting for peers...')}</span>
@@ -3441,8 +3441,8 @@ yKeepalive.observe((event: any) => {
               on:click={() => (showShortcuts = !showShortcuts)}
               title="Keyboard shortcuts"
             >⌨️</button>
-          </fieldset>
-        </form>
+                </fieldset>
+              </form>
       </section>
 
       <!-- Keyboard shortcuts -->
