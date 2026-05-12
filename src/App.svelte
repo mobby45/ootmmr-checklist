@@ -378,6 +378,12 @@ yKeepalive.observe((event: any) => {
   let spoilerSyncedFromPeer = false;
 
   persistenceProvider.on('synced', () => {
+    // Clean up stale relocation key from IndexedDB (previous session).
+    // Don't clear relocationCode here — WebRTC may have already synced a fresh
+    // relocatedTo and set the banner. The observer skips local changes.
+    if (ySpoiler.get('relocatedTo') !== undefined) {
+      ySpoiler.delete('relocatedTo');
+    }
     if (ySpoilerLocations.size === 0 && !ySpoiler.get('locationsBlock')) {
       const locStr = localStorage.getItem('spoilerLocations');
       if (locStr) {
