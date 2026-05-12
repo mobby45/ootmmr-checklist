@@ -838,12 +838,13 @@ yKeepalive.observe((event: any) => {
     dbg('setRoomPassword: writing relocatedTo, newBase:', newBase);
     // Write relocation for peers (sends via current provider)
     ySpoiler.set('relocatedTo', newBase);
+    // Delete own yPeerInfo while provider is still connected (full 1s for propagation)
+    if (peerId) { yPeerInfo.delete(peerId); peerId = ''; }
     // Give Yjs time to propagate to peers before we disconnect
     setTimeout(() => {
       try {
         dbg('setRoomPassword: timeout fired, reconnecting…');
         autoSaveRoomSlot();
-        if (peerId) { yPeerInfo.delete(peerId); peerId = ''; }
         if (p2pHealthInterval) { clearInterval(p2pHealthInterval); p2pHealthInterval = null; }
         if (dcKeepaliveInterval) { clearInterval(dcKeepaliveInterval); dcKeepaliveInterval = null; }
         if (dcMonInterval) { clearInterval(dcMonInterval); dcMonInterval = null; }
