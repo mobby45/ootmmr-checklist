@@ -377,12 +377,7 @@ yKeepalive.observe((event: any) => {
   let operaWarningTimer: ReturnType<typeof setTimeout> | null = null;
   let spoilerSyncedFromPeer = false;
 
-  // Clean up stale relocation key from previous sessions
   persistenceProvider.on('synced', () => {
-    relocationCode = null;
-    if (ySpoiler.get('relocatedTo') !== undefined) {
-      ySpoiler.delete('relocatedTo');
-    }
     if (ySpoilerLocations.size === 0 && !ySpoiler.get('locationsBlock')) {
       const locStr = localStorage.getItem('spoilerLocations');
       if (locStr) {
