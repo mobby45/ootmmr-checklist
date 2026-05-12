@@ -426,8 +426,8 @@ yKeepalive.observe((event: any) => {
     }
     if (!isWatchMode && !isSettingPassword && connectionProvider && event.keysChanged?.has?.('relocatedTo')) {
       const relocated = ySpoiler.get('relocatedTo');
-      if (relocated !== undefined) relocationCode = relocated;
-      else relocationCode = null;
+      if (relocated !== undefined) persistRelocationCode(relocated);
+      else persistRelocationCode(null);
     }
   });
 
@@ -461,8 +461,11 @@ yKeepalive.observe((event: any) => {
   let watchRelayProvider: WebrtcProvider | null = null;
   let connectedUsers: { name: string; color: string }[] = [];
   let relocationCode: string | null = sessionStorage.getItem('relocationCode');
-  $: if (relocationCode) sessionStorage.setItem('relocationCode', relocationCode);
-  $: if (!relocationCode) sessionStorage.removeItem('relocationCode');
+  function persistRelocationCode(v: string | null) {
+    relocationCode = v;
+    if (v) sessionStorage.setItem('relocationCode', v);
+    else sessionStorage.removeItem('relocationCode');
+  }
   let isSettingPassword = false;
   let newRoomPassword = '';
   let p2pHealthInterval: ReturnType<typeof setInterval> | null = null;
@@ -562,7 +565,7 @@ yKeepalive.observe((event: any) => {
 
   // fullCode may be "basecode" or "basecode-password"
   function joinCoopRoom(name?: string, password?: string) {
-    relocationCode = null;
+    persistRelocationCode(null);
     if (aloneHintTimer) { clearTimeout(aloneHintTimer); aloneHintTimer = undefined; }
     showAloneHint = false;
     // Disconnect any existing provider before creating a new one
@@ -800,7 +803,7 @@ yKeepalive.observe((event: any) => {
       watchRelayProvider = null;
       roomName = null;
       roomBaseCode = null;
-      relocationCode = null;
+      persistRelocationCode(null);
       if (aloneHintTimer) { clearTimeout(aloneHintTimer); aloneHintTimer = undefined; }
       showAloneHint = false;
       roomHasPassword = false;
@@ -823,7 +826,7 @@ yKeepalive.observe((event: any) => {
   function setRoomPassword() {
     if (!roomName || !connectionProvider) { dbg('setRoomPassword: early return — no room or provider'); return; }
     isSettingPassword = true;
-    relocationCode = null;
+    persistRelocationCode(null);
     dbg('setRoomPassword: prompting for password…');
     const pw = window.prompt('Enter a password to protect this room:');
     if (!pw || !pw.trim()) { dbg('setRoomPassword: no password entered'); isSettingPassword = false; return; }
@@ -851,7 +854,7 @@ yKeepalive.observe((event: any) => {
         roomBaseCode = null;
         roomHasPassword = false;
         connectedUsers = [];
-        relocationCode = null;
+        persistRelocationCode(null);
         // Clean up relocated key so it doesn't persist into the new room
         ySpoiler.delete('relocatedTo');
         // Host joins new room immediately
@@ -2853,8 +2856,8 @@ yKeepalive.observe((event: any) => {
   {#if relocationCode}
     <div class="relocation-banner">
       🔒 Room password changed by host
-      <button class="pure-button" on:click={() => { const pw = window.prompt('Enter the new room password:'); if (pw != null) { joinCoopRoom(relocationCode, pw.trim() || undefined); relocationCode = null; } }}>Join new room</button>
-      <button class="pure-button" on:click={() => relocationCode = null}>Dismiss</button>
+      <button class="pure-button" on:click={() => { const pw = window.prompt('Enter the new room password:'); if (pw != null) { joinCoopRoom(relocationCode, pw.trim() || undefined); } }}>Join new room</button>
+      <button class="pure-button" on:click={() => persistRelocationCode(null)}>Dismiss</button>
     </div>
   {/if}
   <main class:modal-active={showMapModal}>
