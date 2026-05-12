@@ -460,7 +460,9 @@ yKeepalive.observe((event: any) => {
   let connectionProvider: WebrtcProvider | null = null;
   let watchRelayProvider: WebrtcProvider | null = null;
   let connectedUsers: { name: string; color: string }[] = [];
-  let relocationCode: string | null = null;
+  let relocationCode: string | null = sessionStorage.getItem('relocationCode');
+  $: if (relocationCode) sessionStorage.setItem('relocationCode', relocationCode);
+  $: if (!relocationCode) sessionStorage.removeItem('relocationCode');
   let isSettingPassword = false;
   let newRoomPassword = '';
   let p2pHealthInterval: ReturnType<typeof setInterval> | null = null;
