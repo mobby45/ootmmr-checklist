@@ -593,6 +593,7 @@ yKeepalive.observe((event: any) => {
     roomBaseCode = dashIdx !== -1 ? full.slice(0, dashIdx) : full;
     const hasPassword = dashIdx !== -1;
     roomHasPassword = hasPassword;
+    console.log('[coop] joinCoopRoom: dashIdx=%s hasPassword=%s roomBaseCode=%s full=%s', dashIdx, hasPassword, roomBaseCode, full);
     // Store password when provided explicitly or embedded in the name
     const embeddedPw = hasPassword ? full.slice(dashIdx + 1) : undefined;
     const actualPassword = password ?? embeddedPw;
@@ -3114,7 +3115,7 @@ yKeepalive.observe((event: any) => {
                 <button type="submit" class="bg-primary fullwidth pure-button">Create new co-op room</button>
               </form>
             {:else}
-              <form class="pure-form">
+              <form class="pure-form" on:submit|preventDefault>
                 <fieldset>
                   <button
                     class="bg-primary pure-button"
@@ -3131,9 +3132,9 @@ yKeepalive.observe((event: any) => {
                   >
                   {/if}
                   {#if !roomHasPassword}
-                  <button class="pure-button" on:click={() => { if (isWatchMode) return; setRoomPassword(); }} title="Create a new room with a password — current peers will lose edit access" disabled={isWatchMode}>🔒 Set Password</button>
+                  <button type="button" class="pure-button" on:click={() => { if (isWatchMode) return; setRoomPassword(); }} title="Create a new room with a password — current peers will lose edit access" disabled={isWatchMode}>🔒 Set Password</button>
                   {/if}
-                  <button class="bg-primary pure-button" on:click={leaveCoopRoom} disabled={isWatchMode}>Disconnect</button>
+                  <button type="button" class="bg-primary pure-button" on:click={leaveCoopRoom} disabled={isWatchMode}>Disconnect</button>
                 </fieldset>
               </form>
               <div class="sync-status" class:synced={connectedUsers.length > 1}>
