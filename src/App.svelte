@@ -859,8 +859,7 @@ yKeepalive.observe((event: any) => {
         roomHasPassword = false;
         connectedUsers = [];
         persistRelocationCode(null, 'setRoomPassword-timeout');
-        // Clean up relocated key so it doesn't persist into the new room
-        ySpoiler.delete('relocatedTo');
+        // joinCoopRoom will clean up relocatedTo at line 589 (after disconnect, before new provider)
         // Host joins new room immediately
         joinCoopRoom(newBase, pw.trim());
         isSettingPassword = false;
