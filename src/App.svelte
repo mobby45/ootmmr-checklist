@@ -517,7 +517,6 @@ yKeepalive.observe((event: any) => {
   function refreshConnectedUsers() {
     if (!connectionProvider) {
       connectedUsers = [];
-      relocationCode = null;
       if (aloneHintTimer) { clearTimeout(aloneHintTimer); aloneHintTimer = undefined; }
       showAloneHint = false;
       bumpConnectedUsersRev();
@@ -750,10 +749,11 @@ yKeepalive.observe((event: any) => {
       }, 20000);
     }
 
-    // Bridge to watch room so viewers in ?watch=baseCode receive updates
-    if (hasPassword && !isWatchMode) {
-      watchRelayProvider = new WebrtcProvider(roomBaseCode, ydoc, rtcOpts);
-    }
+    // Bridge to watch room disabled — causes participants to see each other in both
+    // password room and public room via shared yDoc, which is confusing.
+    // if (hasPassword && !isWatchMode) {
+    //   watchRelayProvider = new WebrtcProvider(roomBaseCode, ydoc, rtcOpts);
+    // }
   }
 
   $: if (connectionProvider) {
