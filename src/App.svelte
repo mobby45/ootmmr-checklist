@@ -3132,9 +3132,9 @@ yKeepalive.observe((event: any) => {
                   >
                   {/if}
                   {#if !roomHasPassword}
-                  <button type="button" class="pure-button" on:click={() => { if (isWatchMode) return; setRoomPassword(); }} title="Create a new room with a password — current peers will lose edit access" disabled={isWatchMode}>🔒 Set Password</button>
+                  <button type="button" class="pure-button" on:click|preventDefault={() => { if (isWatchMode) return; setRoomPassword(); }} title="Create a new room with a password — current peers will lose edit access" disabled={isWatchMode}>🔒 Set Password</button>
                   {/if}
-                  <button type="button" class="bg-primary pure-button" on:click={leaveCoopRoom} disabled={isWatchMode}>Disconnect</button>
+                  <button type="button" class="bg-primary pure-button" on:click|preventDefault={leaveCoopRoom} disabled={isWatchMode}>Disconnect</button>
                 </fieldset>
               </form>
               <div class="sync-status" class:synced={connectedUsers.length > 1}>
