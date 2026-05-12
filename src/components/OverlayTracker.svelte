@@ -9,6 +9,9 @@
   export let ySettings: YMap<any>;
   export let onJoinRoom: ((code: string) => void) | null = null;
 
+  let ovGameMode: 'both' | 'oot' | 'mm' | 'none' = JSON.parse(localStorage.getItem('ov_gameMode') || '"both"');
+  $: localStorage.setItem('ov_gameMode', JSON.stringify(ovGameMode));
+
   const IMG_BASE = '/ootmmr-checklist/images/';
   const _p = new URLSearchParams(window.location.search);
   const overlayGame = (_p.get('game') as 'oot' | 'mm' | 'both') ?? 'both';
@@ -26,10 +29,9 @@
     u(); ySettings.observe(u); return () => ySettings.unobserve(u);
   });
 
-  $: gameMode   = ($settingsStore.get('OOTMM') ?? 'both') as 'both' | 'oot' | 'mm' | 'none';
-  $: showOot    = gameMode !== 'mm'  && gameMode !== 'none' && (overlayGame === 'both' || overlayGame === 'oot');
-  $: showMm     = gameMode !== 'oot' && gameMode !== 'none' && (overlayGame === 'both' || overlayGame === 'mm');
-  $: showShared = gameMode === 'both' && overlayGame === 'both';
+  $: showOot    = ovGameMode !== 'mm'  && ovGameMode !== 'none' && (overlayGame === 'both' || overlayGame === 'oot');
+  $: showMm     = ovGameMode !== 'oot' && ovGameMode !== 'none' && (overlayGame === 'both' || overlayGame === 'mm');
+  $: showShared = ovGameMode === 'both' && overlayGame === 'both';
 
   $: activeSharedIds = new Set(
     sharedItems.filter(i => !i.settingKey || $settingsStore.get(i.settingKey) === true).map(i => i.id)

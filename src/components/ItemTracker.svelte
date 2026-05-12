@@ -13,6 +13,9 @@
   export let roomName: string | null = null;
   export let isWatchMode = false;
 
+  let itGameMode: 'both' | 'oot' | 'mm' | 'none' = JSON.parse(localStorage.getItem('it_gameMode') || '"both"');
+  $: localStorage.setItem('it_gameMode', JSON.stringify(itGameMode));
+
   let activeTab: 'items' | 'settings' = 'items';
   let overlayStacked: boolean = JSON.parse(localStorage.getItem('overlayStacked') ?? 'false');
   $: localStorage.setItem('overlayStacked', JSON.stringify(overlayStacked));
@@ -152,8 +155,6 @@
     'mm_bk_gb':               'bossKeyMmEnabled',
     'mm_bk_st':               'bossKeyMmEnabled',
   };
-
-  $: gameMode = ($settingsStore.get('OOTMM') ?? 'both') as 'both' | 'oot' | 'mm' | 'none';
 
   $: disabledItems = new Set(
     Object.entries(itemVisibilityMap)
@@ -639,8 +640,8 @@
 
   <div class="tracker-toolbar">
       <div class="tracker-counts">
-        {#if gameMode !== 'mm' && gameMode !== 'none'}<span class="game-badge oot">OoT {ootObtained}/{ootTotal}</span>{/if}
-        {#if gameMode !== 'oot' && gameMode !== 'none'}<span class="game-badge mm">MM {mmObtained}/{mmTotal}</span>{/if}
+        {#if itGameMode !== 'mm' && itGameMode !== 'none'}<span class="game-badge oot">OoT {ootObtained}/{ootTotal}</span>{/if}
+        {#if itGameMode !== 'oot' && itGameMode !== 'none'}<span class="game-badge mm">MM {mmObtained}/{mmTotal}</span>{/if}
       </div>
       <div class="tracker-actions">
         <button class="tracker-btn" on:click={openObsPreview}>🪟 Overlay</button>
@@ -690,10 +691,10 @@
   {#if activeTab === 'items'}
 
 
-  <div class="{overlayStacked ? 'stacked-grid' : 'main-grid'}" class:single-col={gameMode !== 'both' && gameMode !== 'none'}>
+  <div class="{overlayStacked ? 'stacked-grid' : 'main-grid'}" class:single-col={itGameMode !== 'both' && itGameMode !== 'none'}>
 
     <!-- ===== OoT ===== -->
-    {#if gameMode !== 'mm' && gameMode !== 'none'}
+    {#if itGameMode !== 'mm' && itGameMode !== 'none'}
     <div class="game-col">
       <div class="col-header oot-header">Ocarina of Time</div>
 
@@ -870,7 +871,7 @@
     {/if}
 
     <!-- ===== MM ===== -->
-    {#if gameMode !== 'oot' && gameMode !== 'none'}
+    {#if itGameMode !== 'oot' && itGameMode !== 'none'}
     <div class="game-col">
       <div class="col-header mm-header">Majora's Mask</div>
 
@@ -1104,7 +1105,7 @@
   </div>
 
   <!-- ===== Souls ===== -->
-  {#if ootSoulsVisible.length > 0 && gameMode !== 'mm' && gameMode !== 'none'}
+  {#if ootSoulsVisible.length > 0 && itGameMode !== 'mm' && itGameMode !== 'none'}
       <div class="souls-section">
         <div class="col-header oot-header">OoT Souls</div>
         <div class="souls-grid">
@@ -1119,7 +1120,7 @@
         </div>
       </div>
     {/if}
-    {#if mmSoulsVisible.length > 0 && gameMode !== 'oot' && gameMode !== 'none'}
+    {#if mmSoulsVisible.length > 0 && itGameMode !== 'oot' && itGameMode !== 'none'}
       <div class="souls-section">
         <div class="col-header mm-header">MM Souls</div>
         <div class="souls-grid">
@@ -1139,6 +1140,17 @@
 
   {#if activeTab === 'settings'}
     <div class="settings-tab">
+      <div class="it-game-mode-row">
+        <label>
+          Show items for:
+          <select bind:value={itGameMode} disabled={isWatchMode}>
+            <option value="both">Both</option>
+            <option value="oot">OoT</option>
+            <option value="mm">MM</option>
+            <option value="none">None</option>
+          </select>
+        </label>
+      </div>
       <div class="settings-subtabs">
         <button class="settings-stab" class:stab-active={activeSettingsTab === 'shared'} on:click={() => activeSettingsTab = 'shared'}>Shared</button>
         <button class="settings-stab" class:stab-active={activeSettingsTab === 'oot'}    on:click={() => activeSettingsTab = 'oot'}>OoT</button>
@@ -1377,6 +1389,8 @@
 
   /* Settings tab */
   .settings-tab { display: flex; flex-direction: column; gap: 0.6em; padding-top: 0.4em; }
+  .it-game-mode-row { padding: 0.3em 0 0.2em; font-size: 0.82em; display: flex; align-items: center; gap: 0.5em; }
+  .it-game-mode-row select { background: var(--color-bg); color: var(--color-text); border: 1px solid var(--color-border); border-radius: 3px; font-size: 0.9em; padding: 2px 4px; cursor: pointer; }
   .settings-hint { font-size: 0.74em; color: var(--color-header); margin: 2px 0 6px; line-height: 1.4; }
 
   /* Sub-tabs (OoT / MM / Shared) */

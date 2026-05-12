@@ -923,23 +923,26 @@ yKeepalive.observe((event: any) => {
   });
 
   // ==========================================
-  // DISPLAY SETTINGS (synced via Yjs)
-  // Migrated from localStorage on first load
+  // DISPLAY SETTINGS (local only, not synced to peers)
   // ==========================================
-  const _displayDefaults: Record<string, any> = {
-    OOTMM: 'both', OOTMMDungeons: 'both',
-    showUnshuffledGS: false, showUnshuffledDungeonSF: false,
-    showUnshuffledFreeSF: false, showUnshuffledTownSF: false,
-    showTypeColors: true,
+  function loadDisplaySetting<T>(key: string, def: T): T {
+    const v = localStorage.getItem(`gs_${key}`);
+    return v !== null ? JSON.parse(v) : def;
+  }
+  function saveDisplaySetting(key: string, value: any) {
+    displaySettings = { ...displaySettings, [key]: value };
+    localStorage.setItem(`gs_${key}`, JSON.stringify(value));
+  }
+  let displaySettings = {
+    OOTMM: loadDisplaySetting('OOTMM', 'both'),
+    OOTMMDungeons: loadDisplaySetting('OOTMMDungeons', 'both'),
+    showUnshuffledGS: loadDisplaySetting('showUnshuffledGS', false),
+    showUnshuffledDungeonSF: loadDisplaySetting('showUnshuffledDungeonSF', false),
+    showUnshuffledFreeSF: loadDisplaySetting('showUnshuffledFreeSF', false),
+    showUnshuffledTownSF: loadDisplaySetting('showUnshuffledTownSF', false),
+    showTypeColors: loadDisplaySetting('showTypeColors', true),
   };
-  $: showTypeColors = ($sSettings.get('showTypeColors') ?? true) as boolean;
-  // Migrate old localStorage values on first load
-  Object.entries(_displayDefaults).forEach(([k, def]) => {
-    if (!ySettings.has(k)) {
-      const old = localStorage.getItem(`gs_${k}`);
-      ySettings.set(k, old !== null ? JSON.parse(old) : def);
-    }
-  });
+  $: showTypeColors = (displaySettings.showTypeColors ?? true) as boolean;
 
   // ==========================================
   // SPOILER LOG
@@ -1043,8 +1046,8 @@ yKeepalive.observe((event: any) => {
 
       ydoc.transact(() => {
         Object.entries(data.settings).forEach(([k, v]) => ySettings.set(k, v));
-        ySettings.set('OOTMM', data.OOTMM);
-        ySettings.set('OOTMMDungeons', data.OOTMMDungeons);
+        saveDisplaySetting('OOTMM', data.OOTMM);
+        saveDisplaySetting('OOTMMDungeons', data.OOTMMDungeons);
         // Store locations as a single JSON blob to avoid sending 4434
         // individual Yjs operations over WebRTC (overwhelms SimplePeer).
         ySpoiler.set('locationsBlock', JSON.stringify(raw));
@@ -1077,8 +1080,8 @@ yKeepalive.observe((event: any) => {
     if (!newPresetName.trim()) return;
     userPresets[newPresetName] = {
       settings: Object.fromEntries(Array.from(ySettings.entries())),
-      OOTMM: ySettings.get('OOTMM') ?? 'both',
-      OOTMMDungeons: ySettings.get('OOTMMDungeons') ?? 'both',
+      OOTMM: displaySettings.OOTMM,
+      OOTMMDungeons: displaySettings.OOTMMDungeons,
     };
     localStorage.setItem('presets', JSON.stringify(userPresets));
     userPresets = { ...userPresets };
@@ -1096,8 +1099,8 @@ yKeepalive.observe((event: any) => {
       missingKeys.forEach(k => ySettings.set(k, (presetBaseSettings as Record<string, any>)[k]));
     }
     Object.entries(preset.settings).forEach(([k, v]) => ySettings.set(k, v));
-    ySettings.set('OOTMM', preset.OOTMM ?? 'both');
-    ySettings.set('OOTMMDungeons', preset.OOTMMDungeons ?? 'both');
+    saveDisplaySetting('OOTMM', preset.OOTMM ?? 'both');
+    saveDisplaySetting('OOTMMDungeons', preset.OOTMMDungeons ?? 'both');
   }
 
   function exportPresets() {
@@ -1447,14 +1450,14 @@ yKeepalive.observe((event: any) => {
     // --- Game filter ---
     let matchesOverworld = true;
     if (!isDungeon) {
-      const m = ($sSettings.get('OOTMM') ?? 'both') as string;
+      const m = (displaySettings.OOTMM ?? 'both') as string;
       if (m === 'oot') matchesOverworld = check.game === T.Game.oot;
       else if (m === 'mm') matchesOverworld = check.game === T.Game.mm;
       else if (m === 'none') matchesOverworld = false;
     }
     let matchesDungeons = true;
     if (isDungeon) {
-      const m = ($sSettings.get('OOTMMDungeons') ?? 'both') as string;
+      const m = (displaySettings.OOTMMDungeons ?? 'both') as string;
       if (m === 'ootdungeons') matchesDungeons = check.game === T.Game.oot;
       else if (m === 'mmdungeons') matchesDungeons = check.game === T.Game.mm;
       else if (m === 'none') matchesDungeons = false;
@@ -1465,7 +1468,7 @@ yKeepalive.observe((event: any) => {
     let matchesGS = true;
     if (check.type === T.CheckType.gs && check.game === T.Game.oot) {
       const ind = check.scene ? ootDungeons.includes(check.scene) : false;
-      const showGS = ($sSettings.get('showUnshuffledGS') ?? false) as boolean;
+      const showGS = (displaySettings.showUnshuffledGS ?? false) as boolean;
       if (gsMode === 'no_shuffle') matchesGS = showGS;
       else if (gsMode === 'dungeons') matchesGS = ind || (showGS && !ind);
       else if (gsMode === 'overworld') matchesGS = !ind || (showGS && ind);
@@ -1490,18 +1493,18 @@ yKeepalive.observe((event: any) => {
     let matchesTownSF = true;
     if (check.item?.startsWith('STRAY_FAIRY_TOWN'))
       matchesTownSF =
-        ($sSettings.get('TownSFShuffleMM') ?? 'vanilla') !== 'vanilla' || ($sSettings.get('showUnshuffledTownSF') ?? false);
+        ($sSettings.get('TownSFShuffleMM') ?? 'vanilla') !== 'vanilla' || (displaySettings.showUnshuffledTownSF ?? false);
 
     let matchesDungeonSF = true;
     if (check.type === T.CheckType.chest && check.item?.startsWith('STRAY_FAIRY_'))
       matchesDungeonSF =
         ($sSettings.get('DungeonChestSFShuffleMM') ?? 'own_dungeon') !== 'vanilla' ||
-        ($sSettings.get('showUnshuffledDungeonSF') ?? false);
+        (displaySettings.showUnshuffledDungeonSF ?? false);
 
     let matchesFreeSF = true;
     if (check.type === T.CheckType.sf)
       matchesFreeSF =
-        ($sSettings.get('DungeonFreeSFShuffleMM') ?? 'vanilla') !== 'vanilla' || ($sSettings.get('showUnshuffledFreeSF') ?? false);
+        ($sSettings.get('DungeonFreeSFShuffleMM') ?? 'vanilla') !== 'vanilla' || (displaySettings.showUnshuffledFreeSF ?? false);
 
     // --- Ganon Boss Key ---
     let matchesGanonBK = true;
@@ -2173,10 +2176,15 @@ yKeepalive.observe((event: any) => {
   function resetSettings() {
     if (!window.confirm('Are you sure you want to reset all settings to default?')) return;
     [...ySettings.keys()].forEach(k => ySettings.delete(k));
-    ySettings.set('OOTMM', 'both');
+    saveDisplaySetting('OOTMM', 'both');
+    saveDisplaySetting('OOTMMDungeons', 'both');
+    saveDisplaySetting('showUnshuffledGS', false);
+    saveDisplaySetting('showUnshuffledDungeonSF', false);
+    saveDisplaySetting('showUnshuffledFreeSF', false);
+    saveDisplaySetting('showUnshuffledTownSF', false);
+    saveDisplaySetting('showTypeColors', true);
     [...yMqSettings.keys()].forEach(k => yMqSettings.set(k, false));
     [...yVariantSettings.keys()].forEach(k => yVariantSettings.set(k, 0));
-    Object.entries(_displayDefaults).forEach(([k, v]) => ySettings.set(k, v));
   }
 
   function exportData() {
@@ -2860,14 +2868,14 @@ yKeepalive.observe((event: any) => {
           <button class="undo-btn" on:click|stopPropagation={redo} disabled={!canRedo} title="Redo (Ctrl+Y)">↪ Redo</button>
           <span class="summary-sep"></span>
           <span class="game-filter-label">Overworld</span>
-          <button class="game-filter-btn" class:active={($sSettings.get('OOTMM') ?? 'both') === 'both'} on:click|stopPropagation={() => { if (isWatchMode) return; ySettings.set('OOTMM', 'both'); }}>Both</button>
-          <button class="game-filter-btn" class:active={($sSettings.get('OOTMM') ?? 'both') === 'oot'} on:click|stopPropagation={() => { if (isWatchMode) return; ySettings.set('OOTMM', 'oot'); }}>OoT</button>
-          <button class="game-filter-btn" class:active={($sSettings.get('OOTMM') ?? 'both') === 'mm'} on:click|stopPropagation={() => { if (isWatchMode) return; ySettings.set('OOTMM', 'mm'); }}>MM</button>
+          <button class="game-filter-btn" class:active={(displaySettings.OOTMM ?? 'both') === 'both'} on:click|stopPropagation={() => { if (isWatchMode) return; saveDisplaySetting('OOTMM', 'both'); }}>Both</button>
+          <button class="game-filter-btn" class:active={(displaySettings.OOTMM ?? 'both') === 'oot'} on:click|stopPropagation={() => { if (isWatchMode) return; saveDisplaySetting('OOTMM', 'oot'); }}>OoT</button>
+          <button class="game-filter-btn" class:active={(displaySettings.OOTMM ?? 'both') === 'mm'} on:click|stopPropagation={() => { if (isWatchMode) return; saveDisplaySetting('OOTMM', 'mm'); }}>MM</button>
           <span class="summary-sep"></span>
           <span class="game-filter-label">Dungeons</span>
-          <button class="game-filter-btn" class:active={($sSettings.get('OOTMMDungeons') ?? 'both') === 'both'} on:click|stopPropagation={() => { if (isWatchMode) return; ySettings.set('OOTMMDungeons', 'both'); }}>Both</button>
-          <button class="game-filter-btn" class:active={($sSettings.get('OOTMMDungeons') ?? 'both') === 'ootdungeons'} on:click|stopPropagation={() => { if (isWatchMode) return; ySettings.set('OOTMMDungeons', 'ootdungeons'); }}>OoT</button>
-          <button class="game-filter-btn" class:active={($sSettings.get('OOTMMDungeons') ?? 'both') === 'mmdungeons'} on:click|stopPropagation={() => { if (isWatchMode) return; ySettings.set('OOTMMDungeons', 'mmdungeons'); }}>MM</button>
+          <button class="game-filter-btn" class:active={(displaySettings.OOTMMDungeons ?? 'both') === 'both'} on:click|stopPropagation={() => { if (isWatchMode) return; saveDisplaySetting('OOTMMDungeons', 'both'); }}>Both</button>
+          <button class="game-filter-btn" class:active={(displaySettings.OOTMMDungeons ?? 'both') === 'ootdungeons'} on:click|stopPropagation={() => { if (isWatchMode) return; saveDisplaySetting('OOTMMDungeons', 'ootdungeons'); }}>OoT</button>
+          <button class="game-filter-btn" class:active={(displaySettings.OOTMMDungeons ?? 'both') === 'mmdungeons'} on:click|stopPropagation={() => { if (isWatchMode) return; saveDisplaySetting('OOTMMDungeons', 'mmdungeons'); }}>MM</button>
         </summary>
         <div id="general-container" class="flex flex-wrap" style="margin-top: 0.8em">
           <form class="pure-form pure-form-stacked">
@@ -2878,8 +2886,8 @@ yKeepalive.observe((event: any) => {
               <label>
                 Show OOT/MM Overworld
                 <select
-                  value={$sSettings.get('OOTMM') ?? 'both'}
-                  on:change={e => { if (isWatchMode) return; ySettings.set('OOTMM', e.target.value); }}
+                  value={displaySettings.OOTMM ?? 'both'}
+                  on:change={e => { if (isWatchMode) return; saveDisplaySetting('OOTMM', e.target.value); }}
                   class="dropdown-select"
                   disabled={isWatchMode}
                 >
@@ -2892,8 +2900,8 @@ yKeepalive.observe((event: any) => {
               <label>
                 Show OOT/MM Dungeons
                 <select
-                  value={$sSettings.get('OOTMMDungeons') ?? 'both'}
-                  on:change={e => { if (isWatchMode) return; ySettings.set('OOTMMDungeons', e.currentTarget.value); }}
+                  value={displaySettings.OOTMMDungeons ?? 'both'}
+                  on:change={e => { if (isWatchMode) return; saveDisplaySetting('OOTMMDungeons', e.currentTarget.value); }}
                   class="dropdown-select"
                   disabled={isWatchMode}
                 >
@@ -2909,36 +2917,36 @@ yKeepalive.observe((event: any) => {
                 <label class="checkbox-option">
                   <input
                     type="checkbox"
-                    checked={$sSettings.get('showUnshuffledGS') ?? false}
+                    checked={displaySettings.showUnshuffledGS ?? false}
                     disabled={isWatchMode}
-                    on:change={() => { if (isWatchMode) return; ySettings.set('showUnshuffledGS', !($sSettings.get('showUnshuffledGS') ?? false)); }}
+                    on:change={() => { if (isWatchMode) return; saveDisplaySetting('showUnshuffledGS', !displaySettings.showUnshuffledGS); }}
                   />
                   Show Unshuffled Gold Skulltulas
                 </label>
                 <label class="checkbox-option">
                   <input
                     type="checkbox"
-                    checked={$sSettings.get('showUnshuffledDungeonSF') ?? false}
+                    checked={displaySettings.showUnshuffledDungeonSF ?? false}
                     disabled={isWatchMode}
-                    on:change={() => { if (isWatchMode) return; ySettings.set('showUnshuffledDungeonSF', !($sSettings.get('showUnshuffledDungeonSF') ?? false)); }}
+                    on:change={() => { if (isWatchMode) return; saveDisplaySetting('showUnshuffledDungeonSF', !displaySettings.showUnshuffledDungeonSF); }}
                   />
                   Show Unshuffled Dungeon Stray Fairies (Chest)
                 </label>
                 <label class="checkbox-option">
                   <input
                     type="checkbox"
-                    checked={$sSettings.get('showUnshuffledFreeSF') ?? false}
+                    checked={displaySettings.showUnshuffledFreeSF ?? false}
                     disabled={isWatchMode}
-                    on:change={() => { if (isWatchMode) return; ySettings.set('showUnshuffledFreeSF', !($sSettings.get('showUnshuffledFreeSF') ?? false)); }}
+                    on:change={() => { if (isWatchMode) return; saveDisplaySetting('showUnshuffledFreeSF', !displaySettings.showUnshuffledFreeSF); }}
                   />
                   Show Unshuffled Dungeon Freestanding Fairies
                 </label>
                 <label class="checkbox-option">
                   <input
                     type="checkbox"
-                    checked={$sSettings.get('showUnshuffledTownSF') ?? false}
+                    checked={displaySettings.showUnshuffledTownSF ?? false}
                     disabled={isWatchMode}
-                    on:change={() => { if (isWatchMode) return; ySettings.set('showUnshuffledTownSF', !($sSettings.get('showUnshuffledTownSF') ?? false)); }}
+                    on:change={() => { if (isWatchMode) return; saveDisplaySetting('showUnshuffledTownSF', !displaySettings.showUnshuffledTownSF); }}
                   />
                   Show Unshuffled Town Stray Fairy
                 </label>
@@ -3423,7 +3431,7 @@ yKeepalive.observe((event: any) => {
               class="pure-button"
               type="button"
               class:pure-button-active={showTypeColors}
-              on:click={() => { if (isWatchMode) return; ySettings.set('showTypeColors', !showTypeColors); }}
+              on:click={() => { if (isWatchMode) return; saveDisplaySetting('showTypeColors', !showTypeColors); }}
               title="Toggle type colors on checks"
             >Colors</button>
             <span class="check-stat">{visibleGroupCount} zones · {visibleCheckCount} checks</span>
