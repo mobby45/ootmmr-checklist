@@ -451,6 +451,13 @@ yKeepalive.observe((event: any) => {
         // Don't show banner if we're already in the room this points to
         if (relocated && roomName && (roomName === relocated || roomName.startsWith(relocated + '-'))) return;
         persistRelocationCode(relocated, 'observer-set');
+        // Host is leaving for a new room; clean up their yPeerInfo locally
+        // since the Yjs delete may not propagate before the WebRTC connection drops.
+        ydoc.transact(() => {
+          for (const [id] of yPeerInfo) {
+            if (id !== peerId) yPeerInfo.delete(id);
+          }
+        });
       }
       // Never clear the banner on delete — only user action should dismiss it
     }
@@ -671,6 +678,15 @@ yKeepalive.observe((event: any) => {
       }
       prevP2pPeerCount = p2pPeerCount;
       p2pPeerCount = newCount;
+      // When remote peers disconnect, clean up their stale yPeerInfo entries
+      // (Yjs delete may not propagate before WebRTC drops).
+      if (newCount === 0 && prevP2pPeerCount > 0) {
+        ydoc.transact(() => {
+          for (const [id] of yPeerInfo) {
+            if (id !== peerId) yPeerInfo.delete(id);
+          }
+        });
+      }
       refreshConnectedUsers();
       startDcMonitor();
     });
