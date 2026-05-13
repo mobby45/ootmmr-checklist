@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { EntranceInfo } from '../data/entranceData';
-  import { createEventDispatcher, onMount } from 'svelte';
+  import { createEventDispatcher } from 'svelte';
 
   export let options: EntranceInfo[] = [];
   export let value: string = '';
@@ -95,24 +95,22 @@
     item?.scrollIntoView({ block: 'nearest' });
   }
 
-  function handleDocClick(e: MouseEvent) {
-    const target = e.target as Node;
-    if (wrapEl && !wrapEl.contains(target) && (!dropdownEl || !dropdownEl.contains(target))) {
-      editing = false;
-      open = false;
-      search = '';
+  function clickOutside(node: HTMLElement) {
+    function handler(e: MouseEvent) {
+      if (!node.contains(e.target as Node)) {
+        editing = false;
+        open = false;
+        search = '';
+      }
     }
+    document.addEventListener('mousedown', handler, true);
+    return { destroy: () => document.removeEventListener('mousedown', handler, true) };
   }
-
-  onMount(() => {
-    document.addEventListener('click', handleDocClick, true);
-    return () => document.removeEventListener('click', handleDocClick, true);
-  });
 </script>
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <!-- svelte-ignore a11y-click-events-have-key-events -->
-<div class="es-wrap" bind:this={wrapEl}>
+<div class="es-wrap" bind:this={wrapEl} use:clickOutside>
 
   {#if editing}
     <!-- Edit mode: search input -->
