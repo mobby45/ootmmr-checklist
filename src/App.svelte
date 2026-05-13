@@ -3113,8 +3113,8 @@ yKeepalive.observe((event: any) => {
               <summary class="spoiler-panel-summary">Spoiler</summary>
               <div style="margin-top: 0.4em;">
                 <div class="tabs" style="margin:0 0 0.5em; border:none;">
-                  <button class="tab-button" class:active={spoilerSectionTab==='search'} on:click="{(spoilerSectionTab='search', localStorage.setItem('sec_spoilertab','search'))}" style="font-size:0.85em; padding:0.25em 0.8em;">Search</button>
-                  <button class="tab-button" class:active={spoilerSectionTab==='spheres'} on:click="{(spoilerSectionTab='spheres', localStorage.setItem('sec_spoilertab','spheres'))}" style="font-size:0.85em; padding:0.25em 0.8em;">Spheres ({spoilerSpheres.length})</button>
+                  <button type="button" class="tab-button" class:active={spoilerSectionTab==='search'} on:click="{(spoilerSectionTab='search', localStorage.setItem('sec_spoilertab','search'))}" style="font-size:0.85em; padding:0.25em 0.8em;">Search</button>
+                  <button type="button" class="tab-button" class:active={spoilerSectionTab==='spheres'} on:click="{(spoilerSectionTab='spheres', localStorage.setItem('sec_spoilertab','spheres'))}" style="font-size:0.85em; padding:0.25em 0.8em;">Spheres ({spoilerSpheres.length})</button>
                 </div>
                 {#if connectionProvider}
                   <label class="share-spoiler-toggle" style="margin-bottom:0.4em;" title="When enabled, the spoiler log is shared with co-op partners via Yjs">
