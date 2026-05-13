@@ -104,8 +104,13 @@
     return populatedSubTypes.has(key);
   }
 
+  function hasSubTypeGroup(erType: ErSettingKey): boolean {
+    return subTypeGroups.some(g => g.parent === erType);
+  }
+
   function entranceMatchesSubTypes(id: string, erType: ErSettingKey): boolean {
-    if (!hasActiveSubTypes.has(erType)) return true;
+    if (!hasSubTypeGroup(erType)) return true;
+    if (!hasActiveSubTypes.has(erType)) return false;
     for (const group of subTypeGroups) {
       if (group.parent !== erType) continue;
       for (const key of group.keys) {
