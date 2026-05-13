@@ -767,17 +767,17 @@ export const subTypeToParent: Record<string, ErSettingKey> = {
   erOneWaysWaterVoids: 'erOneWays', erOneWaysAnywhere: 'erOneWays',
 };
 
-// Display labels for sub-type toggles
+// Display labels for sub-type toggles (matching generator names)
 export const subTypeLabels: Record<string, string> = {
-  erMajorDungeons: '🏛️ Major', erMinorDungeons: '🏚️ Minor',
-  erGanonCastle: '🏰 Ganon Castle', erGanonTower: '🗼 Ganon Tower',
-  erMoon: '🌙 Moon',
-  erSpiderHouses: '🕷️ Spider Houses', erPirateFortress: '🏴️ Pirate Fortress',
-  erBeneathWell: '🕳️ Beneath Well', erIkanaCastle: '🏯 Ikana Castle',
-  erSecretShrine: '🔮 Secret Shrine',
-  erIndoorsMajor: '🏛️ Major', erIndoorsExtra: '🏠 Extra', erIndoorsGameLinks: '🔗 Cross-game',
-  erOneWaysMajor: '🌍 Major', erOneWaysIkana: '🏯 Ikana',
-  erOneWaysSongs: '🎵 Songs', erOneWaysStatues: '🦉 Statues',
-  erOneWaysWoods: '🌲 Woods', erOneWaysWaterVoids: '💧 Water Voids',
-  erOneWaysAnywhere: '🌀 Anywhere',
+  erMajorDungeons: 'Major Dungeons', erMinorDungeons: 'OoT Minor Dungeons',
+  erGanonCastle: "Ganon's Castle", erGanonTower: "Ganon's Tower",
+  erMoon: 'Clock Tower Roof',
+  erSpiderHouses: 'Spider Houses', erPirateFortress: "Pirates' Fortress",
+  erBeneathWell: 'Beneath the Well', erIkanaCastle: "Ikana Castle's Interior",
+  erSecretShrine: 'Secret Shrine',
+  erIndoorsMajor: 'Most Interiors', erIndoorsExtra: 'Extra Interiors', erIndoorsGameLinks: 'Mask Shop/Clock Tower',
+  erOneWaysMajor: 'Standard One-Ways', erOneWaysIkana: 'Ikana Castle One-Ways',
+  erOneWaysSongs: 'Warp Songs', erOneWaysStatues: 'Soaring Spots',
+  erOneWaysWoods: 'Altered Lost Woods', erOneWaysWaterVoids: 'Water Void Points',
+  erOneWaysAnywhere: 'Anywhere One-Ways',
 };

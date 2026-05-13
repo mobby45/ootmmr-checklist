@@ -90,6 +90,9 @@
   function getSub(key: string): boolean {
     return (manualErSettings as any)[key] ?? false;
   }
+  function parentIsActive(parentKey: string): boolean {
+    return (activeErSettings as any)[parentKey] ?? false;
+  }
   function hasPopulatedSub(key: string): boolean {
     return populatedSubTypes.has(key);
   }
@@ -187,7 +190,7 @@
     <div class="er-extra-grid">
       {#each subTypeGroups as group}
         {@const groupKeys = group.keys.filter(k => hasPopulatedSub(k))}
-        {#if groupKeys.length > 0}
+        {#if groupKeys.length > 0 && parentIsActive(group.parent)}
           <div class="er-extra-group">
             <div class="er-extra-group-title">{group.label}</div>
             {#each groupKeys as key}
