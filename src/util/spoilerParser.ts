@@ -152,18 +152,40 @@ export function parseSpoilerLog(text: string): SpoilerData {
 
   if (currentSphere) spheres.push(currentSphere);
 
+  function isErActive(val: string | undefined): boolean {
+    return val === 'full' || val === 'ownGame' || val === 'dungeon';
+  }
+
   const erSettings: ErSettings = {
-    erBoss: rawEr['erBoss'] === 'full' || rawEr['erBoss'] === 'dungeon',
-    erDungeons: rawEr['erDungeons'] === 'full' || rawEr['erDungeons'] === 'dungeon',
-    erGrottos: rawEr['erGrottos'] === 'full' || rawEr['erGrottos'] === 'dungeon',
-    erIndoors: rawEr['erIndoors'] === 'full' || rawEr['erIndoors'] === 'dungeon',
-    erOverworld: rawEr['erOverworld'] === 'full' || rawEr['erOverworld'] === 'dungeon',
-    erOneWays: rawEr['erOneWays'] === 'full' || rawEr['erOneWays'] === 'dungeon',
-    erOwls: rawEr['erOneWaysOwls'] === 'true',
-    erWallmasters: rawEr['erWallmasters'] === 'full' || rawEr['erWallmasters'] === 'dungeon',
-    erMixed: false, // always set manually
-    erAlterLw: rawEr['alterLostWoodsExits'] === 'true',
+    erBoss:       isErActive(rawEr['erBoss']),
+    erDungeons:   isErActive(rawEr['erDungeons']),
+    erGrottos:    isErActive(rawEr['erGrottos']),
+    erIndoors:    isErActive(rawEr['erIndoors']),
+    erOverworld:  isErActive(rawEr['erOverworld']),
+    erOneWays:    isErActive(rawEr['erOneWays']),
+    erOwls:       rawEr['erOneWaysOwls'] === 'true',
+    erWallmasters: isErActive(rawEr['erWallmasters']),
+    erMixed:      isErActive(rawEr['erMixed']) || rawEr['erMixed'] === 'dungeon',
+    erAlterLw:    rawEr['alterLostWoodsExits'] === 'true',
   };
+
+  // Store sub-type / extra ER settings in general settings record
+  const extraErSettings = [
+    'erSelfLoops', 'erNoPolarity', 'erDecoupled',
+    'erMajorDungeons', 'erMinorDungeons', 'erGanonCastle', 'erGanonTower', 'erMoon',
+    'erSpiderHouses', 'erPirateFortress', 'erBeneathWell', 'erIkanaCastle', 'erSecretShrine',
+    'erIndoorsMajor', 'erIndoorsExtra', 'erIndoorsGameLinks',
+    'erRegions', 'erRegionsExtra', 'erRegionsShortcuts', 'erPiratesWorld',
+    'erSpawns', 'erWarps',
+    'erMixedDungeons', 'erMixedGrottos', 'erMixedIndoors', 'erMixedRegions', 'erMixedOverworld',
+    'erOneWaysMajor', 'erOneWaysIkana', 'erOneWaysSongs', 'erOneWaysStatues',
+    'erOneWaysWoods', 'erOneWaysWaterVoids', 'erOneWaysAnywhere',
+  ];
+  for (const key of extraErSettings) {
+    if (rawEr[key] !== undefined) {
+      settings[key] = rawEr[key] === 'true' ? true : rawEr[key] === 'false' ? false : rawEr[key];
+    }
+  }
 
   const gamesLine = lines.find(l => l.trim().startsWith('games:'));
   const games = gamesLine ? gamesLine.split(':')[1].trim() : 'ootmm';

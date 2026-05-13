@@ -7,7 +7,55 @@
   export let yEntrances: YMap<string>;
   export let entranceValues: Map<string, string>;
   export let spoilerErSettings: ErSettings | null = null;
+  export let spoilerExtraEr: Record<string, any> | null = null;
   export let isWatchMode = false;
+
+  let extraErOpen = false;
+
+  const extraErGroups = [
+    { key: 'Global', label: 'Global' },
+    { key: 'Dungeons', label: 'Dungeons' },
+    { key: 'Interiors', label: 'Interiors' },
+    { key: 'Regions', label: 'Regions' },
+    { key: 'Spawns/Warps', label: 'Spawns / Warps' },
+    { key: 'Mixed', label: 'Mixed' },
+    { key: 'One-Ways', label: 'One-Ways' },
+  ];
+
+  const extraErLabels: Record<string, string> = {
+    erSelfLoops: 'Self-loops', erNoPolarity: 'No polarity', erDecoupled: 'Decoupled',
+    erMajorDungeons: 'Major dungeons', erMinorDungeons: 'Minor dungeons', erGanonCastle: "Ganon's Castle",
+    erGanonTower: "Ganon's Tower", erMoon: 'Moon', erSpiderHouses: 'Spider Houses',
+    erPirateFortress: 'Pirate Fortress', erBeneathWell: 'Beneath the Well',
+    erIkanaCastle: "Ikana's Castle", erSecretShrine: 'Secret Shrine',
+    erIndoorsMajor: 'Major interiors', erIndoorsExtra: 'Extra interiors', erIndoorsGameLinks: 'Cross-game links',
+    erRegions: 'Regions', erRegionsExtra: 'Extra regions', erRegionsShortcuts: 'Shortcuts',
+    erPiratesWorld: "Pirate's World", erSpawns: 'Spawns', erWarps: 'Warps',
+    erMixedDungeons: 'Mixed dungeons', erMixedGrottos: 'Mixed grottos', erMixedIndoors: 'Mixed interiors',
+    erMixedRegions: 'Mixed regions', erMixedOverworld: 'Mixed overworld',
+    erOneWaysMajor: 'Major', erOneWaysIkana: 'Ikana', erOneWaysSongs: 'Songs',
+    erOneWaysStatues: 'Statues', erOneWaysWoods: 'Woods',
+    erOneWaysWaterVoids: 'Water voids', erOneWaysAnywhere: 'Anywhere',
+  };
+
+  const extraErGroupMap: Record<string, string> = {
+    erSelfLoops: 'Global', erNoPolarity: 'Global', erDecoupled: 'Global',
+    erMajorDungeons: 'Dungeons', erMinorDungeons: 'Dungeons', erGanonCastle: 'Dungeons',
+    erGanonTower: 'Dungeons', erMoon: 'Dungeons', erSpiderHouses: 'Dungeons',
+    erPirateFortress: 'Dungeons', erBeneathWell: 'Dungeons', erIkanaCastle: 'Dungeons', erSecretShrine: 'Dungeons',
+    erIndoorsMajor: 'Interiors', erIndoorsExtra: 'Interiors', erIndoorsGameLinks: 'Interiors',
+    erRegions: 'Regions', erRegionsExtra: 'Regions', erRegionsShortcuts: 'Regions', erPiratesWorld: 'Regions',
+    erSpawns: 'Spawns/Warps', erWarps: 'Spawns/Warps',
+    erMixedDungeons: 'Mixed', erMixedGrottos: 'Mixed', erMixedIndoors: 'Mixed',
+    erMixedRegions: 'Mixed', erMixedOverworld: 'Mixed',
+    erOneWaysMajor: 'One-Ways', erOneWaysIkana: 'One-Ways', erOneWaysSongs: 'One-Ways',
+    erOneWaysStatues: 'One-Ways', erOneWaysWoods: 'One-Ways',
+    erOneWaysWaterVoids: 'One-Ways', erOneWaysAnywhere: 'One-Ways',
+  };
+
+  $: extraErEntries = spoilerExtraEr
+    ? Object.entries(spoilerExtraEr).filter(([k]) => extraErLabels[k]) as [string, boolean][]
+    : [];
 
   let manualErSettings: ErSettings = JSON.parse(
     localStorage.getItem('erSettings') ?? JSON.stringify(defaultErSettings)
@@ -109,6 +157,24 @@
         </button>
       {/each}
     </div>
+    {#if spoilerExtraEr && extraErEntries.length > 0}
+      <details class="er-extra-details" bind:open={extraErOpen}>
+        <summary class="er-extra-summary">ER options ({extraErEntries.filter(([,v]) => v).length}/{extraErEntries.length} active)</summary>
+        <div class="er-extra-grid">
+          {#each extraErGroups as group}
+            {@const groupEntries = extraErEntries.filter(([k]) => extraErGroupMap[k] === group.key)}
+            {#if groupEntries.length > 0}
+              <div class="er-extra-group">
+                <div class="er-extra-group-title">{group.label}</div>
+                {#each groupEntries as [key, val]}
+                  <span class="er-extra-badge" class:active={val}>{extraErLabels[key]}</span>
+                {/each}
+              </div>
+            {/if}
+          {/each}
+        </div>
+      </details>
+    {/if}
   </div>
 
   <div class="er-controls">
@@ -354,6 +420,50 @@
   min-width: 160px;
   max-width: 500px;
 }
+
+  .er-extra-details {
+    margin: 0.4em 0 0.8em 0;
+    font-size: 0.82em;
+  }
+  .er-extra-summary {
+    cursor: pointer;
+    color: var(--color-text);
+    opacity: 0.7;
+    font-size: 0.9em;
+    margin-bottom: 0.4em;
+  }
+  .er-extra-summary:hover { opacity: 1; }
+  .er-extra-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6em;
+  }
+  .er-extra-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25em;
+  }
+  .er-extra-group-title {
+    font-weight: bold;
+    color: var(--color-text);
+    opacity: 0.6;
+    font-size: 0.85em;
+    margin-bottom: 0.15em;
+  }
+  .er-extra-badge {
+    font-size: 0.82em;
+    padding: 1px 6px;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.05);
+    color: var(--color-text);
+    opacity: 0.4;
+    transition: all 0.15s;
+  }
+  .er-extra-badge.active {
+    opacity: 1;
+    background: rgba(100, 200, 100, 0.15);
+    color: #7ec87e;
+  }
 
   @media screen and (max-width: 768px) {
     .er-input-wrap { width: 140px; }

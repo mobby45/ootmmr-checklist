@@ -432,6 +432,8 @@ yKeepalive.observe((event: any) => {
     } else if (event.keysChanged?.has?.('erSettings')) {
       spoilerErSettings = null;
       localStorage.removeItem('spoilerErSettings');
+      spoilerExtraEr = null;
+      localStorage.removeItem('spoilerExtraEr');
     }
     const locStr = ySpoiler.get('locationsBlock');
     if (locStr !== undefined) {
@@ -1102,6 +1104,7 @@ yKeepalive.observe((event: any) => {
         })
     : [];
   let spoilerErSettings: ErSettings | null = JSON.parse(localStorage.getItem('spoilerErSettings') ?? 'null');
+  let spoilerExtraEr: Record<string, any> | null = JSON.parse(localStorage.getItem('spoilerExtraEr') ?? 'null');
 
   function toggleShareSpoiler() {
     shareSpoiler = !shareSpoiler;
@@ -1160,6 +1163,12 @@ yKeepalive.observe((event: any) => {
       spoilerSeedInfo = data.seedInfo;
       const siStr = JSON.stringify(data.seedInfo);
       localStorage.setItem('spoilerSeedInfo', siStr);
+      const extraEr: Record<string, any> = {};
+      for (const [k, v] of Object.entries(data.settings)) {
+        if (k.startsWith('er') && typeof v === 'boolean') extraEr[k] = v;
+      }
+      spoilerExtraEr = Object.keys(extraEr).length ? extraEr : null;
+      localStorage.setItem('spoilerExtraEr', JSON.stringify(spoilerExtraEr));
 
       if (shareSpoiler) {
         ydoc.transact(() => {
@@ -2297,6 +2306,8 @@ yKeepalive.observe((event: any) => {
     localStorage.removeItem('spoilerErSettings');
     spoilerSeedInfo = null;
     localStorage.removeItem('spoilerSeedInfo');
+    spoilerExtraEr = null;
+    localStorage.removeItem('spoilerExtraEr');
     for (const [key] of ySpoilerLocations.entries()) {
       ySpoilerLocations.delete(key);
     }
@@ -2417,6 +2428,7 @@ yKeepalive.observe((event: any) => {
     spoilerSpheres: SpoilerSphere[];
     spoilerSeedInfo: SeedInfo | null;
     spoilerErSettings: ErSettings | null;
+    spoilerExtraEr: Record<string, any> | null;
   }
 
   let saveSlots: SaveSlot[] = JSON.parse(localStorage.getItem('saveSlots') ?? '[]');
@@ -2445,6 +2457,7 @@ yKeepalive.observe((event: any) => {
       spoilerSpheres,
       spoilerSeedInfo,
       spoilerErSettings,
+      spoilerExtraEr,
     };
   }
 
@@ -2506,6 +2519,8 @@ yKeepalive.observe((event: any) => {
     localStorage.setItem('spoilerSeedInfo', JSON.stringify(spoilerSeedInfo));
     spoilerErSettings = slot.spoilerErSettings ?? null;
     localStorage.setItem('spoilerErSettings', JSON.stringify(spoilerErSettings));
+    spoilerExtraEr = slot.spoilerExtraEr ?? null;
+    localStorage.setItem('spoilerExtraEr', JSON.stringify(spoilerExtraEr));
     currentSlotId = slot.id;
     localStorage.setItem('currentSlotId', slot.id);
   }
@@ -3451,7 +3466,7 @@ yKeepalive.observe((event: any) => {
           <strong class="interactable">Entrance Rando Tracker</strong>
           {#if $sEntrances.size > 0}<span class="section-badge">{$sEntrances.size}</span>{/if}
         </summary>
-        <ERTracker {yEntrances} entranceValues={entranceValuesMap} {spoilerErSettings} {isWatchMode} />
+        <ERTracker {yEntrances} entranceValues={entranceValuesMap} {spoilerErSettings} {spoilerExtraEr} {isWatchMode} />
       </details>
 
       <!-- Item Tracker -->
