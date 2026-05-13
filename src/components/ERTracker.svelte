@@ -32,6 +32,7 @@
     }
   }
 
+  let activeErSettings: ErSettings = spoilerErSettings ?? manualErSettings;
   $: activeErSettings = spoilerErSettings ?? manualErSettings;
 
   function saveManualErSettings() {
