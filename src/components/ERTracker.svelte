@@ -194,7 +194,7 @@
           class:active={key === 'erMixed' ? manualErSettings.erMixed : activeErSettings[key]}
           class:from-spoiler={spoilerErSettings !== null && key !== 'erMixed'}
           class:always-manual={key === 'erMixed'}
-          disabled={spoilerErSettings !== null && key !== 'erMixed'}
+          disabled={isWatchMode || (spoilerErSettings !== null && key !== 'erMixed')}
           on:click={() => !isWatchMode && (key === 'erMixed' || spoilerErSettings === null) && toggleErSetting(key)}
           title={key === 'erMixed' ? 'Always manual — show both games as destinations' : spoilerErSettings ? 'Set by spoiler log' : 'Click to toggle'}
         >
