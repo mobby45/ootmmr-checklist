@@ -1000,6 +1000,13 @@ yKeepalive.observe((event: any) => {
   function pageNext(e: Event) { e.preventDefault(); spherePage = Math.min(Math.ceil(spoilerSpheres.length / spherePerPage) - 1, spherePage + 1); }
   $: totalSpherePages = Math.ceil(spoilerSpheres.length / spherePerPage) || 1;
   $: pageSpheres = spoilerSpheres.slice(spherePage * spherePerPage, (spherePage + 1) * spherePerPage);
+  $: spherePageOptions = Array.from({ length: totalSpherePages }, (_, i) => {
+    const first = spoilerSpheres[i * spherePerPage]?.sphere;
+    const last = spoilerSpheres[Math.min((i + 1) * spherePerPage, spoilerSpheres.length) - 1]?.sphere;
+    if (first === undefined) return { value: i, label: `Page ${i + 1}` };
+    if (first === last) return { value: i, label: `Sphere ${first}` };
+    return { value: i, label: `Sphere ${first}–${last}` };
+  });
   let spoilerSearch = '';
   let spoilerSectionTab: 'search' | 'spheres' = (localStorage.getItem('sec_spoilertab') as 'search' | 'spheres') ?? 'search';
   let seedInfoOpen = localStorage.getItem('sec_seedinfo') === 'true';
@@ -3089,8 +3096,8 @@ yKeepalive.observe((event: any) => {
                       <div style="display:flex; gap:0.3em; align-items:center; margin-left:auto;">
                         <button type="button" class="pure-button" on:click={pagePrev} disabled={spherePage === 0} style="font-size:0.82em; padding:0.15em 0.5em;">◀</button>
                         <select class="dropdown-select" style="font-size:0.82em; padding:0.15em 0.3em; width:auto;" bind:value={spherePage}>
-                          {#each Array(totalSpherePages) as _, i}
-                            <option value={i}>Page {i + 1}</option>
+                          {#each spherePageOptions as opt}
+                            <option value={opt.value}>{opt.label}</option>
                           {/each}
                         </select>
                         <button type="button" class="pure-button" on:click={pageNext} disabled={spherePage >= totalSpherePages - 1} style="font-size:0.82em; padding:0.15em 0.5em;">▶</button>
