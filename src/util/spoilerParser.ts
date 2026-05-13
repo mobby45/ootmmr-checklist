@@ -38,10 +38,29 @@ export interface SeedInfo {
   settingsString: string;
 }
 
+export interface SpoilerSphereEntryLocation {
+  type: 'Location';
+  location: string;
+  item: string;
+}
+
+export interface SpoilerSphereEntryEvent {
+  type: 'Event';
+  event: string;
+}
+
+export type SpoilerSphereEntry = SpoilerSphereEntryLocation | SpoilerSphereEntryEvent;
+
+export interface SpoilerSphere {
+  sphere: number;
+  entries: SpoilerSphereEntry[];
+}
+
 export interface SpoilerData {
   settings: Record<string, any>;
   locations: Record<string, string>;
   entrances: Record<string, string>;
+  spheres: SpoilerSphere[];
   erSettings: ErSettings;
   OOTMM: 'both' | 'oot' | 'mm';
   OOTMMDungeons: 'both' | 'ootdungeons' | 'mmdungeons';
@@ -61,11 +80,14 @@ export function parseSpoilerLog(text: string): SpoilerData {
   const settings: Record<string, any> = {};
   const locations: Record<string, string> = {};
   const entrances: Record<string, string> = {};
+  const spheres: SpoilerSphere[] = [];
   const rawEr: Record<string, string> = {};
 
   let inSettings = false;
   let inLocations = false;
   let inEntrances = false;
+  let inSpheres = false;
+  let currentSphere: SpoilerSphere | null = null;
 
   for (const line of lines) {
     if (line.trim() === 'Settings') { inSettings = true; inLocations = false; inEntrances = false; continue; }
@@ -73,7 +95,8 @@ export function parseSpoilerLog(text: string): SpoilerData {
     if (line.startsWith('Special Conditions') || line.startsWith('Tricks') || line.startsWith('World Flags') || line.startsWith('Hints') || line.startsWith('Paths')) {
       inSettings = false; inEntrances = false;
     }
-    if (line.startsWith('Location List')) { inLocations = true; inSettings = false; inEntrances = false; continue; }
+    if (line.startsWith('Location List')) { inLocations = true; inSettings = false; inEntrances = false; inSpheres = false; currentSphere = null; continue; }
+    if (line.trim() === 'Spheres') { inSpheres = true; inSettings = false; inLocations = false; inEntrances = false; currentSphere = null; continue; }
     if (inEntrances && line && !line.startsWith(' ')) { inEntrances = false; }
 
     if (inSettings) {
@@ -106,7 +129,28 @@ export function parseSpoilerLog(text: string): SpoilerData {
         if (!locationName.match(/\(\d+\)$/)) locations[locationName.trim()] = itemName.trim();
       }
     }
+
+    if (inSpheres) {
+      const sphereHeaderMatch = line.match(/^Sphere\s+(\d+)$/);
+      if (sphereHeaderMatch) {
+        if (currentSphere) spheres.push(currentSphere);
+        currentSphere = { sphere: parseInt(sphereHeaderMatch[1], 10), entries: [] };
+        continue;
+      }
+      const locationMatch = line.match(/^Location\s+-\s+(.+):\s*(.+)$/);
+      if (locationMatch && currentSphere) {
+        currentSphere.entries.push({ type: 'Location', location: locationMatch[1].trim(), item: locationMatch[2].trim() });
+        continue;
+      }
+      const eventMatch = line.match(/^Event\s+-\s+(.+)$/);
+      if (eventMatch && currentSphere) {
+        currentSphere.entries.push({ type: 'Event', event: eventMatch[1].trim() });
+        continue;
+      }
+    }
   }
+
+  if (currentSphere) spheres.push(currentSphere);
 
   const erSettings: ErSettings = {
     erBoss: rawEr['erBoss'] === 'full' || rawEr['erBoss'] === 'dungeon',
@@ -139,5 +183,5 @@ export function parseSpoilerLog(text: string): SpoilerData {
     settingsString: settingsStringLine ? settingsStringLine.replace('SettingsString:', '').trim() : '',
   } : null;
 
-  return { settings, locations, entrances, erSettings, OOTMM, OOTMMDungeons, seedInfo };
+  return { settings, locations, entrances, spheres, erSettings, OOTMM, OOTMMDungeons, seedInfo };
 }

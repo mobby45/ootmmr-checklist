@@ -51,7 +51,7 @@
   import { initializeStructuredChecks } from './util/util';
   import { parseSpoilerLog } from './util/spoilerParser';
   import { importRandomizerSettings } from './util/importSettings';
-  import type { ErSettings, SeedInfo } from './util/spoilerParser';
+  import type { ErSettings, SeedInfo, SpoilerSphere } from './util/spoilerParser';
   import { defaultPresets, defaultPresetNames, presetBaseSettings } from './data/presets';
   import * as T from './data/types';
 
@@ -396,6 +396,10 @@ yKeepalive.observe((event: any) => {
         });
       }
     }
+    if (!ySpoiler.get('spheresBlock')) {
+      const sphStr = localStorage.getItem('spoilerSpheres');
+      if (sphStr) ySpoiler.set('spheresBlock', sphStr);
+    }
     if (ySpoiler.size === 0) {
       const siStr = localStorage.getItem('spoilerSeedInfo');
       const erStr = localStorage.getItem('spoilerErSettings');
@@ -423,6 +427,11 @@ yKeepalive.observe((event: any) => {
       localStorage.setItem('spoilerLocations', locStr);
       spoilerSyncedFromPeer = true;
       setTimeout(() => { spoilerSyncedFromPeer = false; }, 4000);
+    }
+    const sphStr = ySpoiler.get('spheresBlock');
+    if (sphStr !== undefined) {
+      spoilerSpheres = JSON.parse(sphStr);
+      localStorage.setItem('spoilerSpheres', sphStr);
     }
     if (!event.transaction?.local && !isWatchMode && !isSettingPassword && connectionProvider && event.keysChanged?.has?.('relocatedTo')) {
       const relocated = ySpoiler.get('relocatedTo');
@@ -980,13 +989,28 @@ yKeepalive.observe((event: any) => {
   }
 
   let spoilerLocations: Record<string, string> = applyAliases(JSON.parse(localStorage.getItem('spoilerLocations') ?? '{}'));
+  let spoilerSpheres: SpoilerSphere[] = JSON.parse(localStorage.getItem('spoilerSpheres') ?? '[]');
   let spoilerSeedInfo: SeedInfo | null = JSON.parse(localStorage.getItem('spoilerSeedInfo') ?? 'null');
   let showSpoilerItems = false;
+  let showSpoilerSpheres = false;
+  let sphereMin = 0;
+  let sphereMax = 999;
+  let sphereTab: 'all' | 'oot' | 'mm' = 'all';
   let spoilerSearch = '';
   let seedInfoOpen = localStorage.getItem('sec_seedinfo') === 'true';
+  let spheresOpen = localStorage.getItem('sec_spheres') === 'true';
   let spoilerSearchOpen = localStorage.getItem('sec_spoilersearch') === 'true';
 
   // Locations in the spoiler that don't match any check name in the full pool
+  function findCheckByName(name: string) {
+    if (!structuredChecks) return null;
+    for (const group of structuredChecks) {
+      const check = group.checks.find(c => c.name === name);
+      if (check) return check;
+    }
+    return null;
+  }
+
   $: spoilerUnmatched = (() => {
     if (!structuredChecks || Object.keys(spoilerLocations).length === 0) return [];
     const allNames = new Set(structuredChecks.flatMap(g => g.checks.map(c => c.name)));
@@ -1047,6 +1071,9 @@ yKeepalive.observe((event: any) => {
       }
       spoilerLocations = applyAliases(raw);
       localStorage.setItem('spoilerLocations', JSON.stringify(raw));
+      const spheresStr = JSON.stringify(data.spheres);
+      spoilerSpheres = data.spheres;
+      localStorage.setItem('spoilerSpheres', spheresStr);
       spoilerErSettings = data.erSettings;
       const erStr = JSON.stringify(data.erSettings);
       localStorage.setItem('spoilerErSettings', erStr);
@@ -1061,6 +1088,7 @@ yKeepalive.observe((event: any) => {
         // Store locations as a single JSON blob to avoid sending 4434
         // individual Yjs operations over WebRTC (overwhelms SimplePeer).
         ySpoiler.set('locationsBlock', JSON.stringify(raw));
+        ySpoiler.set('spheresBlock', spheresStr);
         ySpoiler.set('erSettings', erStr);
         ySpoiler.set('seedInfo', siStr);
         // Clear old per-location entries for backward compat
@@ -2171,6 +2199,8 @@ yKeepalive.observe((event: any) => {
     yHints.delete(0, yHints.length);
     spoilerLocations = {};
     localStorage.removeItem('spoilerLocations');
+    spoilerSpheres = [];
+    localStorage.removeItem('spoilerSpheres');
     spoilerErSettings = null;
     localStorage.removeItem('spoilerErSettings');
     spoilerSeedInfo = null;
@@ -2181,6 +2211,7 @@ yKeepalive.observe((event: any) => {
     ySpoiler.delete('seedInfo');
     ySpoiler.delete('erSettings');
     ySpoiler.delete('locationsBlock');
+    ySpoiler.delete('spheresBlock');
   }
 
   function resetSettings() {
@@ -2291,6 +2322,7 @@ yKeepalive.observe((event: any) => {
     entrances: Record<string, string>;
     hints: any[];
     spoilerLocations: Record<string, string>;
+    spoilerSpheres: SpoilerSphere[];
     spoilerSeedInfo: SeedInfo | null;
     spoilerErSettings: ErSettings | null;
   }
@@ -2318,6 +2350,7 @@ yKeepalive.observe((event: any) => {
       entrances: Object.fromEntries(yEntrances.entries()),
       hints: yHints.toArray(),
       spoilerLocations,
+      spoilerSpheres,
       spoilerSeedInfo,
       spoilerErSettings,
     };
@@ -2375,6 +2408,8 @@ yKeepalive.observe((event: any) => {
     if (slot.hints.length > 0) yHints.push(slot.hints);
     spoilerLocations = slot.spoilerLocations ?? {};
     localStorage.setItem('spoilerLocations', JSON.stringify(spoilerLocations));
+    spoilerSpheres = slot.spoilerSpheres ?? [];
+    localStorage.setItem('spoilerSpheres', JSON.stringify(spoilerSpheres));
     spoilerSeedInfo = slot.spoilerSeedInfo ?? null;
     localStorage.setItem('spoilerSeedInfo', JSON.stringify(spoilerSeedInfo));
     spoilerErSettings = slot.spoilerErSettings ?? null;
@@ -3000,6 +3035,59 @@ yKeepalive.observe((event: any) => {
               {:else}
                 <p class="spoiler-no-log">No spoiler loaded — use <em>Import Spoiler</em> to populate.</p>
               {/if}
+            </details>
+
+            <!-- Collapsible spoiler spheres -->
+            <details class="spoiler-panel" style="margin-top: 0.4em;"
+              bind:open={spheresOpen}
+              on:toggle={() => localStorage.setItem('sec_spheres', String(spheresOpen))}
+            >
+              <summary class="spoiler-panel-summary">Spoiler Spheres ({spoilerSpheres.length > 0 ? spoilerSpheres.length + ' spheres' : 'none'})</summary>
+              <div style="margin-top: 0.4em;">
+                {#if spoilerSpheres.length === 0}
+                  <p class="spoiler-no-log">No spheres loaded — use <em>Import Spoiler</em> to populate.</p>
+                {:else}
+                  <div style="margin-bottom: 0.5em; display:flex; gap:0.4em; align-items:center; flex-wrap:wrap;">
+                    <label style="font-size:0.82em; display:flex; align-items:center; gap:0.3em;">
+                      Sphere range:
+                      <input type="number" bind:value={sphereMin} min="0" max="999" style="width:4em; padding:0.2em; font-size:0.9em;" class="dropdown-select" />
+                      <span>–</span>
+                      <input type="number" bind:value={sphereMax} min="0" max="999" style="width:4em; padding:0.2em; font-size:0.9em;" class="dropdown-select" />
+                    </label>
+                    <div class="tabs" style="margin:0; border:none;">
+                      <button class="tab-button" class:active={sphereTab==='all'} on:click={() => sphereTab='all'} style="font-size:0.82em; padding:0.2em 0.6em;">All</button>
+                      <button class="tab-button" class:active={sphereTab==='oot'} on:click={() => sphereTab='oot'} style="font-size:0.82em; padding:0.2em 0.6em;">OoT</button>
+                      <button class="tab-button" class:active={sphereTab==='mm'} on:click={() => sphereTab='mm'} style="font-size:0.82em; padding:0.2em 0.6em;">MM</button>
+                    </div>
+                  </div>
+                  {#each spoilerSpheres.filter(s => s.sphere >= sphereMin && s.sphere <= sphereMax) as sphere (sphere.sphere)}
+                    <div style="margin-bottom:0.6em; border:1px solid var(--color-border); border-radius:4px; padding:0.3em 0.5em;">
+                      <div style="font-weight:bold; font-size:0.85em; margin-bottom:0.2em; display:flex; justify-content:space-between;">
+                        <span>Sphere {sphere.sphere}</span>
+                        <span style="opacity:0.6; font-weight:normal;">{sphere.entries.length} entr{sphere.entries.length === 1 ? 'y' : 'ies'}</span>
+                      </div>
+                      <ul style="list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:0.15em;">
+                        {#each sphere.entries as entry}
+                          {@const check = entry.type === 'Location' ? findCheckByName(entry.location) : null}
+                          {@const matchesGame = sphereTab === 'all' || entry.type === 'Event' || (check != null && check.game === sphereTab)}
+                          {#if matchesGame}
+                            <li style="font-size:0.82em; padding:0.1em 0.2em; border-radius:2px; display:flex; align-items:baseline; gap:0.4em;">
+                              <span class="sphere-tag" class:sphere-tag-location={entry.type === 'Location'} class:sphere-tag-event={entry.type === 'Event'}>{entry.type}</span>
+                              {#if entry.type === 'Location'}
+                                <span style="opacity:0.8;">{entry.location}</span>
+                                <span style="opacity:0.4;">→</span>
+                                <span style="color:var(--color-primary); font-weight:bold;">{formatSpoilerItem(entry.item)}</span>
+                              {:else}
+                                <span style="opacity:0.8;">{entry.event}</span>
+                              {/if}
+                            </li>
+                          {/if}
+                        {/each}
+                      </ul>
+                    </div>
+                  {/each}
+                {/if}
+              </div>
             </details>
 
             <!-- Collapsible spoiler search -->
@@ -4120,6 +4208,27 @@ yKeepalive.observe((event: any) => {
   .copy-hash-btn:hover { opacity: 1; }
 
   .spoiler-result-checked { opacity: 0.4; text-decoration: line-through; }
+
+  .sphere-tag {
+    display: inline-block;
+    font-size: 0.7em;
+    font-weight: bold;
+    padding: 0.1em 0.4em;
+    border-radius: 3px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    flex-shrink: 0;
+  }
+  .sphere-tag-location {
+    background: rgba(40, 120, 200, 0.2);
+    color: #5a9eff;
+    border: 1px solid rgba(40, 120, 200, 0.3);
+  }
+  .sphere-tag-event {
+    background: rgba(200, 160, 40, 0.2);
+    color: #e8c040;
+    border: 1px solid rgba(200, 160, 40, 0.3);
+  }
 
   /* ===== CHAT ===== */
   .chat-container {
