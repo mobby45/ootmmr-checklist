@@ -186,6 +186,7 @@ yKeepalive.observe((event: any) => {
     : messages.filter(m => m.isPing);
 
   function clearChat() {
+    if (isWatchMode) return;
     if (!window.confirm('Clear all messages?')) return;
     yMessages.delete(0, yMessages.length);
   }
@@ -209,6 +210,7 @@ yKeepalive.observe((event: any) => {
   }
 
   function sendMessage() {
+    if (isWatchMode) return;
     const msg = chatMessage.trim();
     if (!msg) return;
     const entry: ChatMessage = { pseudo: pseudo || 'Anonymous', message: msg, timestamp: Date.now() };
@@ -228,6 +230,7 @@ yKeepalive.observe((event: any) => {
   const sPings = readableMap(yPings);
 
   function handleMapPing(e: CustomEvent) {
+    if (isWatchMode) return;
     if (!connectionProvider) return;
     const { xPct, yPct, scene, subscene, checkName } = e.detail;
     const p = pseudo || 'Anonymous';
@@ -1107,6 +1110,7 @@ yKeepalive.observe((event: any) => {
   let spoilerExtraEr: Record<string, any> | null = JSON.parse(localStorage.getItem('spoilerExtraEr') ?? 'null');
 
   function toggleShareSpoiler() {
+    if (isWatchMode) return;
     shareSpoiler = !shareSpoiler;
     if (shareSpoiler) {
       // Re-push from localStorage
@@ -3157,7 +3161,7 @@ yKeepalive.observe((event: any) => {
                 </div>
                 {#if connectionProvider}
                   <label class="share-spoiler-toggle" style="margin-bottom:0.4em;" title="When enabled, the spoiler log is shared with co-op partners via Yjs">
-                    <input type="checkbox" checked={shareSpoiler} on:change={toggleShareSpoiler} /> Share with coop
+                    <input type="checkbox" checked={shareSpoiler} on:change={toggleShareSpoiler} disabled={isWatchMode} /> Share with coop
                   </label>
                 {/if}
 
@@ -3807,7 +3811,7 @@ yKeepalive.observe((event: any) => {
                 <button class="chat-filter-btn" class:active={chatFilter==='all'} on:click={() => chatFilter='all'}>All</button>
                 <button class="chat-filter-btn" class:active={chatFilter==='chat'} on:click={() => chatFilter='chat'}>💬</button>
                 <button class="chat-filter-btn" class:active={chatFilter==='pings'} on:click={() => chatFilter='pings'}>📍</button>
-                <button class="chat-clear-btn" on:click={clearChat} title="Clear chat">🗑</button>
+                <button class="chat-clear-btn" on:click={clearChat} title="Clear chat" disabled={isWatchMode}>🗑</button>
                 <button class="chat-close-btn" on:click={() => { chatOpen = false; }}>✕</button>
               </div>
             </div>
@@ -3840,8 +3844,9 @@ yKeepalive.observe((event: any) => {
                 placeholder="Message..."
                 maxlength="200"
                 class="chat-input"
+                disabled={isWatchMode}
               />
-              <button type="submit" class="chat-send-btn">Send</button>
+              <button type="submit" class="chat-send-btn" disabled={isWatchMode}>Send</button>
             </form>
           </div>
         {/if}
