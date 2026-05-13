@@ -65,16 +65,6 @@
     updatePos();
   }
 
-  function handleBlur() {
-    setTimeout(() => {
-      if (!dropdownEl?.matches(':hover')) {
-        editing = false;
-        open = false;
-        search = '';
-      }
-    }, 150);
-  }
-
   function handleKeydown(e: KeyboardEvent) {
     if (e.key === 'ArrowDown') {
       e.preventDefault();
@@ -134,7 +124,6 @@
         class="es-input"
         placeholder="Search..."
         on:input={handleInput}
-        on:blur={handleBlur}
         on:keydown={handleKeydown}
         autocomplete="off"
         spellcheck="false"
@@ -174,7 +163,7 @@
         </div>
       {/each}
       {#if totalFiltered > 80}
-        <div class="es-more">… {totalFiltered} results — affine ta recherche</div>
+        <div class="es-more">… {totalFiltered} results — refine your search</div>
       {/if}
     </div>
   {/if}
