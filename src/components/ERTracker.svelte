@@ -77,8 +77,10 @@
   let showOnlyUnknown = false;
 
   // Which sub-type groups have at least one visible group (parent active + populated)
+  // NOTE: must reference activeErSettings directly, not through a function,
+  // so Svelte can detect the reactive dependency at compile time
   $: visibleSubGroups = subTypeGroups.filter(g =>
-    parentIsActive(g.parent) && g.keys.some(k => hasPopulatedSub(k))
+    (activeErSettings as any)[g.parent] && g.keys.some(k => hasPopulatedSub(k))
   );
 
   // Build a set of entrance IDs per sub-type for quick lookup
