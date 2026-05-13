@@ -176,29 +176,40 @@
     </div>
   </div>
 
-  {#each subTypeGroups as group}
-    {@const groupPopulated = group.keys.some(k => hasPopulatedSub(k))}
-    {#if groupPopulated}
-      <div class="er-section er-sub-section">
-        <div class="er-sub-toggles-label">{group.label}</div>
-        <div class="er-toggles">
-          {#each group.keys as key}
-            {@const ids = entranceSubTypes[key] ?? []}
-            <button
-              class="er-toggle-btn er-sub-toggle"
-              class:active={getSub(key)}
-              disabled={isWatchMode || ids.length === 0}
-              on:click={() => !isWatchMode && toggleErSetting(key)}
-              title={ids.length === 0 ? 'No entrances in this category' : subTypeLabels[key] ?? key}
-            >
-              {subTypeLabels[key] ?? key}
-              <span class="er-sub-count">{ids.length}</span>
-            </button>
-          {/each}
-        </div>
-      </div>
-    {/if}
-  {/each}
+  <details class="er-extra-details">
+    <summary class="er-extra-summary">ER options
+      {#each subTypeGroups as group}
+        {@const active = group.keys.filter(k => getSub(k)).length}
+        {@const total = group.keys.filter(k => hasPopulatedSub(k)).length}
+        {total > 0 ? `${group.label} ${active}/${total} ` : ''}
+      {/each}
+    </summary>
+    <div class="er-extra-grid">
+      {#each subTypeGroups as group}
+        {@const groupKeys = group.keys.filter(k => hasPopulatedSub(k))}
+        {#if groupKeys.length > 0}
+          <div class="er-extra-group">
+            <div class="er-extra-group-title">{group.label}</div>
+            {#each groupKeys as key}
+              <span
+                class="er-extra-badge clickable"
+                class:active={getSub(key)}
+                class:disabled={isWatchMode}
+                on:click={() => !isWatchMode && toggleErSetting(key)}
+                title="Click to toggle"
+                role="button"
+                tabindex="0"
+                on:keydown={(e) => e.key === 'Enter' && !isWatchMode && toggleErSetting(key)}
+              >
+                {subTypeLabels[key] ?? key}
+                <span class="er-sub-count">{(entranceSubTypes[key] ?? []).length}</span>
+              </span>
+            {/each}
+          </div>
+        {/if}
+      {/each}
+    </div>
+  </details>
 
   <div class="er-controls">
     <div class="er-filters">
@@ -444,34 +455,71 @@
   max-width: 500px;
 }
 
-  .er-sub-section { margin-top: -0.4em; }
-  .er-sub-toggles-label {
-    font-size: 0.78em;
+  .er-extra-details {
+    margin: 0.4em 0 0.8em 0;
+    font-size: 0.82em;
+  }
+  .er-extra-summary {
+    cursor: pointer;
+    color: var(--color-text);
+    opacity: 0.7;
+    font-size: 0.9em;
+    margin-bottom: 0.4em;
+  }
+  .er-extra-summary:hover { opacity: 1; }
+  .er-extra-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6em;
+  }
+  .er-extra-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25em;
+  }
+  .er-extra-group-title {
     font-weight: bold;
     color: var(--color-text);
-    opacity: 0.5;
-    margin-bottom: 0.3em;
+    opacity: 0.6;
+    font-size: 0.85em;
+    margin-bottom: 0.15em;
   }
-  .er-sub-toggle {
-    font-size: 0.78em !important;
-    border-style: dashed !important;
+  .er-extra-badge {
+    font-size: 0.82em;
+    padding: 1px 6px;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.05);
+    color: var(--color-text);
+    opacity: 0.4;
+    transition: all 0.15s;
   }
-  .er-sub-toggle.active {
-    border-style: solid !important;
-    border-color: #e07800 !important;
-    background: rgba(224, 120, 0, 0.15) !important;
-    color: #ffaa44 !important;
+  .er-extra-badge.active {
+    opacity: 1;
+    background: rgba(100, 200, 100, 0.15);
+    color: #7ec87e;
   }
-  .er-sub-toggle:disabled {
-    opacity: 0.2 !important;
-    cursor: default !important;
+  .er-extra-badge.clickable {
+    cursor: pointer;
+    user-select: none;
+  }
+  .er-extra-badge.clickable:hover {
+    opacity: 0.8;
+    background: rgba(255,255,255,0.1);
+  }
+  .er-extra-badge.clickable.active:hover {
+    opacity: 0.9;
+    background: rgba(100, 200, 100, 0.25);
+  }
+  .er-extra-badge.clickable.disabled {
+    cursor: default;
+    opacity: 0.3 !important;
   }
   .er-sub-count {
     font-size: 0.75em;
     opacity: 0.5;
     margin-left: 0.3em;
   }
-  .er-sub-toggle.active .er-sub-count { opacity: 0.8; }
+  .er-extra-badge.active .er-sub-count { opacity: 0.8; }
 
   @media screen and (max-width: 768px) {
     .er-input-wrap { width: 140px; }
