@@ -1341,6 +1341,7 @@ yKeepalive.observe((event: any) => {
   let shopEditPrice = '';
 
   function openShopEdit(key: string, allowPrice: boolean) {
+    if (isWatchMode) return;
     shopEditKey = key;
     shopEditAllowPrice = allowPrice;
     shopEditItem = yShopItems.get(key) ?? '';
@@ -3020,8 +3021,8 @@ yKeepalive.observe((event: any) => {
           {#if connectionProvider != null}
             <span>&nbsp; (Connected to room: <code>{roomBaseCode}</code> {roomHasPassword ? '🔒' : '🔓'})</span>
           {/if}
-          <button class="undo-btn" on:click|stopPropagation={undo} disabled={!canUndo} title="Undo (Ctrl+Z)">↩ Undo</button>
-          <button class="undo-btn" on:click|stopPropagation={redo} disabled={!canRedo} title="Redo (Ctrl+Y)">↪ Redo</button>
+          <button class="undo-btn" on:click|stopPropagation={undo} disabled={isWatchMode || !canUndo} title="Undo (Ctrl+Z)">↩ Undo</button>
+          <button class="undo-btn" on:click|stopPropagation={redo} disabled={isWatchMode || !canRedo} title="Redo (Ctrl+Y)">↪ Redo</button>
           <span class="summary-sep"></span>
           <span class="game-filter-label">Overworld</span>
           <button class="game-filter-btn" class:active={(displaySettings.OOTMM ?? 'both') === 'both'} on:click|stopPropagation={() => { if (isWatchMode) return; saveDisplaySetting('OOTMM', 'both'); }}>Both</button>
