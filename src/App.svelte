@@ -993,23 +993,12 @@ yKeepalive.observe((event: any) => {
   let spoilerSeedInfo: SeedInfo | null = JSON.parse(localStorage.getItem('spoilerSeedInfo') ?? 'null');
   let showSpoilerItems = false;
   let showSpoilerSpheres = false;
-  let sphereMin = 0;
-  let sphereMax = 999;
-  let sphereTab: 'all' | 'oot' | 'mm' = 'all';
+  let spherePerPage = 1;
+  let spherePage = 0;
   let spoilerSearch = '';
   let spoilerSectionTab: 'search' | 'spheres' = (localStorage.getItem('sec_spoilertab') as 'search' | 'spheres') ?? 'search';
   let seedInfoOpen = localStorage.getItem('sec_seedinfo') === 'true';
   let spoilerSectionOpen = localStorage.getItem('sec_spoilersection') === 'true';
-
-  // Locations in the spoiler that don't match any check name in the full pool
-  function findCheckByName(name: string) {
-    if (!structuredChecks) return null;
-    for (const group of structuredChecks) {
-      const check = group.checks.find(c => c.name === name);
-      if (check) return check;
-    }
-    return null;
-  }
 
   $: spoilerUnmatched = (() => {
     if (!structuredChecks || Object.keys(spoilerLocations).length === 0) return [];
@@ -3087,18 +3076,19 @@ yKeepalive.observe((event: any) => {
                   {:else}
                     <div style="margin-bottom:0.5em; display:flex; gap:0.4em; align-items:center; flex-wrap:wrap;">
                       <label style="font-size:0.82em; display:flex; align-items:center; gap:0.3em;">
-                        Sphere range:
-                        <input type="number" bind:value={sphereMin} min="0" max="999" style="width:4em; padding:0.2em; font-size:0.9em;" class="dropdown-select" />
-                        <span>–</span>
-                        <input type="number" bind:value={sphereMax} min="0" max="999" style="width:4em; padding:0.2em; font-size:0.9em;" class="dropdown-select" />
+                        Per page:
+                        <button class="pure-button" class:active={spherePerPage===1} on:click="{() => { spherePerPage=1; spherePage=0; }}" style="font-size:0.82em; padding:0.15em 0.5em;">1</button>
+                        <button class="pure-button" class:active={spherePerPage===2} on:click="{() => { spherePerPage=2; spherePage=0; }}" style="font-size:0.82em; padding:0.15em 0.5em;">2</button>
+                        <button class="pure-button" class:active={spherePerPage===3} on:click="{() => { spherePerPage=3; spherePage=0; }}" style="font-size:0.82em; padding:0.15em 0.5em;">3</button>
                       </label>
-                      <div class="tabs" style="margin:0; border:none;">
-                        <button class="tab-button" class:active={sphereTab==='all'} on:click={() => sphereTab='all'} style="font-size:0.82em; padding:0.2em 0.6em;">All</button>
-                        <button class="tab-button" class:active={sphereTab==='oot'} on:click={() => sphereTab='oot'} style="font-size:0.82em; padding:0.2em 0.6em;">OoT</button>
-                        <button class="tab-button" class:active={sphereTab==='mm'} on:click={() => sphereTab='mm'} style="font-size:0.82em; padding:0.2em 0.6em;">MM</button>
+                      <div style="display:flex; gap:0.3em; align-items:center; margin-left:auto;">
+                        <button class="pure-button" on:click={() => spherePage = Math.max(0, spherePage - 1)} disabled={spherePage === 0} style="font-size:0.82em; padding:0.15em 0.5em;">◀</button>
+                        <span style="font-size:0.82em;">{spherePage + 1}/{Math.ceil(spoilerSpheres.length / spherePerPage) || 1}</span>
+                        <button class="pure-button" on:click={() => spherePage = Math.min(Math.ceil(spoilerSpheres.length / spherePerPage) - 1, spherePage + 1)} disabled={spherePage >= Math.ceil(spoilerSpheres.length / spherePerPage) - 1} style="font-size:0.82em; padding:0.15em 0.5em;">▶</button>
                       </div>
                     </div>
-                    {#each spoilerSpheres.filter(s => s.sphere >= sphereMin && s.sphere <= sphereMax) as sphere (sphere.sphere)}
+                    {@const pageSpheres = spoilerSpheres.slice(spherePage * spherePerPage, (spherePage + 1) * spherePerPage)}
+                    {#each pageSpheres as sphere (sphere.sphere)}
                       <div style="margin-bottom:0.6em; border:1px solid var(--color-border); border-radius:4px; padding:0.3em 0.5em;">
                         <div style="font-weight:bold; font-size:0.85em; margin-bottom:0.2em; display:flex; justify-content:space-between;">
                           <span>Sphere {sphere.sphere}</span>
@@ -3106,20 +3096,16 @@ yKeepalive.observe((event: any) => {
                         </div>
                         <ul style="list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:0.15em;">
                           {#each sphere.entries as entry}
-                            {@const check = entry.type === 'Location' ? findCheckByName(entry.location) : null}
-                            {@const matchesGame = sphereTab === 'all' || entry.type === 'Event' || (check != null && check.game === sphereTab)}
-                            {#if matchesGame}
-                              <li style="font-size:0.82em; padding:0.1em 0.2em; border-radius:2px; display:flex; align-items:baseline; gap:0.4em;">
-                                <span class="sphere-tag" class:sphere-tag-location={entry.type === 'Location'} class:sphere-tag-event={entry.type === 'Event'}>{entry.type}</span>
-                                {#if entry.type === 'Location'}
-                                  <span style="opacity:0.8;">{entry.location}</span>
-                                  <span style="opacity:0.4;">→</span>
-                                  <span style="color:var(--color-primary); font-weight:bold;">{formatSpoilerItem(entry.item)}</span>
-                                {:else}
-                                  <span style="opacity:0.8;">{entry.event}</span>
-                                {/if}
-                              </li>
-                            {/if}
+                            <li style="font-size:0.82em; padding:0.1em 0.2em; border-radius:2px; display:flex; align-items:baseline; gap:0.4em;">
+                              <span class="sphere-tag" class:sphere-tag-location={entry.type === 'Location'} class:sphere-tag-event={entry.type === 'Event'}>{entry.type}</span>
+                              {#if entry.type === 'Location'}
+                                <span style="opacity:0.8;">{entry.location}</span>
+                                <span style="opacity:0.4;">→</span>
+                                <span style="color:var(--color-primary); font-weight:bold;">{formatSpoilerItem(entry.item)}</span>
+                              {:else}
+                                <span style="opacity:0.8;">{entry.event}</span>
+                              {/if}
+                            </li>
                           {/each}
                         </ul>
                       </div>
