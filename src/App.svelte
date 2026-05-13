@@ -379,9 +379,9 @@ yKeepalive.observe((event: any) => {
 
   persistenceProvider.on('synced', () => {
     // Clean up stale relocation key from IndexedDB (previous session).
-    // Don't clear relocationCode here — WebRTC may have already synced a fresh
-    // relocatedTo and set the banner. The observer skips local changes.
-    if (ySpoiler.get('relocatedTo') !== undefined) {
+    // Only do this if no WebRTC provider is active, otherwise the delete
+    // would propagate to current-room peers and kill their banner.
+    if (!connectionProvider && ySpoiler.get('relocatedTo') !== undefined) {
       ySpoiler.delete('relocatedTo');
     }
     if (ySpoilerLocations.size === 0 && !ySpoiler.get('locationsBlock')) {
@@ -435,8 +435,12 @@ yKeepalive.observe((event: any) => {
     }
     if (!event.transaction?.local && !isWatchMode && !isSettingPassword && connectionProvider && event.keysChanged?.has?.('relocatedTo')) {
       const relocated = ySpoiler.get('relocatedTo');
-      if (relocated !== undefined) persistRelocationCode(relocated, 'observer-set');
-      else persistRelocationCode(null, 'observer-delete');
+      if (relocated !== undefined) {
+        // Don't show banner if we're already in the room this points to
+        if (relocated && roomName && (roomName === relocated || roomName.startsWith(relocated + '-'))) return;
+        persistRelocationCode(relocated, 'observer-set');
+      }
+      // Never clear the banner on delete — only user action should dismiss it
     }
   });
 
@@ -469,6 +473,7 @@ yKeepalive.observe((event: any) => {
   let connectionProvider: WebrtcProvider | null = null;
   let watchRelayProvider: WebrtcProvider | null = null;
   let connectedUsers: { name: string; color: string }[] = [];
+  let roomStartTime = 0;
   let relocationCode: string | null = sessionStorage.getItem('relocationCode');
   function persistRelocationCode(v: string | null, reason?: string) {
     if (v === null && relocationCode !== null) {
@@ -545,6 +550,7 @@ yKeepalive.observe((event: any) => {
     for (const [id, val] of yPeerInfo) {
       try {
         const d = JSON.parse(val as string);
+        if (roomStartTime && d.ts && d.ts < roomStartTime) continue;
         entries.push({ name: d.name || 'Anonymous', color: d.color || '#888' });
       } catch { /* skip malformed entries */ }
     }
@@ -594,6 +600,7 @@ yKeepalive.observe((event: any) => {
     const base = name ?? crypto.randomUUID();
     const full = password ? `${base}-${password}` : base;
     roomName = full;
+    roomStartTime = Date.now();
     sessionStorage.setItem('coopRoomCode', full);
 
     // UUID codes are 36 chars (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx).
@@ -864,18 +871,13 @@ yKeepalive.observe((event: any) => {
         roomBaseCode = null;
         roomHasPassword = false;
         connectedUsers = [];
-        // Cleanup Yjs state NOW — old provider is fully disconnected (1s timeout
-        // has elapsed), so these operations CANNOT leak to old-room peers.
-        // If done inside joinCoopRoom, the delete could leak through the dying
-        // WebRTC channel of a just-disconnected provider.
-        yPeerInfo.clear();
-        if (ySpoiler.get('relocatedTo') !== undefined) ySpoiler.delete('relocatedTo');
         persistRelocationCode(null, 'setRoomPassword-timeout');
-        // joinCoopRoom will clean up relocatedTo at line 589 (after disconnect, before new provider)
-        // Host joins new room immediately
+        // Don't do any Yjs cleanup here — it would leak through the dying
+        // WebRTC channel. Instead, join the new room directly; stale
+        // yPeerInfo entries are cleaned by cleanupStalePeers() and the
+        // observer ignores relocatedTo from previous sessions.
         joinCoopRoom(newBase, pw.trim());
         isSettingPassword = false;
-        dbg('room recreated with password — new base:', newBase);
       } catch (e) { console.error('setRoomPassword: error in timeout', e); isSettingPassword = false; }
     }, 1000);
   }
