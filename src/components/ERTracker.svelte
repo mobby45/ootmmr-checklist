@@ -87,6 +87,16 @@
     Object.entries(entranceSubTypes).map(([k, ids]) => [k, new Set(ids)])
   ) as Record<string, Set<string>>;
 
+  // Active/total sub-type count per parent key
+  $: subTypeCounts = Object.fromEntries(
+    subTypeGroups
+      .filter(g => hasPopulatedSubGroup(g))
+      .map(g => [g.parent, {
+        active: g.keys.filter(k => getSub(k)).length,
+        total: g.keys.filter(k => hasPopulatedSub(k)).length,
+      }])
+  ) as Record<string, { active: number; total: number }>;
+
   // Determine which sub-type groups have at least one active toggle
   $: hasActiveSubTypes = new Set(
     subTypeGroups
@@ -106,6 +116,9 @@
 
   function hasSubTypeGroup(erType: ErSettingKey): boolean {
     return subTypeGroups.some(g => g.parent === erType);
+  }
+  function hasPopulatedSubGroup(g: { keys: string[] }): boolean {
+    return g.keys.some(k => hasPopulatedSub(k));
   }
 
   function entranceMatchesSubTypes(id: string, erType: ErSettingKey): boolean {
@@ -186,19 +199,16 @@
           title={key === 'erMixed' ? 'Always manual — show both games as destinations' : spoilerErSettings ? 'Set by spoiler log' : 'Click to toggle'}
         >
           {label}
+          {#if subTypeCounts[key]}
+            <span class="er-btn-sub-count">{subTypeCounts[key].active}/{subTypeCounts[key].total}</span>
+          {/if}
         </button>
       {/each}
     </div>
   </div>
 
   <details class="er-extra-details">
-    <summary class="er-extra-summary">ER options
-      {#each visibleSubGroups as group}
-        {@const active = group.keys.filter(k => getSub(k)).length}
-        {@const total = group.keys.filter(k => hasPopulatedSub(k)).length}
-        {total > 0 ? `${group.label} ${active}/${total} ` : ''}
-      {/each}
-    </summary>
+    <summary class="er-extra-summary">ER options</summary>
     <div class="er-extra-grid">
       {#if visibleSubGroups.length > 0}
         {#each visibleSubGroups as group}
@@ -321,6 +331,11 @@
     color: #4da8ff;
   }
   .er-toggle-btn.from-spoiler { cursor: default; }
+  .er-btn-sub-count {
+    margin-left: 0.3em;
+    font-size: 0.75em;
+    opacity: 0.6;
+  }
   .er-toggle-btn.from-spoiler.active {
     border-color: rgba(100, 200, 100, 0.6);
     background: rgba(100, 200, 100, 0.1);
@@ -519,6 +534,11 @@
     opacity: 1;
     background: rgba(100, 200, 100, 0.15);
     color: #7ec87e;
+  }
+  .er-extra-badge.disabled {
+    opacity: 0.25;
+    cursor: default;
+    pointer-events: none;
   }
   .er-extra-badge.clickable {
     cursor: pointer;
