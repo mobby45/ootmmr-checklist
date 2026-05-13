@@ -68,12 +68,6 @@
   import type { MapCheck } from './util/mapData';
 
   const IMG_BASE = '/ootmmr-checklist/images/';
-  setTimeout(() => {
-    allTrackerItems.forEach(item => {
-      const img = new Image();
-      img.src = `${IMG_BASE}${item.icon}.png`;
-    });
-  }, 2000); // 2s after initial load
 
   // ==========================================
   // OVERLAY DETECTION

@@ -296,7 +296,7 @@
               {@const item = itemById[cid]}
               {@const lvl  = $itemStore.get(cid) ?? 0}
               <div class="ov-cell" class:obtained={isObt(item, lvl) || sharedObt(cid, 'oot')}>
-                <img src={getIconSrc(item, lvl)} alt="" class="ov-icon" draggable="false" />
+                <img loading="lazy" src={getIconSrc(item, lvl)} alt="" class="ov-icon" draggable="false" />
                 {#if getBadge(item, lvl)}<span class="ov-badge">{getBadge(item, lvl)}</span>{/if}
                 {#if hasSyncDot(cid, 'oot')}<span class="ov-sync-dot"></span>{/if}
               </div>
@@ -315,7 +315,7 @@
               {@const item = itemById[cid]}
               {@const lvl  = $itemStore.get(cid) ?? 0}
               <div class="ov-cell" class:obtained={isObt(item, lvl) || sharedObt(cid, 'oot')}>
-                <img src={getIconSrc(item, lvl)} alt="" class="ov-icon" draggable="false" />
+                <img loading="lazy" src={getIconSrc(item, lvl)} alt="" class="ov-icon" draggable="false" />
                 {#if getBadge(item, lvl)}<span class="ov-badge">{getBadge(item, lvl)}</span>{/if}
                 {#if hasSyncDot(cid, 'oot')}<span class="ov-sync-dot"></span>{/if}
               </div>
@@ -337,7 +337,7 @@
             {@const item = itemById[cid]}
             {@const lvl  = $itemStore.get(cid) ?? 0}
             <div class="ov-cell" class:obtained={isObt(item, lvl) || sharedObt(cid, 'oot')}>
-              <img src={getIconSrc(item, lvl)} alt="" class="ov-icon" draggable="false" />
+              <img loading="lazy" src={getIconSrc(item, lvl)} alt="" class="ov-icon" draggable="false" />
               {#if hasSyncDot(cid, 'oot')}<span class="ov-sync-dot"></span>{/if}
             </div>
           {/if}
@@ -358,7 +358,7 @@
             {@const item = itemById[cid]}
             {@const lvl  = $itemStore.get(cid) ?? 0}
             <div class="ov-cell ov-sm" class:obtained={isObt(item, lvl) || sharedObt(cid, 'oot')}>
-              <img src={getIconSrc(item, lvl)} alt="" class="ov-icon" draggable="false" />
+              <img loading="lazy" src={getIconSrc(item, lvl)} alt="" class="ov-icon" draggable="false" />
               {#if getBadge(item, lvl)}<span class="ov-badge">{getBadge(item, lvl)}</span>{/if}
               {#if hasSyncDot(cid, 'oot')}<span class="ov-sync-dot"></span>{/if}
             </div>
@@ -380,7 +380,7 @@
             {@const item = itemById[cid]}
             {@const lvl  = $itemStore.get(cid) ?? 0}
             <div class="ov-cell ov-sm" class:obtained={isObt(item, lvl) || sharedObt(cid, 'oot')}>
-              <img src={getIconSrc(item, lvl)} alt="" class="ov-icon" draggable="false" />
+              <img loading="lazy" src={getIconSrc(item, lvl)} alt="" class="ov-icon" draggable="false" />
               {#if getBadge(item, lvl)}<span class="ov-badge">{getBadge(item, lvl)}</span>{/if}
               {#if hasSyncDot(cid, 'oot')}<span class="ov-sync-dot"></span>{/if}
             </div>
@@ -400,7 +400,7 @@
             {@const item = itemById[cid]}
             {@const lvl  = $itemStore.get(cid) ?? 0}
             <div class="ov-cell" class:obtained={isObt(item, lvl)}>
-              <img src={getIconSrc(item, lvl)} alt="" class="ov-icon" draggable="false" />
+              <img loading="lazy" src={getIconSrc(item, lvl)} alt="" class="ov-icon" draggable="false" />
             </div>
           {:else}
             <div class="ov-cell"></div>
@@ -418,7 +418,7 @@
             {@const item = itemById[cid]}
             {@const lvl  = $itemStore.get(cid) ?? 0}
             <div class="ov-cell ov-key" class:obtained={isObt(item, lvl)}>
-              <img src={getIconSrc(item, lvl)} alt="" class="ov-icon" draggable="false" />
+              <img loading="lazy" src={getIconSrc(item, lvl)} alt="" class="ov-icon" draggable="false" />
               {#if getBadge(item, lvl)}<span class="ov-badge">{getBadge(item, lvl)}</span>{/if}
             </div>
           {:else}
@@ -433,7 +433,7 @@
             {@const item = itemById[cid]}
             {@const lvl  = $itemStore.get(cid) ?? 0}
             <div class="ov-cell ov-key" class:obtained={isObt(item, lvl)}>
-              <img src={getIconSrc(item, lvl)} alt="" class="ov-icon" draggable="false" />
+              <img loading="lazy" src={getIconSrc(item, lvl)} alt="" class="ov-icon" draggable="false" />
             </div>
           {:else}
             <div class="ov-cell ov-key"></div>
@@ -462,7 +462,7 @@
               {@const item = itemById[cid]}
               {@const lvl  = $itemStore.get(cid) ?? 0}
               <div class="ov-cell" class:obtained={isObt(item, lvl) || sharedObt(cid, 'mm')}>
-                <img src={getIconSrc(item, lvl)} alt="" class="ov-icon" draggable="false" />
+                <img loading="lazy" src={getIconSrc(item, lvl)} alt="" class="ov-icon" draggable="false" />
                 {#if getBadge(item, lvl)}<span class="ov-badge">{getBadge(item, lvl)}</span>{/if}
                 {#if hasSyncDot(cid, 'mm')}<span class="ov-sync-dot"></span>{/if}
               </div>
@@ -481,7 +481,7 @@
               {@const item = itemById[cid]}
               {@const lvl  = $itemStore.get(cid) ?? 0}
               <div class="ov-cell" class:obtained={isObt(item, lvl) || sharedObt(cid, 'mm')}>
-                <img src={getIconSrc(item, lvl)} alt="" class="ov-icon" draggable="false" />
+                <img loading="lazy" src={getIconSrc(item, lvl)} alt="" class="ov-icon" draggable="false" />
                 {#if getBadge(item, lvl)}<span class="ov-badge">{getBadge(item, lvl)}</span>{/if}
                 {#if hasSyncDot(cid, 'mm')}<span class="ov-sync-dot"></span>{/if}
               </div>
@@ -503,7 +503,7 @@
             {@const item = itemById[cid]}
             {@const lvl  = $itemStore.get(cid) ?? 0}
             <div class="ov-cell" class:obtained={isObt(item, lvl) || sharedObt(cid, 'mm')}>
-              <img src={getIconSrc(item, lvl)} alt="" class="ov-icon" draggable="false" />
+              <img loading="lazy" src={getIconSrc(item, lvl)} alt="" class="ov-icon" draggable="false" />
               {#if hasSyncDot(cid, 'mm')}<span class="ov-sync-dot"></span>{/if}
             </div>
           {/if}
@@ -524,7 +524,7 @@
             {@const item = itemById[cid]}
             {@const lvl  = $itemStore.get(cid) ?? 0}
             <div class="ov-cell ov-sm" class:obtained={isObt(item, lvl) || sharedObt(cid, 'mm')}>
-              <img src={getIconSrc(item, lvl)} alt="" class="ov-icon" draggable="false" />
+              <img loading="lazy" src={getIconSrc(item, lvl)} alt="" class="ov-icon" draggable="false" />
               {#if getBadge(item, lvl)}<span class="ov-badge">{getBadge(item, lvl)}</span>{/if}
               {#if hasSyncDot(cid, 'mm')}<span class="ov-sync-dot"></span>{/if}
             </div>
@@ -546,7 +546,7 @@
             {@const item = itemById[cid]}
             {@const lvl  = $itemStore.get(cid) ?? 0}
             <div class="ov-cell ov-sm" class:obtained={isObt(item, lvl) || sharedObt(cid, 'mm')}>
-              <img src={getIconSrc(item, lvl)} alt="" class="ov-icon" draggable="false" />
+              <img loading="lazy" src={getIconSrc(item, lvl)} alt="" class="ov-icon" draggable="false" />
               {#if getBadge(item, lvl)}<span class="ov-badge">{getBadge(item, lvl)}</span>{/if}
               {#if hasSyncDot(cid, 'mm')}<span class="ov-sync-dot"></span>{/if}
             </div>
@@ -568,7 +568,7 @@
             {@const item = itemById[dung.reward]}
             {@const lvl  = $itemStore.get(dung.reward) ?? 0}
             <div class="ov-cell ov-sm" class:obtained={isObt(item, lvl)}>
-              <img src={getIconSrc(item, lvl)} alt="" class="ov-icon" draggable="false" />
+              <img loading="lazy" src={getIconSrc(item, lvl)} alt="" class="ov-icon" draggable="false" />
             </div>
           {:else}
             <div class="ov-cell ov-sm"></div>
@@ -577,7 +577,7 @@
             {@const item = itemById[dung.sk]}
             {@const lvl  = $itemStore.get(dung.sk) ?? 0}
             <div class="ov-cell ov-key" class:obtained={isObt(item, lvl)}>
-              <img src={getIconSrc(item, lvl)} alt="" class="ov-icon" draggable="false" />
+              <img loading="lazy" src={getIconSrc(item, lvl)} alt="" class="ov-icon" draggable="false" />
               {#if getBadge(item, lvl)}<span class="ov-badge">{getBadge(item, lvl)}</span>{/if}
             </div>
           {:else}
@@ -588,7 +588,7 @@
               {@const item = itemById[bk]}
               {@const lvl  = $itemStore.get(bk) ?? 0}
               <div class="ov-cell ov-key" class:obtained={isObt(item, lvl)}>
-                <img src={getIconSrc(item, lvl)} alt="" class="ov-icon" draggable="false" />
+                <img loading="lazy" src={getIconSrc(item, lvl)} alt="" class="ov-icon" draggable="false" />
               </div>
             {:else}
               <div class="ov-cell ov-key"></div>
@@ -609,7 +609,7 @@
             {@const item = itemById[cid]}
             {@const lvl  = $itemStore.get(cid) ?? 0}
             <div class="ov-cell ov-sm" class:obtained={isObt(item, lvl) || sharedObt(cid, 'mm')}>
-              <img src={getIconSrc(item, lvl)} alt="" class="ov-icon" draggable="false" />
+              <img loading="lazy" src={getIconSrc(item, lvl)} alt="" class="ov-icon" draggable="false" />
               {#if getBadge(item, lvl)}<span class="ov-badge">{getBadge(item, lvl)}</span>{/if}
               {#if hasSyncDot(cid, 'mm')}<span class="ov-sync-dot"></span>{/if}
             </div>

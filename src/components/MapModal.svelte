@@ -385,6 +385,7 @@
       >
         <div class="map-container" style="transform: scale({scale}) translate({panX / scale}px, {panY / scale}px); transform-origin: top left;">
         <img
+          loading="lazy"
           bind:this={mapImageEl}
           src={currentImageSrc}
           alt={currentSubscene}

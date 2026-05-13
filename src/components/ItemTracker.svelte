@@ -717,7 +717,7 @@
                     <div class="tracker-item" class:obtained={isObtained(item,level)} class:maxed={isMaxed(item,level)}
                       title="{item.name}{item.maxLevel>1&&level>0?` — ${item.levelLabels?.[level-1]??level}`:''}"
                       on:click={e=>handleClick(e,item)} on:contextmenu={e=>handleRightClick(e,item)}>
-                      <img src={getIconSrc(item,level)} alt={item.name} class="tracker-icon" class:greyed={isGreyed(item,level)} draggable="false"/>
+                      <img loading="lazy" src={getIconSrc(item,level)} alt={item.name} class="tracker-icon" class:greyed={isGreyed(item,level)} draggable="false"/>
                       {#if badge}<span class="badge">{badge}</span>{/if}
                     </div>
                   {:else}<div class="cell-empty"></div>{/if}
@@ -743,7 +743,7 @@
                     {@const badge = getBadge(item, level)}
                     <div class="tracker-item" class:obtained={isObtained(item,level)} class:maxed={isMaxed(item,level)}
                       title="{item.name}" on:click={e=>handleClick(e,item)} on:contextmenu={e=>handleRightClick(e,item)}>
-                      <img src={getIconSrc(item,level)} alt={item.name} class="tracker-icon" class:greyed={isGreyed(item,level)} draggable="false"/>
+                      <img loading="lazy" src={getIconSrc(item,level)} alt={item.name} class="tracker-icon" class:greyed={isGreyed(item,level)} draggable="false"/>
                       {#if badge}<span class="badge">{badge}</span>{/if}
                     </div>
                   {:else}<div class="cell-empty"></div>{/if}
@@ -774,7 +774,7 @@
                     {@const badge = getBadge(item, level)}
                     <div class="tracker-item" class:obtained={isObtained(item,level)} class:maxed={isMaxed(item,level)}
                       title="{item.name}" on:click={e=>handleClick(e,item)} on:contextmenu={e=>handleRightClick(e,item)}>
-                      <img src={getIconSrc(item,level)} alt={item.name} class="tracker-icon" class:greyed={isGreyed(item,level)} draggable="false"/>
+                      <img loading="lazy" src={getIconSrc(item,level)} alt={item.name} class="tracker-icon" class:greyed={isGreyed(item,level)} draggable="false"/>
                       {#if badge}<span class="badge">{badge}</span>{/if}
                     </div>
                   {:else}<div class="cell-empty"></div>{/if}
@@ -800,7 +800,7 @@
                     {@const badge = getBadge(item, level)}
                     <div class="tracker-item" class:obtained={isObtained(item,level)} class:maxed={isMaxed(item,level)}
                       title="{item.name}" on:click={e=>handleClick(e,item)} on:contextmenu={e=>handleRightClick(e,item)}>
-                      <img src={getIconSrc(item,level)} alt={item.name} class="tracker-icon" class:greyed={isGreyed(item,level)} draggable="false"/>
+                      <img loading="lazy" src={getIconSrc(item,level)} alt={item.name} class="tracker-icon" class:greyed={isGreyed(item,level)} draggable="false"/>
                       {#if badge}<span class="badge">{badge}</span>{/if}
                     </div>
                   {:else}<div class="cell-empty"></div>{/if}
@@ -829,7 +829,7 @@
                   {@const badge = getBadge(item, level)}
                   <div class="tracker-item" class:obtained={isObtained(item,level)} class:maxed={isMaxed(item,level)}
                     title="{item.name}" on:click={e=>handleClick(e,item)} on:contextmenu={e=>handleRightClick(e,item)}>
-                    <img src={getIconSrc(item,level)} alt={item.name} class="tracker-icon" class:greyed={isGreyed(item,level)} draggable="false"/>
+                    <img loading="lazy" src={getIconSrc(item,level)} alt={item.name} class="tracker-icon" class:greyed={isGreyed(item,level)} draggable="false"/>
                     {#if badge}<span class="badge">{badge}</span>{/if}
                   </div>
                 {:else}<div class="cell-empty"></div>{/if}
@@ -856,7 +856,7 @@
                   {@const badge = getBadge(item, level)}
                   <div class="tracker-item" class:obtained={isObtained(item,level)} class:maxed={isMaxed(item,level)}
                     title="{item.name}" on:click={e=>handleClick(e,item)} on:contextmenu={e=>handleRightClick(e,item)}>
-                    <img src={getIconSrc(item,level)} alt={item.name} class="tracker-icon" class:greyed={isGreyed(item,level)} draggable="false"/>
+                    <img loading="lazy" src={getIconSrc(item,level)} alt={item.name} class="tracker-icon" class:greyed={isGreyed(item,level)} draggable="false"/>
                     {#if badge}<span class="badge">{badge}</span>{/if}
                   </div>
                 {:else}<div class="cell-empty"></div>{/if}
@@ -893,7 +893,7 @@
                     {@const badge = getBadge(item, level)}
                     <div class="tracker-item" class:obtained={isObtained(item,level)} class:maxed={isMaxed(item,level)}
                       title="{item.name}" on:click={e=>handleClick(e,item)} on:contextmenu={e=>handleRightClick(e,item)}>
-                      <img src={getIconSrc(item,level)} alt={item.name} class="tracker-icon" class:greyed={isGreyed(item,level)} draggable="false"/>
+                      <img loading="lazy" src={getIconSrc(item,level)} alt={item.name} class="tracker-icon" class:greyed={isGreyed(item,level)} draggable="false"/>
                       {#if badge}<span class="badge">{badge}</span>{/if}
                     </div>
                   {:else}<div class="cell-empty"></div>{/if}
@@ -919,7 +919,7 @@
                     {@const badge = getBadge(item, level)}
                     <div class="tracker-item" class:obtained={isObtained(item,level)} class:maxed={isMaxed(item,level)}
                       title="{item.name}" on:click={e=>handleClick(e,item)} on:contextmenu={e=>handleRightClick(e,item)}>
-                      <img src={getIconSrc(item,level)} alt={item.name} class="tracker-icon" class:greyed={isGreyed(item,level)} draggable="false"/>
+                      <img loading="lazy" src={getIconSrc(item,level)} alt={item.name} class="tracker-icon" class:greyed={isGreyed(item,level)} draggable="false"/>
                       {#if badge}<span class="badge">{badge}</span>{/if}
                     </div>
                   {:else}<div class="cell-empty"></div>{/if}
@@ -950,7 +950,7 @@
                     {@const badge = getBadge(item, level)}
                     <div class="tracker-item" class:obtained={isObtained(item,level)} class:maxed={isMaxed(item,level)}
                       title="{item.name}" on:click={e=>handleClick(e,item)} on:contextmenu={e=>handleRightClick(e,item)}>
-                      <img src={getIconSrc(item,level)} alt={item.name} class="tracker-icon" class:greyed={isGreyed(item,level)} draggable="false"/>
+                      <img loading="lazy" src={getIconSrc(item,level)} alt={item.name} class="tracker-icon" class:greyed={isGreyed(item,level)} draggable="false"/>
                       {#if badge}<span class="badge">{badge}</span>{/if}
                     </div>
                   {:else}<div class="cell-empty"></div>{/if}
@@ -976,7 +976,7 @@
                     {@const badge = getBadge(item, level)}
                     <div class="tracker-item" class:obtained={isObtained(item,level)} class:maxed={isMaxed(item,level)}
                       title="{item.name}" on:click={e=>handleClick(e,item)} on:contextmenu={e=>handleRightClick(e,item)}>
-                      <img src={getIconSrc(item,level)} alt={item.name} class="tracker-icon" class:greyed={isGreyed(item,level)} draggable="false"/>
+                      <img loading="lazy" src={getIconSrc(item,level)} alt={item.name} class="tracker-icon" class:greyed={isGreyed(item,level)} draggable="false"/>
                       {#if badge}<span class="badge">{badge}</span>{/if}
                     </div>
                   {:else}<div class="cell-empty"></div>{/if}
@@ -1006,7 +1006,7 @@
                     {@const level = $itemStore.get(cellId) ?? 0}
                     <div class="tracker-item" class:obtained={isObtained(item,level)} class:maxed={isMaxed(item,level)}
                       title="{item.name}" on:click={e=>handleClick(e,item)} on:contextmenu={e=>handleRightClick(e,item)}>
-                      <img src={getIconSrc(item,level)} alt={item.name} class="tracker-icon" class:greyed={isGreyed(item,level)} draggable="false"/>
+                      <img loading="lazy" src={getIconSrc(item,level)} alt={item.name} class="tracker-icon" class:greyed={isGreyed(item,level)} draggable="false"/>
                     </div>
                   {:else}<div class="cell-empty"></div>{/if}
                 {/if}
@@ -1031,7 +1031,7 @@
                     {@const badge = getBadge(item, level)}
                     <div class="tracker-item" class:obtained={isObtained(item,level)} class:maxed={isMaxed(item,level)}
                       title="{item.name}" on:click={e=>handleClick(e,item)} on:contextmenu={e=>handleRightClick(e,item)}>
-                      <img src={getIconSrc(item,level)} alt={item.name} class="tracker-icon" class:greyed={isGreyed(item,level)} draggable="false"/>
+                      <img loading="lazy" src={getIconSrc(item,level)} alt={item.name} class="tracker-icon" class:greyed={isGreyed(item,level)} draggable="false"/>
                       {#if badge}<span class="badge">{badge}</span>{/if}
                     </div>
                   {:else}<div class="cell-empty"></div>{/if}
@@ -1062,7 +1062,7 @@
                     {@const badge = getBadge(item, level)}
                     <div class="tracker-item" class:obtained={isObtained(item,level)} class:maxed={isMaxed(item,level)}
                       title="{item.name}" on:click={e=>handleClick(e,item)} on:contextmenu={e=>handleRightClick(e,item)}>
-                      <img src={getIconSrc(item,level)} alt={item.name} class="tracker-icon" class:greyed={isGreyed(item,level)} draggable="false"/>
+                      <img loading="lazy" src={getIconSrc(item,level)} alt={item.name} class="tracker-icon" class:greyed={isGreyed(item,level)} draggable="false"/>
                       {#if badge}<span class="badge">{badge}</span>{/if}
                     </div>
                   {:else}<div class="cell-empty"></div>{/if}
@@ -1088,7 +1088,7 @@
                     {@const badge = getBadge(item, level)}
                     <div class="tracker-item" class:obtained={isObtained(item,level)} class:maxed={isMaxed(item,level)}
                       title="{item.name}" on:click={e=>handleClick(e,item)} on:contextmenu={e=>handleRightClick(e,item)}>
-                      <img src={getIconSrc(item,level)} alt={item.name} class="tracker-icon" class:greyed={isGreyed(item,level)} draggable="false"/>
+                      <img loading="lazy" src={getIconSrc(item,level)} alt={item.name} class="tracker-icon" class:greyed={isGreyed(item,level)} draggable="false"/>
                       {#if badge}<span class="badge">{badge}</span>{/if}
                     </div>
                   {:else}<div class="cell-empty"></div>{/if}
@@ -1113,7 +1113,7 @@
             {@const level = $itemStore.get(item.id) ?? 0}
             <div class="soul-item" class:obtained={isObtained(item,level)} class:maxed={isMaxed(item,level)}
               on:click={e=>handleClick(e,item)} on:contextmenu={e=>handleRightClick(e,item)}>
-              <img src={getIconSrc(item,level)} alt={item.name} class="soul-icon" class:greyed={isGreyed(item,level)} draggable="false"/>
+              <img loading="lazy" src={getIconSrc(item,level)} alt={item.name} class="soul-icon" class:greyed={isGreyed(item,level)} draggable="false"/>
               <span class="soul-name">{soulShortName(item.name)}</span>
             </div>
           {/each}
@@ -1128,7 +1128,7 @@
             {@const level = $itemStore.get(item.id) ?? 0}
             <div class="soul-item" class:obtained={isObtained(item,level)} class:maxed={isMaxed(item,level)}
               on:click={e=>handleClick(e,item)} on:contextmenu={e=>handleRightClick(e,item)}>
-              <img src={getIconSrc(item,level)} alt={item.name} class="soul-icon" class:greyed={isGreyed(item,level)} draggable="false"/>
+              <img loading="lazy" src={getIconSrc(item,level)} alt={item.name} class="soul-icon" class:greyed={isGreyed(item,level)} draggable="false"/>
               <span class="soul-name">{soulShortName(item.name)}</span>
             </div>
           {/each}
