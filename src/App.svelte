@@ -997,6 +997,7 @@ yKeepalive.observe((event: any) => {
   let spoilerSeedInfo: SeedInfo | null = JSON.parse(localStorage.getItem('spoilerSeedInfo') ?? 'null');
   let showSpoilerItems = false;
   let showSpoilerSpheres = false;
+  let shareSpoiler = false;
   let spherePerPage = 1;
   let spherePage = 0;
   function setSpherePerPage(n: number) { spherePerPage = n; spherePage = 0; }
@@ -1059,6 +1060,37 @@ yKeepalive.observe((event: any) => {
     : [];
   let spoilerErSettings: ErSettings | null = JSON.parse(localStorage.getItem('spoilerErSettings') ?? 'null');
 
+  function toggleShareSpoiler() {
+    shareSpoiler = !shareSpoiler;
+    if (shareSpoiler) {
+      // Re-push from localStorage
+      const raw = localStorage.getItem('spoilerLocations');
+      const spheresStr = localStorage.getItem('spoilerSpheres');
+      const erStr = localStorage.getItem('spoilerErSettings');
+      const siStr = localStorage.getItem('spoilerSeedInfo');
+      if (raw && spheresStr) {
+        ydoc.transact(() => {
+          ySpoiler.set('locationsBlock', raw);
+          ySpoiler.set('spheresBlock', spheresStr);
+          ySpoiler.set('erSettings', erStr ?? 'null');
+          ySpoiler.set('seedInfo', siStr ?? 'null');
+          for (const [key] of ySpoilerLocations.entries()) {
+            ySpoilerLocations.delete(key);
+          }
+        });
+        dbg('spoiler re-shared with peers');
+      }
+    } else {
+      ydoc.transact(() => {
+        ySpoiler.delete('locationsBlock');
+        ySpoiler.delete('spheresBlock');
+        ySpoiler.delete('erSettings');
+        ySpoiler.delete('seedInfo');
+      });
+      dbg('spoiler removed from peers');
+    }
+  }
+
   function importSpoilerLog() {
     const input = document.createElement('input');
     input.type = 'file';
@@ -1086,23 +1118,35 @@ yKeepalive.observe((event: any) => {
       const siStr = JSON.stringify(data.seedInfo);
       localStorage.setItem('spoilerSeedInfo', siStr);
 
+      if (shareSpoiler) {
+        ydoc.transact(() => {
+          ySpoiler.set('locationsBlock', JSON.stringify(raw));
+          ySpoiler.set('spheresBlock', spheresStr);
+          ySpoiler.set('erSettings', erStr);
+          ySpoiler.set('seedInfo', siStr);
+          for (const [key] of ySpoilerLocations.entries()) {
+            ySpoilerLocations.delete(key);
+          }
+        });
+        dbg('spoiler synced to Yjs');
+      } else {
+        // Clear any previously-shared spoiler from Yjs
+        ydoc.transact(() => {
+          ySpoiler.delete('locationsBlock');
+          ySpoiler.delete('spheresBlock');
+          ySpoiler.delete('erSettings');
+          ySpoiler.delete('seedInfo');
+        });
+        dbg('spoiler NOT shared');
+      }
+      // Always sync settings regardless of shareSpoiler
       ydoc.transact(() => {
         Object.entries(data.settings).forEach(([k, v]) => ySettings.set(k, v));
         saveDisplaySetting('OOTMM', data.OOTMM);
         saveDisplaySetting('OOTMMDungeons', data.OOTMMDungeons);
-        // Store locations as a single JSON blob to avoid sending 4434
-        // individual Yjs operations over WebRTC (overwhelms SimplePeer).
-        ySpoiler.set('locationsBlock', JSON.stringify(raw));
-        ySpoiler.set('spheresBlock', spheresStr);
-        ySpoiler.set('erSettings', erStr);
-        ySpoiler.set('seedInfo', siStr);
-        // Clear old per-location entries for backward compat
-        for (const [key] of ySpoilerLocations.entries()) {
-          ySpoilerLocations.delete(key);
-        }
       });
-      dbg('spoiler synced to Yjs');
     };
+    shareSpoiler = false;
     input.click();
   }
 
@@ -3279,6 +3323,9 @@ yKeepalive.observe((event: any) => {
                   <button class="bg-primary pure-button" on:click|preventDefault={exportData} disabled={isWatchMode}>Export Save</button>
                   <button class="bg-primary pure-button" on:click|preventDefault={importData} disabled={isWatchMode}>Import Save</button>
                   <button class="bg-primary pure-button" on:click|preventDefault={importSpoilerLog} disabled={isWatchMode}>Import Spoiler</button>
+                  <label class="share-spoiler-toggle" title="When enabled, the spoiler log is shared with co-op partners via Yjs">
+                    <input type="checkbox" checked={shareSpoiler} on:change={toggleShareSpoiler} /> Share with coop
+                  </label>
                   <button class="pure-button" on:click|preventDefault={() => { if (isWatchMode) return; randoImportOpen = !randoImportOpen; randoImportError = ''; randoImportOk = false; }} disabled={isWatchMode}>🎲 Import Hash</button>
                   <button class="bg-danger pure-button" on:click|preventDefault={reset} disabled={isWatchMode}>Clear Checks</button>
                   <button class="bg-danger pure-button" on:click|preventDefault={resetSettings} disabled={isWatchMode}>Reset Settings</button>
@@ -4104,6 +4151,18 @@ yKeepalive.observe((event: any) => {
     grid-template-columns: repeat(2, 1fr);
     gap: 0.5em;
   }
+  .share-spoiler-toggle {
+    grid-column: 1 / -1;
+    font-size: 0.78em;
+    display: flex;
+    align-items: center;
+    gap: 0.3em;
+    opacity: 0.8;
+    cursor: pointer;
+    user-select: none;
+    padding: 0.1em 0;
+  }
+  .share-spoiler-toggle input { margin: 0; }
 
   .progress-wrap {
     position: relative;
