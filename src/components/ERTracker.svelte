@@ -61,7 +61,7 @@
   const subTypeGroups = [
     { parent: 'erDungeons', label: 'Dungeons', keys: ['erMajorDungeons', 'erMinorDungeons', 'erGanonCastle', 'erGanonTower', 'erMoon', 'erSpiderHouses', 'erPirateFortress', 'erBeneathWell', 'erIkanaCastle', 'erSecretShrine'] },
     { parent: 'erIndoors', label: 'Interiors', keys: ['erIndoorsMajor', 'erIndoorsExtra', 'erIndoorsGameLinks'] },
-    { parent: 'erOneWays', label: 'One-Ways', keys: ['erOneWaysMajor', 'erOneWaysIkana', 'erOneWaysSongs', 'erOneWaysStatues', 'erOneWaysWoods', 'erOneWaysWaterVoids', 'erOneWaysAnywhere'] },
+    { parent: 'erOneWays', label: 'One-Ways', keys: ['erOneWaysMajor', 'erOneWaysIkana', 'erOneWaysSongs', 'erOneWaysStatues', 'erOneWaysWoods', 'erOneWaysWaterVoids', 'erOneWaysAnywhere', 'erOneWaysOwls'] },
   ];
 
   // Track which sub-types have at least one entrance in the current data

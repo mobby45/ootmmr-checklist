@@ -36,6 +36,7 @@ export interface ErSettings {
   erOneWaysWoods: boolean;
   erOneWaysWaterVoids: boolean;
   erOneWaysAnywhere: boolean;
+  erOneWaysOwls: boolean;
 }
 
 export const defaultErSettings: ErSettings = {
@@ -69,6 +70,7 @@ export const defaultErSettings: ErSettings = {
   erOneWaysWoods: false,
   erOneWaysWaterVoids: false,
   erOneWaysAnywhere: false,
+  erOneWaysOwls: false,
 };
 
 export interface SeedInfo {
@@ -228,6 +230,7 @@ export function parseSpoilerLog(text: string): SpoilerData {
     erOneWaysWoods:      rawEr['erOneWaysWoods'] === 'true',
     erOneWaysWaterVoids: rawEr['erOneWaysWaterVoids'] === 'true',
     erOneWaysAnywhere:   rawEr['erOneWaysAnywhere'] === 'true',
+    erOneWaysOwls:       rawEr['erOneWaysOwls'] === 'true',
   };
 
   // Store sub-type / extra ER settings in general settings record
@@ -240,7 +243,7 @@ export function parseSpoilerLog(text: string): SpoilerData {
     'erSpawns', 'erWarps',
     'erMixedDungeons', 'erMixedGrottos', 'erMixedIndoors', 'erMixedRegions', 'erMixedOverworld',
     'erOneWaysMajor', 'erOneWaysIkana', 'erOneWaysSongs', 'erOneWaysStatues',
-    'erOneWaysWoods', 'erOneWaysWaterVoids', 'erOneWaysAnywhere',
+    'erOneWaysWoods', 'erOneWaysWaterVoids', 'erOneWaysAnywhere', 'erOneWaysOwls',
   ];
   for (const key of extraErSettings) {
     if (rawEr[key] !== undefined) {
