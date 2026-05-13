@@ -68,6 +68,19 @@
   import type { MapCheck } from './util/mapData';
 
   const IMG_BASE = '/ootmmr-checklist/images/';
+  // Preload icons in small batches so the service worker cache fills gradually
+  // without saturating the network (1557 concurrent requests would be too much).
+  setTimeout(() => {
+    const BATCH = 20;
+    let idx = 0;
+    function loadBatch() {
+      const batch = allTrackerItems.slice(idx, idx + BATCH);
+      batch.forEach(item => { const img = new Image(); img.src = `${IMG_BASE}${item.icon}.png`; });
+      idx += BATCH;
+      if (idx < allTrackerItems.length) setTimeout(loadBatch, 150);
+    }
+    loadBatch();
+  }, 2000);
 
   // ==========================================
   // OVERLAY DETECTION
