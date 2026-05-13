@@ -15,6 +15,27 @@ export interface ErSettings {
   erWallmasters: boolean;
   erMixed: boolean;
   erAlterLw: boolean;
+  // Sub-types
+  erMajorDungeons: boolean;
+  erMinorDungeons: boolean;
+  erGanonCastle: boolean;
+  erGanonTower: boolean;
+  erMoon: boolean;
+  erSpiderHouses: boolean;
+  erPirateFortress: boolean;
+  erBeneathWell: boolean;
+  erIkanaCastle: boolean;
+  erSecretShrine: boolean;
+  erIndoorsMajor: boolean;
+  erIndoorsExtra: boolean;
+  erIndoorsGameLinks: boolean;
+  erOneWaysMajor: boolean;
+  erOneWaysIkana: boolean;
+  erOneWaysSongs: boolean;
+  erOneWaysStatues: boolean;
+  erOneWaysWoods: boolean;
+  erOneWaysWaterVoids: boolean;
+  erOneWaysAnywhere: boolean;
 }
 
 export const defaultErSettings: ErSettings = {
@@ -28,6 +49,26 @@ export const defaultErSettings: ErSettings = {
   erWallmasters: false,
   erMixed: false,
   erAlterLw: false,
+  erMajorDungeons: false,
+  erMinorDungeons: false,
+  erGanonCastle: false,
+  erGanonTower: false,
+  erMoon: false,
+  erSpiderHouses: false,
+  erPirateFortress: false,
+  erBeneathWell: false,
+  erIkanaCastle: false,
+  erSecretShrine: false,
+  erIndoorsMajor: false,
+  erIndoorsExtra: false,
+  erIndoorsGameLinks: false,
+  erOneWaysMajor: false,
+  erOneWaysIkana: false,
+  erOneWaysSongs: false,
+  erOneWaysStatues: false,
+  erOneWaysWoods: false,
+  erOneWaysWaterVoids: false,
+  erOneWaysAnywhere: false,
 };
 
 export interface SeedInfo {
@@ -167,6 +208,26 @@ export function parseSpoilerLog(text: string): SpoilerData {
     erWallmasters: isErActive(rawEr['erWallmasters']),
     erMixed:      isErActive(rawEr['erMixed']) || rawEr['erMixed'] === 'dungeon',
     erAlterLw:    rawEr['alterLostWoodsExits'] === 'true',
+    erMajorDungeons:     rawEr['erMajorDungeons'] === 'true',
+    erMinorDungeons:     rawEr['erMinorDungeons'] === 'true',
+    erGanonCastle:       rawEr['erGanonCastle'] === 'true',
+    erGanonTower:        rawEr['erGanonTower'] === 'true',
+    erMoon:              rawEr['erMoon'] === 'true',
+    erSpiderHouses:      rawEr['erSpiderHouses'] === 'true',
+    erPirateFortress:    rawEr['erPirateFortress'] === 'true',
+    erBeneathWell:       rawEr['erBeneathWell'] === 'true',
+    erIkanaCastle:       rawEr['erIkanaCastle'] === 'true',
+    erSecretShrine:      rawEr['erSecretShrine'] === 'true',
+    erIndoorsMajor:      rawEr['erIndoorsMajor'] === 'true',
+    erIndoorsExtra:      rawEr['erIndoorsExtra'] === 'true',
+    erIndoorsGameLinks:  rawEr['erIndoorsGameLinks'] === 'true',
+    erOneWaysMajor:      rawEr['erOneWaysMajor'] === 'true',
+    erOneWaysIkana:      rawEr['erOneWaysIkana'] === 'true',
+    erOneWaysSongs:      rawEr['erOneWaysSongs'] === 'true',
+    erOneWaysStatues:    rawEr['erOneWaysStatues'] === 'true',
+    erOneWaysWoods:      rawEr['erOneWaysWoods'] === 'true',
+    erOneWaysWaterVoids: rawEr['erOneWaysWaterVoids'] === 'true',
+    erOneWaysAnywhere:   rawEr['erOneWaysAnywhere'] === 'true',
   };
 
   // Store sub-type / extra ER settings in general settings record

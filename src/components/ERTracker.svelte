@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { allEntrances, type EntranceType, type ErSettingKey } from '../data/entranceData';
+  import { allEntrances, entranceSubTypes, subTypeToParent, subTypeLabels, type EntranceType, type ErSettingKey } from '../data/entranceData';
   import { defaultErSettings, type ErSettings } from '../util/spoilerParser';
   import type { Map as YMap } from 'yjs';
   import EntranceSelect from './EntranceSelect.svelte';
@@ -7,59 +7,30 @@
   export let yEntrances: YMap<string>;
   export let entranceValues: Map<string, string>;
   export let spoilerErSettings: ErSettings | null = null;
+  // Extra ER settings from spoiler log, used to pre-fill sub-type toggles
   export let spoilerExtraEr: Record<string, any> | null = null;
   export let isWatchMode = false;
-
-  let extraErOpen = false;
-
-  const extraErGroups = [
-    { key: 'Global', label: 'Global' },
-    { key: 'Dungeons', label: 'Dungeons' },
-    { key: 'Interiors', label: 'Interiors' },
-    { key: 'Regions', label: 'Regions' },
-    { key: 'Spawns/Warps', label: 'Spawns / Warps' },
-    { key: 'Mixed', label: 'Mixed' },
-    { key: 'One-Ways', label: 'One-Ways' },
-  ];
-
-  const extraErLabels: Record<string, string> = {
-    erSelfLoops: 'Self-loops', erNoPolarity: 'No polarity', erDecoupled: 'Decoupled',
-    erMajorDungeons: 'Major dungeons', erMinorDungeons: 'Minor dungeons', erGanonCastle: "Ganon's Castle",
-    erGanonTower: "Ganon's Tower", erMoon: 'Moon', erSpiderHouses: 'Spider Houses',
-    erPirateFortress: 'Pirate Fortress', erBeneathWell: 'Beneath the Well',
-    erIkanaCastle: "Ikana's Castle", erSecretShrine: 'Secret Shrine',
-    erIndoorsMajor: 'Major interiors', erIndoorsExtra: 'Extra interiors', erIndoorsGameLinks: 'Cross-game links',
-    erRegions: 'Regions', erRegionsExtra: 'Extra regions', erRegionsShortcuts: 'Shortcuts',
-    erPiratesWorld: "Pirate's World", erSpawns: 'Spawns', erWarps: 'Warps',
-    erMixedDungeons: 'Mixed dungeons', erMixedGrottos: 'Mixed grottos', erMixedIndoors: 'Mixed interiors',
-    erMixedRegions: 'Mixed regions', erMixedOverworld: 'Mixed overworld',
-    erOneWaysMajor: 'Major', erOneWaysIkana: 'Ikana', erOneWaysSongs: 'Songs',
-    erOneWaysStatues: 'Statues', erOneWaysWoods: 'Woods',
-    erOneWaysWaterVoids: 'Water voids', erOneWaysAnywhere: 'Anywhere',
-  };
-
-  const extraErGroupMap: Record<string, string> = {
-    erSelfLoops: 'Global', erNoPolarity: 'Global', erDecoupled: 'Global',
-    erMajorDungeons: 'Dungeons', erMinorDungeons: 'Dungeons', erGanonCastle: 'Dungeons',
-    erGanonTower: 'Dungeons', erMoon: 'Dungeons', erSpiderHouses: 'Dungeons',
-    erPirateFortress: 'Dungeons', erBeneathWell: 'Dungeons', erIkanaCastle: 'Dungeons', erSecretShrine: 'Dungeons',
-    erIndoorsMajor: 'Interiors', erIndoorsExtra: 'Interiors', erIndoorsGameLinks: 'Interiors',
-    erRegions: 'Regions', erRegionsExtra: 'Regions', erRegionsShortcuts: 'Regions', erPiratesWorld: 'Regions',
-    erSpawns: 'Spawns/Warps', erWarps: 'Spawns/Warps',
-    erMixedDungeons: 'Mixed', erMixedGrottos: 'Mixed', erMixedIndoors: 'Mixed',
-    erMixedRegions: 'Mixed', erMixedOverworld: 'Mixed',
-    erOneWaysMajor: 'One-Ways', erOneWaysIkana: 'One-Ways', erOneWaysSongs: 'One-Ways',
-    erOneWaysStatues: 'One-Ways', erOneWaysWoods: 'One-Ways',
-    erOneWaysWaterVoids: 'One-Ways', erOneWaysAnywhere: 'One-Ways',
-  };
-
-  $: extraErEntries = spoilerExtraEr
-    ? Object.entries(spoilerExtraEr).filter(([k]) => extraErLabels[k]) as [string, boolean][]
-    : [];
 
   let manualErSettings: ErSettings = JSON.parse(
     localStorage.getItem('erSettings') ?? JSON.stringify(defaultErSettings)
   );
+
+  // When spoilerExtraEr changes, merge sub-type values into manual settings (only once)
+  let lastExtraEr = '';
+  $: {
+    const serialized = JSON.stringify(spoilerExtraEr);
+    if (serialized !== lastExtraEr && spoilerExtraEr) {
+      lastExtraEr = serialized;
+      let changed = false;
+      for (const [k, v] of Object.entries(spoilerExtraEr)) {
+        if (k in manualErSettings && typeof v === 'boolean') {
+          manualErSettings[k as keyof ErSettings] = v;
+          changed = true;
+        }
+      }
+      if (changed) saveManualErSettings();
+    }
+  }
 
   $: activeErSettings = spoilerErSettings ?? manualErSettings;
 
@@ -73,7 +44,7 @@
     saveManualErSettings();
   }
 
-  const erLabels: Record<keyof ErSettings, string> = {
+  const erLabels: Record<string, string> = {
     erBoss: '⚔️ Boss',
     erDungeons: '🏰 Dungeons',
     erGrottos: '🕳️ Grottos',
@@ -86,10 +57,55 @@
     erMixed: '🔀 Cross-game destinations',
   };
 
+  const subTypeGroups = [
+    { parent: 'erDungeons', label: 'Dungeons', keys: ['erMajorDungeons', 'erMinorDungeons', 'erGanonCastle', 'erGanonTower', 'erMoon', 'erSpiderHouses', 'erPirateFortress', 'erBeneathWell', 'erIkanaCastle', 'erSecretShrine'] },
+    { parent: 'erIndoors', label: 'Interiors', keys: ['erIndoorsMajor', 'erIndoorsExtra', 'erIndoorsGameLinks'] },
+    { parent: 'erOneWays', label: 'One-Ways', keys: ['erOneWaysMajor', 'erOneWaysIkana', 'erOneWaysSongs', 'erOneWaysStatues', 'erOneWaysWoods', 'erOneWaysWaterVoids', 'erOneWaysAnywhere'] },
+  ];
+
+  // Track which sub-types have at least one entrance in the current data
+  $: populatedSubTypes = new Set(
+    Object.entries(entranceSubTypes)
+      .filter(([, ids]) => ids.length > 0)
+      .map(([k]) => k)
+  );
+
   type GameFilter = 'both' | 'oot' | 'mm';
   let gameFilter: GameFilter = 'both';
   let searchFilter = '';
   let showOnlyUnknown = false;
+
+  // Build a set of entrance IDs per sub-type for quick lookup
+  $: subTypeIdSets = Object.fromEntries(
+    Object.entries(entranceSubTypes).map(([k, ids]) => [k, new Set(ids)])
+  ) as Record<string, Set<string>>;
+
+  // Determine which sub-type groups have at least one active toggle
+  $: hasActiveSubTypes = new Set(
+    subTypeGroups
+      .filter(g => g.keys.some(k => manualErSettings[k as keyof ErSettings]))
+      .map(g => g.parent)
+  );
+
+  function getSub(key: string): boolean {
+    return (manualErSettings as any)[key] ?? false;
+  }
+  function hasPopulatedSub(key: string): boolean {
+    return populatedSubTypes.has(key);
+  }
+
+  function entranceMatchesSubTypes(id: string, erType: ErSettingKey): boolean {
+    if (!hasActiveSubTypes.has(erType)) return true;
+    for (const group of subTypeGroups) {
+      if (group.parent !== erType) continue;
+      for (const key of group.keys) {
+        if (getSub(key) && subTypeIdSets[key]?.has(id)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
 
   $: activeErTypes = new Set<ErSettingKey>(
     (Object.keys(activeErSettings) as (keyof ErSettings)[]).filter(k => activeErSettings[k])
@@ -97,6 +113,7 @@
 
   $: filteredEntrances = allEntrances.filter(e => {
     if (!activeErTypes.has(e.erType)) return false;
+    if (!entranceMatchesSubTypes(e.id, e.erType)) return false;
     if (gameFilter !== 'both' && e.game !== gameFilter) return false;
     if (searchFilter && !e.name.toLowerCase().includes(searchFilter.toLowerCase())) return false;
     if (showOnlyUnknown && entranceValues.get(e.id)) return false;
@@ -157,25 +174,31 @@
         </button>
       {/each}
     </div>
-    {#if spoilerExtraEr && extraErEntries.length > 0}
-      <details class="er-extra-details" bind:open={extraErOpen}>
-        <summary class="er-extra-summary">ER options ({extraErEntries.filter(([,v]) => v).length}/{extraErEntries.length} active)</summary>
-        <div class="er-extra-grid">
-          {#each extraErGroups as group}
-            {@const groupEntries = extraErEntries.filter(([k]) => extraErGroupMap[k] === group.key)}
-            {#if groupEntries.length > 0}
-              <div class="er-extra-group">
-                <div class="er-extra-group-title">{group.label}</div>
-                {#each groupEntries as [key, val]}
-                  <span class="er-extra-badge" class:active={val}>{extraErLabels[key]}</span>
-                {/each}
-              </div>
-            {/if}
+  </div>
+
+  {#each subTypeGroups as group}
+    {@const groupPopulated = group.keys.some(k => hasPopulatedSub(k))}
+    {#if groupPopulated}
+      <div class="er-section er-sub-section">
+        <div class="er-sub-toggles-label">{group.label}</div>
+        <div class="er-toggles">
+          {#each group.keys as key}
+            {@const ids = entranceSubTypes[key] ?? []}
+            <button
+              class="er-toggle-btn er-sub-toggle"
+              class:active={getSub(key)}
+              disabled={isWatchMode || ids.length === 0}
+              on:click={() => !isWatchMode && toggleErSetting(key)}
+              title={ids.length === 0 ? 'No entrances in this category' : subTypeLabels[key] ?? key}
+            >
+              {subTypeLabels[key] ?? key}
+              <span class="er-sub-count">{ids.length}</span>
+            </button>
           {/each}
         </div>
-      </details>
+      </div>
     {/if}
-  </div>
+  {/each}
 
   <div class="er-controls">
     <div class="er-filters">
@@ -421,49 +444,34 @@
   max-width: 500px;
 }
 
-  .er-extra-details {
-    margin: 0.4em 0 0.8em 0;
-    font-size: 0.82em;
-  }
-  .er-extra-summary {
-    cursor: pointer;
-    color: var(--color-text);
-    opacity: 0.7;
-    font-size: 0.9em;
-    margin-bottom: 0.4em;
-  }
-  .er-extra-summary:hover { opacity: 1; }
-  .er-extra-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.6em;
-  }
-  .er-extra-group {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25em;
-  }
-  .er-extra-group-title {
+  .er-sub-section { margin-top: -0.4em; }
+  .er-sub-toggles-label {
+    font-size: 0.78em;
     font-weight: bold;
     color: var(--color-text);
-    opacity: 0.6;
-    font-size: 0.85em;
-    margin-bottom: 0.15em;
+    opacity: 0.5;
+    margin-bottom: 0.3em;
   }
-  .er-extra-badge {
-    font-size: 0.82em;
-    padding: 1px 6px;
-    border-radius: 8px;
-    background: rgba(255,255,255,0.05);
-    color: var(--color-text);
-    opacity: 0.4;
-    transition: all 0.15s;
+  .er-sub-toggle {
+    font-size: 0.78em !important;
+    border-style: dashed !important;
   }
-  .er-extra-badge.active {
-    opacity: 1;
-    background: rgba(100, 200, 100, 0.15);
-    color: #7ec87e;
+  .er-sub-toggle.active {
+    border-style: solid !important;
+    border-color: #e07800 !important;
+    background: rgba(224, 120, 0, 0.15) !important;
+    color: #ffaa44 !important;
   }
+  .er-sub-toggle:disabled {
+    opacity: 0.2 !important;
+    cursor: default !important;
+  }
+  .er-sub-count {
+    font-size: 0.75em;
+    opacity: 0.5;
+    margin-left: 0.3em;
+  }
+  .er-sub-toggle.active .er-sub-count { opacity: 0.8; }
 
   @media screen and (max-width: 768px) {
     .er-input-wrap { width: 140px; }
