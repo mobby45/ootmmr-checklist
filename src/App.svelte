@@ -995,6 +995,9 @@ yKeepalive.observe((event: any) => {
   let showSpoilerSpheres = false;
   let spherePerPage = 1;
   let spherePage = 0;
+  function setSpherePerPage(n: number) { spherePerPage = n; spherePage = 0; }
+  function pagePrev() { spherePage = Math.max(0, spherePage - 1); }
+  function pageNext() { spherePage = Math.min(Math.ceil(spoilerSpheres.length / spherePerPage) - 1, spherePage + 1); }
   let spoilerSearch = '';
   let spoilerSectionTab: 'search' | 'spheres' = (localStorage.getItem('sec_spoilertab') as 'search' | 'spheres') ?? 'search';
   let seedInfoOpen = localStorage.getItem('sec_seedinfo') === 'true';
@@ -3077,14 +3080,14 @@ yKeepalive.observe((event: any) => {
                     <div style="margin-bottom:0.5em; display:flex; gap:0.4em; align-items:center; flex-wrap:wrap;">
                       <label style="font-size:0.82em; display:flex; align-items:center; gap:0.3em;">
                         Per page:
-                        <button class="pure-button" class:active={spherePerPage===1} on:click="{(spherePerPage=1, spherePage=0)}" style="font-size:0.82em; padding:0.15em 0.5em;">1</button>
-                        <button class="pure-button" class:active={spherePerPage===2} on:click="{(spherePerPage=2, spherePage=0)}" style="font-size:0.82em; padding:0.15em 0.5em;">2</button>
-                        <button class="pure-button" class:active={spherePerPage===3} on:click="{(spherePerPage=3, spherePage=0)}" style="font-size:0.82em; padding:0.15em 0.5em;">3</button>
+                        <button type="button" class="pure-button" class:active={spherePerPage===1} on:click={() => setSpherePerPage(1)} style="font-size:0.82em; padding:0.15em 0.5em;">1</button>
+                        <button type="button" class="pure-button" class:active={spherePerPage===2} on:click={() => setSpherePerPage(2)} style="font-size:0.82em; padding:0.15em 0.5em;">2</button>
+                        <button type="button" class="pure-button" class:active={spherePerPage===3} on:click={() => setSpherePerPage(3)} style="font-size:0.82em; padding:0.15em 0.5em;">3</button>
                       </label>
                       <div style="display:flex; gap:0.3em; align-items:center; margin-left:auto;">
-                        <button class="pure-button" on:click={() => spherePage = Math.max(0, spherePage - 1)} disabled={spherePage === 0} style="font-size:0.82em; padding:0.15em 0.5em;">◀</button>
+                        <button class="pure-button" on:click={pagePrev} disabled={spherePage === 0} style="font-size:0.82em; padding:0.15em 0.5em;">◀</button>
                         <span style="font-size:0.82em;">{spherePage + 1}/{Math.ceil(spoilerSpheres.length / spherePerPage) || 1}</span>
-                        <button class="pure-button" on:click={() => spherePage = Math.min(Math.ceil(spoilerSpheres.length / spherePerPage) - 1, spherePage + 1)} disabled={spherePage >= Math.ceil(spoilerSpheres.length / spherePerPage) - 1} style="font-size:0.82em; padding:0.15em 0.5em;">▶</button>
+                        <button class="pure-button" on:click={pageNext} disabled={spherePage >= Math.ceil(spoilerSpheres.length / spherePerPage) - 1} style="font-size:0.82em; padding:0.15em 0.5em;">▶</button>
                       </div>
                     </div>
                     {@const pageSpheres = spoilerSpheres.slice(spherePage * spherePerPage, (spherePage + 1) * spherePerPage)}
