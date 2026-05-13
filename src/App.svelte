@@ -591,10 +591,13 @@ yKeepalive.observe((event: any) => {
     }
     if (peerKeepaliveInterval) { clearInterval(peerKeepaliveInterval); peerKeepaliveInterval = null; }
     if (peerCleanupInterval) { clearInterval(peerCleanupInterval); peerCleanupInterval = null; }
-    // Clear all yPeerInfo to remove stale entries from the previous room
-    yPeerInfo.clear();
-    // Clean up stale relocation key from previous session (e.g., IndexedDB replay)
-    if (ySpoiler.get('relocatedTo') !== undefined) ySpoiler.delete('relocatedTo');
+    // Defer cleanup to next tick so WebRTC channel fully closes first —
+    // otherwise yPeerInfo.clear() and relocatedTo delete can leak through
+    // the dying channel to old-room peers, clearing their banner & peer list.
+    setTimeout(() => {
+      yPeerInfo.clear();
+      if (ySpoiler.get('relocatedTo') !== undefined) ySpoiler.delete('relocatedTo');
+    }, 0);
     const base = name ?? crypto.randomUUID();
     const full = password ? `${base}-${password}` : base;
     roomName = full;
