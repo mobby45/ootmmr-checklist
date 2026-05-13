@@ -75,6 +75,11 @@
   let searchFilter = '';
   let showOnlyUnknown = false;
 
+  // Which sub-type groups have at least one visible group (parent active + populated)
+  $: visibleSubGroups = subTypeGroups.filter(g =>
+    parentIsActive(g.parent) && g.keys.some(k => hasPopulatedSub(k))
+  );
+
   // Build a set of entrance IDs per sub-type for quick lookup
   $: subTypeIdSets = Object.fromEntries(
     Object.entries(entranceSubTypes).map(([k, ids]) => [k, new Set(ids)])
@@ -179,18 +184,18 @@
     </div>
   </div>
 
-  <details class="er-extra-details">
-    <summary class="er-extra-summary">ER options
-      {#each subTypeGroups as group}
-        {@const active = group.keys.filter(k => getSub(k)).length}
-        {@const total = group.keys.filter(k => hasPopulatedSub(k)).length}
-        {total > 0 ? `${group.label} ${active}/${total} ` : ''}
-      {/each}
-    </summary>
-    <div class="er-extra-grid">
-      {#each subTypeGroups as group}
-        {@const groupKeys = group.keys.filter(k => hasPopulatedSub(k))}
-        {#if groupKeys.length > 0 && parentIsActive(group.parent)}
+  {#if visibleSubGroups.length > 0}
+    <details class="er-extra-details">
+      <summary class="er-extra-summary">ER options
+        {#each visibleSubGroups as group}
+          {@const active = group.keys.filter(k => getSub(k)).length}
+          {@const total = group.keys.filter(k => hasPopulatedSub(k)).length}
+          {total > 0 ? `${group.label} ${active}/${total} ` : ''}
+        {/each}
+      </summary>
+      <div class="er-extra-grid">
+        {#each visibleSubGroups as group}
+          {@const groupKeys = group.keys.filter(k => hasPopulatedSub(k))}
           <div class="er-extra-group">
             <div class="er-extra-group-title">{group.label}</div>
             {#each groupKeys as key}
@@ -209,10 +214,10 @@
               </span>
             {/each}
           </div>
-        {/if}
-      {/each}
-    </div>
-  </details>
+        {/each}
+      </div>
+    </details>
+  {/if}
 
   <div class="er-controls">
     <div class="er-filters">
