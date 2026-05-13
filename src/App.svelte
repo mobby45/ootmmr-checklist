@@ -591,13 +591,6 @@ yKeepalive.observe((event: any) => {
     }
     if (peerKeepaliveInterval) { clearInterval(peerKeepaliveInterval); peerKeepaliveInterval = null; }
     if (peerCleanupInterval) { clearInterval(peerCleanupInterval); peerCleanupInterval = null; }
-    // Defer cleanup to next tick so WebRTC channel fully closes first —
-    // otherwise yPeerInfo.clear() and relocatedTo delete can leak through
-    // the dying channel to old-room peers, clearing their banner & peer list.
-    setTimeout(() => {
-      yPeerInfo.clear();
-      if (ySpoiler.get('relocatedTo') !== undefined) ySpoiler.delete('relocatedTo');
-    }, 0);
     const base = name ?? crypto.randomUUID();
     const full = password ? `${base}-${password}` : base;
     roomName = full;
@@ -871,6 +864,12 @@ yKeepalive.observe((event: any) => {
         roomBaseCode = null;
         roomHasPassword = false;
         connectedUsers = [];
+        // Cleanup Yjs state NOW — old provider is fully disconnected (1s timeout
+        // has elapsed), so these operations CANNOT leak to old-room peers.
+        // If done inside joinCoopRoom, the delete could leak through the dying
+        // WebRTC channel of a just-disconnected provider.
+        yPeerInfo.clear();
+        if (ySpoiler.get('relocatedTo') !== undefined) ySpoiler.delete('relocatedTo');
         persistRelocationCode(null, 'setRoomPassword-timeout');
         // joinCoopRoom will clean up relocatedTo at line 589 (after disconnect, before new provider)
         // Host joins new room immediately
