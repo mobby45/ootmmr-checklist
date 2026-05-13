@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { EntranceInfo } from '../data/entranceData';
-  import { createEventDispatcher, onMount, onDestroy } from 'svelte';
+  import { createEventDispatcher, onMount } from 'svelte';
 
   export let options: EntranceInfo[] = [];
   export let value: string = '';
@@ -106,15 +106,18 @@
   }
 
   function handleDocClick(e: MouseEvent) {
-    if (!wrapEl?.contains(e.target as Node) && !dropdownEl?.contains(e.target as Node)) {
+    const target = e.target as Node;
+    if (wrapEl && !wrapEl.contains(target) && (!dropdownEl || !dropdownEl.contains(target))) {
       editing = false;
       open = false;
       search = '';
     }
   }
 
-  onMount(() => document.addEventListener('mousedown', handleDocClick));
-  onDestroy(() => document.removeEventListener('mousedown', handleDocClick));
+  onMount(() => {
+    document.addEventListener('click', handleDocClick, true);
+    return () => document.removeEventListener('click', handleDocClick, true);
+  });
 </script>
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
