@@ -185,16 +185,16 @@
     </div>
   </div>
 
-  {#if visibleSubGroups.length > 0}
-    <details class="er-extra-details">
-      <summary class="er-extra-summary">ER options
-        {#each visibleSubGroups as group}
-          {@const active = group.keys.filter(k => getSub(k)).length}
-          {@const total = group.keys.filter(k => hasPopulatedSub(k)).length}
-          {total > 0 ? `${group.label} ${active}/${total} ` : ''}
-        {/each}
-      </summary>
-      <div class="er-extra-grid">
+  <details class="er-extra-details">
+    <summary class="er-extra-summary">ER options
+      {#each visibleSubGroups as group}
+        {@const active = group.keys.filter(k => getSub(k)).length}
+        {@const total = group.keys.filter(k => hasPopulatedSub(k)).length}
+        {total > 0 ? `${group.label} ${active}/${total} ` : ''}
+      {/each}
+    </summary>
+    <div class="er-extra-grid">
+      {#if visibleSubGroups.length > 0}
         {#each visibleSubGroups as group}
           {@const groupKeys = group.keys.filter(k => hasPopulatedSub(k))}
           <div class="er-extra-group">
@@ -216,9 +216,11 @@
             {/each}
           </div>
         {/each}
-      </div>
-    </details>
-  {/if}
+      {:else}
+        <div class="er-extra-empty">Enable a main ER setting above (Dungeons, Interiors, One-Ways) to access sub-type options</div>
+      {/if}
+    </div>
+  </details>
 
   <div class="er-controls">
     <div class="er-filters">
@@ -480,6 +482,11 @@
     display: flex;
     flex-wrap: wrap;
     gap: 0.6em;
+  }
+  .er-extra-empty {
+    font-size: 0.85em;
+    opacity: 0.5;
+    padding: 0.5em 0;
   }
   .er-extra-group {
     display: flex;
