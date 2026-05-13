@@ -2900,7 +2900,7 @@ yKeepalive.observe((event: any) => {
   {#if relocationCode}
     <div class="relocation-banner">
       🔒 Room password changed by host
-      <button class="pure-button" on:click={() => { const pw = window.prompt('Enter the new room password:'); if (pw != null) { persistRelocationCode(null, 'dismiss'); joinCoopRoom(relocationCode, pw.trim() || undefined); } }}>Join new room</button>
+      <button class="pure-button" on:click={() => { const pw = window.prompt('Enter the new room password:'); if (pw != null) { const code = relocationCode; persistRelocationCode(null, 'dismiss'); if (code) joinCoopRoom(code, pw.trim() || undefined); } }}>Join new room</button>
       <button class="pure-button" on:click={() => persistRelocationCode(null, 'dismiss')}>Dismiss</button>
     </div>
   {/if}
