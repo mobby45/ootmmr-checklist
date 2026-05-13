@@ -863,9 +863,9 @@ yKeepalive.observe((event: any) => {
         if (peerKeepaliveInterval) { clearInterval(peerKeepaliveInterval); peerKeepaliveInterval = null; }
         if (peerCleanupInterval) { clearInterval(peerCleanupInterval); peerCleanupInterval = null; }
         if (healthVerifyTimer) { clearTimeout(healthVerifyTimer); healthVerifyTimer = null; }
-        connectionProvider?.disconnect();
+        connectionProvider?.destroy();
         connectionProvider = null;
-        watchRelayProvider?.disconnect();
+        watchRelayProvider?.destroy();
         watchRelayProvider = null;
         roomName = null;
         roomBaseCode = null;
