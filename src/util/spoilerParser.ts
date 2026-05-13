@@ -131,18 +131,18 @@ export function parseSpoilerLog(text: string): SpoilerData {
     }
 
     if (inSpheres) {
-      const sphereHeaderMatch = line.match(/^Sphere\s+(\d+)$/);
+      const sphereHeaderMatch = line.match(/^\s*Sphere\s+(\d+)$/);
       if (sphereHeaderMatch) {
         if (currentSphere) spheres.push(currentSphere);
         currentSphere = { sphere: parseInt(sphereHeaderMatch[1], 10), entries: [] };
         continue;
       }
-      const locationMatch = line.match(/^Location\s+-\s+(.+):\s*(.+)$/);
+      const locationMatch = line.match(/^\s*Location\s+-\s+(.+):\s*(.+)$/);
       if (locationMatch && currentSphere) {
         currentSphere.entries.push({ type: 'Location', location: locationMatch[1].trim(), item: locationMatch[2].trim() });
         continue;
       }
-      const eventMatch = line.match(/^Event\s+-\s+(.+)$/);
+      const eventMatch = line.match(/^\s*Event\s+-\s+(.+)$/);
       if (eventMatch && currentSphere) {
         currentSphere.entries.push({ type: 'Event', event: eventMatch[1].trim() });
         continue;

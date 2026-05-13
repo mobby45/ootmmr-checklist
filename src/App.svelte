@@ -997,9 +997,9 @@ yKeepalive.observe((event: any) => {
   let sphereMax = 999;
   let sphereTab: 'all' | 'oot' | 'mm' = 'all';
   let spoilerSearch = '';
+  let spoilerSectionTab: 'search' | 'spheres' = (localStorage.getItem('sec_spoilertab') as 'search' | 'spheres') ?? 'search';
   let seedInfoOpen = localStorage.getItem('sec_seedinfo') === 'true';
-  let spheresOpen = localStorage.getItem('sec_spheres') === 'true';
-  let spoilerSearchOpen = localStorage.getItem('sec_spoilersearch') === 'true';
+  let spoilerSectionOpen = localStorage.getItem('sec_spoilersection') === 'true';
 
   // Locations in the spoiler that don't match any check name in the full pool
   function findCheckByName(name: string) {
@@ -3037,112 +3037,93 @@ yKeepalive.observe((event: any) => {
               {/if}
             </details>
 
-            <!-- Collapsible spoiler spheres -->
+            <!-- Collapsible spoiler section (search + spheres) -->
             <details class="spoiler-panel" style="margin-top: 0.4em;"
-              bind:open={spheresOpen}
-              on:toggle={() => localStorage.setItem('sec_spheres', String(spheresOpen))}
+              bind:open={spoilerSectionOpen}
+              on:toggle={() => localStorage.setItem('sec_spoilersection', String(spoilerSectionOpen))}
             >
-              <summary class="spoiler-panel-summary">Spoiler Spheres ({spoilerSpheres.length > 0 ? spoilerSpheres.length + ' spheres' : 'none'})</summary>
+              <summary class="spoiler-panel-summary">Spoiler</summary>
               <div style="margin-top: 0.4em;">
-                {#if spoilerSpheres.length === 0}
-                  <p class="spoiler-no-log">No spheres loaded — use <em>Import Spoiler</em> to populate.</p>
-                {:else}
-                  <div style="margin-bottom: 0.5em; display:flex; gap:0.4em; align-items:center; flex-wrap:wrap;">
-                    <label style="font-size:0.82em; display:flex; align-items:center; gap:0.3em;">
-                      Sphere range:
-                      <input type="number" bind:value={sphereMin} min="0" max="999" style="width:4em; padding:0.2em; font-size:0.9em;" class="dropdown-select" />
-                      <span>–</span>
-                      <input type="number" bind:value={sphereMax} min="0" max="999" style="width:4em; padding:0.2em; font-size:0.9em;" class="dropdown-select" />
-                    </label>
-                    <div class="tabs" style="margin:0; border:none;">
-                      <button class="tab-button" class:active={sphereTab==='all'} on:click={() => sphereTab='all'} style="font-size:0.82em; padding:0.2em 0.6em;">All</button>
-                      <button class="tab-button" class:active={sphereTab==='oot'} on:click={() => sphereTab='oot'} style="font-size:0.82em; padding:0.2em 0.6em;">OoT</button>
-                      <button class="tab-button" class:active={sphereTab==='mm'} on:click={() => sphereTab='mm'} style="font-size:0.82em; padding:0.2em 0.6em;">MM</button>
-                    </div>
-                  </div>
-                  {#each spoilerSpheres.filter(s => s.sphere >= sphereMin && s.sphere <= sphereMax) as sphere (sphere.sphere)}
-                    <div style="margin-bottom:0.6em; border:1px solid var(--color-border); border-radius:4px; padding:0.3em 0.5em;">
-                      <div style="font-weight:bold; font-size:0.85em; margin-bottom:0.2em; display:flex; justify-content:space-between;">
-                        <span>Sphere {sphere.sphere}</span>
-                        <span style="opacity:0.6; font-weight:normal;">{sphere.entries.length} entr{sphere.entries.length === 1 ? 'y' : 'ies'}</span>
-                      </div>
-                      <ul style="list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:0.15em;">
-                        {#each sphere.entries as entry}
-                          {@const check = entry.type === 'Location' ? findCheckByName(entry.location) : null}
-                          {@const matchesGame = sphereTab === 'all' || entry.type === 'Event' || (check != null && check.game === sphereTab)}
-                          {#if matchesGame}
-                            <li style="font-size:0.82em; padding:0.1em 0.2em; border-radius:2px; display:flex; align-items:baseline; gap:0.4em;">
-                              <span class="sphere-tag" class:sphere-tag-location={entry.type === 'Location'} class:sphere-tag-event={entry.type === 'Event'}>{entry.type}</span>
-                              {#if entry.type === 'Location'}
-                                <span style="opacity:0.8;">{entry.location}</span>
-                                <span style="opacity:0.4;">→</span>
-                                <span style="color:var(--color-primary); font-weight:bold;">{formatSpoilerItem(entry.item)}</span>
-                              {:else}
-                                <span style="opacity:0.8;">{entry.event}</span>
-                              {/if}
-                            </li>
-                          {/if}
+                <div class="tabs" style="margin:0 0 0.5em; border:none;">
+                  <button class="tab-button" class:active={spoilerSectionTab==='search'} on:click="{(spoilerSectionTab='search', localStorage.setItem('sec_spoilertab','search'))}" style="font-size:0.85em; padding:0.25em 0.8em;">Search</button>
+                  <button class="tab-button" class:active={spoilerSectionTab==='spheres'} on:click="{(spoilerSectionTab='spheres', localStorage.setItem('sec_spoilertab','spheres'))}" style="font-size:0.85em; padding:0.25em 0.8em;">Spheres ({spoilerSpheres.length})</button>
+                </div>
+
+                {#if spoilerSectionTab === 'search'}
+                  <!-- Search tab -->
+                  {#if Object.keys(spoilerLocations).length === 0}
+                    <p class="spoiler-no-log">No spoiler loaded — use <em>Import Spoiler</em> to enable search.</p>
+                  {:else}
+                    {#if spoilerUnmatched.length > 0}
+                      <p class="spoiler-warn" title={spoilerUnmatched.join('\n')} on:click={() => console.table(spoilerUnmatched)} style="cursor:help">
+                        {spoilerUnmatched.length} location{spoilerUnmatched.length > 1 ? 's' : ''} in spoiler not found in pool (hover/click for details)
+                      </p>
+                    {/if}
+                    <input type="text" class="dropdown-select" style="width:100%; box-sizing:border-box;" placeholder="Item or location… (e.g. Hookshot, Water Temple) — Ctrl+Shift+S" bind:value={spoilerSearch} bind:this={spoilerSearchEl} disabled={isWatchMode} />
+                    {#if spoilerSearchResults.length > 0}
+                      <ul class="spoiler-results">
+                        {#each spoilerSearchResults as r}
+                          <li on:click={() => { if (isWatchMode) return; jumpToCheck(r.loc); }} style={isWatchMode ? '' : 'cursor:pointer'} title={isWatchMode ? '' : 'Click to jump to check'} class:spoiler-result-checked={($sChecks.get(r.loc) ?? T.CheckState.unchecked) === T.CheckState.checked}>
+                            {#if r.matchedLoc}
+                              <span class="spoiler-loc">{r.loc}</span>
+                              <span class="spoiler-arrow">→</span>
+                              <span class="spoiler-item-name">{formatSpoilerItem(r.item)}</span>
+                            {:else}
+                              <span class="spoiler-item-name">{formatSpoilerItem(r.item)}</span>
+                              <span class="spoiler-arrow">→</span>
+                              <span class="spoiler-loc">{r.loc}</span>
+                            {/if}
+                          </li>
                         {/each}
                       </ul>
-                    </div>
-                  {/each}
-                {/if}
-              </div>
-            </details>
-
-            <!-- Collapsible spoiler search -->
-            <details class="spoiler-panel" style="margin-top: 0.4em;"
-              bind:open={spoilerSearchOpen}
-              on:toggle={() => localStorage.setItem('sec_spoilersearch', String(spoilerSearchOpen))}
-              bind:this={spoilerSearchDetailsEl}
-            >
-              <summary class="spoiler-panel-summary">Spoiler Search</summary>
-              <div style="margin-top: 0.4em;">
-                {#if Object.keys(spoilerLocations).length === 0}
-                  <p class="spoiler-no-log">No spoiler loaded — use <em>Import Spoiler</em> to enable search.</p>
-                {:else}
-                  {#if spoilerUnmatched.length > 0}
-                    <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-noninteractive-element-interactions -->
-                    <p
-                      class="spoiler-warn"
-                      title={spoilerUnmatched.join('\n')}
-                      on:click={() => console.table(spoilerUnmatched)}
-                      style="cursor:help"
-                    >{spoilerUnmatched.length} location{spoilerUnmatched.length > 1 ? 's' : ''} in spoiler not found in pool (hover/click for details)</p>
+                    {:else if spoilerSearch.trim().length >= 2}
+                      <p class="spoiler-empty">No match.</p>
+                    {/if}
                   {/if}
-                  <input
-                    type="text"
-                    class="dropdown-select"
-                    style="width: 100%; box-sizing: border-box;"
-                    placeholder="Item or location… (e.g. Hookshot, Water Temple) — Ctrl+Shift+S"
-                    bind:value={spoilerSearch}
-                    bind:this={spoilerSearchEl}
-                    disabled={isWatchMode}
-                  />
-                  {#if spoilerSearchResults.length > 0}
-                    <ul class="spoiler-results">
-                      {#each spoilerSearchResults as r}
-                        <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-noninteractive-element-interactions -->
-                        <li
-                          on:click={() => { if (isWatchMode) return; jumpToCheck(r.loc); }}
-                          style={isWatchMode ? '' : 'cursor:pointer'}
-                          title={isWatchMode ? '' : 'Click to jump to check'}
-                          class:spoiler-result-checked={($sChecks.get(r.loc) ?? T.CheckState.unchecked) === T.CheckState.checked}
-                        >
-                          {#if r.matchedLoc}
-                            <span class="spoiler-loc">{r.loc}</span>
-                            <span class="spoiler-arrow">→</span>
-                            <span class="spoiler-item-name">{formatSpoilerItem(r.item)}</span>
-                          {:else}
-                            <span class="spoiler-item-name">{formatSpoilerItem(r.item)}</span>
-                            <span class="spoiler-arrow">→</span>
-                            <span class="spoiler-loc">{r.loc}</span>
-                          {/if}
-                        </li>
-                      {/each}
-                    </ul>
-                  {:else if spoilerSearch.trim().length >= 2}
-                    <p class="spoiler-empty">No match.</p>
+                {:else}
+                  <!-- Spheres tab -->
+                  {#if spoilerSpheres.length === 0}
+                    <p class="spoiler-no-log">No spheres loaded — use <em>Import Spoiler</em> to populate.</p>
+                  {:else}
+                    <div style="margin-bottom:0.5em; display:flex; gap:0.4em; align-items:center; flex-wrap:wrap;">
+                      <label style="font-size:0.82em; display:flex; align-items:center; gap:0.3em;">
+                        Sphere range:
+                        <input type="number" bind:value={sphereMin} min="0" max="999" style="width:4em; padding:0.2em; font-size:0.9em;" class="dropdown-select" />
+                        <span>–</span>
+                        <input type="number" bind:value={sphereMax} min="0" max="999" style="width:4em; padding:0.2em; font-size:0.9em;" class="dropdown-select" />
+                      </label>
+                      <div class="tabs" style="margin:0; border:none;">
+                        <button class="tab-button" class:active={sphereTab==='all'} on:click={() => sphereTab='all'} style="font-size:0.82em; padding:0.2em 0.6em;">All</button>
+                        <button class="tab-button" class:active={sphereTab==='oot'} on:click={() => sphereTab='oot'} style="font-size:0.82em; padding:0.2em 0.6em;">OoT</button>
+                        <button class="tab-button" class:active={sphereTab==='mm'} on:click={() => sphereTab='mm'} style="font-size:0.82em; padding:0.2em 0.6em;">MM</button>
+                      </div>
+                    </div>
+                    {#each spoilerSpheres.filter(s => s.sphere >= sphereMin && s.sphere <= sphereMax) as sphere (sphere.sphere)}
+                      <div style="margin-bottom:0.6em; border:1px solid var(--color-border); border-radius:4px; padding:0.3em 0.5em;">
+                        <div style="font-weight:bold; font-size:0.85em; margin-bottom:0.2em; display:flex; justify-content:space-between;">
+                          <span>Sphere {sphere.sphere}</span>
+                          <span style="opacity:0.6; font-weight:normal;">{sphere.entries.length} entr{sphere.entries.length === 1 ? 'y' : 'ies'}</span>
+                        </div>
+                        <ul style="list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:0.15em;">
+                          {#each sphere.entries as entry}
+                            {@const check = entry.type === 'Location' ? findCheckByName(entry.location) : null}
+                            {@const matchesGame = sphereTab === 'all' || entry.type === 'Event' || (check != null && check.game === sphereTab)}
+                            {#if matchesGame}
+                              <li style="font-size:0.82em; padding:0.1em 0.2em; border-radius:2px; display:flex; align-items:baseline; gap:0.4em;">
+                                <span class="sphere-tag" class:sphere-tag-location={entry.type === 'Location'} class:sphere-tag-event={entry.type === 'Event'}>{entry.type}</span>
+                                {#if entry.type === 'Location'}
+                                  <span style="opacity:0.8;">{entry.location}</span>
+                                  <span style="opacity:0.4;">→</span>
+                                  <span style="color:var(--color-primary); font-weight:bold;">{formatSpoilerItem(entry.item)}</span>
+                                {:else}
+                                  <span style="opacity:0.8;">{entry.event}</span>
+                                {/if}
+                              </li>
+                            {/if}
+                          {/each}
+                        </ul>
+                      </div>
+                    {/each}
                   {/if}
                 {/if}
               </div>
