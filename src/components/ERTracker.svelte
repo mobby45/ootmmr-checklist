@@ -52,7 +52,6 @@
     erIndoors: '🏠 Interiors',
     erOverworld: '🌍 Overworld',
     erOneWays: '➡️ One-Ways',
-    erOwls: '🦉 Owl Statues',
     erWallmasters: '👁️ Wallmasters',
     erAlterLw: '🌲 Alter LW Exits',
     erMixed: '🔀 Cross-game destinations',
