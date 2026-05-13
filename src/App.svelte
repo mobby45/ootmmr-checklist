@@ -414,11 +414,17 @@ yKeepalive.observe((event: any) => {
     if (siStr !== undefined) {
       spoilerSeedInfo = siStr === 'null' ? null : JSON.parse(siStr);
       localStorage.setItem('spoilerSeedInfo', siStr);
+    } else if (event.keysChanged?.has?.('seedInfo')) {
+      spoilerSeedInfo = null;
+      localStorage.removeItem('spoilerSeedInfo');
     }
     const erStr = ySpoiler.get('erSettings');
     if (erStr !== undefined) {
       spoilerErSettings = erStr === 'null' ? null : JSON.parse(erStr);
       localStorage.setItem('spoilerErSettings', erStr);
+    } else if (event.keysChanged?.has?.('erSettings')) {
+      spoilerErSettings = null;
+      localStorage.removeItem('spoilerErSettings');
     }
     const locStr = ySpoiler.get('locationsBlock');
     if (locStr !== undefined) {
@@ -427,11 +433,17 @@ yKeepalive.observe((event: any) => {
       localStorage.setItem('spoilerLocations', locStr);
       spoilerSyncedFromPeer = true;
       setTimeout(() => { spoilerSyncedFromPeer = false; }, 4000);
+    } else if (event.keysChanged?.has?.('locationsBlock')) {
+      spoilerLocations = {};
+      localStorage.removeItem('spoilerLocations');
     }
     const sphStr = ySpoiler.get('spheresBlock');
     if (sphStr !== undefined) {
       spoilerSpheres = JSON.parse(sphStr);
       localStorage.setItem('spoilerSpheres', sphStr);
+    } else if (event.keysChanged?.has?.('spheresBlock')) {
+      spoilerSpheres = [];
+      localStorage.removeItem('spoilerSpheres');
     }
     if (!event.transaction?.local && !isWatchMode && !isSettingPassword && connectionProvider && event.keysChanged?.has?.('relocatedTo')) {
       const relocated = ySpoiler.get('relocatedTo');
@@ -663,7 +675,10 @@ yKeepalive.observe((event: any) => {
       startDcMonitor();
     });
     connectionProvider.on('status', (ev: any) => dbg('status event — connected:', ev.connected));
-    connectionProvider.on('synced', (ev: any) => dbg('synced event — synced:', ev.synced));
+    connectionProvider.on('synced', (ev: any) => {
+      dbg('synced event — synced:', ev.synced);
+      if (ev.synced) refreshConnectedUsers();
+    });
     dbg('provider created, room:', full, '| pseudo:', pseudo, '| color:', pingColor);
     refreshConnectedUsers();
 
@@ -810,32 +825,36 @@ yKeepalive.observe((event: any) => {
       if (peerKeepaliveInterval) { clearInterval(peerKeepaliveInterval); peerKeepaliveInterval = null; }
       if (peerCleanupInterval) { clearInterval(peerCleanupInterval); peerCleanupInterval = null; }
       if (healthVerifyTimer) { clearTimeout(healthVerifyTimer); healthVerifyTimer = null; }
+      // Delete own yPeerInfo while provider is still connected (allows propagation to peers)
       if (peerId) { yPeerInfo.delete(peerId); peerId = ''; }
+      // Update UI immediately as disconnected
       p2pPeerCount = 0;
-      autoSaveRoomSlot();
-      connectionProvider?.disconnect();
-      connectionProvider = null;
-      watchRelayProvider?.disconnect();
-      watchRelayProvider = null;
+      connectedUsers = [];
       roomName = null;
       roomBaseCode = null;
-      persistRelocationCode(null, 'leaveCoopRoom');
       if (aloneHintTimer) { clearTimeout(aloneHintTimer); aloneHintTimer = undefined; }
       showAloneHint = false;
       roomHasPassword = false;
       sessionStorage.removeItem('coopRoomPassword');
       sessionStorage.removeItem('coopRoomCode');
       window.location.hash = '';
-      connectedUsers = [];
       if (operaWarningTimer) { clearTimeout(operaWarningTimer); operaWarningTimer = null; }
       showOperaWarning = false;
-      // Clear transient data from previous room so it doesn't leak into the next connection
       ydoc.transact(() => {
         yMessages.delete(0, yMessages.length);
         for (const key of yPings.keys()) yPings.delete(key);
       });
       messages = [];
-      dbg('coop room left — transient data cleared');
+      persistRelocationCode(null, 'leaveCoopRoom');
+      autoSaveRoomSlot();
+      // Give Yjs time to propagate before destroying connections
+      setTimeout(() => {
+        connectionProvider?.destroy();
+        connectionProvider = null;
+        watchRelayProvider?.destroy();
+        watchRelayProvider = null;
+        dbg('coop room left — provider destroyed');
+      }, 1000);
     }
   }
 
@@ -3097,6 +3116,11 @@ yKeepalive.observe((event: any) => {
                   <button class="tab-button" class:active={spoilerSectionTab==='search'} on:click="{(spoilerSectionTab='search', localStorage.setItem('sec_spoilertab','search'))}" style="font-size:0.85em; padding:0.25em 0.8em;">Search</button>
                   <button class="tab-button" class:active={spoilerSectionTab==='spheres'} on:click="{(spoilerSectionTab='spheres', localStorage.setItem('sec_spoilertab','spheres'))}" style="font-size:0.85em; padding:0.25em 0.8em;">Spheres ({spoilerSpheres.length})</button>
                 </div>
+                {#if connectionProvider}
+                  <label class="share-spoiler-toggle" style="margin-bottom:0.4em;" title="When enabled, the spoiler log is shared with co-op partners via Yjs">
+                    <input type="checkbox" checked={shareSpoiler} on:change={toggleShareSpoiler} /> Share with coop
+                  </label>
+                {/if}
 
                 {#if spoilerSectionTab === 'search'}
                   <!-- Search tab -->
@@ -3323,9 +3347,6 @@ yKeepalive.observe((event: any) => {
                   <button class="bg-primary pure-button" on:click|preventDefault={exportData} disabled={isWatchMode}>Export Save</button>
                   <button class="bg-primary pure-button" on:click|preventDefault={importData} disabled={isWatchMode}>Import Save</button>
                   <button class="bg-primary pure-button" on:click|preventDefault={importSpoilerLog} disabled={isWatchMode}>Import Spoiler</button>
-                  <label class="share-spoiler-toggle" title="When enabled, the spoiler log is shared with co-op partners via Yjs">
-                    <input type="checkbox" checked={shareSpoiler} on:change={toggleShareSpoiler} /> Share with coop
-                  </label>
                   <button class="pure-button" on:click|preventDefault={() => { if (isWatchMode) return; randoImportOpen = !randoImportOpen; randoImportError = ''; randoImportOk = false; }} disabled={isWatchMode}>🎲 Import Hash</button>
                   <button class="bg-danger pure-button" on:click|preventDefault={reset} disabled={isWatchMode}>Clear Checks</button>
                   <button class="bg-danger pure-button" on:click|preventDefault={resetSettings} disabled={isWatchMode}>Reset Settings</button>
@@ -4152,7 +4173,6 @@ yKeepalive.observe((event: any) => {
     gap: 0.5em;
   }
   .share-spoiler-toggle {
-    grid-column: 1 / -1;
     font-size: 0.78em;
     display: flex;
     align-items: center;
@@ -4160,7 +4180,6 @@ yKeepalive.observe((event: any) => {
     opacity: 0.8;
     cursor: pointer;
     user-select: none;
-    padding: 0.1em 0;
   }
   .share-spoiler-toggle input { margin: 0; }
 
