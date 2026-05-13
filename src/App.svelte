@@ -3077,9 +3077,9 @@ yKeepalive.observe((event: any) => {
                     <div style="margin-bottom:0.5em; display:flex; gap:0.4em; align-items:center; flex-wrap:wrap;">
                       <label style="font-size:0.82em; display:flex; align-items:center; gap:0.3em;">
                         Per page:
-                        <button class="pure-button" class:active={spherePerPage===1} on:click="{() => { spherePerPage=1; spherePage=0; }}" style="font-size:0.82em; padding:0.15em 0.5em;">1</button>
-                        <button class="pure-button" class:active={spherePerPage===2} on:click="{() => { spherePerPage=2; spherePage=0; }}" style="font-size:0.82em; padding:0.15em 0.5em;">2</button>
-                        <button class="pure-button" class:active={spherePerPage===3} on:click="{() => { spherePerPage=3; spherePage=0; }}" style="font-size:0.82em; padding:0.15em 0.5em;">3</button>
+                        <button class="pure-button" class:active={spherePerPage===1} on:click="{(spherePerPage=1, spherePage=0)}" style="font-size:0.82em; padding:0.15em 0.5em;">1</button>
+                        <button class="pure-button" class:active={spherePerPage===2} on:click="{(spherePerPage=2, spherePage=0)}" style="font-size:0.82em; padding:0.15em 0.5em;">2</button>
+                        <button class="pure-button" class:active={spherePerPage===3} on:click="{(spherePerPage=3, spherePage=0)}" style="font-size:0.82em; padding:0.15em 0.5em;">3</button>
                       </label>
                       <div style="display:flex; gap:0.3em; align-items:center; margin-left:auto;">
                         <button class="pure-button" on:click={() => spherePage = Math.max(0, spherePage - 1)} disabled={spherePage === 0} style="font-size:0.82em; padding:0.15em 0.5em;">◀</button>
