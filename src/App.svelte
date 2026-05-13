@@ -1038,6 +1038,7 @@ yKeepalive.observe((event: any) => {
   function setSpherePerPage(n: number) { spherePerPage = n; spherePage = 0; }
   function pagePrev(e: Event) { e.preventDefault(); spherePage = Math.max(0, spherePage - 1); }
   function pageNext(e: Event) { e.preventDefault(); spherePage = Math.min(Math.ceil(spoilerSpheres.length / spherePerPage) - 1, spherePage + 1); }
+  function setSpoilerTab(tab: string) { spoilerSectionTab = tab; localStorage.setItem('sec_spoilertab', tab); }
   $: totalSpherePages = Math.ceil(spoilerSpheres.length / spherePerPage) || 1;
   $: pageSpheres = spoilerSpheres.slice(spherePage * spherePerPage, (spherePage + 1) * spherePerPage);
   $: spherePageOptions = Array.from({ length: totalSpherePages }, (_, i) => {
@@ -3129,8 +3130,8 @@ yKeepalive.observe((event: any) => {
               <summary class="spoiler-panel-summary">Spoiler</summary>
               <div style="margin-top: 0.4em;">
                 <div class="tabs" style="margin:0 0 0.5em; border:none;">
-                  <button type="button" class="tab-button" class:active={spoilerSectionTab==='search'} on:click="{(spoilerSectionTab='search', localStorage.setItem('sec_spoilertab','search'))}" style="font-size:0.85em; padding:0.25em 0.8em;">Search</button>
-                  <button type="button" class="tab-button" class:active={spoilerSectionTab==='spheres'} on:click="{(spoilerSectionTab='spheres', localStorage.setItem('sec_spoilertab','spheres'))}" style="font-size:0.85em; padding:0.25em 0.8em;">Spheres ({spoilerSpheres.length})</button>
+                  <button type="button" class="tab-button" class:active={spoilerSectionTab==='search'} on:click={() => setSpoilerTab('search')} style="font-size:0.85em; padding:0.25em 0.8em;">Search</button>
+                  <button type="button" class="tab-button" class:active={spoilerSectionTab==='spheres'} on:click={() => setSpoilerTab('spheres')} style="font-size:0.85em; padding:0.25em 0.8em;">Spheres ({spoilerSpheres.length})</button>
                 </div>
                 {#if connectionProvider}
                   <label class="share-spoiler-toggle" style="margin-bottom:0.4em;" title="When enabled, the spoiler log is shared with co-op partners via Yjs">
