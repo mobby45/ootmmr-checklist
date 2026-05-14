@@ -754,10 +754,12 @@ yKeepalive.observe((event: any) => {
     connectionProvider.on('status', (ev: any) => dbg('status event — connected:', ev.connected));
     connectionProvider.on('synced', (ev: any) => {
       dbg('synced event — synced:', ev.synced);
-      if (ev.synced) refreshConnectedUsers();
+      if (ev.synced) {
+        // Claim host only after initial sync (so we can see if one already exists)
+        ydoc.transact(() => { if (!yHost.get('id')) yHost.set('id', peerId); });
+        refreshConnectedUsers();
+      }
     });
-    // First peer in room = host
-    ydoc.transact(() => { if (!yHost.get('id')) yHost.set('id', peerId); });
     dbg('provider created, room:', full, '| pseudo:', pseudo, '| color:', pingColor);
     refreshConnectedUsers();
 
