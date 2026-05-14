@@ -3070,8 +3070,7 @@ yKeepalive.observe((event: any) => {
     : [];
 
   function formatSpecialCondition(cond: import('./util/spoilerParser').SpecialCondition): string {
-    const condAny = cond as any;
-    const enabled = Object.keys(subConditionLabels).filter(k => condAny[k] === true).map(k => subConditionLabels[k]);
+    const enabled = Object.keys(subConditionLabels).filter((k: any) => (cond as any)[k] === true).map(k => subConditionLabels[k]);
     if (enabled.length === 0) return 'Open';
     if (cond.count > 0 && cond.count !== enabled.length) return `Any ${cond.count} of: ${enabled.join(', ')}`;
     return enabled.join(', ');
@@ -3234,7 +3233,7 @@ yKeepalive.observe((event: any) => {
               {#if gameStatePresent}
                 {#if showGameState}
                 <table class="seed-table" style="margin-top: 0.6em;">
-                  <tr><td colspan="2" style="font-weight:600; padding-bottom:0.2em;">Game State <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-noninteractive-element-interactions --><span class="copy-hash-btn" style="font-size:1.3em;" title="Hide Game State" on:click|stopPropagation={() => { showGameState = false; localStorage.setItem('sec_showgamestate', 'false'); } }>✕</span></td></tr>
+                  <tr><td colspan="2" style="font-weight:600; padding-bottom:0.2em;">Game State <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-noninteractive-element-interactions --><span class="hide-btn" title="Hide Game State" on:click|stopPropagation={() => { showGameState = false; localStorage.setItem('sec_showgamestate', 'false'); } }>✕</span></td></tr>
                   {#each gameStateSettings as gs}
                     {#if $sSettings.get(gs.id) != null}
                       <tr>
@@ -4435,6 +4434,8 @@ yKeepalive.observe((event: any) => {
   .seed-table td:last-child { font-family: monospace; }
   .copy-hash-btn { cursor: pointer; opacity: 0.45; font-size: 0.9em; user-select: none; }
   .copy-hash-btn:hover { opacity: 1; }
+  .hide-btn { cursor: pointer; opacity: 0.5; font-size: 1.15em; user-select: none; margin-left: 0.3em; }
+  .hide-btn:hover { opacity: 1; }
 
   .spoiler-result-checked { opacity: 0.4; text-decoration: line-through; }
 
