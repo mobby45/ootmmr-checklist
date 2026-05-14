@@ -1075,6 +1075,7 @@ yKeepalive.observe((event: any) => {
   let spoilerSectionTab: 'search' | 'spheres' = (localStorage.getItem('sec_spoilertab') as 'search' | 'spheres') ?? 'search';
   let seedInfoOpen = localStorage.getItem('sec_seedinfo') === 'true';
   let spoilerSectionOpen = localStorage.getItem('sec_spoilersection') === 'true';
+  let showGameState = false;
 
   $: spoilerUnmatched = (() => {
     if (!structuredChecks || Object.keys(spoilerLocations).length === 0) return [];
@@ -3230,7 +3231,8 @@ yKeepalive.observe((event: any) => {
                     </tr>
                   {/if}
                 </table>
-                {#if gameStatePresent}
+              {#if gameStatePresent}
+                {#if showGameState}
                 <table class="seed-table" style="margin-top: 0.6em;">
                   <tr><td colspan="2" style="font-weight:600; padding-bottom:0.2em;">Game State</td></tr>
                   {#each gameStateSettings as gs}
@@ -3242,7 +3244,12 @@ yKeepalive.observe((event: any) => {
                     {/if}
                   {/each}
                 </table>
+                {:else}
+                <div class="spoiler-warn" on:click={() => showGameState = true} style="margin-top: 0.6em; cursor:pointer;">
+                  ⚠️ Game State hidden — click to reveal (spoilers)
+                </div>
                 {/if}
+              {/if}
                 {#if specialConditionEntries.length > 0}
                 <table class="seed-table" style="margin-top: 0.6em;">
                   <tr><td colspan="2" style="font-weight:600; padding-bottom:0.2em;">Special Conditions</td></tr>
