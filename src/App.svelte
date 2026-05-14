@@ -1261,13 +1261,6 @@ yKeepalive.observe((event: any) => {
     setTimeout(() => { watchCopied = false; }, 2000);
   }
 
-  let settingsCopied = false;
-  function copySettings() {
-    navigator.clipboard.writeText(spoilerSeedInfo?.settingsString ?? '');
-    settingsCopied = true;
-    setTimeout(() => { settingsCopied = false; }, 1500);
-  }
-
   $: spoilerSearchResults = spoilerSearch.trim().length >= 2
     ? Object.entries(spoilerLocations)
         .filter(([loc, item]) => {
