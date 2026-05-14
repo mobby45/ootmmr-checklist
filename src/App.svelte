@@ -3276,6 +3276,20 @@ yKeepalive.observe((event: any) => {
     }
     return labels.join(', ');
   }
+
+  function isConditionMet(cond: import('./util/spoilerParser').SpecialCondition, progress?: Record<string, { obtained: number; total: number }>): boolean {
+    if (!progress || Object.keys(progress).length === 0) return false;
+    const enabled = Object.keys(subConditionLabels).filter((k: any) => (cond as any)[k] === true);
+    if (enabled.length === 0) return false;
+    if (cond.count > 0 && cond.count === enabled.length) {
+      return enabled.every(k => { const p = progress[k]; return p && p.obtained >= p.total; });
+    }
+    if (cond.count > 0) {
+      const totalObtained = enabled.reduce((s, k) => s + (progress[k]?.obtained ?? 0), 0);
+      return totalObtained >= cond.count;
+    }
+    return enabled.every(k => { const p = progress[k]; return p && p.obtained >= p.total; });
+  }
 </script>
 
 <!-- ==========================================
@@ -3462,9 +3476,10 @@ yKeepalive.observe((event: any) => {
                 <table class="seed-table" style="margin-top: 0.6em;">
                   <tr><td colspan="2" style="font-weight:600; padding-bottom:0.2em;">Special Conditions</td></tr>
                   {#each specialConditionEntries as [key, cond]}
-                    <tr>
+                    {@const progress = conditionProgress?.[key]}
+                    <tr class:condition-met={isConditionMet(cond, progress)}>
                       <td>{specialConditionLabels[key] ?? key}</td>
-                      <td>{formatSpecialCondition(cond, conditionProgress?.[key])}</td>
+                      <td>{formatSpecialCondition(cond, progress)}</td>
                     </tr>
                   {/each}
                 </table>
@@ -4649,6 +4664,8 @@ yKeepalive.observe((event: any) => {
   .seed-table td { padding: 0.1em 0.5em 0.1em 0; vertical-align: top; }
   .seed-table td:first-child { opacity: 0.55; white-space: nowrap; width: 1%; }
   .seed-table td:last-child { font-family: monospace; }
+  .seed-table .condition-met td { color: #4caf50; }
+  .seed-table .condition-met td:first-child { opacity: 0.8; }
   .copy-hash-btn { cursor: pointer; opacity: 0.45; font-size: 0.9em; user-select: none; }
   .copy-hash-btn:hover { opacity: 1; }
   .hide-btn { cursor: pointer; opacity: 0.5; font-size: 1.15em; user-select: none; margin-left: 0.3em; }
