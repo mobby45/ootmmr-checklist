@@ -1075,7 +1075,7 @@ yKeepalive.observe((event: any) => {
   let spoilerSectionTab: 'search' | 'spheres' = (localStorage.getItem('sec_spoilertab') as 'search' | 'spheres') ?? 'search';
   let seedInfoOpen = localStorage.getItem('sec_seedinfo') === 'true';
   let spoilerSectionOpen = localStorage.getItem('sec_spoilersection') === 'true';
-  let showGameState = false;
+  let showGameState = localStorage.getItem('sec_showgamestate') === 'true';
 
   $: spoilerUnmatched = (() => {
     if (!structuredChecks || Object.keys(spoilerLocations).length === 0) return [];
@@ -3234,7 +3234,7 @@ yKeepalive.observe((event: any) => {
               {#if gameStatePresent}
                 {#if showGameState}
                 <table class="seed-table" style="margin-top: 0.6em;">
-                  <tr><td colspan="2" style="font-weight:600; padding-bottom:0.2em;">Game State <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-noninteractive-element-interactions --><span class="copy-hash-btn" style="font-size:1.3em;" title="Hide Game State" on:click|stopPropagation={() => showGameState = false}>✕</span></td></tr>
+                  <tr><td colspan="2" style="font-weight:600; padding-bottom:0.2em;">Game State <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-noninteractive-element-interactions --><span class="copy-hash-btn" style="font-size:1.3em;" title="Hide Game State" on:click|stopPropagation={() => { showGameState = false; localStorage.setItem('sec_showgamestate', 'false'); } }>✕</span></td></tr>
                   {#each gameStateSettings as gs}
                     {#if $sSettings.get(gs.id) != null}
                       <tr>
@@ -3245,8 +3245,8 @@ yKeepalive.observe((event: any) => {
                   {/each}
                 </table>
                 {:else}
-                <div class="spoiler-warn" on:click={() => showGameState = true} style="margin-top: 0.6em; cursor:pointer;">
-                  ⚠️ Game State hidden — click to reveal (spoilers)
+                <div class="spoiler-reveal" on:click={() => { showGameState = true; localStorage.setItem('sec_showgamestate', 'true'); } }>
+                  ⚠️ Game State — click to reveal (spoilers)
                 </div>
                 {/if}
               {/if}
@@ -4404,6 +4404,8 @@ yKeepalive.observe((event: any) => {
   .spoiler-empty     { font-size: 0.85em; opacity: 0.5; margin: 0.3em 0 0; }
   .spoiler-no-log    { font-size: 0.85em; opacity: 0.6; margin: 0.2em 0 0; font-style: italic; }
   .spoiler-warn      { font-size: 0.8em; color: #e0a030; margin: 0.2em 0 0.4em; }
+  .spoiler-reveal    { font-size: 0.85em; color: #e0a030; border: 1px dashed #e0a030; border-radius: 4px; padding: 0.4em 0.6em; margin-top: 0.6em; cursor: pointer; text-align: center; }
+  .spoiler-reveal:hover { background: rgba(224, 160, 48, 0.08); }
   .readonly-notice   { font-size: 0.85em; opacity: 0.6; margin: 0.5em 0; font-style: italic; text-align: center; }
   .watch-disabled { opacity: 0.6; }
 
