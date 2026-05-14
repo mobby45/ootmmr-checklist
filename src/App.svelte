@@ -616,23 +616,36 @@ yKeepalive.observe((event: any) => {
     const sortedAware = Array.from(connectionProvider.awareness.getStates().entries())
       .sort(([a], [b]) => a - b);
     const hostPeerId = sortedAware.length > 0 ? (sortedAware[0][1] as any)?.user?.peerId : null;
+    // Merge peers from awareness (immediate) with richer data from yPeerInfo
+    const seen = new Set<string>();
     const entries: { name: string; color: string; isHost: boolean }[] = [];
+    // First, add peers from yPeerInfo (richer data, may lag behind)
     for (const [id, val] of yPeerInfo) {
       try {
         const d = JSON.parse(val as string);
         if (roomStartTime && d.ts && d.ts < roomStartTime) continue;
+        seen.add(id);
         entries.push({ name: d.name || 'Anonymous', color: d.color || '#888', isHost: id === hostPeerId });
       } catch { /* skip malformed entries */ }
+    }
+    // Then, add peers from awareness not yet in yPeerInfo (immediate visibility)
+    for (const [, state] of sortedAware) {
+      const u = (state as any)?.user;
+      if (u?.peerId && !seen.has(u.peerId)) {
+        seen.add(u.peerId);
+        entries.push({ name: u.name || 'Anonymous', color: u.color || '#888', isHost: u.peerId === hostPeerId });
+      }
     }
     const prev = connectedUsers.map(u => u.name).join(',');
     const cur = entries.map(u => u.name).join(',');
     if (prev !== cur) dbg('users:', prev, '->', cur);
     connectedUsers = entries;
     bumpConnectedUsersRev();
-    // Manage alone hint timer (show after 20s alone)
-    if (connectedUsers.length <= 1 && !aloneHintTimer) {
+    // Manage alone hint timer (use awareness count for accuracy)
+    const awareCount = sortedAware.length;
+    if (awareCount <= 1 && !aloneHintTimer) {
       aloneHintTimer = setTimeout(() => { showAloneHint = true; aloneHintTimer = undefined; }, 20000);
-    } else if (connectedUsers.length > 1) {
+    } else if (awareCount > 1) {
       if (aloneHintTimer) { clearTimeout(aloneHintTimer); aloneHintTimer = undefined; }
       showAloneHint = false;
     }
