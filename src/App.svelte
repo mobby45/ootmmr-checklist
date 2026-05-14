@@ -51,7 +51,7 @@
   import { initializeStructuredChecks } from './util/util';
   import { parseSpoilerLog } from './util/spoilerParser';
   import { importRandomizerSettings } from './util/importSettings';
-  import type { ErSettings, SeedInfo, SpoilerSphere } from './util/spoilerParser';
+  import type { ErSettings, SeedInfo, SpoilerSphere, SpecialConditionsMap } from './util/spoilerParser';
   import { defaultPresets, defaultPresetNames, presetBaseSettings } from './data/presets';
   import * as T from './data/types';
 
@@ -413,8 +413,10 @@ yKeepalive.observe((event: any) => {
     if (ySpoiler.size === 0) {
       const siStr = localStorage.getItem('spoilerSeedInfo');
       const erStr = localStorage.getItem('spoilerErSettings');
+      const scStr = localStorage.getItem('spoilerSpecialConditions');
       if (siStr) ySpoiler.set('seedInfo', siStr);
       if (erStr) ySpoiler.set('erSettings', erStr);
+      if (scStr) ySpoiler.set('specialConditions', scStr);
     }
   });
 
@@ -437,6 +439,14 @@ yKeepalive.observe((event: any) => {
       localStorage.removeItem('spoilerErSettings');
       spoilerExtraEr = null;
       localStorage.removeItem('spoilerExtraEr');
+    }
+    const scStr = ySpoiler.get('specialConditions');
+    if (scStr !== undefined) {
+      spoilerSpecialConditions = scStr === 'null' ? null : JSON.parse(scStr);
+      localStorage.setItem('spoilerSpecialConditions', scStr);
+    } else if (event.keysChanged?.has?.('specialConditions')) {
+      spoilerSpecialConditions = null;
+      localStorage.removeItem('spoilerSpecialConditions');
     }
     const locStr = ySpoiler.get('locationsBlock');
     if (locStr !== undefined) {
@@ -1042,6 +1052,7 @@ yKeepalive.observe((event: any) => {
   let spoilerLocations: Record<string, string> = applyAliases(JSON.parse(localStorage.getItem('spoilerLocations') ?? '{}'));
   let spoilerSpheres: SpoilerSphere[] = JSON.parse(localStorage.getItem('spoilerSpheres') ?? '[]');
   let spoilerSeedInfo: SeedInfo | null = JSON.parse(localStorage.getItem('spoilerSeedInfo') ?? 'null');
+  let spoilerSpecialConditions: SpecialConditionsMap | null = JSON.parse(localStorage.getItem('spoilerSpecialConditions') ?? 'null');
   let showSpoilerItems = false;
   let showSpoilerSpheres = false;
   let shareSpoiler = false;
@@ -1118,12 +1129,14 @@ yKeepalive.observe((event: any) => {
       const spheresStr = localStorage.getItem('spoilerSpheres');
       const erStr = localStorage.getItem('spoilerErSettings');
       const siStr = localStorage.getItem('spoilerSeedInfo');
+      const scStr = localStorage.getItem('spoilerSpecialConditions');
       if (raw && spheresStr) {
         ydoc.transact(() => {
           ySpoiler.set('locationsBlock', raw);
           ySpoiler.set('spheresBlock', spheresStr);
           ySpoiler.set('erSettings', erStr ?? 'null');
           ySpoiler.set('seedInfo', siStr ?? 'null');
+          ySpoiler.set('specialConditions', scStr ?? 'null');
           for (const [key] of ySpoilerLocations.entries()) {
             ySpoilerLocations.delete(key);
           }
@@ -1136,6 +1149,7 @@ yKeepalive.observe((event: any) => {
         ySpoiler.delete('spheresBlock');
         ySpoiler.delete('erSettings');
         ySpoiler.delete('seedInfo');
+        ySpoiler.delete('specialConditions');
       });
       dbg('spoiler removed from peers');
     }
@@ -1173,6 +1187,8 @@ yKeepalive.observe((event: any) => {
       }
       spoilerExtraEr = Object.keys(extraEr).length ? extraEr : null;
       localStorage.setItem('spoilerExtraEr', JSON.stringify(spoilerExtraEr));
+      spoilerSpecialConditions = data.specialConditions;
+      localStorage.setItem('spoilerSpecialConditions', JSON.stringify(data.specialConditions));
 
       if (shareSpoiler) {
         ydoc.transact(() => {
@@ -1180,6 +1196,7 @@ yKeepalive.observe((event: any) => {
           ySpoiler.set('spheresBlock', spheresStr);
           ySpoiler.set('erSettings', erStr);
           ySpoiler.set('seedInfo', siStr);
+          ySpoiler.set('specialConditions', JSON.stringify(data.specialConditions));
           for (const [key] of ySpoilerLocations.entries()) {
             ySpoilerLocations.delete(key);
           }
@@ -1192,6 +1209,7 @@ yKeepalive.observe((event: any) => {
           ySpoiler.delete('spheresBlock');
           ySpoiler.delete('erSettings');
           ySpoiler.delete('seedInfo');
+          ySpoiler.delete('specialConditions');
         });
         dbg('spoiler NOT shared');
       }
@@ -2313,6 +2331,8 @@ yKeepalive.observe((event: any) => {
     localStorage.removeItem('spoilerSeedInfo');
     spoilerExtraEr = null;
     localStorage.removeItem('spoilerExtraEr');
+    spoilerSpecialConditions = null;
+    localStorage.removeItem('spoilerSpecialConditions');
     for (const [key] of ySpoilerLocations.entries()) {
       ySpoilerLocations.delete(key);
     }
@@ -2320,6 +2340,7 @@ yKeepalive.observe((event: any) => {
     ySpoiler.delete('erSettings');
     ySpoiler.delete('locationsBlock');
     ySpoiler.delete('spheresBlock');
+    ySpoiler.delete('specialConditions');
   }
 
   function resetSettings() {
@@ -2434,6 +2455,7 @@ yKeepalive.observe((event: any) => {
     spoilerSeedInfo: SeedInfo | null;
     spoilerErSettings: ErSettings | null;
     spoilerExtraEr: Record<string, any> | null;
+    spoilerSpecialConditions: SpecialConditionsMap | null;
   }
 
   let saveSlots: SaveSlot[] = JSON.parse(localStorage.getItem('saveSlots') ?? '[]');
@@ -2463,6 +2485,7 @@ yKeepalive.observe((event: any) => {
       spoilerSeedInfo,
       spoilerErSettings,
       spoilerExtraEr,
+      spoilerSpecialConditions,
     };
   }
 
@@ -2526,6 +2549,8 @@ yKeepalive.observe((event: any) => {
     localStorage.setItem('spoilerErSettings', JSON.stringify(spoilerErSettings));
     spoilerExtraEr = slot.spoilerExtraEr ?? null;
     localStorage.setItem('spoilerExtraEr', JSON.stringify(spoilerExtraEr));
+    spoilerSpecialConditions = slot.spoilerSpecialConditions ?? null;
+    localStorage.setItem('spoilerSpecialConditions', JSON.stringify(spoilerSpecialConditions));
     currentSlotId = slot.id;
     localStorage.setItem('currentSlotId', slot.id);
   }
@@ -3008,6 +3033,48 @@ yKeepalive.observe((event: any) => {
     { id: 'shuffleGerudoCard',        label: 'Shuffle Gerudo Card',   values: {} },
     { id: 'shuffleOcarinasOot',       label: 'Shuffle Ocarinas',      values: {} },
   ];
+
+  const specialConditionLabels: Record<string, string> = {
+    BRIDGE: 'Rainbow Bridge',
+    MOON: 'Moon Access',
+    LACS: 'Light Arrow Cutscene',
+    GANON_BK: 'Ganon Boss Key',
+    MAJORA: 'Majora',
+  };
+
+  const subConditionLabels: Record<string, string> = {
+    stones: 'Spiritual Stones',
+    medallions: 'Medallions',
+    remains: 'Boss Remains',
+    skullsGold: 'Gold Skulltula Tokens',
+    skullsSwamp: 'Swamp Skulltula Tokens',
+    skullsOcean: 'Ocean Skulltula Tokens',
+    fairiesWF: 'Stray Fairies (Woodfall)',
+    fairiesSH: 'Stray Fairies (Snowhead)',
+    fairiesGB: 'Stray Fairies (Great Bay)',
+    fairiesST: 'Stray Fairies (Stone Tower)',
+    fairyTown: 'Stray Fairy (Clock Town)',
+    masksRegular: 'Regular Masks (MM)',
+    masksTransform: 'Transformation Masks (MM)',
+    masksOot: 'Masks (OoT)',
+    triforce: 'Triforce Pieces',
+    coinsRed: 'Coins (Red)',
+    coinsGreen: 'Coins (Green)',
+    coinsBlue: 'Coins (Blue)',
+    coinsYellow: 'Coins (Yellow)',
+  };
+
+  $: specialConditionEntries = spoilerSpecialConditions
+    ? Object.entries(spoilerSpecialConditions).filter(([, cond]) => cond.count > 0 || Object.values(cond).some(v => v === true))
+    : [];
+
+  function formatSpecialCondition(cond: import('./util/spoilerParser').SpecialCondition): string {
+    const condAny = cond as any;
+    const enabled = Object.keys(subConditionLabels).filter(k => condAny[k] === true).map(k => subConditionLabels[k]);
+    if (enabled.length === 0) return 'Open';
+    if (cond.count > 0 && cond.count !== enabled.length) return `${cond.count} of ${enabled.join(', ')}`;
+    return enabled.join(', ');
+  }
 </script>
 
 <!-- ==========================================
@@ -3173,6 +3240,17 @@ yKeepalive.observe((event: any) => {
                         <td>{gs.values[$sSettings.get(gs.id)] ?? $sSettings.get(gs.id)}</td>
                       </tr>
                     {/if}
+                  {/each}
+                </table>
+                {/if}
+                {#if specialConditionEntries.length > 0}
+                <table class="seed-table" style="margin-top: 0.6em;">
+                  <tr><td colspan="2" style="font-weight:600; padding-bottom:0.2em;">Special Conditions</td></tr>
+                  {#each specialConditionEntries as [key, cond]}
+                    <tr>
+                      <td>{specialConditionLabels[key] ?? key}</td>
+                      <td>{formatSpecialCondition(cond)}</td>
+                    </tr>
                   {/each}
                 </table>
                 {/if}

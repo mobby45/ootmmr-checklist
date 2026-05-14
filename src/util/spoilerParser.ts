@@ -81,6 +81,31 @@ export interface SeedInfo {
   settingsString: string;
 }
 
+export interface SpecialCondition {
+  count: number;
+  stones: boolean;
+  medallions: boolean;
+  remains: boolean;
+  skullsGold: boolean;
+  skullsSwamp: boolean;
+  skullsOcean: boolean;
+  fairiesWF: boolean;
+  fairiesSH: boolean;
+  fairiesGB: boolean;
+  fairiesST: boolean;
+  fairyTown: boolean;
+  masksRegular: boolean;
+  masksTransform: boolean;
+  masksOot: boolean;
+  triforce: boolean;
+  coinsRed: boolean;
+  coinsGreen: boolean;
+  coinsBlue: boolean;
+  coinsYellow: boolean;
+}
+
+export type SpecialConditionsMap = Record<string, SpecialCondition>;
+
 export interface SpoilerSphereEntryLocation {
   type: 'Location';
   location: string;
@@ -108,6 +133,7 @@ export interface SpoilerData {
   OOTMM: 'both' | 'oot' | 'mm';
   OOTMMDungeons: 'both' | 'ootdungeons' | 'mmdungeons';
   seedInfo: SeedInfo | null;
+  specialConditions: SpecialConditionsMap;
 }
 
 function parseValue(spoilerKey: string, rawValue: string): any {
@@ -131,15 +157,21 @@ export function parseSpoilerLog(text: string): SpoilerData {
   let inEntrances = false;
   let inSpheres = false;
   let currentSphere: SpoilerSphere | null = null;
+  let inSpecialConditions = false;
+  let currentCondition: string | null = null;
+  const specialConditions: Record<string, Record<string, any>> = {};
 
   for (const line of lines) {
-    if (line.trim() === 'Settings') { inSettings = true; inLocations = false; inEntrances = false; continue; }
-    if (line.trim() === 'Entrances') { inEntrances = true; inSettings = false; inLocations = false; continue; }
-    if (line.startsWith('Special Conditions') || line.startsWith('Tricks') || line.startsWith('World Flags') || line.startsWith('Hints') || line.startsWith('Paths')) {
-      inSettings = false; inEntrances = false;
+    if (line.trim() === 'Settings') { inSettings = true; inLocations = false; inEntrances = false; inSpecialConditions = false; continue; }
+    if (line.trim() === 'Entrances') { inEntrances = true; inSettings = false; inLocations = false; inSpecialConditions = false; continue; }
+    if (line.startsWith('Special Conditions')) {
+      inSettings = false; inEntrances = false; inSpecialConditions = true; currentCondition = null; continue;
     }
-    if (line.startsWith('Location List')) { inLocations = true; inSettings = false; inEntrances = false; inSpheres = false; currentSphere = null; continue; }
-    if (line.trim() === 'Spheres') { inSpheres = true; inSettings = false; inLocations = false; inEntrances = false; currentSphere = null; continue; }
+    if (line.startsWith('Tricks') || line.startsWith('World Flags') || line.startsWith('Hints') || line.startsWith('Paths') || line.startsWith('Junk Locations') || line.startsWith('Plando')) {
+      inSettings = false; inEntrances = false; inSpecialConditions = false; currentCondition = null;
+    }
+    if (line.startsWith('Location List')) { inLocations = true; inSettings = false; inEntrances = false; inSpheres = false; currentSphere = null; inSpecialConditions = false; continue; }
+    if (line.trim() === 'Spheres') { inSpheres = true; inSettings = false; inLocations = false; inEntrances = false; currentSphere = null; inSpecialConditions = false; continue; }
     if (inEntrances && line && !line.startsWith(' ')) { inEntrances = false; }
 
     if (inSettings) {
@@ -170,6 +202,25 @@ export function parseSpoilerLog(text: string): SpoilerData {
       if (match) {
         const [, locationName, itemName] = match;
         if (!locationName.match(/\(\d+\)$/)) locations[locationName.trim()] = itemName.trim();
+      }
+    }
+
+    if (inSpecialConditions) {
+      const condMatch = line.match(/^  ([A-Z_]+):$/);
+      if (condMatch) {
+        currentCondition = condMatch[1];
+        specialConditions[currentCondition] = {};
+        continue;
+      }
+      if (currentCondition) {
+        const kvMatch = line.match(/^    ([a-zA-Z]+):\s*(.+)$/);
+        if (kvMatch) {
+          let val: any = kvMatch[2].trim();
+          if (val === 'true') val = true;
+          else if (val === 'false') val = false;
+          else if (!isNaN(Number(val)) && val !== '') val = Number(val);
+          specialConditions[currentCondition][kvMatch[1]] = val;
+        }
       }
     }
 
@@ -269,5 +320,5 @@ export function parseSpoilerLog(text: string): SpoilerData {
     settingsString: settingsStringLine ? settingsStringLine.replace('SettingsString:', '').trim() : '',
   } : null;
 
-  return { settings, locations, entrances, spheres, erSettings, OOTMM, OOTMMDungeons, seedInfo };
+  return { settings, locations, entrances, spheres, erSettings, OOTMM, OOTMMDungeons, seedInfo, specialConditions: specialConditions as SpecialConditionsMap };
 }
