@@ -186,6 +186,10 @@ export function parseSpoilerLog(text: string): SpoilerData {
         if (key === 'bossKeyShuffleOot') settings['bossKeyOotEnabled'] = rawValue.trim() !== 'removed';
         if (key === 'bossKeyShuffleMm') settings['bossKeyMmEnabled'] = rawValue.trim() !== 'removed';
         if (key === 'ganonBossKey') settings['ganonBossKeyEnabled'] = rawValue.trim() !== 'removed';
+        if (key.startsWith('coins')) {
+          const val = rawValue.trim();
+          settings[key] = val === 'true' ? true : val === 'false' ? false : Number(val);
+        }
       }
     }
 

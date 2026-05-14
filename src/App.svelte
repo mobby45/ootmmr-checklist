@@ -1172,6 +1172,7 @@ yKeepalive.observe((event: any) => {
   let spoilerSpheres: SpoilerSphere[] = JSON.parse(localStorage.getItem('spoilerSpheres') ?? '[]');
   let spoilerSeedInfo: SeedInfo | null = JSON.parse(localStorage.getItem('spoilerSeedInfo') ?? 'null');
   let spoilerSpecialConditions: SpecialConditionsMap | null = JSON.parse(localStorage.getItem('spoilerSpecialConditions') ?? 'null');
+  let spoilerCoinCounts: Record<string, number> = JSON.parse(localStorage.getItem('spoilerCoinCounts') ?? '{}');
   let showSpoilerItems = false;
   let showSpoilerSpheres = false;
   let shareSpoiler = false;
@@ -1309,6 +1310,13 @@ yKeepalive.observe((event: any) => {
       localStorage.setItem('spoilerExtraEr', JSON.stringify(spoilerExtraEr));
       spoilerSpecialConditions = data.specialConditions;
       localStorage.setItem('spoilerSpecialConditions', JSON.stringify(data.specialConditions));
+      spoilerCoinCounts = {
+        coinsRed: (data.settings.coinsRed as number) ?? 0,
+        coinsGreen: (data.settings.coinsGreen as number) ?? 0,
+        coinsBlue: (data.settings.coinsBlue as number) ?? 0,
+        coinsYellow: (data.settings.coinsYellow as number) ?? 0,
+      };
+      localStorage.setItem('spoilerCoinCounts', JSON.stringify(spoilerCoinCounts));
       showGameState = false;
       localStorage.setItem('sec_showgamestate', 'false');
 
@@ -2455,6 +2463,8 @@ yKeepalive.observe((event: any) => {
     localStorage.removeItem('spoilerExtraEr');
     spoilerSpecialConditions = null;
     localStorage.removeItem('spoilerSpecialConditions');
+    spoilerCoinCounts = {};
+    localStorage.removeItem('spoilerCoinCounts');
     for (const [key] of ySpoilerLocations.entries()) {
       ySpoilerLocations.delete(key);
     }
@@ -3215,9 +3225,9 @@ yKeepalive.observe((event: any) => {
     ? Object.entries(spoilerSpecialConditions).filter(([, cond]) => cond.count > 0 || Object.values(cond).some(v => v === true))
     : [];
 
-  $: conditionProgress = ($_itemsRevStore, spoilerSpecialConditions ? computeConditionProgress(spoilerSpecialConditions) : null);
+  $: conditionProgress = ($_itemsRevStore, spoilerSpecialConditions ? computeConditionProgress(spoilerSpecialConditions, spoilerCoinCounts) : null);
 
-  function computeConditionProgress(conditions: import('./util/spoilerParser').SpecialConditionsMap): Record<string, Record<string, { obtained: number; total: number }>> {
+  function computeConditionProgress(conditions: import('./util/spoilerParser').SpecialConditionsMap, coinCounts: Record<string, number>): Record<string, Record<string, { obtained: number; total: number }>> {
     const result: Record<string, Record<string, { obtained: number; total: number }>> = {};
     for (const [condKey, cond] of Object.entries(conditions)) {
       const progress: Record<string, { obtained: number; total: number }> = {};
@@ -3229,8 +3239,9 @@ yKeepalive.observe((event: any) => {
           for (const id of ids) {
             const item = itemById[id];
             if (item) {
-              total += item.maxLevel;
-              obtained += Math.min(yItems.get(id) ?? 0, item.maxLevel);
+              const maxLevel = subKey.startsWith('coins') ? (coinCounts[subKey] ?? item.maxLevel) : item.maxLevel;
+              total += maxLevel;
+              obtained += Math.min(yItems.get(id) ?? 0, maxLevel);
             }
           }
           if (total > 0) progress[subKey] = { obtained, total };
