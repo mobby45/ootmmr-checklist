@@ -95,6 +95,21 @@ export const settingsMap: Record<string, string> = {
   // Bombchu behavior (string setting, passed through as-is)
   bombchuBehaviorOot: 'bombchuBehaviorOot',
   bombchuBehaviorMm:  'bombchuBehaviorMm',
+  // Game-state / event settings (informational)
+  startingAge:              'startingAge',
+  doorOfTime:               'doorOfTime',
+  rainbowBridge:            'rainbowBridge',
+  goal:                     'goal',
+  itemPool:                 'itemPool',
+  logic:                    'logic',
+  gerudoFortress:           'gerudoFortress',
+  zoraKing:                 'zoraKing',
+  kakarikoGate:             'kakarikoGate',
+  dekuTree:                 'dekuTree',
+  housesSkulltulaTokens:    'housesSkulltulaTokens',
+  shuffleMasterSword:       'shuffleMasterSword',
+  shuffleGerudoCard:        'shuffleGerudoCard',
+  shuffleOcarinasOot:       'shuffleOcarinasOot',
 };
 
 // Value transformations for settings whose raw spoiler value differs from the tracker value
@@ -111,6 +126,18 @@ export const valueMap: Record<string, Record<string, any>> = {
   townFairyShuffle:         { vanilla: 'vanilla', anywhere: 'anywhere' },
   strayFairyChestShuffle:   { starting: 'starting', ownDungeon: 'own_dungeon', own_dungeon: 'own_dungeon', vanilla: 'vanilla', anywhere: 'anywhere' },
   strayFairyOtherShuffle:   { removed: 'removed', starting: 'starting', ownDungeon: 'own_dungeon', own_dungeon: 'own_dungeon', vanilla: 'vanilla', anywhere: 'anywhere' },
+  // Game-state settings (spoof log → tracker, mostly pass-through)
+  startingAge:              { child: 'child', adult: 'adult', random: 'random' },
+  doorOfTime:               { closed: 'closed', open: 'open' },
+  rainbowBridge:            { open: 'open', vanilla: 'vanilla', medallions: 'medallions', custom: 'custom' },
+  goal:                     { any: 'any', ganon: 'ganon', majora: 'majora', both: 'both', triforce: 'triforce', triforce3: 'triforce3' },
+  itemPool:                 { plentiful: 'plentiful', normal: 'normal', scarce: 'scarce', minimal: 'minimal', barren: 'barren' },
+  logic:                    { allLocations: 'allLocations', beatable: 'beatable', none: 'none' },
+  gerudoFortress:           { vanilla: 'vanilla', single: 'single', open: 'open' },
+  zoraKing:                 { vanilla: 'vanilla', adult: 'adult', open: 'open' },
+  kakarikoGate:             { closed: 'closed', vanilla: 'vanilla', open: 'open' },
+  dekuTree:                 { closed: 'closed', vanilla: 'vanilla', open: 'open' },
+  housesSkulltulaTokens:    { none: 'none', cross: 'cross', all: 'all' },
 };
 
 // Keys parsed as raw booleans (not via settingsMap, stored under their original name)

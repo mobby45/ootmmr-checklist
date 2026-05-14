@@ -21,6 +21,7 @@ export let woth: boolean = false;
 export let barren: boolean = false;
 export let disableTypeColor: boolean = false;
 export let highlighted: boolean = false;
+export let spiderHouse: boolean = false;
 export let checkName: string = '';
 export let zone: string = '';
 export let filter: string = '';
@@ -137,6 +138,7 @@ $: tooltip = [
   class:barren
   class:pinged={!!pingColor}
   class:highlighted
+  class:spider-house
   class:compact
   data-check={checkName}
   style="{pingColor ? `--ping-color: ${pingColor};` : ''}{typeBg ? `--type-bg: ${typeBg};` : ''}{typeBorder ? `--type-border: ${typeBorder};` : ''}"
@@ -217,6 +219,15 @@ $: tooltip = [
 
     &.highlighted {
       animation: check-highlight 2s ease-out forwards;
+    }
+
+    &.spider-house {
+      background-image: linear-gradient(135deg, rgba(120, 80, 200, 0.15), rgba(120, 80, 200, 0.05));
+      border-left-color: #8855cc;
+    }
+    &.spider-house.checked {
+      background-image: none;
+      border-left-color: #8855cc;
     }
   }
 

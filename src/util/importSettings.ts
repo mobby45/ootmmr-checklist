@@ -62,6 +62,10 @@ const KEY_MAP: Record<string, string> = {
   fairyFountainFairyShuffleMm:  'FairyFountainShuffleMM',
   restoreBrokenActors:          'BrokenActorsOOT',
   skipZelda:                    'SkipChildZeldaOOT',
+  housesSkulltulaTokens:        'housesSkulltulaTokens',
+  shuffleMasterSword:           'shuffleMasterSword',
+  shuffleGerudoCard:            'shuffleGerudoCard',
+  shuffleOcarinasOot:           'shuffleOcarinasOot',
 };
 
 // camelCase value → snake_case, plus special-case overrides

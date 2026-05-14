@@ -70,6 +70,21 @@ const base: Record<string, any> = {
   FairyFountainShuffleMM: false,
   BrokenActorsOOT: false,
   SkipChildZeldaOOT: false,
+  // Game-state settings
+  startingAge: 'child',
+  doorOfTime: 'closed',
+  rainbowBridge: 'medallions',
+  goal: 'both',
+  itemPool: 'normal',
+  logic: 'allLocations',
+  gerudoFortress: 'vanilla',
+  zoraKing: 'vanilla',
+  kakarikoGate: 'vanilla',
+  dekuTree: 'open',
+  housesSkulltulaTokens: 'none',
+  shuffleMasterSword: true,
+  shuffleGerudoCard: true,
+  shuffleOcarinasOot: true,
 };
 
 export const presetBaseSettings = base;

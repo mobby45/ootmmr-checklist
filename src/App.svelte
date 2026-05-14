@@ -2989,6 +2989,25 @@ yKeepalive.observe((event: any) => {
     { type: 'checkbox', id: 'BrokenActorsOOT', label: 'Restore Broken Actors (OoT)' },
     { type: 'checkbox', id: 'SkipChildZeldaOOT', label: 'Skip Child Zelda (OoT)' },
   ];
+
+  // Game-state settings displayed read-only in Seed Info
+  $: gameStatePresent = gameStateSettings.some(gs => $sSettings.get(gs.id) != null);
+  const gameStateSettings: { id: string; label: string; values: Record<string, string> }[] = [
+    { id: 'startingAge',              label: 'Starting Age',          values: { child: 'Child', adult: 'Adult', random: 'Random' } },
+    { id: 'goal',                     label: 'Goal',                  values: { any: 'Any Final Boss', ganon: 'Ganon', majora: 'Majora', both: 'Ganon & Majora', triforce: 'Triforce Hunt', triforce3: 'Triforce Quest' } },
+    { id: 'rainbowBridge',            label: 'Rainbow Bridge',        values: { open: 'Open', vanilla: 'Vanilla', medallions: 'Medallions', custom: 'Custom' } },
+    { id: 'doorOfTime',               label: 'Door of Time',          values: { closed: 'Closed', open: 'Open' } },
+    { id: 'itemPool',                 label: 'Item Pool',             values: { plentiful: 'Plentiful', normal: 'Normal', scarce: 'Scarce', minimal: 'Minimal', barren: 'Barren' } },
+    { id: 'logic',                    label: 'Logic',                 values: { allLocations: 'All Locations', beatable: 'Beatable Only', none: 'No Logic' } },
+    { id: 'gerudoFortress',           label: 'Gerudo Fortress',       values: { vanilla: 'Vanilla', single: 'One Carpenter', open: 'Open' } },
+    { id: 'zoraKing',                 label: 'King Zora',             values: { vanilla: 'Vanilla', adult: 'Open (Adult)', open: 'Open' } },
+    { id: 'kakarikoGate',             label: 'Kakariko Gate',         values: { closed: 'Closed', vanilla: 'Vanilla', open: 'Open' } },
+    { id: 'dekuTree',                 label: 'Deku Tree Access',      values: { closed: 'Closed', vanilla: 'Vanilla', open: 'Open' } },
+    { id: 'housesSkulltulaTokens',    label: 'MM House Skulltulas',   values: { none: 'No Shuffle', cross: 'Gold Skulltula Only', all: 'All Tokens' } },
+    { id: 'shuffleMasterSword',       label: 'Shuffle Master Sword',  values: {} },
+    { id: 'shuffleGerudoCard',        label: 'Shuffle Gerudo Card',   values: {} },
+    { id: 'shuffleOcarinasOot',       label: 'Shuffle Ocarinas',      values: {} },
+  ];
 </script>
 
 <!-- ==========================================
@@ -3144,6 +3163,19 @@ yKeepalive.observe((event: any) => {
                     </tr>
                   {/if}
                 </table>
+                {#if gameStatePresent}
+                <table class="seed-table" style="margin-top: 0.6em;">
+                  <tr><td colspan="2" style="font-weight:600; padding-bottom:0.2em;">Game State</td></tr>
+                  {#each gameStateSettings as gs}
+                    {#if $sSettings.get(gs.id) != null}
+                      <tr>
+                        <td>{gs.label}</td>
+                        <td>{gs.values[$sSettings.get(gs.id)] ?? $sSettings.get(gs.id)}</td>
+                      </tr>
+                    {/if}
+                  {/each}
+                </table>
+                {/if}
               {:else}
                 <p class="spoiler-no-log">No spoiler loaded — use <em>Import Spoiler</em> to populate.</p>
               {/if}
@@ -3732,6 +3764,7 @@ yKeepalive.observe((event: any) => {
                   barren={barrenCheckNames.has(check.name)}
                   disableTypeColor={!showTypeColors}
                   highlighted={spoilerHighlight === check.name}
+                  spiderHouse={!!check.scene?.startsWith('MM_SPIDER_HOUSE')}
                   checkName={check.name}
                   zone={group.groupName}
                   {filter}
