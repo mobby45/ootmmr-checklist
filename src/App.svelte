@@ -112,6 +112,7 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
   const yPings: Y.Map<any> = ydoc.getMap('pings');
 const yKeepalive: Y.Map<number> = ydoc.getMap('keepalive');
 const yPeerInfo: Y.Map<string> = ydoc.getMap('peerInfo');
+const yHost: Y.Map<string> = ydoc.getMap('host');
 let peerId = '';
 let lastRemoteKeepalive = 0;
 yKeepalive.observe((event: any) => {
@@ -524,7 +525,7 @@ yKeepalive.observe((event: any) => {
   let roomHasPassword = false;
   let connectionProvider: WebrtcProvider | null = null;
   let watchRelayProvider: WebrtcProvider | null = null;
-  let connectedUsers: { name: string; color: string }[] = [];
+  let connectedUsers: { name: string; color: string; isHost: boolean }[] = [];
   let roomStartTime = 0;
   let relocationCode: string | null = sessionStorage.getItem('relocationCode');
   function persistRelocationCode(v: string | null, reason?: string) {
@@ -611,12 +612,21 @@ yKeepalive.observe((event: any) => {
       bumpConnectedUsersRev();
       return;
     }
-    const entries: { name: string; color: string }[] = [];
+    // Re-elect host if current host is gone
+    const currentHostId = yHost.get('id');
+    const peerIds = Array.from(yPeerInfo.keys()).filter(id => id !== '');
+    if (currentHostId && !peerIds.includes(currentHostId) && peerIds.length > 0) {
+      ydoc.transact(() => yHost.set('id', peerIds[0]));
+    } else if (!currentHostId && peerIds.length > 0) {
+      ydoc.transact(() => yHost.set('id', peerIds[0]));
+    }
+    const hostId = yHost.get('id');
+    const entries: { name: string; color: string; isHost: boolean }[] = [];
     for (const [id, val] of yPeerInfo) {
       try {
         const d = JSON.parse(val as string);
         if (roomStartTime && d.ts && d.ts < roomStartTime) continue;
-        entries.push({ name: d.name || 'Anonymous', color: d.color || '#888' });
+        entries.push({ name: d.name || 'Anonymous', color: d.color || '#888', isHost: id === hostId });
       } catch { /* skip malformed entries */ }
     }
     const prev = connectedUsers.map(u => u.name).join(',');
@@ -746,6 +756,8 @@ yKeepalive.observe((event: any) => {
       dbg('synced event — synced:', ev.synced);
       if (ev.synced) refreshConnectedUsers();
     });
+    // First peer in room = host
+    ydoc.transact(() => { if (!yHost.get('id')) yHost.set('id', peerId); });
     dbg('provider created, room:', full, '| pseudo:', pseudo, '| color:', pingColor);
     refreshConnectedUsers();
 
@@ -998,6 +1010,7 @@ yKeepalive.observe((event: any) => {
       ydoc.transact(() => {
         yMessages.delete(0, yMessages.length);
         for (const key of yPings.keys()) yPings.delete(key);
+        yHost.delete('id');
       });
       messages = [];
       persistRelocationCode(null, 'leaveCoopRoom');
@@ -3714,7 +3727,7 @@ yKeepalive.observe((event: any) => {
                 <div class="connected-users">
                   {#each connectedUsers as u}
                     <span class="connected-dot" style="background:{u.color}" title={u.name}></span>
-                    <span class="connected-name">{u.name}</span>
+                    <span class="connected-name">{u.name}{#if u.isHost} 👑{/if}</span>
                   {/each}
                 </div>
               {/if}
