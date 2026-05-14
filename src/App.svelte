@@ -4483,8 +4483,8 @@ yKeepalive.observe((event: any) => {
   .spoiler-reveal:hover { background: rgba(224, 160, 48, 0.08); }
   .readonly-notice   { font-size: 0.85em; opacity: 0.6; margin: 0.5em 0; font-style: italic; text-align: center; }
   .watch-disabled { opacity: 0.6; }
-  .summary-more-link { font-size: 0.75em; opacity: 0.5; float: right; text-decoration: none; color: inherit; white-space: nowrap; line-height: 2em; }
-  .summary-more-link:hover { opacity: 1; }
+  .summary-more-link { font-size: 0.85em; opacity: 0.7; float: right; text-decoration: none; color: inherit; white-space: nowrap; line-height: 2em; }
+  .summary-more-link:hover { opacity: 1; text-decoration: underline; }
 
   .spoiler-panel { border: none; padding: 0; }
   .spoiler-panel-summary {
