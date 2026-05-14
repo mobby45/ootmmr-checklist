@@ -612,14 +612,16 @@ yKeepalive.observe((event: any) => {
       bumpConnectedUsersRev();
       return;
     }
-    // Host = first peer in join order that is still connected
-    const hostId = yJoinOrder.toArray().find((id: string) => yPeerInfo.has(id)) ?? peerId;
+    // Host = peer with smallest awareness clientId (immediate via signaling, no Yjs sync)
+    const sortedAware = Array.from(connectionProvider.awareness.getStates().entries())
+      .sort(([a], [b]) => a - b);
+    const hostPeerId = sortedAware.length > 0 ? (sortedAware[0][1] as any)?.user?.peerId : null;
     const entries: { name: string; color: string; isHost: boolean }[] = [];
     for (const [id, val] of yPeerInfo) {
       try {
         const d = JSON.parse(val as string);
         if (roomStartTime && d.ts && d.ts < roomStartTime) continue;
-        entries.push({ name: d.name || 'Anonymous', color: d.color || '#888', isHost: id === hostId });
+        entries.push({ name: d.name || 'Anonymous', color: d.color || '#888', isHost: id === hostPeerId });
       } catch { /* skip malformed entries */ }
     }
     const prev = connectedUsers.map(u => u.name).join(',');
@@ -752,6 +754,7 @@ yKeepalive.observe((event: any) => {
       refreshConnectedUsers();
       startDcMonitor();
     });
+    connectionProvider.awareness.on('change', () => refreshConnectedUsers());
     connectionProvider.on('status', (ev: any) => dbg('status event — connected:', ev.connected));
     connectionProvider.on('synced', (ev: any) => {
       dbg('synced event — synced:', ev.synced);
@@ -791,7 +794,7 @@ yKeepalive.observe((event: any) => {
           if (!connectionProvider || !roomName) return;
           dbg('reconnecting… (jitter: ' + jitter.toFixed(0) + 'ms)');
           connectionProvider.connect();
-          connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anonymous', color: pingColor });
+          connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anonymous', color: pingColor, peerId });
           if (healthVerifyTimer) clearTimeout(healthVerifyTimer);
           healthVerifyTimer = setTimeout(() => verifyHealthAfterReconnect(), VERIFY_DELAY_MS);
         }, 500 + jitter);
@@ -824,7 +827,7 @@ yKeepalive.observe((event: any) => {
             if (!connectionProvider || !roomName) return;
             dbg('reconnecting from verify… (jitter: ' + jitter.toFixed(0) + 'ms)');
             connectionProvider.connect();
-            connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anonymous', color: pingColor });
+    connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anonymous', color: pingColor, peerId });
             if (healthVerifyTimer) clearTimeout(healthVerifyTimer);
             healthVerifyTimer = setTimeout(() => verifyHealthAfterReconnect(), VERIFY_DELAY_MS);
           }, 500 + jitter);
@@ -846,8 +849,8 @@ yKeepalive.observe((event: any) => {
         if (!connectionProvider || !roomName) return;
         dbg('destroyAndRecreateProvider — reconnecting (jitter: ' + jitter.toFixed(0) + 'ms)');
         connectionProvider.connect();
-        connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anonymous', color: pingColor });
-        updatePeerInfo();
+connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anonymous', color: pingColor, peerId });
+    updatePeerInfo();
         if (healthVerifyTimer) clearTimeout(healthVerifyTimer);
         healthVerifyTimer = setTimeout(() => verifyHealthAfterReconnect(), VERIFY_DELAY_MS);
       }, 1000 + jitter);
@@ -960,7 +963,7 @@ yKeepalive.observe((event: any) => {
   $: if (connectionProvider) {
     pseudo; pingColor; // ensure Svelte reactivity tracks these
     dbg('updating awareness user — pseudo:', pseudo, '| color:', pingColor);
-    connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anonymous', color: pingColor });
+    connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anonymous', color: pingColor, peerId });
     updatePeerInfo();
   }
 
