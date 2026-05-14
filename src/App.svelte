@@ -3211,7 +3211,7 @@ yKeepalive.observe((event: any) => {
     fairyTown: ['mm_clocktown_stray_fairy'],
     masksRegular: allTrackerItems.filter(i => i.category === 'masks' && i.game === 'mm' && !transformMaskIds.has(i.id)).map(i => i.id),
     masksTransform: ['mask_deku', 'mask_goron', 'mask_zora', 'mask_fierce_deity'],
-    masksOot: ['mask_keaton_oot', 'mask_skull_oot', 'mask_spooky_oot', 'mask_bunny_oot', 'mask_truth_oot', 'mask_goron_oot', 'mask_zora_oot', 'mask_gerudo_oot'],
+    masksOot: ['mask_keaton_oot', 'mask_skull_oot', 'mask_spooky_oot', 'mask_bunny_oot', 'mask_truth_oot', 'mask_goron_oot', 'mask_zora_oot', 'mask_gerudo_oot', 'trade_c_skull', 'trade_c_spooky', 'trade_c_bunny', 'trade_c_truth'],
     triforce: ['sh_triforce', 'sh_triforce_courage', 'sh_triforce_power', 'sh_triforce_wisdom'],
     coinsRed: ['coin_red'],
     coinsGreen: ['coin_green'],
