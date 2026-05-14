@@ -138,7 +138,7 @@ $: tooltip = [
   class:barren
   class:pinged={!!pingColor}
   class:highlighted
-  class:spider-house
+  class:spider-house={spiderHouse}
   class:compact
   data-check={checkName}
   style="{pingColor ? `--ping-color: ${pingColor};` : ''}{typeBg ? `--type-bg: ${typeBg};` : ''}{typeBorder ? `--type-border: ${typeBorder};` : ''}"
