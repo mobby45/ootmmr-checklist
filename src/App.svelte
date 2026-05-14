@@ -3335,6 +3335,8 @@ yKeepalive.observe((event: any) => {
                   {/each}
                 </table>
                 {/if}
+              {:else}
+                <p class="spoiler-no-log" style="margin-top:0.4em;">No spoiler loaded — use <em>Import Spoiler</em> to populate.</p>
               {/if}
             </details>
 
