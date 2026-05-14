@@ -227,6 +227,7 @@
         ['oot_elegy','button_a','button_up','button_down','button_left','button_right'],
         ['key_skeleton','skulltula_platinum','oot_rupee_magical'],
         ['coin_red','coin_green','coin_blue','coin_yellow'],
+        ['sh_triforce','sh_triforce_courage','sh_triforce_power','sh_triforce_wisdom'],
       ]
     },
     {
@@ -289,7 +290,7 @@
         ['mask_postman','mask_all_night','mask_blast','mask_stone','mask_great_fairy','mask_deku'],
         ['mask_keaton','mask_bremen','mask_bunny','mask_don_gero','mask_scents','mask_goron'],
         ['mask_romani','mask_circus_leader','mask_kafei','mask_couple','mask_truth_mm','mask_zora'],
-        ['mask_kamaro','mask_gibdo','mask_garo','mask_captain_hat','mask_giant','mask_fierce_deity'],
+        ['mask_kamaro','mask_gibdo','mask_garo','mask_captain_hat','mask_giant','mask_fierce_deity','mask_spooky_mm'],
       ]
     },
     {
@@ -319,6 +320,7 @@
         ['mm_owl_clock_town','mm_owl_southern_swamp','mm_owl_woodfall','mm_owl_milk_road','mm_owl_mountain_village'],
         ['mm_owl_snowhead','mm_owl_great_bay','mm_owl_zora_cape','mm_owl_ikana_canyon','mm_owl_stone_tower'],
         ['coin_red','coin_green','coin_blue','coin_yellow'],
+        ['sh_triforce','sh_triforce_courage','sh_triforce_power','sh_triforce_wisdom'],
       ]
     },
   ];
