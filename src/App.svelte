@@ -3125,9 +3125,6 @@ yKeepalive.observe((event: any) => {
         </summary>
         <div id="general-container" class="flex flex-wrap" style="margin-top: 0.8em">
           <form class="pure-form pure-form-stacked">
-            <a href="https://github.com/mobby45/ootmmr-checklist" target="_blank" style="margin-left: auto"
-              >↗ More info</a
-            >
             <fieldset>
               <label>
                 Show OOT/MM Overworld
@@ -3713,6 +3710,7 @@ yKeepalive.observe((event: any) => {
                 {/if}
               </fieldset>
             </form>
+          <a href="https://github.com/mobby45/ootmmr-checklist" target="_blank" style="font-size:0.75em; opacity:0.5; margin-top:0.8em; display:inline-block;">↗ More info</a>
         </div>
       </details>
     </section>
