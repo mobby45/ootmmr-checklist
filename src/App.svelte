@@ -612,14 +612,6 @@ yKeepalive.observe((event: any) => {
       bumpConnectedUsersRev();
       return;
     }
-    // Re-elect host if current host is gone
-    const currentHostId = yHost.get('id');
-    const peerIds = Array.from(yPeerInfo.keys()).filter(id => id !== '');
-    if (currentHostId && !peerIds.includes(currentHostId) && peerIds.length > 0) {
-      ydoc.transact(() => yHost.set('id', peerIds[0]));
-    } else if (!currentHostId && peerIds.length > 0) {
-      ydoc.transact(() => yHost.set('id', peerIds[0]));
-    }
     const hostId = yHost.get('id');
     const entries: { name: string; color: string; isHost: boolean }[] = [];
     for (const [id, val] of yPeerInfo) {
@@ -641,6 +633,23 @@ yKeepalive.observe((event: any) => {
       if (aloneHintTimer) { clearTimeout(aloneHintTimer); aloneHintTimer = undefined; }
       showAloneHint = false;
     }
+  }
+
+  function onPeerInfoChange(event: Y.YMapEvent<string>) {
+    const hostId = yHost.get('id');
+    if (hostId) {
+      for (const [key, change] of event.changes.keys) {
+        if (key === hostId && change.action === 'delete') {
+          let newHost: string | null = null;
+          for (const [id] of yPeerInfo) {
+            if (id !== peerId) { newHost = id; break; }
+          }
+          ydoc.transact(() => yHost.set('id', newHost ?? peerId));
+          break;
+        }
+      }
+    }
+    refreshConnectedUsers();
   }
 
   function startDcMonitor() {
@@ -719,8 +728,8 @@ yKeepalive.observe((event: any) => {
     connectionProvider = new WebrtcProvider(full, ydoc, rtcOpts);
     connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anonymous', color: pingColor });
     updatePeerInfo();
-    yPeerInfo.unobserve(refreshConnectedUsers);
-    yPeerInfo.observe(refreshConnectedUsers);
+    yPeerInfo.unobserve(onPeerInfoChange);
+    yPeerInfo.observe(onPeerInfoChange);
     if (peerKeepaliveInterval) clearInterval(peerKeepaliveInterval);
     peerKeepaliveInterval = setInterval(() => updatePeerInfo(), 15000);
     if (peerCleanupInterval) clearInterval(peerCleanupInterval);
@@ -1232,6 +1241,24 @@ yKeepalive.observe((event: any) => {
     navigator.clipboard.writeText(spoilerSeedInfo?.hash ?? '');
     hashCopied = true;
     setTimeout(() => { hashCopied = false; }, 1500);
+  }
+  let settingsCopied = false;
+  function copySettings() {
+    navigator.clipboard.writeText(spoilerSeedInfo?.settingsString ?? '');
+    settingsCopied = true;
+    setTimeout(() => { settingsCopied = false; }, 1500);
+  }
+  let inviteCopied = false;
+  let watchCopied = false;
+  function copyInviteLink() {
+    window.navigator.clipboard.writeText(`${location.origin}${location.pathname}#${roomName}`);
+    inviteCopied = true;
+    setTimeout(() => { inviteCopied = false; }, 2000);
+  }
+  function copyWatchLink() {
+    window.navigator.clipboard.writeText(`${location.origin}${location.pathname}?watch=${roomBaseCode}`);
+    watchCopied = true;
+    setTimeout(() => { watchCopied = false; }, 2000);
   }
 
   let settingsCopied = false;
@@ -3688,16 +3715,16 @@ yKeepalive.observe((event: any) => {
                 <fieldset>
                   <button
                     class="bg-primary pure-button"
-                    on:click|preventDefault={() => window.navigator.clipboard.writeText(`${location.origin}${location.pathname}#${roomName}`)}
+                    on:click|preventDefault={copyInviteLink}
                     title="Share this link — includes password for auto-connect"
-                    >Copy Room Link</button
+                    >{inviteCopied ? '✓ Link Copied' : 'Copy Room Link'}</button
                   >
                   {#if roomHasPassword}
                   <button
                     class="pure-button"
-                    on:click|preventDefault={() => window.navigator.clipboard.writeText(`${location.origin}${location.pathname}?watch=${roomBaseCode}`)}
+                    on:click|preventDefault={copyWatchLink}
                     title="Share a read-only view — viewers cannot edit even if they modify the URL"
-                    >👁 Watch Link</button
+                    >{watchCopied ? '✓ Link Copied' : '👁 Watch Link'}</button
                   >
                   {/if}
                   {#if !roomHasPassword}
