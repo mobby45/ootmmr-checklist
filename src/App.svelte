@@ -112,7 +112,6 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
   const yPings: Y.Map<any> = ydoc.getMap('pings');
 const yKeepalive: Y.Map<number> = ydoc.getMap('keepalive');
 const yPeerInfo: Y.Map<string> = ydoc.getMap('peerInfo');
-const yHost: Y.Map<string> = ydoc.getMap('host');
 let peerId = '';
 let lastRemoteKeepalive = 0;
 yKeepalive.observe((event: any) => {
@@ -612,7 +611,8 @@ yKeepalive.observe((event: any) => {
       bumpConnectedUsersRev();
       return;
     }
-    const hostId = yHost.get('id');
+    // Host is the peer with the smallest peerId (deterministic across all clients, no race)
+    const hostId = [...yPeerInfo.keys()].sort()[0];
     const entries: { name: string; color: string; isHost: boolean }[] = [];
     for (const [id, val] of yPeerInfo) {
       try {
@@ -635,20 +635,7 @@ yKeepalive.observe((event: any) => {
     }
   }
 
-  function onPeerInfoChange(event: Y.YMapEvent<string>) {
-    const hostId = yHost.get('id');
-    if (hostId) {
-      for (const [key, change] of event.changes.keys) {
-        if (key === hostId && change.action === 'delete') {
-          let newHost: string | null = null;
-          for (const [id] of yPeerInfo) {
-            if (id !== peerId) { newHost = id; break; }
-          }
-          ydoc.transact(() => yHost.set('id', newHost ?? peerId));
-          break;
-        }
-      }
-    }
+  function onPeerInfoChange() {
     refreshConnectedUsers();
   }
 
@@ -763,11 +750,7 @@ yKeepalive.observe((event: any) => {
     connectionProvider.on('status', (ev: any) => dbg('status event — connected:', ev.connected));
     connectionProvider.on('synced', (ev: any) => {
       dbg('synced event — synced:', ev.synced);
-      if (ev.synced) {
-        // Claim host only after initial sync (so we can see if one already exists)
-        ydoc.transact(() => { if (!yHost.get('id')) yHost.set('id', peerId); });
-        refreshConnectedUsers();
-      }
+      if (ev.synced) refreshConnectedUsers();
     });
     dbg('provider created, room:', full, '| pseudo:', pseudo, '| color:', pingColor);
     refreshConnectedUsers();
@@ -1021,7 +1004,7 @@ yKeepalive.observe((event: any) => {
       ydoc.transact(() => {
         yMessages.delete(0, yMessages.length);
         for (const key of yPings.keys()) yPings.delete(key);
-        yHost.delete('id');
+
       });
       messages = [];
       persistRelocationCode(null, 'leaveCoopRoom');
@@ -1250,15 +1233,28 @@ yKeepalive.observe((event: any) => {
   }
   let inviteCopied = false;
   let watchCopied = false;
+  function copyText(text: string, setFlag: (v: boolean) => void) {
+    navigator.clipboard.writeText(text).then(() => {
+      setFlag(true);
+      setTimeout(() => setFlag(false), 2000);
+    }).catch(() => {
+      // Fallback for browsers that block clipboard API
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed'; ta.style.left = '-9999px';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      setFlag(true);
+      setTimeout(() => setFlag(false), 2000);
+    });
+  }
   function copyInviteLink() {
-    window.navigator.clipboard.writeText(`${location.origin}${location.pathname}#${roomName}`);
-    inviteCopied = true;
-    setTimeout(() => { inviteCopied = false; }, 2000);
+    copyText(`${location.origin}${location.pathname}#${roomName}`, (v) => inviteCopied = v);
   }
   function copyWatchLink() {
-    window.navigator.clipboard.writeText(`${location.origin}${location.pathname}?watch=${roomBaseCode}`);
-    watchCopied = true;
-    setTimeout(() => { watchCopied = false; }, 2000);
+    copyText(`${location.origin}${location.pathname}?watch=${roomBaseCode}`, (v) => watchCopied = v);
   }
 
   $: spoilerSearchResults = spoilerSearch.trim().length >= 2
