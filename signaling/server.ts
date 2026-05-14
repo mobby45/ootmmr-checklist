@@ -1,5 +1,22 @@
 const topics = new Map<string, Set<WebSocket>>();
 
+function broadcastToTopic(topic: string, data: any, exclude: WebSocket) {
+  topics.get(topic)?.forEach(receiver => {
+    if (receiver !== exclude && receiver.readyState === WebSocket.OPEN) {
+      receiver.send(JSON.stringify(data));
+    }
+  });
+}
+
+function forwardToOneInTopic(topic: string, data: any, exclude: WebSocket) {
+  for (const peer of topics.get(topic) ?? []) {
+    if (peer !== exclude && peer.readyState === WebSocket.OPEN) {
+      peer.send(JSON.stringify(data));
+      return;
+    }
+  }
+}
+
 function setupConn(ws: WebSocket) {
   const subscribedTopics = new Set<string>();
 
@@ -29,11 +46,16 @@ function setupConn(ws: WebSocket) {
         subscribedTopics.delete(t);
       }
     } else if (data.type === 'publish') {
-      topics.get(data.topic)?.forEach(receiver => {
-        if (receiver !== ws && receiver.readyState === WebSocket.OPEN) {
-          receiver.send(JSON.stringify(data));
-        }
-      });
+      broadcastToTopic(data.topic, data, ws);
+    } else if (data.type === 'yjsUpdate') {
+      // Incremental Yjs update — broadcast to all other peers in room
+      broadcastToTopic(data.topic, data, ws);
+    } else if (data.type === 'yjsSyncRequest') {
+      // Full-state request — forward to exactly one other peer
+      forwardToOneInTopic(data.topic, data, ws);
+    } else if (data.type === 'yjsSyncResponse') {
+      // Full-state response — broadcast to all other peers in room
+      broadcastToTopic(data.topic, data, ws);
     }
   };
 }
