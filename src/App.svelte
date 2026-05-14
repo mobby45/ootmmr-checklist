@@ -3072,7 +3072,7 @@ yKeepalive.observe((event: any) => {
     const condAny = cond as any;
     const enabled = Object.keys(subConditionLabels).filter(k => condAny[k] === true).map(k => subConditionLabels[k]);
     if (enabled.length === 0) return 'Open';
-    if (cond.count > 0 && cond.count !== enabled.length) return `${cond.count} of ${enabled.join(', ')}`;
+    if (cond.count > 0 && cond.count !== enabled.length) return `Any ${cond.count} of: ${enabled.join(', ')}`;
     return enabled.join(', ');
   }
 </script>
