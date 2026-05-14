@@ -1190,6 +1190,8 @@ yKeepalive.observe((event: any) => {
       localStorage.setItem('spoilerExtraEr', JSON.stringify(spoilerExtraEr));
       spoilerSpecialConditions = data.specialConditions;
       localStorage.setItem('spoilerSpecialConditions', JSON.stringify(data.specialConditions));
+      showGameState = false;
+      localStorage.setItem('sec_showgamestate', 'false');
 
       if (shareSpoiler) {
         ydoc.transact(() => {
@@ -3071,8 +3073,9 @@ yKeepalive.observe((event: any) => {
 
   function formatSpecialCondition(cond: import('./util/spoilerParser').SpecialCondition): string {
     const enabled = Object.keys(subConditionLabels).filter((k: any) => (cond as any)[k] === true).map(k => subConditionLabels[k]);
-    if (enabled.length === 0) return 'Open';
-    if (cond.count > 0 && cond.count !== enabled.length) return `Any ${cond.count} of: ${enabled.join(', ')}`;
+    if (enabled.length === 0) return `Count: ${cond.count}`;
+    if (cond.count > 0 && cond.count === enabled.length) return `All ${cond.count}: ${enabled.join(', ')}`;
+    if (cond.count > 0) return `Any ${cond.count} of: ${enabled.join(', ')}`;
     return enabled.join(', ');
   }
 </script>
