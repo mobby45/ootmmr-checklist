@@ -3785,6 +3785,7 @@ yKeepalive.observe((event: any) => {
                 {/if}
               </fieldset>
             </form>
+          <a href="https://github.com/mobby45/ootmmr-checklist" target="_blank" class="footer-link">↗ More info</a>
         </div>
       </details>
     </section>
@@ -4051,7 +4052,6 @@ yKeepalive.observe((event: any) => {
         </button>
       </div>
     {/if}
-    <a href="https://github.com/mobby45/ootmmr-checklist" target="_blank" class="footer-link">↗ More info</a>
   </main>
 {/if}
 
