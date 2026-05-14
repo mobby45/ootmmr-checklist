@@ -62,7 +62,7 @@
   import ItemTracker from './components/ItemTracker.svelte';
   import OverlayTracker from './components/OverlayTracker.svelte';
   import HintTracker from './components/HintTracker.svelte';
-  import { allTrackerItems } from './data/itemData';
+  import { allTrackerItems, itemById } from './data/itemData';
 
   import { buildMapData, type MapData, type SceneData } from './util/mapData';
   import type { MapCheck } from './util/mapData';
@@ -316,10 +316,12 @@ yKeepalive.observe((event: any) => {
   // re-run — plain `let` increments in external observers are not reliably
   // wrapped by Svelte's $$invalidate.
   const _checksRevStore = writable(0);
+  const _itemsRevStore = writable(0);
   // Defer the store update to a microtask so it fires AFTER the current Svelte
   // flush cycle. Without this, $$invalidate called during a reactive block has
   // dirty[0] !== -1, so make_dirty skips re-adding the component to dirty_components.
   let _checksRevPending = false;
+  let _itemsRevPending = false;
   let _connectedUsersRev = 0;
   let showAloneHint = false;
   let aloneHintTimer: ReturnType<typeof setTimeout> | undefined;
@@ -332,6 +334,15 @@ yKeepalive.observe((event: any) => {
       Promise.resolve().then(() => {
         _checksRevPending = false;
         _checksRevStore.update(n => n + 1);
+      });
+    }
+  });
+  yItems.observeDeep(() => {
+    if (!_itemsRevPending) {
+      _itemsRevPending = true;
+      Promise.resolve().then(() => {
+        _itemsRevPending = false;
+        _itemsRevStore.update(n => n + 1);
       });
     }
   });
@@ -3067,16 +3078,71 @@ yKeepalive.observe((event: any) => {
     coinsYellow: 'Coins (Yellow)',
   };
 
+  const transformMaskIds = new Set(['mask_deku', 'mask_goron', 'mask_zora', 'mask_fierce_deity']);
+  const subConditionItems: Record<string, string[]> = {
+    stones: ['stone_emerald', 'stone_ruby', 'stone_sapphire'],
+    medallions: ['medal_forest', 'medal_fire', 'medal_water', 'medal_spirit', 'medal_shadow', 'medal_light'],
+    remains: ['remains_odolwa', 'remains_goht', 'remains_gyorg', 'remains_twinmold'],
+    skullsGold: ['skulltula_token'],
+    skullsSwamp: ['mm_skulltulla_woodfall'],
+    skullsOcean: ['mm_skulltulla_greatbay'],
+    fairiesWF: ['mm_woodfall_stray_fairy'],
+    fairiesSH: ['mm_snowhead_stray_fairy'],
+    fairiesGB: ['mm_greatbay_stray_fairy'],
+    fairiesST: ['mm_stonetower_stray_fairy'],
+    fairyTown: ['mm_clocktown_stray_fairy'],
+    masksRegular: allTrackerItems.filter(i => i.category === 'masks' && i.game === 'mm' && !transformMaskIds.has(i.id)).map(i => i.id),
+    masksTransform: ['mask_deku', 'mask_goron', 'mask_zora', 'mask_fierce_deity'],
+    masksOot: ['mask_keaton_oot', 'mask_skull_oot', 'mask_spooky_oot', 'mask_bunny_oot', 'mask_truth_oot', 'mask_goron_oot', 'mask_zora_oot', 'mask_gerudo_oot'],
+    triforce: ['sh_triforce', 'sh_triforce_courage', 'sh_triforce_power', 'sh_triforce_wisdom'],
+    coinsRed: ['coin_red'],
+    coinsGreen: ['coin_green'],
+    coinsBlue: ['coin_blue'],
+    coinsYellow: ['coin_yellow'],
+  };
+
   $: specialConditionEntries = spoilerSpecialConditions
     ? Object.entries(spoilerSpecialConditions).filter(([, cond]) => cond.count > 0 || Object.values(cond).some(v => v === true))
     : [];
 
-  function formatSpecialCondition(cond: import('./util/spoilerParser').SpecialCondition): string {
-    const enabled = Object.keys(subConditionLabels).filter((k: any) => (cond as any)[k] === true).map(k => subConditionLabels[k]);
-    if (enabled.length === 0) return `Count: ${cond.count}`;
-    if (cond.count > 0 && cond.count === enabled.length) return `All ${cond.count}: ${enabled.join(', ')}`;
-    if (cond.count > 0) return `Any ${cond.count} of: ${enabled.join(', ')}`;
-    return enabled.join(', ');
+  $: conditionProgress = ($_itemsRevStore, spoilerSpecialConditions ? computeConditionProgress(spoilerSpecialConditions) : null);
+
+  function computeConditionProgress(conditions: import('./util/spoilerParser').SpecialConditionsMap): Record<string, Record<string, { obtained: number; total: number }>> {
+    const result: Record<string, Record<string, { obtained: number; total: number }>> = {};
+    for (const [condKey, cond] of Object.entries(conditions)) {
+      const progress: Record<string, { obtained: number; total: number }> = {};
+      for (const subKey of Object.keys(subConditionLabels)) {
+        if ((cond as any)[subKey] === true) {
+          const ids = subConditionItems[subKey] ?? [];
+          let obtained = 0;
+          let total = 0;
+          for (const id of ids) {
+            const item = itemById[id];
+            if (item) {
+              total += item.maxLevel;
+              obtained += Math.min(yItems.get(id) ?? 0, item.maxLevel);
+            }
+          }
+          if (total > 0) progress[subKey] = { obtained, total };
+        }
+      }
+      result[condKey] = progress;
+    }
+    return result;
+  }
+
+  function formatSpecialCondition(cond: import('./util/spoilerParser').SpecialCondition, progress?: Record<string, { obtained: number; total: number }>): string {
+    const enabled = Object.keys(subConditionLabels).filter((k: any) => (cond as any)[k] === true);
+    const labels = enabled.map(k => {
+      const label = subConditionLabels[k];
+      const p = progress?.[k];
+      if (p && p.total > 0) return `${label} (${p.obtained}/${p.total})`;
+      return label;
+    });
+    if (labels.length === 0) return `Count: ${cond.count}`;
+    if (cond.count > 0 && cond.count === labels.length) return `All ${cond.count}: ${labels.join(', ')}`;
+    if (cond.count > 0) return `Any ${cond.count} of: ${labels.join(', ')}`;
+    return labels.join(', ');
   }
 </script>
 
@@ -3230,9 +3296,18 @@ yKeepalive.observe((event: any) => {
                     </tr>
                   {/if}
                 </table>
+              {:else}
+                <p class="spoiler-no-log">No spoiler loaded — use <em>Import Spoiler</em> to populate.</p>
+              {/if}
+            </details>
+
+            <!-- Spoiler details: hidden by default -->
+            <details class="spoiler-panel" style="margin-top: 0.4em;">
+              <summary class="spoiler-panel-summary">Seed Details (spoilers)</summary>
+              {#if spoilerSeedInfo}
               {#if gameStatePresent}
                 {#if showGameState}
-                <table class="seed-table" style="margin-top: 0.6em;">
+                <table class="seed-table" style="margin-top: 0.4em;">
                   <tr><td colspan="2" style="font-weight:600; padding-bottom:0.2em;">Game State <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-noninteractive-element-interactions --><span class="hide-btn" title="Hide Game State" on:click|stopPropagation={() => { showGameState = false; localStorage.setItem('sec_showgamestate', 'false'); } }>✕</span></td></tr>
                   {#each gameStateSettings as gs}
                     {#if $sSettings.get(gs.id) != null}
@@ -3255,13 +3330,11 @@ yKeepalive.observe((event: any) => {
                   {#each specialConditionEntries as [key, cond]}
                     <tr>
                       <td>{specialConditionLabels[key] ?? key}</td>
-                      <td>{formatSpecialCondition(cond)}</td>
+                      <td>{formatSpecialCondition(cond, conditionProgress?.[key])}</td>
                     </tr>
                   {/each}
                 </table>
                 {/if}
-              {:else}
-                <p class="spoiler-no-log">No spoiler loaded — use <em>Import Spoiler</em> to populate.</p>
               {/if}
             </details>
 
