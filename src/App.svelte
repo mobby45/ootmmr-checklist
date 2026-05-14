@@ -564,11 +564,19 @@ yKeepalive.observe((event: any) => {
   let yjsRelayWs: WebSocket | null = null;
   let yjsRelayHandler: ((update: Uint8Array, origin: any) => void) | null = null;
   let yjsRelayReconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  let connectingHintTimer: ReturnType<typeof setTimeout> | null = null;
+  let showConnectingHint = false;
   const DEBUG = true;
   const initialHash = window.location.hash;
   function dbg(...args: any[]) { if (DEBUG) console.log('[coop]', ...args); }
   $: isSynced = connectedUsers.length > 1;
   $: if (isSynced) { showOperaWarning = false; if (operaWarningTimer) { clearTimeout(operaWarningTimer); operaWarningTimer = null; } }
+  $: if (connectionProvider && !isSynced) {
+    connectingHintTimer = setTimeout(() => { showConnectingHint = true; }, 8000);
+  } else {
+    if (connectingHintTimer) { clearTimeout(connectingHintTimer); connectingHintTimer = null; }
+    showConnectingHint = false;
+  }
 
   // Store only baseCode in URL hash (never the password). The full code
   // (with password if any) is kept in sessionStorage for auto-rejoin.
@@ -696,6 +704,8 @@ yKeepalive.observe((event: any) => {
       }
     };
     peerId = crypto.randomUUID();
+    // Connect Yjs relay BEFORE y-webrtc so data sync starts immediately
+    connectYjsRelay(full);
     connectionProvider = new WebrtcProvider(full, ydoc, rtcOpts);
     connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anonymous', color: pingColor });
     updatePeerInfo();
@@ -840,8 +850,6 @@ yKeepalive.observe((event: any) => {
       }, 20000);
     }
 
-    // Yjs WebSocket relay — reliable fallback sync when WebRTC P2P fails
-    connectYjsRelay(full);
   }
 
   // ==========================================
@@ -3630,6 +3638,9 @@ yKeepalive.observe((event: any) => {
                 <span>{connectedUsers.length > 1 ? 'Synced' : (connectedUsers.length >= 1 ? 'Connected' : 'Waiting for peers...')}</span>
                 <span style="display:none">{_connectedUsersRev}</span>
               </div>
+              {#if showConnectingHint}
+                <div class="connecting-hint">Peer-to-peer may take up to 30s — data already syncing via relay</div>
+              {/if}
               {#if connectionProvider && !pseudo}
                 <div class="pseudo-hint">Set a name above to sync with others</div>
               {/if}
@@ -4817,6 +4828,13 @@ yKeepalive.observe((event: any) => {
   }
   .sync-status.synced .sync-dot { background: #44cc66; }
   .sync-status.synced { opacity: 1; }
+
+  .connecting-hint {
+    font-size: 0.78em; opacity: 0.65;
+    margin: 2px 0 4px; color: var(--color-accent);
+    animation: pulse-hint 2s ease-in-out infinite;
+  }
+  @keyframes pulse-hint { 0%,100%{opacity:0.45} 50%{opacity:0.85} }
 
   .pseudo-hint {
     font-size: 0.78em;
