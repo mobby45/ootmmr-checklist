@@ -3188,6 +3188,7 @@ yKeepalive.observe((event: any) => {
           <button class="game-filter-btn" class:active={(displaySettings.OOTMMDungeons ?? 'both') === 'both'} on:click|stopPropagation={() => { if (isWatchMode) return; saveDisplaySetting('OOTMMDungeons', 'both'); }}>Both</button>
           <button class="game-filter-btn" class:active={(displaySettings.OOTMMDungeons ?? 'both') === 'ootdungeons'} on:click|stopPropagation={() => { if (isWatchMode) return; saveDisplaySetting('OOTMMDungeons', 'ootdungeons'); }}>OoT</button>
           <button class="game-filter-btn" class:active={(displaySettings.OOTMMDungeons ?? 'both') === 'mmdungeons'} on:click|stopPropagation={() => { if (isWatchMode) return; saveDisplaySetting('OOTMMDungeons', 'mmdungeons'); }}>MM</button>
+          <a href="https://github.com/mobby45/ootmmr-checklist" target="_blank" class="summary-more-link" on:click|stopPropagation>↗ More info</a>
         </summary>
         <div id="general-container" class="flex flex-wrap" style="margin-top: 0.8em">
           <form class="pure-form pure-form-stacked">
@@ -3785,7 +3786,6 @@ yKeepalive.observe((event: any) => {
                 {/if}
               </fieldset>
             </form>
-          <a href="https://github.com/mobby45/ootmmr-checklist" target="_blank" style="font-size:0.75em; opacity:0.5; margin-top:0.8em; display:inline-block;">↗ More info</a>
         </div>
       </details>
     </section>
@@ -4483,6 +4483,8 @@ yKeepalive.observe((event: any) => {
   .spoiler-reveal:hover { background: rgba(224, 160, 48, 0.08); }
   .readonly-notice   { font-size: 0.85em; opacity: 0.6; margin: 0.5em 0; font-style: italic; text-align: center; }
   .watch-disabled { opacity: 0.6; }
+  .summary-more-link { font-size: 0.75em; opacity: 0.5; float: right; text-decoration: none; color: inherit; white-space: nowrap; line-height: 2em; }
+  .summary-more-link:hover { opacity: 1; }
 
   .spoiler-panel { border: none; padding: 0; }
   .spoiler-panel-summary {
