@@ -3261,17 +3261,25 @@ yKeepalive.observe((event: any) => {
       return label;
     });
     if (labels.length === 0) return `Count: ${cond.count}`;
-    if (cond.count > 0 && cond.count === labels.length) return `All ${cond.count}: ${labels.join(', ')}`;
+    if (cond.count > 0 && cond.count === labels.length) {
+      const done = enabled.filter(k => { const p = progress?.[k]; return p && p.obtained >= p.total; }).length;
+      return `All ${cond.count}: ${labels.join(', ')} (${done}/${cond.count})`;
+    }
     if (cond.count > 0) {
       let totalAvailable = 0;
+      let totalObtained = 0;
       for (const k of enabled) {
         const p = progress?.[k];
-        if (p) totalAvailable += p.total;
+        if (p) {
+          totalAvailable += p.total;
+          totalObtained += p.obtained;
+        }
       }
       let text = `Any ${cond.count} of: ${labels.join(', ')}`;
       if (totalAvailable > 0 && totalAvailable < cond.count) {
         text += ` (need ${cond.count}, max ${totalAvailable})`;
       }
+      text += ` (${totalObtained}/${cond.count})`;
       return text;
     }
     return labels.join(', ');
