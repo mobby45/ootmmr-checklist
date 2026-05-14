@@ -3234,7 +3234,7 @@ yKeepalive.observe((event: any) => {
               {#if gameStatePresent}
                 {#if showGameState}
                 <table class="seed-table" style="margin-top: 0.6em;">
-                  <tr><td colspan="2" style="font-weight:600; padding-bottom:0.2em;">Game State</td></tr>
+                  <tr><td colspan="2" style="font-weight:600; padding-bottom:0.2em;">Game State <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-noninteractive-element-interactions --><span class="copy-hash-btn" title="Hide Game State" on:click|stopPropagation={() => showGameState = false}>✕</span></td></tr>
                   {#each gameStateSettings as gs}
                     {#if $sSettings.get(gs.id) != null}
                       <tr>
