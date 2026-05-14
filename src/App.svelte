@@ -112,6 +112,7 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
   const yPings: Y.Map<any> = ydoc.getMap('pings');
 const yKeepalive: Y.Map<number> = ydoc.getMap('keepalive');
 const yPeerInfo: Y.Map<string> = ydoc.getMap('peerInfo');
+const yJoinOrder: Y.Array<string> = ydoc.getArray('joinOrder');
 let peerId = '';
 let lastRemoteKeepalive = 0;
 yKeepalive.observe((event: any) => {
@@ -611,8 +612,8 @@ yKeepalive.observe((event: any) => {
       bumpConnectedUsersRev();
       return;
     }
-    // Host is the peer with the smallest peerId (deterministic across all clients, no race)
-    const hostId = [...yPeerInfo.keys()].sort()[0];
+    // Host = first peer in join order that is still connected
+    const hostId = yJoinOrder.toArray().find((id: string) => yPeerInfo.has(id)) ?? peerId;
     const entries: { name: string; color: string; isHost: boolean }[] = [];
     for (const [id, val] of yPeerInfo) {
       try {
@@ -715,8 +716,12 @@ yKeepalive.observe((event: any) => {
     connectionProvider = new WebrtcProvider(full, ydoc, rtcOpts);
     connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anonymous', color: pingColor });
     updatePeerInfo();
+    // Record join order: first to push stays first (CRDT ensures deterministic ordering)
+    ydoc.transact(() => { if (!yJoinOrder.toArray().includes(peerId)) yJoinOrder.push([peerId]); });
     yPeerInfo.unobserve(onPeerInfoChange);
     yPeerInfo.observe(onPeerInfoChange);
+    yJoinOrder.unobserve(onPeerInfoChange);
+    yJoinOrder.observe(onPeerInfoChange);
     if (peerKeepaliveInterval) clearInterval(peerKeepaliveInterval);
     peerKeepaliveInterval = setInterval(() => updatePeerInfo(), 15000);
     if (peerCleanupInterval) clearInterval(peerCleanupInterval);
@@ -1004,7 +1009,9 @@ yKeepalive.observe((event: any) => {
       ydoc.transact(() => {
         yMessages.delete(0, yMessages.length);
         for (const key of yPings.keys()) yPings.delete(key);
-
+        // Remove own entry from join order
+        const idx = yJoinOrder.toArray().indexOf(peerId);
+        if (idx !== -1) yJoinOrder.delete(idx);
       });
       messages = [];
       persistRelocationCode(null, 'leaveCoopRoom');
