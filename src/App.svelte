@@ -719,10 +719,12 @@ yKeepalive.observe((event: any) => {
       const newCount = ev.webrtcPeers?.length ?? 0;
       if (newCount !== p2pPeerCount) {
         const now = Date.now();
-        if (now - lastFlapTime > P2P_FLAP_MIN_INTERVAL) {
+        // Don't count the first connection (0->1) as flapping
+        if (p2pPeerCount > 0 && now - lastFlapTime > P2P_FLAP_MIN_INTERVAL) {
           p2pFlapCounter++;
           lastFlapTime = now;
         }
+        if (p2pPeerCount === 0) lastFlapTime = now;
         dbg('P2P peers:', p2pPeerCount, '->', newCount, '| flapping:', p2pFlapCounter);
       }
       prevP2pPeerCount = p2pPeerCount;
@@ -773,14 +775,15 @@ yKeepalive.observe((event: any) => {
         lastHealthReconnect = now;
         lastRemoteKeepalive = 0;
         connectionProvider.disconnect();
+        const jitter = Math.random() * 2000;
         setTimeout(() => {
           if (!connectionProvider || !roomName) return;
-          dbg('reconnecting…');
+          dbg('reconnecting… (jitter: ' + jitter.toFixed(0) + 'ms)');
           connectionProvider.connect();
           connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anonymous', color: pingColor });
           if (healthVerifyTimer) clearTimeout(healthVerifyTimer);
           healthVerifyTimer = setTimeout(() => verifyHealthAfterReconnect(), VERIFY_DELAY_MS);
-        }, 500);
+        }, 500 + jitter);
       } else {
         if (failedReconnects > 0) { failedReconnects = 0; dbg('health — OK, reset'); }
       }
@@ -805,13 +808,15 @@ yKeepalive.observe((event: any) => {
           lastHealthReconnect = Date.now();
           lastRemoteKeepalive = 0;
           connectionProvider.disconnect();
+          const jitter = Math.random() * 2000;
           setTimeout(() => {
             if (!connectionProvider || !roomName) return;
+            dbg('reconnecting from verify… (jitter: ' + jitter.toFixed(0) + 'ms)');
             connectionProvider.connect();
             connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anonymous', color: pingColor });
             if (healthVerifyTimer) clearTimeout(healthVerifyTimer);
             healthVerifyTimer = setTimeout(() => verifyHealthAfterReconnect(), VERIFY_DELAY_MS);
-          }, 500);
+          }, 500 + jitter);
         }
       } else {
         dbg('✅ verify OK');
@@ -825,14 +830,16 @@ yKeepalive.observe((event: any) => {
       failedReconnects = 0;
       lastRemoteKeepalive = 0;
       connectionProvider.disconnect();
+      const jitter = Math.random() * 2000;
       setTimeout(() => {
         if (!connectionProvider || !roomName) return;
+        dbg('destroyAndRecreateProvider — reconnecting (jitter: ' + jitter.toFixed(0) + 'ms)');
         connectionProvider.connect();
         connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anonymous', color: pingColor });
         updatePeerInfo();
         if (healthVerifyTimer) clearTimeout(healthVerifyTimer);
         healthVerifyTimer = setTimeout(() => verifyHealthAfterReconnect(), VERIFY_DELAY_MS);
-      }, 1000);
+      }, 1000 + jitter);
     }
 
     // Keep the WebRTC data channel alive by sending small Yjs updates every 10s
@@ -3202,6 +3209,8 @@ yKeepalive.observe((event: any) => {
     coinsYellow: ['coin_yellow'],
   };
 
+  $: hasSpoilerData = spoilerSeedInfo !== null || Object.keys(spoilerLocations).length > 0;
+
   $: specialConditionEntries = spoilerSpecialConditions
     ? Object.entries(spoilerSpecialConditions).filter(([, cond]) => cond.count > 0 || Object.values(cond).some(v => v === true))
     : [];
@@ -3242,7 +3251,18 @@ yKeepalive.observe((event: any) => {
     });
     if (labels.length === 0) return `Count: ${cond.count}`;
     if (cond.count > 0 && cond.count === labels.length) return `All ${cond.count}: ${labels.join(', ')}`;
-    if (cond.count > 0) return `Any ${cond.count} of: ${labels.join(', ')}`;
+    if (cond.count > 0) {
+      let totalAvailable = 0;
+      for (const k of enabled) {
+        const p = progress?.[k];
+        if (p) totalAvailable += p.total;
+      }
+      let text = `Any ${cond.count} of: ${labels.join(', ')}`;
+      if (totalAvailable > 0 && totalAvailable < cond.count) {
+        text += ` (need ${cond.count}, max ${totalAvailable})`;
+      }
+      return text;
+    }
     return labels.join(', ');
   }
 </script>
@@ -3397,6 +3417,8 @@ yKeepalive.observe((event: any) => {
                     </tr>
                   {/if}
                 </table>
+              {:else if hasSpoilerData}
+                <p class="spoiler-no-log">Spoiler data syncing via co-op — seed info pending.</p>
               {:else}
                 <p class="spoiler-no-log">No spoiler loaded — use <em>Import Spoiler</em> to populate.</p>
               {/if}
@@ -3436,6 +3458,8 @@ yKeepalive.observe((event: any) => {
                   {/each}
                 </table>
                 {/if}
+              {:else if hasSpoilerData}
+                <p class="spoiler-no-log" style="margin-top:0.4em;">Spoiler data syncing via co-op — seed details pending.</p>
               {:else}
                 <p class="spoiler-no-log" style="margin-top:0.4em;">No spoiler loaded — use <em>Import Spoiler</em> to populate.</p>
               {/if}
