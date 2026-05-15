@@ -59,6 +59,7 @@
   import CheckItem from './components/CheckItem.svelte';
   import MapModal from './components/MapModal.svelte';
   import ERTracker from './components/ERTracker.svelte';
+  import Pathfinder from './components/Pathfinder.svelte';
   import ItemTracker from './components/ItemTracker.svelte';
   import OverlayTracker from './components/OverlayTracker.svelte';
   import HintTracker from './components/HintTracker.svelte';
@@ -3879,6 +3880,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
           {#if $sEntrances.size > 0}<span class="section-badge">{$sEntrances.size}</span>{/if}
         </summary>
         <ERTracker {yEntrances} entranceValues={entranceValuesMap} {spoilerErSettings} {spoilerExtraEr} {isWatchMode} />
+        <Pathfinder entranceValues={entranceValuesMap} />
       </details>
 
       <!-- Item Tracker -->
