@@ -12,7 +12,7 @@
   $: activeErSettings = spoilerErSettings ?? manualErSettings;
 
   function isActive(erType: ErSettingKey): boolean {
-    return (activeErSettings as any)[erType] ?? false;
+    return (activeErSettings as any)?.[erType] ?? false;
   }
 
   function parseName(name: string): { src: string; dest: string } {
