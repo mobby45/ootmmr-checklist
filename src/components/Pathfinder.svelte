@@ -22,12 +22,16 @@
       : { src: name, dest: name };
   }
 
-  // All possible locations (from entrance names)
-  $: allLocs = [...new Set(allEntrances.map(e => parseName(e.name).src))].sort();
+  // All possible locations (from both src and dest of entrance names)
+  $: allLocs = [...new Set(allEntrances.flatMap(e => {
+    const { src, dest } = parseName(e.name);
+    return [src, dest];
+  }))].sort();
 
   // Build graph:
-  // - If entrance type is ACTIVE (shuffled): only include if user has mapped it
-  // - If entrance type is NOT active (vanilla): include with default destination
+  // - If entrance type is ACTIVE (shuffled): only include if user has mapped it (one-way)
+  // - If entrance type is NOT active (vanilla): add edges in BOTH directions so the graph
+  //   stays connected despite inconsistent naming in the data
   function buildGraph(): Map<string, { entranceId: string; dest: string }[]> {
     const g = new Map<string, { entranceId: string; dest: string }[]>();
     for (const e of allEntrances) {
@@ -41,6 +45,8 @@
       } else {
         if (!g.has(src)) g.set(src, []);
         g.get(src)!.push({ entranceId: e.id, dest: defaultDest });
+        if (!g.has(defaultDest)) g.set(defaultDest, []);
+        g.get(defaultDest)!.push({ entranceId: e.id + '_rev', dest: src });
       }
     }
     return g;
@@ -108,6 +114,7 @@
   }
 
   function entranceName(id: string): string {
+    if (id.endsWith('_rev')) return '(reverse) ' + (allEntrances.find(e => e.id === id.slice(0, -4))?.name ?? id);
     return allEntrances.find(e => e.id === id)?.name ?? id;
   }
 </script>
