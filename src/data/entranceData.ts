@@ -102,6 +102,8 @@ export const allEntrances: EntranceInfo[] = [
   { id: 'OOT_MARKET_FROM_CASTLE', name: "OOT Market Castle Entry to OOT Market", type: 'overworld', erType: 'erOverworld', game: 'oot' },
   { id: 'OOT_MARKET_FROM_TEMPLE_OF_TIME_ENTRYWAY', name: "OOT Temple of Time Entryway to OOT Market", type: 'overworld', erType: 'erOverworld', game: 'oot' },
   { id: 'OOT_TEMPLE_OF_TIME_ENTRYWAY_FROM_MARKET', name: "OOT Market to OOT Temple of Time Entryway", type: 'overworld', erType: 'erOverworld', game: 'oot' },
+  { id: 'OOT_BACK_ALLEY_FROM_MARKET', name: "OOT Market to OOT Back Alley", type: 'overworld', erType: 'erOverworld', game: 'oot' },
+  { id: 'OOT_MARKET_FROM_BACK_ALLEY', name: "OOT Back Alley to OOT Market", type: 'overworld', erType: 'erOverworld', game: 'oot' },
   { id: 'OOT_LAKE_HYLIA_FROM_VALLEY', name: "OOT Gerudo Valley Falls to OOT Lake Hylia", type: 'overworld', erType: 'erOneWays', game: 'oot' },
   { id: 'OOT_LOST_WOODS_FROM_LOST_WOODS_NORTH', name: "OOT Lost Woods Lost North to OOT Lost Woods", type: 'overworld', erType: 'erAlterLw', game: 'oot' },
   { id: 'OOT_LOST_WOODS_FROM_LOST_WOODS_EAST', name: "OOT Lost Woods Lost East to OOT Lost Woods", type: 'overworld', erType: 'erAlterLw', game: 'oot' },
