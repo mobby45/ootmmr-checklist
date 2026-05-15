@@ -555,7 +555,6 @@ export const allEntrances: EntranceInfo[] = [
   { id: 'MM_CANYON_TO_OWL_IKANA', name: "MM Ikana Canyon to MM Owl Ikana", type: 'overworld', erType: 'erOverworld', game: 'mm' },
   { id: 'MM_OWL_STONE_TOWER_TO_STONE_TOWER', name: "MM Owl Stone Tower to MM Stone Tower", type: 'overworld', erType: 'erOverworld', game: 'mm' },
   { id: 'MM_STONE_TOWER_TO_OWL_STONE_TOWER', name: "MM Stone Tower to MM Owl Stone Tower", type: 'overworld', erType: 'erOverworld', game: 'mm' },
-  { id: 'MM_WARP_OWL_GREAT_BAY', name: "MM Soaring to MM Owl Great Bay", type: 'owl', erType: 'erOneWays', game: 'mm' },
   { id: 'MM_WARP_OWL_ZORA_CAPE', name: "MM Soaring to MM Owl Zora Cape", type: 'owl', erType: 'erOneWays', game: 'mm' },
   { id: 'MM_WARP_OWL_SNOWHEAD', name: "MM Soaring to MM Owl Snowhead", type: 'owl', erType: 'erOneWays', game: 'mm' },
   { id: 'MM_WARP_OWL_MOUNTAIN_VILLAGE', name: "MM Soaring to MM Owl Mountain", type: 'owl', erType: 'erOneWays', game: 'mm' },
@@ -806,7 +805,7 @@ export const entranceSubTypes: Record<string, string[]> = {
     'OOT_WARP_SONG_DESERT', 'OOT_WARP_SONG_TEMPLE',
   ],
   erOneWaysStatues: [
-    'MM_WARP_OWL_GREAT_BAY', 'MM_WARP_OWL_ZORA_CAPE',
+    'MM_WARP_OWL_ZORA_CAPE',
     'MM_WARP_OWL_SNOWHEAD', 'MM_WARP_OWL_MOUNTAIN_VILLAGE',
     'MM_WARP_OWL_CLOCK_TOWN', 'MM_WARP_OWL_MILK_ROAD',
     'MM_WARP_OWL_WOODFALL', 'MM_WARP_OWL_SOUTHERN_SWAMP',
