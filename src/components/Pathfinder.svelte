@@ -4,10 +4,17 @@
   export let entranceValues: Map<string, string>;
 
   function parseName(name: string): { src: string; dest: string } {
-    const i = name.indexOf(' to ');
-    return i >= 0
-      ? { src: name.slice(0, i), dest: name.slice(i + 4) }
-      : { src: name, dest: name };
+    let pos = 0;
+    while (true) {
+      const i = name.indexOf(' to ', pos);
+      if (i < 0) return { src: name, dest: name };
+      const src = name.slice(0, i);
+      const dest = name.slice(i + 4);
+      if ((src.startsWith('OOT ') || src.startsWith('MM ')) &&
+          (dest.startsWith('OOT ') || dest.startsWith('MM ')))
+        return { src, dest };
+      pos = i + 4;
+    }
   }
 
   // All possible locations (from both src and dest of entrance names)
