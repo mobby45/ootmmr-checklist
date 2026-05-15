@@ -128,11 +128,21 @@
 
 <div class="pathfinder">
   <div class="pf-row">
-    <input bind:value={fromInput} placeholder="From (e.g. Snowhead Temple)" class="pf-input" list="pf-from" />
+    <div class="pf-input-wrap">
+      <input bind:value={fromInput} placeholder="From" class="pf-input" list="pf-from" />
+      {#if fromInput}
+        <button class="pf-input-clear" on:click={() => fromInput = ''} tabindex="-1">✕</button>
+      {/if}
+    </div>
     <datalist id="pf-from">
       {#each fromSuggestions as s}<option value={s}>{/each}
     </datalist>
-    <input bind:value={toInput} placeholder="To (e.g. Kokiri Forest)" class="pf-input" list="pf-to" />
+    <div class="pf-input-wrap">
+      <input bind:value={toInput} placeholder="To" class="pf-input" list="pf-to" />
+      {#if toInput}
+        <button class="pf-input-clear" on:click={() => toInput = ''} tabindex="-1">✕</button>
+      {/if}
+    </div>
     <datalist id="pf-to">
       {#each toSuggestions as s}<option value={s}>{/each}
     </datalist>
@@ -165,15 +175,37 @@
     gap: 0.4em;
     flex-wrap: wrap;
   }
-  .pf-input {
+  .pf-input-wrap {
+    position: relative;
     flex: 1 1 160px;
     min-width: 100px;
-    padding: 0.35em 0.5em;
+  }
+  .pf-input {
+    width: 100%;
+    padding: 0.35em 1.5em 0.35em 0.5em;
     border: 1px solid var(--color-border);
     border-radius: 4px;
     background: var(--color-bg);
     color: var(--color-text);
     font-size: 0.85em;
+    box-sizing: border-box;
+  }
+  .pf-input-clear {
+    position: absolute;
+    right: 2px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--color-text);
+    opacity: 0.4;
+    cursor: pointer;
+    padding: 2px 4px;
+    font-size: 0.8em;
+    line-height: 1;
+  }
+  .pf-input-clear:hover {
+    opacity: 1;
   }
   .pf-btn {
     padding: 0.35em 0.7em;
