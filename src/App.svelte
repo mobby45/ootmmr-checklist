@@ -3887,7 +3887,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
         {#if erTab === 'tracker'}
           <ERTracker {yEntrances} entranceValues={entranceValuesMap} {spoilerErSettings} {spoilerExtraEr} {isWatchMode} />
         {:else}
-          <Pathfinder entranceValues={entranceValuesMap} />
+          <Pathfinder entranceValues={entranceValuesMap} {spoilerErSettings} />
         {/if}
       </details>
 

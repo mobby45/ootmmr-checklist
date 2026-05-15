@@ -1,7 +1,19 @@
 <script lang="ts">
-  import { allEntrances } from '../data/entranceData';
+  import { allEntrances, type ErSettingKey } from '../data/entranceData';
+  import { defaultErSettings, type ErSettings } from '../util/spoilerParser';
 
   export let entranceValues: Map<string, string>;
+  export let spoilerErSettings: ErSettings | null = null;
+
+  // Active ER settings: spoiler overrides manual; manual falls back to localStorage
+  let manualErSettings: ErSettings = JSON.parse(
+    localStorage.getItem('erSettings') ?? JSON.stringify(defaultErSettings)
+  );
+  $: activeErSettings = spoilerErSettings ?? manualErSettings;
+
+  function isActive(erType: ErSettingKey): boolean {
+    return (activeErSettings as any)[erType] ?? false;
+  }
 
   function parseName(name: string): { src: string; dest: string } {
     const i = name.indexOf(' to ');
@@ -13,14 +25,23 @@
   // All possible locations (from entrance names)
   $: allLocs = [...new Set(allEntrances.map(e => parseName(e.name).src))].sort();
 
-  // Build graph: use mapped destination if available, otherwise vanilla default
+  // Build graph:
+  // - If entrance type is ACTIVE (shuffled): only include if user has mapped it
+  // - If entrance type is NOT active (vanilla): include with default destination
   function buildGraph(): Map<string, { entranceId: string; dest: string }[]> {
     const g = new Map<string, { entranceId: string; dest: string }[]>();
     for (const e of allEntrances) {
       const { src, dest: defaultDest } = parseName(e.name);
-      const to = entranceValues.get(e.id) || defaultDest;
-      if (!g.has(src)) g.set(src, []);
-      g.get(src)!.push({ entranceId: e.id, dest: to });
+      if (isActive(e.erType)) {
+        const mapped = entranceValues.get(e.id);
+        if (mapped) {
+          if (!g.has(src)) g.set(src, []);
+          g.get(src)!.push({ entranceId: e.id, dest: mapped });
+        }
+      } else {
+        if (!g.has(src)) g.set(src, []);
+        g.get(src)!.push({ entranceId: e.id, dest: defaultDest });
+      }
     }
     return g;
   }
