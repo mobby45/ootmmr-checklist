@@ -117,21 +117,27 @@
     if (id.endsWith('_rev')) return '(reverse) ' + (allEntrances.find(e => e.id === id.slice(0, -4))?.name ?? id);
     return allEntrances.find(e => e.id === id)?.name ?? id;
   }
+
+  function clearAll() {
+    fromInput = '';
+    toInput = '';
+    pathResult = null;
+    pathError = '';
+  }
 </script>
 
 <div class="pathfinder">
-  <h4 style="margin:0 0 0.5em 0">Pathfinder</h4>
   <div class="pf-row">
     <input bind:value={fromInput} placeholder="From (e.g. Snowhead Temple)" class="pf-input" list="pf-from" />
     <datalist id="pf-from">
       {#each fromSuggestions as s}<option value={s}>{/each}
     </datalist>
-    <span style="margin:0 0.3em">→</span>
     <input bind:value={toInput} placeholder="To (e.g. Kokiri Forest)" class="pf-input" list="pf-to" />
     <datalist id="pf-to">
       {#each toSuggestions as s}<option value={s}>{/each}
     </datalist>
-    <button class="pure-button bg-primary" on:click={findPath}>Find Path</button>
+    <button class="pf-btn pf-btn-primary" on:click={findPath}>Find Path</button>
+    <button class="pf-btn pf-btn-clear" on:click={clearAll}>Clear</button>
   </div>
 
   {#if pathResult !== null}
@@ -152,26 +158,43 @@
 <style>
   .pathfinder {
     margin-top: 0.8em;
-    padding: 0.6em;
-    background: rgba(255,255,255,0.03);
-    border-radius: 6px;
-    border: 1px solid rgba(255,255,255,0.08);
   }
   .pf-row {
     display: flex;
     align-items: center;
-    gap: 0.3em;
+    gap: 0.4em;
     flex-wrap: wrap;
   }
   .pf-input {
-    flex: 1 1 180px;
-    min-width: 120px;
-    padding: 0.3em 0.5em;
-    border: 1px solid #555;
+    flex: 1 1 160px;
+    min-width: 100px;
+    padding: 0.35em 0.5em;
+    border: 1px solid var(--color-border);
     border-radius: 4px;
-    background: #222;
-    color: #eee;
-    font-size: 0.9em;
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-size: 0.85em;
+  }
+  .pf-btn {
+    padding: 0.35em 0.7em;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85em;
+    white-space: nowrap;
+  }
+  .pf-btn-primary {
+    background: var(--color-primary);
+    color: #000;
+  }
+  .pf-btn-clear {
+    background: transparent;
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+    opacity: 0.6;
+  }
+  .pf-btn-clear:hover {
+    opacity: 1;
   }
   .pf-path {
     margin-top: 0.5em;
@@ -185,12 +208,13 @@
     color: #81c784;
   }
   .pf-arrow {
-    color: #888;
+    color: var(--color-text);
+    opacity: 0.4;
     margin: 0 0.15em;
   }
   .pf-error {
     margin-top: 0.4em;
-    color: #e57373;
+    color: var(--color-danger);
     font-size: 0.9em;
   }
 </style>
