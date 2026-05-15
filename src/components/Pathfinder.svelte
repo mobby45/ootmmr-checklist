@@ -1,19 +1,7 @@
 <script lang="ts">
-  import { allEntrances, type ErSettingKey } from '../data/entranceData';
-  import { defaultErSettings, type ErSettings } from '../util/spoilerParser';
+  import { allEntrances } from '../data/entranceData';
 
   export let entranceValues: Map<string, string>;
-  export let spoilerErSettings: ErSettings | null = null;
-
-  // Active ER settings: spoiler overrides manual; manual falls back to localStorage
-  let manualErSettings: ErSettings = JSON.parse(
-    localStorage.getItem('erSettings') ?? JSON.stringify(defaultErSettings)
-  );
-  $: activeErSettings = spoilerErSettings ?? manualErSettings;
-
-  function isActive(erType: ErSettingKey): boolean {
-    return (activeErSettings as any)?.[erType] ?? false;
-  }
 
   function parseName(name: string): { src: string; dest: string } {
     const i = name.indexOf(' to ');
@@ -29,25 +17,17 @@
   }))].sort();
 
   // Build graph:
-  // - If entrance type is ACTIVE (shuffled): only include if user has mapped it (one-way)
-  // - If entrance type is NOT active (vanilla): add edges in BOTH directions so the graph
-  //   stays connected despite inconsistent naming in the data
+  // - For each entrance, use the mapped destination if available, else vanilla default
+  // - Add edges in BOTH directions so the graph stays connected despite inconsistent naming
   function buildGraph(): Map<string, { entranceId: string; dest: string }[]> {
     const g = new Map<string, { entranceId: string; dest: string }[]>();
     for (const e of allEntrances) {
       const { src, dest: defaultDest } = parseName(e.name);
-      if (isActive(e.erType)) {
-        const mapped = entranceValues.get(e.id);
-        if (mapped) {
-          if (!g.has(src)) g.set(src, []);
-          g.get(src)!.push({ entranceId: e.id, dest: mapped });
-        }
-      } else {
-        if (!g.has(src)) g.set(src, []);
-        g.get(src)!.push({ entranceId: e.id, dest: defaultDest });
-        if (!g.has(defaultDest)) g.set(defaultDest, []);
-        g.get(defaultDest)!.push({ entranceId: e.id + '_rev', dest: src });
-      }
+      const dest = entranceValues.get(e.id) || defaultDest;
+      if (!g.has(src)) g.set(src, []);
+      g.get(src)!.push({ entranceId: e.id, dest });
+      if (!g.has(dest)) g.set(dest, []);
+      g.get(dest)!.push({ entranceId: e.id + '_rev', dest: src });
     }
     return g;
   }
