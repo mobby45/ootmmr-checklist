@@ -86,6 +86,8 @@
 
   let fromInput = '';
   let toInput = '';
+  let fromFocused = false;
+  let toFocused = false;
   let pathResult: { entranceId: string; from: string; to: string }[] | null = null;
   let pathError = '';
 
@@ -96,6 +98,9 @@
   $: toSuggestions = toInput.length >= 2
     ? allLocs.filter(l => l.toLowerCase().includes(toInput.toLowerCase())).slice(0, 20)
     : [];
+
+  function pickFrom(val: string) { fromInput = val; fromFocused = false; }
+  function pickTo(val: string) { toInput = val; toFocused = false; }
 
   function findPath() {
     pathResult = null;
@@ -161,24 +166,36 @@
 <div class="pathfinder">
   <div class="pf-row">
     <div class="pf-input-wrap">
-      <input bind:value={fromInput} placeholder="From" class="pf-input" list="pf-from" />
+      <input bind:value={fromInput} placeholder="From" class="pf-input"
+        on:focus={() => fromFocused = true}
+        on:blur={() => setTimeout(() => fromFocused = false, 150)} />
       {#if fromInput}
         <button class="pf-input-clear" on:click={() => fromInput = ''} tabindex="-1">✕</button>
       {/if}
+      {#if fromFocused && fromSuggestions.length > 0}
+        <div class="pf-suggestions" on:mousedown|preventDefault={() => {}}>
+          {#each fromSuggestions as s}
+            <button class="pf-suggestion" on:click={() => pickFrom(s)}>{s}</button>
+          {/each}
+        </div>
+      {/if}
     </div>
-    <datalist id="pf-from">
-      {#each fromSuggestions as s}<option value={s}>{/each}
-    </datalist>
     <span class="pf-arrow-icon">→</span>
     <div class="pf-input-wrap">
-      <input bind:value={toInput} placeholder="To" class="pf-input" list="pf-to" />
+      <input bind:value={toInput} placeholder="To" class="pf-input"
+        on:focus={() => toFocused = true}
+        on:blur={() => setTimeout(() => toFocused = false, 150)} />
       {#if toInput}
         <button class="pf-input-clear" on:click={() => toInput = ''} tabindex="-1">✕</button>
       {/if}
+      {#if toFocused && toSuggestions.length > 0}
+        <div class="pf-suggestions" on:mousedown|preventDefault={() => {}}>
+          {#each toSuggestions as s}
+            <button class="pf-suggestion" on:click={() => pickTo(s)}>{s}</button>
+          {/each}
+        </div>
+      {/if}
     </div>
-    <datalist id="pf-to">
-      {#each toSuggestions as s}<option value={s}>{/each}
-    </datalist>
     <button class="pf-btn pf-btn-primary" on:click={findPath}>Find Path</button>
     <button class="pf-btn pf-btn-clear" on:click={clearAll}>Clear</button>
   </div>
@@ -223,9 +240,33 @@
     font-size: 0.85em;
     box-sizing: border-box;
   }
-  .pf-input::-webkit-calendar-picker-indicator,
-  .pf-input::-webkit-list-button {
-    display: none;
+  .pf-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 10;
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-top: none;
+    border-radius: 0 0 4px 4px;
+    max-height: 200px;
+    overflow-y: auto;
+  }
+  .pf-suggestion {
+    display: block;
+    width: 100%;
+    padding: 0.3em 0.5em;
+    background: none;
+    border: none;
+    color: var(--color-text);
+    font-size: 0.82em;
+    text-align: left;
+    cursor: pointer;
+  }
+  .pf-suggestion:hover {
+    background: var(--color-primary);
+    color: #000;
   }
   .pf-input-clear {
     position: absolute;
