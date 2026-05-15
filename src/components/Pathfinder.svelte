@@ -155,6 +155,7 @@
     <datalist id="pf-from">
       {#each fromSuggestions as s}<option value={s}>{/each}
     </datalist>
+    <span class="pf-arrow-icon">→</span>
     <div class="pf-input-wrap">
       <input bind:value={toInput} placeholder="To" class="pf-input" list="pf-to" />
       {#if toInput}
@@ -208,6 +209,10 @@
     font-size: 0.85em;
     box-sizing: border-box;
   }
+  .pf-input::-webkit-calendar-picker-indicator,
+  .pf-input::-webkit-list-button {
+    display: none;
+  }
   .pf-input-clear {
     position: absolute;
     right: 2px;
@@ -224,6 +229,13 @@
   }
   .pf-input-clear:hover {
     opacity: 1;
+  }
+  .pf-arrow-icon {
+    color: var(--color-text);
+    opacity: 0.35;
+    font-size: 1em;
+    line-height: 1;
+    flex-shrink: 0;
   }
   .pf-btn {
     padding: 0.35em 0.7em;
