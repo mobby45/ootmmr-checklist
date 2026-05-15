@@ -16,9 +16,16 @@
     return [src, dest];
   }))].sort();
 
+  // Known cross-game links in vanilla OoTMM (mask shop ↔ clock town)
+  const gameLinks: [string, string][] = [
+    ['OOT Market Mask Shop', 'MM Clock Town South'],
+    ['MM Clock Tower', 'OOT Market'],
+  ];
+
   // Build graph:
   // - For each entrance, use the mapped destination if available, else vanilla default
   // - Add edges in BOTH directions so the graph stays connected despite inconsistent naming
+  // - Add virtual cross-game edges so OoT ↔ MM paths work
   function buildGraph(): Map<string, { entranceId: string; dest: string }[]> {
     const g = new Map<string, { entranceId: string; dest: string }[]>();
     for (const e of allEntrances) {
@@ -28,6 +35,13 @@
       g.get(src)!.push({ entranceId: e.id, dest });
       if (!g.has(dest)) g.set(dest, []);
       g.get(dest)!.push({ entranceId: e.id + '_rev', dest: src });
+    }
+    // Virtual cross-game edges
+    for (const [a, b] of gameLinks) {
+      if (!g.has(a)) g.set(a, []);
+      if (!g.has(b)) g.set(b, []);
+      g.get(a)!.push({ entranceId: 'gameLink', dest: b });
+      g.get(b)!.push({ entranceId: 'gameLink', dest: a });
     }
     return g;
   }
@@ -94,6 +108,7 @@
   }
 
   function entranceName(id: string): string {
+    if (id === 'gameLink') return 'Game Link (Mask Shop / Clock Tower)';
     if (id.endsWith('_rev')) return '(reverse) ' + (allEntrances.find(e => e.id === id.slice(0, -4))?.name ?? id);
     return allEntrances.find(e => e.id === id)?.name ?? id;
   }
