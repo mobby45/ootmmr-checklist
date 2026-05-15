@@ -24,8 +24,10 @@
 
   // Build graph:
   // - For each entrance, use the mapped destination if available, else vanilla default
-  // - Add edges in BOTH directions so the graph stays connected despite inconsistent naming
-  // - Add virtual cross-game edges so OoT ↔ MM paths work
+  // - Add edges in BOTH directions so the graph stays connected
+  // - Add virtual cross-game edges (mask shop ↔ clock town)
+  // - Auto-link same-game locations sharing 2+ leading words (e.g. "MM Mountain Village"
+  //   and "MM Mountain Village Cliff") to bridge naming inconsistencies in the entrance data
   function buildGraph(): Map<string, { entranceId: string; dest: string }[]> {
     const g = new Map<string, { entranceId: string; dest: string }[]>();
     for (const e of allEntrances) {
@@ -36,12 +38,32 @@
       if (!g.has(dest)) g.set(dest, []);
       g.get(dest)!.push({ entranceId: e.id + '_rev', dest: src });
     }
-    // Virtual cross-game edges
     for (const [a, b] of gameLinks) {
       if (!g.has(a)) g.set(a, []);
       if (!g.has(b)) g.set(b, []);
       g.get(a)!.push({ entranceId: 'gameLink', dest: b });
       g.get(b)!.push({ entranceId: 'gameLink', dest: a });
+    }
+    // Auto-link locations sharing 2+ leading words in the same game
+    const locs = [...g.keys()];
+    const gameOf = (s: string) => s.startsWith('OOT ') ? 'oot' : s.startsWith('MM ') ? 'mm' : null;
+    const stripGame = (s: string) => s.startsWith('OOT ') ? s.slice(4) : s.startsWith('MM ') ? s.slice(3) : s;
+    const words = (s: string) => s.split(/\s+/);
+    for (let i = 0; i < locs.length; i++) {
+      const gi = gameOf(locs[i]);
+      if (!gi) continue;
+      const wi = words(stripGame(locs[i]));
+      for (let j = i + 1; j < locs.length; j++) {
+        if (gameOf(locs[j]) !== gi) continue;
+        const wj = words(stripGame(locs[j]));
+        let shared = 0;
+        const limit = Math.min(wi.length, wj.length);
+        while (shared < limit && wi[shared] === wj[shared]) shared++;
+        if (shared >= 2) {
+          g.get(locs[i])!.push({ entranceId: 'autoLink', dest: locs[j] });
+          g.get(locs[j])!.push({ entranceId: 'autoLink', dest: locs[i] });
+        }
+      }
     }
     return g;
   }
@@ -109,6 +131,7 @@
 
   function entranceName(id: string): string {
     if (id === 'gameLink') return 'Game Link (Mask Shop / Clock Tower)';
+    if (id === 'autoLink') return 'Auto Link (same area)';
     if (id.endsWith('_rev')) return '(reverse) ' + (allEntrances.find(e => e.id === id.slice(0, -4))?.name ?? id);
     return allEntrances.find(e => e.id === id)?.name ?? id;
   }

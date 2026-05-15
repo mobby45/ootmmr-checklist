@@ -349,6 +349,8 @@ export const allEntrances: EntranceInfo[] = [
   { id: 'MM_TERMINA_FIELD_FROM_ROAD_TO_IKANA', name: "MM Road to Ikana Front to MM Termina Field", type: 'overworld', erType: 'erOverworld', game: 'mm' },
   { id: 'MM_MOUNTAIN_VILLAGE_PATH_FROM_TERMINA_FIELD', name: "MM Behind Large Icicles to MM Mountain Village Path Lower", type: 'overworld', erType: 'erOverworld', game: 'mm' },
   { id: 'MM_TERMINA_FIELD_FROM_PATH_TO_MOUNTAIN_VILLAGE', name: "MM Mountain Village Path Lower to MM Behind Large Icicles", type: 'overworld', erType: 'erOverworld', game: 'mm' },
+  { id: 'MM_TERMINA_FIELD_FROM_BEHIND_LARGE_ICICLES', name: "MM Behind Large Icicles to MM Termina Field", type: 'overworld', erType: 'erOverworld', game: 'mm' },
+  { id: 'MM_BEHIND_LARGE_ICICLES_FROM_TERMINA_FIELD', name: "MM Termina Field to MM Behind Large Icicles", type: 'overworld', erType: 'erOverworld', game: 'mm' },
   { id: 'MM_SWAMP_ROAD_FROM_FIELD', name: "MM Termina Field to MM Road to Southern Swamp", type: 'overworld', erType: 'erOverworld', game: 'mm' },
   { id: 'MM_TERMINA_FIELD_FROM_ROAD_TO_SWAMP', name: "MM Road to Southern Swamp to MM Termina Field", type: 'overworld', erType: 'erOverworld', game: 'mm' },
   { id: 'MM_MILK_ROAD_FROM_FIELD', name: "MM Termina Field to MM Milk Road", type: 'overworld', erType: 'erOverworld', game: 'mm' },
