@@ -536,8 +536,7 @@ export const allEntrances: EntranceInfo[] = [
   { id: 'MM_DEKU_PALACE_EXTERIOR_FROM_THRONE_CAGE', name: "MM Deku Palace Cage to MM Deku Palace Near Cage", type: 'interior', erType: 'erIndoors', game: 'mm' },
   { id: 'MM_SAKON_HIDEOUT', name: "MM Ikana Valley to MM Sakon Hideout", type: 'interior', erType: 'erIndoors', game: 'mm' },
   { id: 'MM_IKANA_CANYON_FROM_SAKON_HIDEOUT', name: "MM Sakon Hideout to MM Ikana Valley", type: 'interior', erType: 'erIndoors', game: 'mm' },
-  { id: 'MM_OWL_GREAT_BAY_TO_COAST', name: "MM Owl Great Bay to MM Great Bay Coast", type: 'overworld', erType: 'erOverworld', game: 'mm' },
-  { id: 'MM_COAST_TO_OWL_GREAT_BAY', name: "MM Great Bay Coast to MM Owl Great Bay", type: 'overworld', erType: 'erOverworld', game: 'mm' },
+
   { id: 'MM_OWL_ZORA_CAPE_TO_ZORA_CAPE', name: "MM Owl Zora Cape to MM Zora Cape", type: 'overworld', erType: 'erOverworld', game: 'mm' },
   { id: 'MM_ZORA_CAPE_TO_OWL_ZORA_CAPE', name: "MM Zora Cape to MM Owl Zora Cape", type: 'overworld', erType: 'erOverworld', game: 'mm' },
   { id: 'MM_OWL_SNOWHEAD_TO_PATH', name: "MM Owl Snowhead to MM Path to Snowhead Back", type: 'overworld', erType: 'erOverworld', game: 'mm' },
