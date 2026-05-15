@@ -2825,6 +2825,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
   const _loadSec = (k: string) => localStorage.getItem(k) === 'true';
   let secGeneral    = _loadSec('sec_general');
   let secEr         = _loadSec('sec_er');
+  let erTab: 'tracker' | 'pathfinder' = 'tracker';
   let secItem       = _loadSec('sec_item');
   let secHint       = _loadSec('sec_hint');
   let secShuffle    = _loadSec('sec_shuffle');
@@ -3879,8 +3880,15 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
           <strong class="interactable">Entrance Rando Tracker</strong>
           {#if $sEntrances.size > 0}<span class="section-badge">{$sEntrances.size}</span>{/if}
         </summary>
-        <ERTracker {yEntrances} entranceValues={entranceValuesMap} {spoilerErSettings} {spoilerExtraEr} {isWatchMode} />
-        <Pathfinder entranceValues={entranceValuesMap} />
+        <div class="er-tabs" role="tablist">
+          <button class="er-tab" class:active={erTab === 'tracker'} on:click={() => erTab = 'tracker'} role="tab">Tracker</button>
+          <button class="er-tab" class:active={erTab === 'pathfinder'} on:click={() => erTab = 'pathfinder'} role="tab">Pathfinder</button>
+        </div>
+        {#if erTab === 'tracker'}
+          <ERTracker {yEntrances} entranceValues={entranceValuesMap} {spoilerErSettings} {spoilerExtraEr} {isWatchMode} />
+        {:else}
+          <Pathfinder entranceValues={entranceValuesMap} />
+        {/if}
       </details>
 
       <!-- Item Tracker -->
@@ -5042,5 +5050,26 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     padding: 0.4em 1em; cursor: pointer;
   }
   .shop-edit-cancel:hover { background: #555; }
+
+  .er-tabs {
+    display: flex; gap: 0;
+    border-bottom: 1px solid #444;
+    margin-bottom: 0.5em;
+  }
+  .er-tab {
+    padding: 0.4em 1em;
+    background: transparent;
+    color: #999;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .er-tab:hover { color: #ddd; }
+  .er-tab.active {
+    color: #81c784;
+    border-bottom-color: #81c784;
+  }
 
 </style>

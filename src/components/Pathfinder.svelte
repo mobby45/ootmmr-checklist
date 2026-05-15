@@ -3,25 +3,24 @@
 
   export let entranceValues: Map<string, string>;
 
-  // Extract unique "from" location from each entrance name ("Source to Dest" → "Source")
-  function srcLoc(name: string): string {
+  function parseName(name: string): { src: string; dest: string } {
     const i = name.indexOf(' to ');
-    return i >= 0 ? name.slice(0, i) : name;
+    return i >= 0
+      ? { src: name.slice(0, i), dest: name.slice(i + 4) }
+      : { src: name, dest: name };
   }
 
   // All possible locations (from entrance names)
-  $: allLocs = [...new Set(allEntrances.map(e => srcLoc(e.name)))].sort();
+  $: allLocs = [...new Set(allEntrances.map(e => parseName(e.name).src))].sort();
 
-  // Build graph from mapped entrances only
+  // Build graph: use mapped destination if available, otherwise vanilla default
   function buildGraph(): Map<string, { entranceId: string; dest: string }[]> {
     const g = new Map<string, { entranceId: string; dest: string }[]>();
     for (const e of allEntrances) {
-      const from = srcLoc(e.name);
-      const to = entranceValues.get(e.id);
-      if (to) {
-        if (!g.has(from)) g.set(from, []);
-        g.get(from)!.push({ entranceId: e.id, dest: to });
-      }
+      const { src, dest: defaultDest } = parseName(e.name);
+      const to = entranceValues.get(e.id) || defaultDest;
+      if (!g.has(src)) g.set(src, []);
+      g.get(src)!.push({ entranceId: e.id, dest: to });
     }
     return g;
   }
