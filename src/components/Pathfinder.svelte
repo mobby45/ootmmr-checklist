@@ -51,7 +51,14 @@
       g.get(a)!.push({ entranceId: 'gameLink', dest: b });
       g.get(b)!.push({ entranceId: 'gameLink', dest: a });
     }
-    // Auto-link locations sharing 2+ leading words in the same game
+    // Count unique neighbors (degree) for each location
+    const degree = new Map<string, number>();
+    for (const [loc, edges] of g) {
+      degree.set(loc, new Set(edges.map(e => e.dest)).size);
+    }
+    // Auto-link same-game locations sharing 2+ leading words,
+    // but only when at least one is a leaf (degree ≤ 1) so well-connected
+    // nodes like "OOT Lost Woods Bridge" (degree 2) aren't shortcut.
     const locs = [...g.keys()];
     const gameOf = (s: string) => s.startsWith('OOT ') ? 'oot' : s.startsWith('MM ') ? 'mm' : null;
     const stripGame = (s: string) => s.startsWith('OOT ') ? s.slice(4) : s.startsWith('MM ') ? s.slice(3) : s;
@@ -66,7 +73,7 @@
         let shared = 0;
         const limit = Math.min(wi.length, wj.length);
         while (shared < limit && wi[shared] === wj[shared]) shared++;
-        if (shared >= 2) {
+        if (shared >= 2 && (degree.get(locs[i])! <= 1 || degree.get(locs[j])! <= 1)) {
           g.get(locs[i])!.push({ entranceId: 'autoLink', dest: locs[j] });
           g.get(locs[j])!.push({ entranceId: 'autoLink', dest: locs[i] });
         }
