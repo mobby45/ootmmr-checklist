@@ -66,6 +66,22 @@ const KEY_MAP: Record<string, string> = {
   shuffleMasterSword:           'shuffleMasterSword',
   shuffleGerudoCard:            'shuffleGerudoCard',
   shuffleOcarinasOot:           'shuffleOcarinasOot',
+  // Cross-game songs (MM songs in OoT pool)
+  sharedSongHealing:            'sharedSongHealing',
+  sharedSongSoaring:            'sharedSongSoaring',
+  sharedSongSonata:             'sharedSongSonata',
+  sharedSongLullaby:            'sharedSongLullaby',
+  sharedSongNova:               'sharedSongNova',
+  sharedSongOath:               'sharedSongOath',
+  // Cross-game songs (OoT songs in MM pool)
+  sharedSongZeldaLullaby:       'sharedSongZeldaLullaby',
+  sharedSongSaria:              'sharedSongSaria',
+  sharedSongMinuet:             'sharedSongMinuet',
+  sharedSongBolero:             'sharedSongBolero',
+  sharedSongSerenade:           'sharedSongSerenade',
+  sharedSongRequiem:            'sharedSongRequiem',
+  sharedSongNocturne:           'sharedSongNocturne',
+  sharedSongPrelude:            'sharedSongPrelude',
 };
 
 // camelCase value → snake_case, plus special-case overrides
@@ -85,7 +101,7 @@ async function inflateRaw(bytes: Uint8Array): Promise<Uint8Array> {
   const ds = new DecompressionStream('deflate-raw');
   const writer = ds.writable.getWriter();
   const reader = ds.readable.getReader();
-  writer.write(bytes);
+  writer.write(bytes as BufferSource);
   writer.close();
   const chunks: Uint8Array[] = [];
   while (true) {
@@ -139,5 +155,18 @@ export async function importRandomizerSettings(str: string): Promise<{
       if (isShuffleLike) unmapped.push(ootmmKey);
     }
   }
+  // Auto-enable UI toggles derived from multiple OoTMM settings
+  const crossGameKeys = [
+    'sharedSongHealing','sharedSongSoaring','sharedSongSonata','sharedSongLullaby','sharedSongNova','sharedSongOath',
+    'sharedSongZeldaLullaby','sharedSongSaria','sharedSongMinuet','sharedSongBolero',
+    'sharedSongSerenade','sharedSongRequiem','sharedSongNocturne','sharedSongPrelude',
+  ];
+  if (crossGameKeys.some(k => appSettings[k] === true)) {
+    appSettings['crossGameSongs'] = true;
+  }
+  if (raw['songEventsShuffleOot'] === true || raw['songEventsShuffleMm'] === true) {
+    appSettings['songEventShuffle'] = true;
+  }
+
   return { appSettings, unmapped };
 }

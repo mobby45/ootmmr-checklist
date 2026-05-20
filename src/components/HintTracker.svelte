@@ -1,5 +1,7 @@
 <script lang="ts">
-  import type { Array as YArray } from 'yjs';
+  import type { Array as YArray, Map as YMap } from 'yjs';
+  import { allTrackerItems } from '../data/itemData';
+  import { sharedToOot, sharedToMm, ootToShared, mmToShared } from '../data/sharedSync';
 
   export let yHints: YArray<any>;
   export let hints: any[] = [];
@@ -10,6 +12,9 @@
   export let onDeleteNote: ((id: string) => void) | null = null;
   export let onDeleteShop: ((id: string) => void) | null = null;
   export let isWatchMode = false;
+  export let ySongEvents: YMap<string> | null = null;
+  export let yItems: YMap<number> | null = null;
+  export let songEventShuffle = false;
 
   $: annotationCount = notesEntries.length + shopEntries.length;
 
@@ -42,7 +47,58 @@
     { id: 'other',    label: 'Other',    color: '#9b59b6' },
   ];
 
-  let view: 'hints' | 'notes' = 'hints';
+  // Song Events Shuffle data
+  const SONG_EVENT_SLOTS = [
+    { slot: 0,  oot: null,                      mm: 'Open Woodfall Temple' },
+    { slot: 1,  oot: 'Drain Well',              mm: 'Open Snowhead' },
+    { slot: 2,  oot: 'Open Royal Tomb',         mm: 'Wake Turtle' },
+    { slot: 4,  oot: 'Darunia (child)',         mm: 'Goron Graveyard Mask' },
+    { slot: 5,  oot: "Farore's Wind",           mm: 'Gibdo Mask' },
+    { slot: 6,  oot: "Din's Fire",              mm: 'Kamaro Mask' },
+    { slot: 7,  oot: "Nayru's Love",            mm: 'Zora Mask' },
+    { slot: 8,  oot: 'Magic Upgrade (DMT)',     mm: 'Wake Keeta' },
+    { slot: 9,  oot: 'Double Magic (DMC)',      mm: null },
+    { slot: 10, oot: 'Defense Upgrade',         mm: 'Goron Baby' },
+    { slot: 11, oot: null,                      mm: 'Lift Ikana Curse' },
+  ];
+
+  const songChoices = allTrackerItems.filter(i => i.category === 'songs' && i.maxLevel >= 1);
+
+  let songEventMap: Record<string, string> = {};
+  $: if (ySongEvents) {
+    ySongEvents.observe(() => { songEventMap = Object.fromEntries(ySongEvents!.entries()); });
+    songEventMap = Object.fromEntries(ySongEvents.entries());
+  }
+
+  let itemMap: Record<string, number> = {};
+  $: if (yItems) {
+    yItems.observe(() => { itemMap = Object.fromEntries(yItems!.entries()); });
+    itemMap = Object.fromEntries(yItems.entries());
+  }
+
+  function setSongEvent(slot: number, songId: string) {
+    if (isWatchMode || !ySongEvents) return;
+    if (songId) ySongEvents.set(String(slot), songId);
+    else ySongEvents.delete(String(slot));
+  }
+
+  function isSongObtained(songId: string): boolean {
+    if ((itemMap[songId] ?? 0) > 0) return true;
+    // Check via shared ↔ game-specific counterparts
+    const shId = ootToShared[songId] ?? mmToShared[songId] ?? (songId.startsWith('sh_') ? songId : null);
+    if (shId) {
+      if ((itemMap[shId] ?? 0) > 0) return true;
+      for (const id of (sharedToOot[shId] ?? [])) if ((itemMap[id] ?? 0) > 0) return true;
+      for (const id of (sharedToMm[shId] ?? []))  if ((itemMap[id] ?? 0) > 0) return true;
+    }
+    return false;
+  }
+
+  function selectValue(e: Event): string {
+    return (e.target as HTMLSelectElement | null)?.value ?? '';
+  }
+
+  let view: 'hints' | 'notes' | 'songs' = 'hints';
   let newText = '';
   let newType: HintType = 'woth';
   let filterType: HintType | 'all' = 'all';
@@ -128,6 +184,11 @@
     <button class="tab-btn" class:active={view === 'notes'} on:click={() => view = 'notes'}>
       Notes {#if annotationCount > 0}<span class="tab-count">{annotationCount}</span>{/if}
     </button>
+    {#if songEventShuffle}
+      <button class="tab-btn" class:active={view === 'songs'} on:click={() => view = 'songs'}>
+        Songs
+      </button>
+    {/if}
   </div>
 
   {#if view === 'hints'}
@@ -195,7 +256,7 @@
       </ul>
     {/if}
 
-  {:else}
+  {:else if view === 'notes'}
     <!-- Notes + Shops grid -->
     {#if annotationCount === 0}
       <p class="empty">No notes or shops yet.</p>
@@ -252,6 +313,50 @@
         </div>
       {/each}
     {/if}
+  {:else if view === 'songs'}
+    <!-- Song Events Shuffle -->
+    <table class="song-events-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>OoT effect</th>
+          <th>MM effect</th>
+          <th>Required song</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {#each SONG_EVENT_SLOTS as evt}
+          {@const selectedId = songEventMap[String(evt.slot)] ?? ''}
+          {@const obtained = selectedId ? isSongObtained(selectedId) : null}
+          <tr>
+            <td class="slot-num">{evt.slot}</td>
+            <td class="effect-cell">{evt.oot ?? '—'}</td>
+            <td class="effect-cell">{evt.mm ?? '—'}</td>
+            <td>
+              <select
+                value={selectedId}
+                on:change={e => setSongEvent(evt.slot, selectValue(e))}
+                disabled={isWatchMode}
+                class="song-select"
+              >
+                <option value="">—</option>
+                {#each songChoices as song}
+                  <option value={song.id}>{song.name}</option>
+                {/each}
+              </select>
+            </td>
+            <td class="status-cell">
+              {#if obtained === true}
+                <span class="status-ok">✓</span>
+              {:else if obtained === false}
+                <span class="status-no">✗</span>
+              {/if}
+            </td>
+          </tr>
+        {/each}
+      </tbody>
+    </table>
   {/if}
 </div>
 
@@ -502,5 +607,23 @@
     opacity: 0.5;
   }
   .del-btn:hover { opacity: 1; }
+
+  .song-events-table { width: 100%; border-collapse: collapse; font-size: 0.82em; }
+  .song-events-table th, .song-events-table td { padding: 3px 6px; border-bottom: 1px solid var(--color-border); text-align: left; }
+  .song-events-table th { opacity: 0.6; font-weight: normal; }
+  .slot-num { width: 1.5em; text-align: center; opacity: 0.5; }
+  .effect-cell { color: var(--color-text-muted, #aaa); font-size: 0.9em; }
+  .song-select {
+    background: var(--color-bg-input, #1a1a1a);
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+    border-radius: 3px;
+    padding: 1px 4px;
+    font-size: 0.85em;
+    max-width: 14em;
+  }
+  .status-cell { width: 1.5em; text-align: center; }
+  .status-ok { color: #2ecc71; font-weight: bold; }
+  .status-no { color: #e74c3c; font-weight: bold; }
 
 </style>

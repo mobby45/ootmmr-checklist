@@ -218,6 +218,9 @@
       rows: [
         ['oot_song_zelda','oot_song_epona','oot_song_saria','oot_song_sun','oot_song_time','oot_song_storms'],
         ['oot_song_minuet','oot_song_bolero','oot_song_serenade','oot_song_requiem','oot_song_nocturne','oot_song_prelude'],
+        ...($settingsStore.get('crossGameSongs') === true ? [
+          ['oot_song_healing','oot_song_soaring','oot_song_sonata','oot_song_lullaby','oot_song_nova','oot_song_oath'],
+        ] : []),
       ]
     },
     {
@@ -274,6 +277,9 @@
       rows: [
         ['mm_song_time','mm_song_healing','mm_song_epona','mm_song_soaring','mm_song_storms','mm_song_sun'],
         ['mm_song_sonata','mm_song_lullaby','mm_song_nova','mm_song_elegy','mm_song_oath'],
+        ...($settingsStore.get('crossGameSongs') === true ? [
+          ['mm_song_zelda','mm_song_saria','mm_song_minuet','mm_song_bolero','mm_song_serenade','mm_song_requiem','mm_song_nocturne','mm_song_prelude'],
+        ] : []),
       ]
     },
     {
@@ -446,6 +452,25 @@
     { key: 'sharedSongTime',   name: 'Song of Time' },
     { key: 'sharedSongSun',    name: "Sun's Song" },
     { key: 'sharedSongElegy',  name: 'Elegy of Emptiness' },
+    { header: 'Cross-Game Songs (MM → OoT)' },
+    { key: 'sharedSongHealing',  name: 'Song of Healing' },
+    { key: 'sharedSongSoaring',  name: 'Song of Soaring' },
+    { key: 'sharedSongSonata',   name: 'Sonata of Awakening' },
+    { key: 'sharedSongLullaby',  name: "Goron's Lullaby" },
+    { key: 'sharedSongNova',     name: 'New Wave Bossa Nova' },
+    { key: 'sharedSongOath',     name: 'Oath to Order' },
+    { header: 'Cross-Game Songs (OoT → MM)' },
+    { key: 'sharedSongZeldaLullaby', name: "Zelda's Lullaby" },
+    { key: 'sharedSongSaria',        name: "Saria's Song" },
+    { key: 'sharedSongMinuet',       name: 'Minuet of Forest' },
+    { key: 'sharedSongBolero',       name: 'Bolero of Fire' },
+    { key: 'sharedSongSerenade',     name: 'Serenade of Water' },
+    { key: 'sharedSongRequiem',      name: 'Requiem of Spirit' },
+    { key: 'sharedSongNocturne',     name: 'Nocturne of Shadow' },
+    { key: 'sharedSongPrelude',      name: 'Prelude of Light' },
+    { header: 'Song Events' },
+    { key: 'crossGameSongs',     name: 'Show Cross-Game Song Icons' },
+    { key: 'songEventShuffle',   name: 'Song Events Shuffle' },
     { header: 'Bottles' },
     { key: 'sharedHealth',         name: 'Bottle' },
     { key: 'sharedBottleRuto',     name: "Ruto's Letter" },
@@ -481,6 +506,10 @@
     ySettings.set(key, value);
   }
 
+  function getItemKey(item: VItem): string {
+    return getItemKey(item);
+  }
+
   // ==========================================
   // SOULS
   // ==========================================
@@ -504,7 +533,7 @@
   // ==========================================
   // ITEM INTERACTION
   // ==========================================
-  function handleClick(e: MouseEvent, item: TrackerItem) {
+  function handleClick(e: MouseEvent | KeyboardEvent, item: TrackerItem) {
     if (isWatchMode || item.maxLevel === 0) return;
     if (e.shiftKey && item.showCount) {
       const now = Date.now();
@@ -714,9 +743,9 @@
                   {#if item}
                     {@const level = $itemStore.get(cellId) ?? 0}
                     {@const badge = getBadge(item, level)}
-                    <div class="tracker-item" class:obtained={isObtained(item,level)} class:maxed={isMaxed(item,level)}
+                    <div class="tracker-item" role="button" tabindex="0" class:obtained={isObtained(item,level)} class:maxed={isMaxed(item,level)}
                       title="{item.name}{item.maxLevel>1&&level>0?` — ${item.levelLabels?.[level-1]??level}`:''}"
-                      on:click={e=>handleClick(e,item)} on:contextmenu={e=>handleRightClick(e,item)}>
+                      on:click={e=>handleClick(e,item)} on:contextmenu={e=>handleRightClick(e,item)} on:keydown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();handleClick(e,item)}}}>
                       <img loading="lazy" src={getIconSrc(item,level)} alt={item.name} class="tracker-icon" class:greyed={isGreyed(item,level)} draggable="false"/>
                       {#if badge}<span class="badge">{badge}</span>{/if}
                     </div>
@@ -741,8 +770,8 @@
                   {#if item}
                     {@const level = $itemStore.get(cellId) ?? 0}
                     {@const badge = getBadge(item, level)}
-                    <div class="tracker-item" class:obtained={isObtained(item,level)} class:maxed={isMaxed(item,level)}
-                      title="{item.name}" on:click={e=>handleClick(e,item)} on:contextmenu={e=>handleRightClick(e,item)}>
+                    <div class="tracker-item" role="button" tabindex="0" class:obtained={isObtained(item,level)} class:maxed={isMaxed(item,level)}
+                      title="{item.name}" on:click={e=>handleClick(e,item)} on:contextmenu={e=>handleRightClick(e,item)} on:keydown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();handleClick(e,item)}}}>
                       <img loading="lazy" src={getIconSrc(item,level)} alt={item.name} class="tracker-icon" class:greyed={isGreyed(item,level)} draggable="false"/>
                       {#if badge}<span class="badge">{badge}</span>{/if}
                     </div>
@@ -772,8 +801,8 @@
                   {#if item}
                     {@const level = $itemStore.get(cellId) ?? 0}
                     {@const badge = getBadge(item, level)}
-                    <div class="tracker-item" class:obtained={isObtained(item,level)} class:maxed={isMaxed(item,level)}
-                      title="{item.name}" on:click={e=>handleClick(e,item)} on:contextmenu={e=>handleRightClick(e,item)}>
+                    <div class="tracker-item" role="button" tabindex="0" class:obtained={isObtained(item,level)} class:maxed={isMaxed(item,level)}
+                      title="{item.name}" on:click={e=>handleClick(e,item)} on:contextmenu={e=>handleRightClick(e,item)} on:keydown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();handleClick(e,item)}}}>
                       <img loading="lazy" src={getIconSrc(item,level)} alt={item.name} class="tracker-icon" class:greyed={isGreyed(item,level)} draggable="false"/>
                       {#if badge}<span class="badge">{badge}</span>{/if}
                     </div>
@@ -798,8 +827,8 @@
                   {#if item}
                     {@const level = $itemStore.get(cellId) ?? 0}
                     {@const badge = getBadge(item, level)}
-                    <div class="tracker-item" class:obtained={isObtained(item,level)} class:maxed={isMaxed(item,level)}
-                      title="{item.name}" on:click={e=>handleClick(e,item)} on:contextmenu={e=>handleRightClick(e,item)}>
+                    <div class="tracker-item" role="button" tabindex="0" class:obtained={isObtained(item,level)} class:maxed={isMaxed(item,level)}
+                      title="{item.name}" on:click={e=>handleClick(e,item)} on:contextmenu={e=>handleRightClick(e,item)} on:keydown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();handleClick(e,item)}}}>
                       <img loading="lazy" src={getIconSrc(item,level)} alt={item.name} class="tracker-icon" class:greyed={isGreyed(item,level)} draggable="false"/>
                       {#if badge}<span class="badge">{badge}</span>{/if}
                     </div>
@@ -827,8 +856,8 @@
                 {#if item}
                   {@const level = $itemStore.get(cellId) ?? 0}
                   {@const badge = getBadge(item, level)}
-                  <div class="tracker-item" class:obtained={isObtained(item,level)} class:maxed={isMaxed(item,level)}
-                    title="{item.name}" on:click={e=>handleClick(e,item)} on:contextmenu={e=>handleRightClick(e,item)}>
+                  <div class="tracker-item" role="button" tabindex="0" class:obtained={isObtained(item,level)} class:maxed={isMaxed(item,level)}
+                    title="{item.name}" on:click={e=>handleClick(e,item)} on:contextmenu={e=>handleRightClick(e,item)} on:keydown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();handleClick(e,item)}}}>
                     <img loading="lazy" src={getIconSrc(item,level)} alt={item.name} class="tracker-icon" class:greyed={isGreyed(item,level)} draggable="false"/>
                     {#if badge}<span class="badge">{badge}</span>{/if}
                   </div>
@@ -854,8 +883,8 @@
                 {#if item}
                   {@const level = $itemStore.get(cellId) ?? 0}
                   {@const badge = getBadge(item, level)}
-                  <div class="tracker-item" class:obtained={isObtained(item,level)} class:maxed={isMaxed(item,level)}
-                    title="{item.name}" on:click={e=>handleClick(e,item)} on:contextmenu={e=>handleRightClick(e,item)}>
+                  <div class="tracker-item" role="button" tabindex="0" class:obtained={isObtained(item,level)} class:maxed={isMaxed(item,level)}
+                    title="{item.name}" on:click={e=>handleClick(e,item)} on:contextmenu={e=>handleRightClick(e,item)} on:keydown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();handleClick(e,item)}}}>
                     <img loading="lazy" src={getIconSrc(item,level)} alt={item.name} class="tracker-icon" class:greyed={isGreyed(item,level)} draggable="false"/>
                     {#if badge}<span class="badge">{badge}</span>{/if}
                   </div>
@@ -891,8 +920,8 @@
                   {#if item}
                     {@const level = $itemStore.get(cellId) ?? 0}
                     {@const badge = getBadge(item, level)}
-                    <div class="tracker-item" class:obtained={isObtained(item,level)} class:maxed={isMaxed(item,level)}
-                      title="{item.name}" on:click={e=>handleClick(e,item)} on:contextmenu={e=>handleRightClick(e,item)}>
+                    <div class="tracker-item" role="button" tabindex="0" class:obtained={isObtained(item,level)} class:maxed={isMaxed(item,level)}
+                      title="{item.name}" on:click={e=>handleClick(e,item)} on:contextmenu={e=>handleRightClick(e,item)} on:keydown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();handleClick(e,item)}}}>
                       <img loading="lazy" src={getIconSrc(item,level)} alt={item.name} class="tracker-icon" class:greyed={isGreyed(item,level)} draggable="false"/>
                       {#if badge}<span class="badge">{badge}</span>{/if}
                     </div>
@@ -917,8 +946,8 @@
                   {#if item}
                     {@const level = $itemStore.get(cellId) ?? 0}
                     {@const badge = getBadge(item, level)}
-                    <div class="tracker-item" class:obtained={isObtained(item,level)} class:maxed={isMaxed(item,level)}
-                      title="{item.name}" on:click={e=>handleClick(e,item)} on:contextmenu={e=>handleRightClick(e,item)}>
+                    <div class="tracker-item" role="button" tabindex="0" class:obtained={isObtained(item,level)} class:maxed={isMaxed(item,level)}
+                      title="{item.name}" on:click={e=>handleClick(e,item)} on:contextmenu={e=>handleRightClick(e,item)} on:keydown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();handleClick(e,item)}}}>
                       <img loading="lazy" src={getIconSrc(item,level)} alt={item.name} class="tracker-icon" class:greyed={isGreyed(item,level)} draggable="false"/>
                       {#if badge}<span class="badge">{badge}</span>{/if}
                     </div>
@@ -948,8 +977,8 @@
                   {#if item}
                     {@const level = $itemStore.get(cellId) ?? 0}
                     {@const badge = getBadge(item, level)}
-                    <div class="tracker-item" class:obtained={isObtained(item,level)} class:maxed={isMaxed(item,level)}
-                      title="{item.name}" on:click={e=>handleClick(e,item)} on:contextmenu={e=>handleRightClick(e,item)}>
+                    <div class="tracker-item" role="button" tabindex="0" class:obtained={isObtained(item,level)} class:maxed={isMaxed(item,level)}
+                      title="{item.name}" on:click={e=>handleClick(e,item)} on:contextmenu={e=>handleRightClick(e,item)} on:keydown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();handleClick(e,item)}}}>
                       <img loading="lazy" src={getIconSrc(item,level)} alt={item.name} class="tracker-icon" class:greyed={isGreyed(item,level)} draggable="false"/>
                       {#if badge}<span class="badge">{badge}</span>{/if}
                     </div>
@@ -974,8 +1003,8 @@
                   {#if item}
                     {@const level = $itemStore.get(cellId) ?? 0}
                     {@const badge = getBadge(item, level)}
-                    <div class="tracker-item" class:obtained={isObtained(item,level)} class:maxed={isMaxed(item,level)}
-                      title="{item.name}" on:click={e=>handleClick(e,item)} on:contextmenu={e=>handleRightClick(e,item)}>
+                    <div class="tracker-item" role="button" tabindex="0" class:obtained={isObtained(item,level)} class:maxed={isMaxed(item,level)}
+                      title="{item.name}" on:click={e=>handleClick(e,item)} on:contextmenu={e=>handleRightClick(e,item)} on:keydown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();handleClick(e,item)}}}>
                       <img loading="lazy" src={getIconSrc(item,level)} alt={item.name} class="tracker-icon" class:greyed={isGreyed(item,level)} draggable="false"/>
                       {#if badge}<span class="badge">{badge}</span>{/if}
                     </div>
@@ -1004,8 +1033,8 @@
                   {@const item = effectiveItemById[cellId]}
                   {#if item}
                     {@const level = $itemStore.get(cellId) ?? 0}
-                    <div class="tracker-item" class:obtained={isObtained(item,level)} class:maxed={isMaxed(item,level)}
-                      title="{item.name}" on:click={e=>handleClick(e,item)} on:contextmenu={e=>handleRightClick(e,item)}>
+                    <div class="tracker-item" role="button" tabindex="0" class:obtained={isObtained(item,level)} class:maxed={isMaxed(item,level)}
+                      title="{item.name}" on:click={e=>handleClick(e,item)} on:contextmenu={e=>handleRightClick(e,item)} on:keydown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();handleClick(e,item)}}}>
                       <img loading="lazy" src={getIconSrc(item,level)} alt={item.name} class="tracker-icon" class:greyed={isGreyed(item,level)} draggable="false"/>
                     </div>
                   {:else}<div class="cell-empty"></div>{/if}
@@ -1029,8 +1058,8 @@
                   {#if item}
                     {@const level = $itemStore.get(cellId) ?? 0}
                     {@const badge = getBadge(item, level)}
-                    <div class="tracker-item" class:obtained={isObtained(item,level)} class:maxed={isMaxed(item,level)}
-                      title="{item.name}" on:click={e=>handleClick(e,item)} on:contextmenu={e=>handleRightClick(e,item)}>
+                    <div class="tracker-item" role="button" tabindex="0" class:obtained={isObtained(item,level)} class:maxed={isMaxed(item,level)}
+                      title="{item.name}" on:click={e=>handleClick(e,item)} on:contextmenu={e=>handleRightClick(e,item)} on:keydown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();handleClick(e,item)}}}>
                       <img loading="lazy" src={getIconSrc(item,level)} alt={item.name} class="tracker-icon" class:greyed={isGreyed(item,level)} draggable="false"/>
                       {#if badge}<span class="badge">{badge}</span>{/if}
                     </div>
@@ -1060,8 +1089,8 @@
                   {#if item}
                     {@const level = $itemStore.get(cellId) ?? 0}
                     {@const badge = getBadge(item, level)}
-                    <div class="tracker-item" class:obtained={isObtained(item,level)} class:maxed={isMaxed(item,level)}
-                      title="{item.name}" on:click={e=>handleClick(e,item)} on:contextmenu={e=>handleRightClick(e,item)}>
+                    <div class="tracker-item" role="button" tabindex="0" class:obtained={isObtained(item,level)} class:maxed={isMaxed(item,level)}
+                      title="{item.name}" on:click={e=>handleClick(e,item)} on:contextmenu={e=>handleRightClick(e,item)} on:keydown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();handleClick(e,item)}}}>
                       <img loading="lazy" src={getIconSrc(item,level)} alt={item.name} class="tracker-icon" class:greyed={isGreyed(item,level)} draggable="false"/>
                       {#if badge}<span class="badge">{badge}</span>{/if}
                     </div>
@@ -1086,8 +1115,8 @@
                   {#if item}
                     {@const level = $itemStore.get(cellId) ?? 0}
                     {@const badge = getBadge(item, level)}
-                    <div class="tracker-item" class:obtained={isObtained(item,level)} class:maxed={isMaxed(item,level)}
-                      title="{item.name}" on:click={e=>handleClick(e,item)} on:contextmenu={e=>handleRightClick(e,item)}>
+                    <div class="tracker-item" role="button" tabindex="0" class:obtained={isObtained(item,level)} class:maxed={isMaxed(item,level)}
+                      title="{item.name}" on:click={e=>handleClick(e,item)} on:contextmenu={e=>handleRightClick(e,item)} on:keydown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();handleClick(e,item)}}}>
                       <img loading="lazy" src={getIconSrc(item,level)} alt={item.name} class="tracker-icon" class:greyed={isGreyed(item,level)} draggable="false"/>
                       {#if badge}<span class="badge">{badge}</span>{/if}
                     </div>
@@ -1111,8 +1140,8 @@
         <div class="souls-grid">
           {#each ootSoulsVisible as item}
             {@const level = $itemStore.get(item.id) ?? 0}
-            <div class="soul-item" class:obtained={isObtained(item,level)} class:maxed={isMaxed(item,level)}
-              on:click={e=>handleClick(e,item)} on:contextmenu={e=>handleRightClick(e,item)}>
+            <div class="soul-item" role="button" tabindex="0" class:obtained={isObtained(item,level)} class:maxed={isMaxed(item,level)}
+              on:click={e=>handleClick(e,item)} on:contextmenu={e=>handleRightClick(e,item)} on:keydown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();handleClick(e,item)}}}>
               <img loading="lazy" src={getIconSrc(item,level)} alt={item.name} class="soul-icon" class:greyed={isGreyed(item,level)} draggable="false"/>
               <span class="soul-name">{soulShortName(item.name)}</span>
             </div>
@@ -1126,8 +1155,8 @@
         <div class="souls-grid">
           {#each mmSoulsVisible as item}
             {@const level = $itemStore.get(item.id) ?? 0}
-            <div class="soul-item" class:obtained={isObtained(item,level)} class:maxed={isMaxed(item,level)}
-              on:click={e=>handleClick(e,item)} on:contextmenu={e=>handleRightClick(e,item)}>
+            <div class="soul-item" role="button" tabindex="0" class:obtained={isObtained(item,level)} class:maxed={isMaxed(item,level)}
+              on:click={e=>handleClick(e,item)} on:contextmenu={e=>handleRightClick(e,item)} on:keydown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();handleClick(e,item)}}}>
               <img loading="lazy" src={getIconSrc(item,level)} alt={item.name} class="soul-icon" class:greyed={isGreyed(item,level)} draggable="false"/>
               <span class="soul-name">{soulShortName(item.name)}</span>
             </div>
@@ -1166,8 +1195,8 @@
             {:else if item.options}
               <label class="settings-select-row">
                 <span class="settings-select-name">{item.name}</span>
-                <select value={$settingsStore.get(item.key) ?? item.options[0].value}
-                  on:change={e => setStringSetting(item.key, e.currentTarget.value)}
+                <select value={$settingsStore.get(getItemKey(item)) ?? item.options[0].value}
+                  on:change={e => setStringSetting(getItemKey(item), e.currentTarget.value)}
                   disabled={isWatchMode}>
                   {#each item.options as opt}
                     <option value={opt.value}>{opt.label}</option>
@@ -1177,8 +1206,8 @@
             {:else}
               <label class="settings-check">
                 <input type="checkbox"
-                  checked={$settingsStore.get(item.key) !== false}
-                  on:change={() => toggleVisibility(item.key, $settingsStore.get(item.key) === false)}
+                  checked={$settingsStore.get(getItemKey(item)) !== false}
+                  on:change={() => toggleVisibility(getItemKey(item), $settingsStore.get(getItemKey(item)) === false)}
                   disabled={isWatchMode}
                 />
                 {item.name}
@@ -1197,8 +1226,8 @@
             {:else if item.options}
               <label class="settings-select-row">
                 <span class="settings-select-name">{item.name}</span>
-                <select value={$settingsStore.get(item.key) ?? item.options[0].value}
-                  on:change={e => setStringSetting(item.key, e.currentTarget.value)}
+                <select value={$settingsStore.get(getItemKey(item)) ?? item.options[0].value}
+                  on:change={e => setStringSetting(getItemKey(item), e.currentTarget.value)}
                   disabled={isWatchMode}>
                   {#each item.options as opt}
                     <option value={opt.value}>{opt.label}</option>
@@ -1208,8 +1237,8 @@
             {:else}
               <label class="settings-check">
                 <input type="checkbox"
-                  checked={$settingsStore.get(item.key) !== false}
-                  on:change={() => toggleVisibility(item.key, $settingsStore.get(item.key) === false)}
+                  checked={$settingsStore.get(getItemKey(item)) !== false}
+                  on:change={() => toggleVisibility(getItemKey(item), $settingsStore.get(getItemKey(item)) === false)}
                   disabled={isWatchMode}
                 />
                 {item.name}
@@ -1228,8 +1257,8 @@
             {:else}
               <label class="settings-check">
                 <input type="checkbox"
-                  checked={$settingsStore.get(item.key) === true}
-                  on:change={() => toggleSetting(item.key, $settingsStore.get(item.key) !== true)}
+                  checked={$settingsStore.get(getItemKey(item)) === true}
+                  on:change={() => toggleSetting(getItemKey(item), $settingsStore.get(getItemKey(item)) !== true)}
                   disabled={isWatchMode}
                 />
                 {item.name}
