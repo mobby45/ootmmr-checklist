@@ -585,10 +585,12 @@ yKeepalive.observe((event: any) => {
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
   ];
-  async function fetchTurnCredentials() {
+  async function fetchTurnCredentials(force = false) {
     try {
-      const cached = localStorage.getItem('turnIceServers');
-      if (cached) { turnIceServers = [...turnIceServers, ...JSON.parse(cached)]; return; }
+      if (!force) {
+        const cached = localStorage.getItem('turnIceServers');
+        if (cached) { turnIceServers = [...turnIceServers, ...JSON.parse(cached)]; return; }
+      }
       const res = await fetch('https://ootmmr-checklist.mobby45.deno.net/api/turn-credentials');
       if (!res.ok) return;
       const data = await res.json();
@@ -598,7 +600,7 @@ yKeepalive.observe((event: any) => {
       }
     } catch {}
   }
-  fetchTurnCredentials();
+  // Start prefetch immediately, but joinCoopRoom will await if not ready
 
   // Yjs WebSocket relay — reliable fallback data channel when WebRTC P2P fails
   let yjsRelayWs: WebSocket | null = null;
@@ -710,7 +712,13 @@ yKeepalive.observe((event: any) => {
   }
 
   // fullCode may be "basecode" or "basecode-password"
-  function joinCoopRoom(name?: string, password?: string) {
+  let fetchingTurnCreds: Promise<void> | null = null;
+  async function joinCoopRoom(name?: string, password?: string) {
+    // Ensure TURN credentials are fetched before creating RTCPeerConnection
+    if (!fetchingTurnCreds || localStorage.getItem('turnIceServers') === null) {
+      fetchingTurnCreds = fetchTurnCredentials(true);
+    }
+    await fetchingTurnCreds;
     if (aloneHintTimer) { clearTimeout(aloneHintTimer); aloneHintTimer = undefined; }
     showAloneHint = false;
     // Disconnect any existing provider before creating a new one
