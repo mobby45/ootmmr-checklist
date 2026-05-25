@@ -75,7 +75,36 @@ xc.onmessage = (e) => {
   }
 };
 
-Deno.serve(req => {
+// TURN credentials cache (refresh every 12h)
+let turnCache: { iceServers: any[] } | null = null;
+let turnCacheTime = 0;
+const TURN_CACHE_TTL = 12 * 60 * 60 * 1000;
+
+async function getTurnCredentials(): Promise<{ iceServers: any[] }> {
+  const now = Date.now();
+  if (turnCache && now - turnCacheTime < TURN_CACHE_TTL) return turnCache;
+  const apiKey = Deno.env.get('METERED_API_KEY');
+  if (!apiKey) return { iceServers: [] };
+  try {
+    const res = await fetch(`https://ootmmr-checklist-mobby45.metered.live/api/v1/turn/credentials?apiKey=${apiKey}`);
+    if (!res.ok) return { iceServers: [] };
+    const data = await res.json();
+    turnCache = { iceServers: data };
+    turnCacheTime = now;
+    return { iceServers: data };
+  } catch {
+    return { iceServers: [] };
+  }
+}
+
+Deno.serve(async req => {
+  const url = new URL(req.url);
+  if (url.pathname === '/api/turn-credentials' && req.method === 'GET') {
+    const creds = await getTurnCredentials();
+    return new Response(JSON.stringify(creds), {
+      headers: { 'content-type': 'application/json', 'access-control-allow-origin': '*' },
+    });
+  }
   if (req.headers.get('upgrade') !== 'websocket') {
     return new Response('y-webrtc signaling server', { status: 200 });
   }

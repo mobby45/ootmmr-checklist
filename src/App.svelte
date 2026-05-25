@@ -2,6 +2,7 @@
   // ==========================================
   // IMPORTS
   // ==========================================
+  import { tick } from 'svelte';
   import * as Y from 'yjs';
   import { readableArray, readableMap } from 'svelt-yjs';
   import { writable } from 'svelte/store';
@@ -45,14 +46,16 @@
         }
       };
     }
-    return origSetRemoteDescription.apply(this, args);
+    return origSetRemoteDescription.call(this, ...args as Parameters<typeof RTCPeerConnection.prototype.setRemoteDescription>);
   };
 
   import { initializeStructuredChecks } from './util/util';
   import { parseSpoilerLog } from './util/spoilerParser';
   import { importRandomizerSettings } from './util/importSettings';
   import type { ErSettings, SeedInfo, SpoilerSphere, SpecialConditionsMap } from './util/spoilerParser';
+  import { defaultErSettings } from './util/spoilerParser';
   import { defaultPresets, defaultPresetNames, presetBaseSettings } from './data/presets';
+  import { allEntrances } from './data/entranceData';
   import * as T from './data/types';
 
   import CheckGroup from './components/CheckGroup.svelte';
@@ -67,8 +70,10 @@
 
   import { buildMapData, type MapData, type SceneData } from './util/mapData';
   import type { MapCheck } from './util/mapData';
+  import { entrancePositions } from './data/entrancePositions';
 
   const IMG_BASE = '/ootmmr-checklist/images/';
+  const MAP_BASE = '/ootmmr-checklist/maps/';
   // Preload icons in small batches so the service worker cache fills gradually
   // without saturating the network (1557 concurrent requests would be too much).
   setTimeout(() => {
@@ -82,6 +87,7 @@
     }
     loadBatch();
   }, 2000);
+
 
   // ==========================================
   // OVERLAY DETECTION
@@ -109,6 +115,7 @@
   const yCheckAuthors: Y.Map<string> = ydoc.getMap('checkAuthors');
   const yNotes: Y.Map<string> = ydoc.getMap('notes');
   const yHints: Y.Array<any> = ydoc.getArray('hints');
+  const ySongEvents: Y.Map<string> = ydoc.getMap('songEvents');
 const yMessages: Y.Array<any> = ydoc.getArray('messages');
   const yPings: Y.Map<any> = ydoc.getMap('pings');
 const yKeepalive: Y.Map<number> = ydoc.getMap('keepalive');
@@ -313,6 +320,9 @@ yKeepalive.observe((event: any) => {
   const sCheckAuthors = readableMap(yCheckAuthors);
   let hints: any[] = yHints.toArray();
   yHints.observe(() => { hints = yHints.toArray(); });
+  // Helper: use as `trackDep($_checksRevStore, expr)` to make expr reactive to checks changes
+  function trackDep<T, U>(_dep: T, value: U): U { return value; }
+
   // Writable store incremented on every yChecks mutation so that reactive
   // count statements (groupCheckCounts, ootCheckCount, …) are guaranteed to
   // re-run — plain `let` increments in external observers are not reliably
@@ -349,6 +359,7 @@ yKeepalive.observe((event: any) => {
     }
   });
   const sSettings = readableMap(ySettings);
+  $: songEventShuffle = $sSettings.get('songEventShuffle') === true;
   const sMqSettings = readableMap(yMqSettings);
   const sVariantSettings = readableMap(yVariantSettings);
   const sShopItems = readableMap(yShopItems);
@@ -356,10 +367,13 @@ yKeepalive.observe((event: any) => {
   const sEntrances = readableMap(yEntrances);
   const sNotes = readableMap(yNotes);
 
-  $: checkStatesMap = new Map($sChecks);
-  $: shopItemsMap = new Map($sShopItems);
-  $: shopPricesMap = new Map($sShopPrices);
-  $: entranceValuesMap = new Map($sEntrances);
+  $: checkStatesMap = new Map($sChecks) as Map<string, T.CheckState>;
+  $: shopItemsMap = new Map($sShopItems) as Map<string, string>;
+  $: shopPricesMap = new Map($sShopPrices) as Map<string, number>;
+  $: entranceValuesMap = (spoilerFillEntrances && spoilerEntrances)
+    ? new Map(Object.entries(spoilerEntrances)) as Map<string, string>
+    : new Map($sEntrances) as Map<string, string>;
+  $: erSettingsForMap = activeErSettings as unknown as Record<string, boolean>;
   $: checkToGroup = structuredChecks
     ? new Map(structuredChecks.flatMap(g => g.checks.map(c => [c.name, g.groupName])))
     : new Map<string, string>();
@@ -466,8 +480,10 @@ yKeepalive.observe((event: any) => {
       const raw = JSON.parse(locStr);
       spoilerLocations = applyAliases(raw);
       localStorage.setItem('spoilerLocations', locStr);
-      spoilerSyncedFromPeer = true;
-      setTimeout(() => { spoilerSyncedFromPeer = false; }, 4000);
+      if (!event.transaction?.local && connectionProvider) {
+        spoilerSyncedFromPeer = true;
+        setTimeout(() => { spoilerSyncedFromPeer = false; }, 4000);
+      }
     } else if (event.keysChanged?.has?.('locationsBlock')) {
       spoilerLocations = {};
       localStorage.removeItem('spoilerLocations');
@@ -508,8 +524,10 @@ yKeepalive.observe((event: any) => {
     if (Object.keys(raw).length > 0) {
       spoilerLocations = applyAliases(raw);
       localStorage.setItem('spoilerLocations', JSON.stringify(raw));
-      spoilerSyncedFromPeer = true;
-      setTimeout(() => { spoilerSyncedFromPeer = false; }, 4000);
+      if (connectionProvider) {
+        spoilerSyncedFromPeer = true;
+        setTimeout(() => { spoilerSyncedFromPeer = false; }, 4000);
+      }
     }
   });
 
@@ -561,6 +579,26 @@ yKeepalive.observe((event: any) => {
   const P2P_FLAP_MIN_INTERVAL = 2000;
   const P2P_FLAP_THRESHOLD = 10;
   const FORCE_TURN_RELAY = false;
+
+  // TURN credentials fetched from signaling server (avoids hardcoding API key)
+  let turnIceServers: RTCIceServer[] = [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' },
+  ];
+  async function fetchTurnCredentials() {
+    try {
+      const cached = localStorage.getItem('turnIceServers');
+      if (cached) { turnIceServers = [...turnIceServers, ...JSON.parse(cached)]; return; }
+      const res = await fetch('https://ootmmr-checklist.mobby45.deno.net/api/turn-credentials');
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.iceServers?.length) {
+        turnIceServers = [...turnIceServers, ...data.iceServers];
+        localStorage.setItem('turnIceServers', JSON.stringify(data.iceServers));
+      }
+    } catch {}
+  }
+  fetchTurnCredentials();
 
   // Yjs WebSocket relay — reliable fallback data channel when WebRTC P2P fails
   let yjsRelayWs: WebSocket | null = null;
@@ -711,17 +749,15 @@ yKeepalive.observe((event: any) => {
     else sessionStorage.removeItem('coopRoomPassword');
 
     const rtcOpts = {
-      signaling: ['wss://ootmmr-checklist.mobby45.deno.net'],
+      signaling: [
+        'wss://ootmmr-checklist.mobby45.deno.net',
+        'wss://signaling.yjs.dev',
+        'wss://y-webrtc-signaling-eu.fly.dev',
+        'wss://y-webrtc-signaling-us.fly.dev',
+      ],
       peerOpts: {
         config: {
-          iceServers: [
-            { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:stun1.l.google.com:19302' },
-            // TURN relay for symmetric NATs — without this, data channels are one-way
-            { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
-            { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
-            { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
-          ],
+          iceServers: turnIceServers,
           iceTransportPolicy: FORCE_TURN_RELAY ? 'relay' : undefined,
         }
       }
@@ -1123,8 +1159,14 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
   // Password is never stored in the URL to avoid leaking.
   function joinFromHash(hash: string) {
     if (!hash || isWatchMode) return;
-    const storedPw = sessionStorage.getItem('coopRoomPassword') || undefined;
-    joinCoopRoom(hash, storedPw);
+    if (hash.includes('-')) {
+      // Hash has an embedded password; ignore sessionStorage
+      joinCoopRoom(hash, undefined);
+    } else {
+      // Hash has no password — clear any stale stored password
+      sessionStorage.removeItem('coopRoomPassword');
+      joinCoopRoom(hash, undefined);
+    }
   }
   let joinedFromHash = false;
   if (initialHash.length > 0 && /#[a-z0-9-]+/.test(initialHash)) {
@@ -1202,6 +1244,9 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
   let spoilerLocations: Record<string, string> = applyAliases(JSON.parse(localStorage.getItem('spoilerLocations') ?? '{}'));
   let spoilerSpheres: SpoilerSphere[] = JSON.parse(localStorage.getItem('spoilerSpheres') ?? '[]');
   let spoilerSeedInfo: SeedInfo | null = JSON.parse(localStorage.getItem('spoilerSeedInfo') ?? 'null');
+  let spoilerPlayers: number = parseInt(localStorage.getItem('spoilerPlayers') ?? '1', 10);
+  let spoilerPlayerWorld: number = parseInt(localStorage.getItem('spoilerPlayerWorld') ?? '1', 10);
+  let spoilerAllWorldLocations: Record<number, Record<string, string>> = JSON.parse(localStorage.getItem('spoilerAllWorldLocations') ?? '{}');
   let spoilerSpecialConditions: SpecialConditionsMap | null = JSON.parse(localStorage.getItem('spoilerSpecialConditions') ?? 'null');
   let spoilerCoinCounts: Record<string, number> = JSON.parse(localStorage.getItem('spoilerCoinCounts') ?? '{}');
   let showSpoilerItems = false;
@@ -1212,7 +1257,9 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
   function setSpherePerPage(n: number) { spherePerPage = n; spherePage = 0; }
   function pagePrev(e: Event) { e.preventDefault(); spherePage = Math.max(0, spherePage - 1); }
   function pageNext(e: Event) { e.preventDefault(); spherePage = Math.min(Math.ceil(spoilerSpheres.length / spherePerPage) - 1, spherePage + 1); }
-  function setSpoilerTab(tab: string) { spoilerSectionTab = tab; localStorage.setItem('sec_spoilertab', tab); }
+  function setSpoilerTab(tab: 'search' | 'spheres') { spoilerSectionTab = tab; localStorage.setItem('sec_spoilertab', tab); }
+  function selectValue(e: Event): string { return (e.target as HTMLSelectElement).value; }
+  function getRoomCode(e: Event): string { return ((e.target as HTMLFormElement).querySelector('#room-code-input') as HTMLInputElement).value; }
   $: totalSpherePages = Math.ceil(spoilerSpheres.length / spherePerPage) || 1;
   $: pageSpheres = spoilerSpheres.slice(spherePage * spherePerPage, (spherePage + 1) * spherePerPage);
   $: spherePageOptions = Array.from({ length: totalSpherePages }, (_, i) => {
@@ -1241,6 +1288,16 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
   function formatSpoilerItem(s: string): string {
     // Capitalize after spaces/underscores only — not after apostrophes (avoids "Kokiri'S Emerald")
     return s.toLowerCase().replace(/_/g, ' ').replace(/(?<!')\b\w/g, c => c.toUpperCase());
+  }
+
+  function setPlayerWorld(w: number) {
+    spoilerPlayerWorld = Math.max(1, Math.min(spoilerPlayers, w));
+    localStorage.setItem('spoilerPlayerWorld', String(spoilerPlayerWorld));
+    const rawLocs = spoilerAllWorldLocations[spoilerPlayerWorld] ?? {};
+    const raw: Record<string, string> = {};
+    for (const [key, value] of Object.entries(rawLocs)) raw[key.replace(/^(OOT|MM) /, '')] = value;
+    spoilerLocations = applyAliases(raw);
+    localStorage.setItem('spoilerLocations', JSON.stringify(raw));
   }
 
   let hashCopied = false;
@@ -1295,6 +1352,15 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     : [];
   let spoilerErSettings: ErSettings | null = JSON.parse(localStorage.getItem('spoilerErSettings') ?? 'null');
   let spoilerExtraEr: Record<string, any> | null = JSON.parse(localStorage.getItem('spoilerExtraEr') ?? 'null');
+  let spoilerEntrances: Record<string, string> | null = JSON.parse(localStorage.getItem('spoilerEntrances') ?? 'null');
+  let spoilerFillEntrances = localStorage.getItem('spoilerFillEntrances') === 'true';
+
+  function toggleSpoilerFillEntrances() {
+    if (!spoilerEntrances) return;
+    spoilerFillEntrances = !spoilerFillEntrances;
+    localStorage.setItem('spoilerFillEntrances', String(spoilerFillEntrances));
+  }
+  let activeErSettings: ErSettings = spoilerErSettings ?? JSON.parse(localStorage.getItem('erSettings') ?? JSON.stringify(defaultErSettings));
 
   function toggleShareSpoiler() {
     if (isWatchMode) return;
@@ -1338,7 +1404,21 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     input.onchange = async e => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
-      const data = parseSpoilerLog(await file.text());
+      const parsed = parseSpoilerLog(await file.text());
+      spoilerPlayers = parsed.players;
+      localStorage.setItem('spoilerPlayers', String(spoilerPlayers));
+      if (parsed.players > 1) {
+        spoilerAllWorldLocations = parsed.worldLocations;
+        localStorage.setItem('spoilerAllWorldLocations', JSON.stringify(spoilerAllWorldLocations));
+        spoilerPlayerWorld = 0;
+        localStorage.setItem('spoilerPlayerWorld', '0');
+        Object.keys(parsed.locations).forEach(k => delete parsed.locations[k]);
+        // locations left empty — user must select a player
+      } else {
+        spoilerAllWorldLocations = {};
+        localStorage.removeItem('spoilerAllWorldLocations');
+      }
+      const data = parsed;
       const locs = Object.keys(data.locations).length;
       dbg('spoiler parsed —', locs, 'locations,', Object.keys(data.settings).length, 'settings');
 
@@ -1363,6 +1443,8 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
       }
       spoilerExtraEr = Object.keys(extraEr).length ? extraEr : null;
       localStorage.setItem('spoilerExtraEr', JSON.stringify(spoilerExtraEr));
+      spoilerEntrances = Object.keys(data.entrances).length ? data.entrances : null;
+      localStorage.setItem('spoilerEntrances', JSON.stringify(spoilerEntrances));
       spoilerSpecialConditions = data.specialConditions;
       localStorage.setItem('spoilerSpecialConditions', JSON.stringify(data.specialConditions));
       spoilerCoinCounts = {
@@ -1579,6 +1661,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
   let showMapModal = false;
   let currentMapScene = '';
   let currentSceneData: SceneData | null = null;
+  let mapInitialSubscene = '';
   let currentGroupName = '';
   let matchedScenes: string[] = [];
   let filteredCheckNames: Set<string> = new Set();
@@ -1653,6 +1736,57 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     document.body.style.right = '';
     if (saved > 0) requestAnimationFrame(() => window.scrollTo(0, saved));
     scrollPosition = 0;
+  }
+
+  function normEntName(s: string): string {
+    return s.replace(/ \(Game Link\)$/, '').replace(/ from .+$/, '');
+  }
+
+  function findReverseEntrance(ent: { name: string; id: string }) {
+    const i = ent.name.indexOf(' to ');
+    if (i < 0) return undefined;
+    const nSrc = normEntName(ent.name.slice(0, i));
+    const nDst = normEntName(ent.name.slice(i + 4));
+    const parts = (e: { name: string }) => { const j = e.name.indexOf(' to '); return j < 0 ? null : [normEntName(e.name.slice(0, j)), normEntName(e.name.slice(j + 4))] as const; };
+    // 1. Exact match on normalized names — handles Game Link and "from X" qualifiers automatically
+    const exact = allEntrances.find(e => { const p = parts(e); return p !== null && p[0] === nDst && p[1] === nSrc; });
+    if (exact) return exact;
+    // 2. Source has extra qualifier beyond normalized dst (e.g. "Lost Woods Lost Forest" vs "Lost Woods")
+    return allEntrances.find(e => { const p = parts(e); return p !== null && p[1] === nSrc && p[0].startsWith(nDst + ' '); });
+  }
+
+  async function openMapForEntrance(entranceId: string) {
+    if (!mapData) return;
+    // If a destination is assigned, navigate to the spawn point (reverse entrance interior) if available
+    let targetId = entranceId;
+    const destName = entranceValuesMap.get(entranceId);
+    if (destName) {
+      const destEntrance = allEntrances.find(e => e.name === destName);
+      if (destEntrance) {
+        const rev = findReverseEntrance(destEntrance);
+        if (rev && entrancePositions.some(p => p.entranceId === rev.id)) {
+          targetId = rev.id;
+        } else if (entrancePositions.some(p => p.entranceId === destEntrance.id)) {
+          targetId = destEntrance.id;
+        }
+      }
+    }
+    const pos = entrancePositions.find(p => p.entranceId === targetId);
+    if (!pos) return;
+    const renderscene = pos.renderscene;
+    for (const [sceneKey, sd] of Object.entries(mapData)) {
+      if (sd.subscenes[renderscene]) {
+        scrollPosition = window.scrollY;
+        currentGroupName = '';
+        filteredCheckNames = new Set();
+        currentMapScene = sceneKey;
+        currentSceneData = sd;
+        mapInitialSubscene = renderscene;
+        if (showMapModal) { showMapModal = false; await tick(); }
+        showMapModal = true;
+        return;
+      }
+    }
   }
 
   function openMap(groupName: string) {
@@ -1783,7 +1917,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
   // Returns true if a check should be visible given current settings.
   // Each shuffle setting independently controls a subset of checks.
   // ==========================================
-  $: checkPredicate = (group: T.CheckGroup, check: T.Check) => {
+  $: checkPredicate = (group: T.CheckGroup, check: T.Check, ignoreHide = false) => {
     const isDungeon = check.scene ? allDungeons.includes(check.scene) : false;
 
     // Helper: matches dungeon/overworld/all mode
@@ -1813,7 +1947,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     // --- Gold Skulltulas ---
     const gsMode = $sSettings.get('goldSkulltulaShuffleOOT') ?? 'all';
     let matchesGS = true;
-    if (check.type === T.CheckType.gs && check.game === T.Game.oot) {
+    if (check.type === T.CheckType.gold_skulltula && check.game === T.Game.oot) {
       const ind = check.scene ? ootDungeons.includes(check.scene) : false;
       const showGS = (displaySettings.showUnshuffledGS ?? false) as boolean;
       if (gsMode === 'no_shuffle') matchesGS = showGS;
@@ -1849,7 +1983,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
         (displaySettings.showUnshuffledDungeonSF ?? false);
 
     let matchesFreeSF = true;
-    if (check.type === T.CheckType.sf)
+    if (check.type === T.CheckType.stray_fairy)
       matchesFreeSF =
         ($sSettings.get('DungeonFreeSFShuffleMM') ?? 'vanilla') !== 'vanilla' || (displaySettings.showUnshuffledFreeSF ?? false);
 
@@ -1860,7 +1994,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
 
     // --- Scrubs ---
     let matchesScrubsOOT = true;
-    if (check.type === T.CheckType.scrub && !check.tags.includes(T.Tag.special_scrub))
+    if (check.type === T.CheckType.deku_scrub && !check.tags.includes(T.Tag.special_scrub))
       matchesScrubsOOT = $sSettings.get('ScrubsOOT') ?? false;
 
     let matchesScrubsMM = true;
@@ -1915,11 +2049,11 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
 
     // --- Hives ---
     let matchesHiveOOT = true;
-    if (check.type === T.CheckType.hive && check.game === T.Game.oot)
+    if (check.type === T.CheckType.beehive && check.game === T.Game.oot)
       matchesHiveOOT = $sSettings.get('HivesShuffleOOT') ?? false;
 
     let matchesHiveMM = true;
-    if (check.type === T.CheckType.hive && check.game === T.Game.mm)
+    if (check.type === T.CheckType.beehive && check.game === T.Game.mm)
       matchesHiveMM = $sSettings.get('HivesShuffleMM') ?? false;
 
     // --- Grass ---
@@ -1975,11 +2109,11 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
 
     // --- Soil ---
     let matchesSoilOOT = true;
-    if (check.type === T.CheckType.soil && check.game === T.Game.oot)
+    if (check.type === T.CheckType.soft_soil && check.game === T.Game.oot)
       matchesSoilOOT = $sSettings.get('SoilShuffleOOT') ?? false;
 
     let matchesSoilMM = true;
-    if (check.type === T.CheckType.soil && check.game === T.Game.mm)
+    if (check.type === T.CheckType.soft_soil && check.game === T.Game.mm)
       matchesSoilMM = matchMode(mmDungeons.includes(check.scene ?? ''), $sSettings.get('SoilShuffleMM') ?? 'none');
 
     // --- Rupees, Hearts, Wonder Items ---
@@ -2003,14 +2137,14 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
       matchesHeartMM = $sSettings.get('HeartsShuffleMM') ?? false;
 
     let matchesWonderOOT = true;
-    if (check.type === T.CheckType.wonder && check.game === T.Game.oot)
+    if (check.type === T.CheckType.wonder_item && check.game === T.Game.oot)
       matchesWonderOOT = matchMode(
         ootDungeons.includes(check.scene ?? ''),
         $sSettings.get('WonderShuffleOOT') ?? 'none',
       );
 
     let matchesWonderMM = true;
-    if (check.type === T.CheckType.wonder && check.game === T.Game.mm)
+    if (check.type === T.CheckType.wonder_item && check.game === T.Game.mm)
       matchesWonderMM = $sSettings.get('WonderShuffleMM') ?? false;
 
     // --- Snowballs ---
@@ -2032,11 +2166,11 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
 
     // --- Red Boulders ---
     let matchesRedBoulderOOT = true;
-    if (check.type === T.CheckType.redboulder && check.game === T.Game.oot)
+    if (check.type === T.CheckType.red_boulder && check.game === T.Game.oot)
       matchesRedBoulderOOT = $sSettings.get('RedBoulderShuffleOOT') ?? false;
 
     let matchesRedBoulderMM = true;
-    if (check.type === T.CheckType.redboulder && check.game === T.Game.mm)
+    if (check.type === T.CheckType.red_boulder && check.game === T.Game.mm)
       matchesRedBoulderMM = $sSettings.get('RedBoulderShuffleMM') ?? false;
 
     // --- Broken Actors (OoT) ---
@@ -2080,7 +2214,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
       matchesIcicleMM = $sSettings.get('IciclesShuffleMM') ?? false;
 
     let matchesRedIce = true;
-    if (check.type === T.CheckType.redice && check.game === T.Game.oot)
+    if (check.type === T.CheckType.red_ice && check.game === T.Game.oot)
       matchesRedIce = $sSettings.get('RedIceShuffleOOT') ?? false;
 
     const maskTradeList = [
@@ -2123,11 +2257,11 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
       matchesDive = $sSettings.get('DiveGameShuffleOOT') ?? false;
 
     let matchesFairyFountainOOT = true;
-    if (check.game === T.Game.oot && check.type === T.CheckType.fairy)
+    if (check.game === T.Game.oot && check.type === T.CheckType.fairy_fountain)
       matchesFairyFountainOOT = $sSettings.get('FairyFountainShuffleOOT') ?? false;
 
     let matchesFairyFountainMM = true;
-    if (check.game === T.Game.mm && check.type === T.CheckType.fairy)
+    if (check.game === T.Game.mm && check.type === T.CheckType.fairy_fountain)
       matchesFairyFountainMM = $sSettings.get('FairyFountainShuffleMM') ?? false;
 
     let matchesFairySpot = true;
@@ -2144,19 +2278,21 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
 
     // --- Text filter & MQ/Variant/HideChecked ---
     const lf = filter.toLowerCase();
+    const gamePrefix = check.game === T.Game.oot ? 'oot ' : check.game === T.Game.mm ? 'mm ' : '';
     const matchesFilter =
       filter.length === 0 ||
       check.name.toLowerCase().includes(lf) ||
       check.shortName.toLowerCase().includes(lf) ||
-      group.groupName.toLowerCase().includes(lf);
+      group.groupName.toLowerCase().includes(lf) ||
+      (gamePrefix + check.name.toLowerCase()).includes(lf);
 
     const matchesMq = check.canBeMq ? ($sMqSettings.get(group.groupName) ?? false) === check.isMq : true;
     const matchesVariant = check.canHaveVariant
       ? ($sVariantSettings.get(group.groupName) ?? 0) === check.variantNumber
       : true;
-    const matchesHide = hideChecked ? $sChecks.get(check.name) !== T.CheckState.checked : true;
+    const matchesHide = (!ignoreHide && hideChecked) ? $sChecks.get(check.name) !== T.CheckState.checked : true;
 
-    return (
+    const passesCategories =
       matchesOverworld &&
       matchesDungeons &&
       matchesGS &&
@@ -2218,8 +2354,11 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
       matchesFairyFountainMM &&
       matchesFairySpot &&
       matchesEgg &&
-      matchesSkipZelda &&
+      matchesSkipZelda;
+
+    return (
       matchesFilter &&
+      passesCategories &&
       matchesMq &&
       matchesVariant &&
       matchesHide
@@ -2230,11 +2369,16 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
   // FILTERED & SORTED CHECKS
   // ==========================================
   $: filteredChecks = structuredChecks?.flatMap(group => {
-    const filtered = group.checks.filter(checkPredicate.bind(null, group));
+    const filtered = group.checks.filter(c => checkPredicate(group, c));
     return filtered.length === 0 ? [] : [{ ...group, checks: filtered }];
   });
 
-  $: groupCompletionStatus = ($_checksRevStore, filteredChecks?.reduce(
+  $: countableChecks = structuredChecks?.flatMap(group => {
+    const filtered = group.checks.filter(c => checkPredicate(group, c, true));
+    return filtered.length === 0 ? [] : [{ ...group, checks: filtered }];
+  });
+
+  $: groupCompletionStatus = trackDep($_checksRevStore, filteredChecks?.reduce(
     (acc, group) => {
       acc[group.groupName] = group.checks.every(c => yChecks.get(c.name) === T.CheckState.checked);
       return acc;
@@ -2242,7 +2386,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     {} as Record<string, boolean>,
   ) ?? {});
 
-  $: groupCheckCounts = ($_checksRevStore, filteredChecks?.reduce(
+  $: groupCheckCounts = trackDep($_checksRevStore, countableChecks?.reduce(
     (acc, group) => {
       acc[group.groupName] = {
         checked: group.checks.filter(c => yChecks.get(c.name) === T.CheckState.checked).length,
@@ -2253,7 +2397,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     {} as Record<string, { checked: number; total: number }>,
   ) ?? {});
 
-  $: totalCheckCount = ($_checksRevStore, filteredChecks?.reduce(
+  $: totalCheckCount = trackDep($_checksRevStore, countableChecks?.reduce(
     (acc, group) => {
       acc.checked += group.checks.filter(c => yChecks.get(c.name) === T.CheckState.checked).length;
       acc.total += group.checks.length;
@@ -2262,7 +2406,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     { checked: 0, total: 0 },
   ) ?? { checked: 0, total: 0 });
 
-  $: ootCheckCount = ($_checksRevStore, filteredChecks?.reduce(
+  $: ootCheckCount = trackDep($_checksRevStore, countableChecks?.reduce(
     (acc, group) => {
       const oot = group.checks.filter(c => c.game === T.Game.oot);
       acc.checked += oot.filter(c => yChecks.get(c.name) === T.CheckState.checked).length;
@@ -2272,7 +2416,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     { checked: 0, total: 0 },
   ) ?? { checked: 0, total: 0 });
 
-  $: mmCheckCount = ($_checksRevStore, filteredChecks?.reduce(
+  $: mmCheckCount = trackDep($_checksRevStore, countableChecks?.reduce(
     (acc, group) => {
       const mm = group.checks.filter(c => c.game === T.Game.mm);
       acc.checked += mm.filter(c => yChecks.get(c.name) === T.CheckState.checked).length;
@@ -2433,6 +2577,74 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
 
   $: shouldShowCollapse = groupStates.size > 0 ? Array.from(groupStates.values()).some(s => s) : allGroupsExpanded;
 
+  function exportAllEntranceMarkers() {
+    let markers: { uid?: string; id: string; renderscene: string; x: number; y: number }[] = [];
+    try { markers = JSON.parse(localStorage.getItem('entranceMarkers') ?? '[]'); } catch {}
+    let deletedIds: string[] = [];
+    try { deletedIds = JSON.parse(localStorage.getItem('deletedAutoMarkers') ?? '[]'); } catch {}
+    if (markers.length === 0 && deletedIds.length === 0) { alert('No entrance markers placed yet.'); return; }
+    const rows = [
+      'id,renderscene,x,y,name,type,action',
+      ...markers.map(m => {
+        const ent = allEntrances.find(e => e.id === m.id);
+        const name = (ent?.name ?? m.id).replace(/,/g, ';');
+        const type = ent?.type ?? '';
+        return `${m.id},${m.renderscene},${m.x},${m.y},${name},${type},`;
+      }),
+      ...deletedIds.map(id => {
+        const ent = allEntrances.find(e => e.id === id);
+        const name = (ent?.name ?? id).replace(/,/g, ';');
+        const type = ent?.type ?? '';
+        return `${id},,,,,${type},delete`;
+      }),
+    ].join('\n');
+    const blob = new Blob([rows], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'entrance_markers.csv'; a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  let importFileInput: HTMLInputElement;
+
+  function triggerImportEntranceMarkers() {
+    importFileInput.value = '';
+    importFileInput.click();
+  }
+
+  function importEntranceMarkers(e: Event) {
+    const file = (e.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const lines = (reader.result as string).trim().split('\n').slice(1);
+      const markers = lines
+        .filter(l => l.trim())
+        .map(line => {
+          const parts = line.split(',');
+          const id = parts[0]?.trim();
+          const renderscene = parts[1]?.trim();
+          const x = parseInt(parts[2]?.trim());
+          const y = parseInt(parts[3]?.trim());
+          return { uid: `${id}_imp_${Date.now()}_${Math.random().toString(36).slice(2)}`, id, renderscene, x, y };
+        })
+        .filter(m => m.id && m.renderscene && !isNaN(m.x) && !isNaN(m.y));
+      if (markers.length === 0) { alert('No valid markers found in file.'); return; }
+      const existing: typeof markers = JSON.parse(localStorage.getItem('entranceMarkers') ?? '[]');
+      const merged = [...existing, ...markers.filter(m => !existing.some(e => e.id === m.id && e.renderscene === m.renderscene))];
+      localStorage.setItem('entranceMarkers', JSON.stringify(merged));
+      alert(`Imported ${markers.length - (markers.length - (merged.length - existing.length))} new markers (${markers.length - (merged.length - existing.length)} duplicates skipped).`);
+    };
+    reader.readAsText(file);
+  }
+
+  function clearAllEntranceMarkers() {
+    const count: number = (() => { try { return JSON.parse(localStorage.getItem('entranceMarkers') ?? '[]').length; } catch { return 0; } })();
+    if (count === 0) { alert('No manual entrance markers to clear.'); return; }
+    if (!confirm(`Clear all ${count} manually placed entrance markers? Default auto-markers will not be affected.`)) return;
+    localStorage.removeItem('entranceMarkers');
+  }
+
   function toggleAllGroups() {
     allGroupsExpanded = !shouldShowCollapse;
     forceOpenTimestamp = Date.now();
@@ -2505,6 +2717,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     [...yEntrances.keys()].forEach(k => yEntrances.delete(k));
     [...yItems.keys()].forEach(k => yItems.delete(k));
     [...yNotes.keys()].forEach(k => yNotes.delete(k));
+    [...ySongEvents.keys()].forEach(k => ySongEvents.delete(k));
     yHints.delete(0, yHints.length);
     spoilerLocations = {};
     localStorage.removeItem('spoilerLocations');
@@ -2516,10 +2729,20 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     localStorage.removeItem('spoilerSeedInfo');
     spoilerExtraEr = null;
     localStorage.removeItem('spoilerExtraEr');
+    spoilerEntrances = null;
+    localStorage.removeItem('spoilerEntrances');
+    spoilerFillEntrances = false;
+    localStorage.removeItem('spoilerFillEntrances');
     spoilerSpecialConditions = null;
     localStorage.removeItem('spoilerSpecialConditions');
     spoilerCoinCounts = {};
     localStorage.removeItem('spoilerCoinCounts');
+    spoilerPlayers = 1;
+    localStorage.removeItem('spoilerPlayers');
+    spoilerPlayerWorld = 1;
+    localStorage.removeItem('spoilerPlayerWorld');
+    spoilerAllWorldLocations = {};
+    localStorage.removeItem('spoilerAllWorldLocations');
     for (const [key] of ySpoilerLocations.entries()) {
       ySpoilerLocations.delete(key);
     }
@@ -2556,6 +2779,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
       entrances: Object.fromEntries(yEntrances.entries()),
       notes: Object.fromEntries(yNotes.entries()),
       hints: yHints.toArray(),
+      songEvents: Object.fromEntries(ySongEvents.entries()),
     };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -2637,6 +2861,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     items: Record<string, number>;
     entrances: Record<string, string>;
     hints: any[];
+    songEvents?: Record<string, string>;
     spoilerLocations: Record<string, string>;
     spoilerSpheres: SpoilerSphere[];
     spoilerSeedInfo: SeedInfo | null;
@@ -2667,6 +2892,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
       items: Object.fromEntries(yItems.entries()),
       entrances: Object.fromEntries(yEntrances.entries()),
       hints: yHints.toArray(),
+      songEvents: Object.fromEntries(ySongEvents.entries()),
       spoilerLocations,
       spoilerSpheres,
       spoilerSeedInfo,
@@ -2724,6 +2950,8 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     Object.entries(slot.items).forEach(([k, v]) => yItems.set(k, v));
     [...yEntrances.keys()].forEach(k => yEntrances.delete(k));
     Object.entries(slot.entrances).forEach(([k, v]) => yEntrances.set(k, v));
+    [...ySongEvents.keys()].forEach(k => ySongEvents.delete(k));
+    if (slot.songEvents) Object.entries(slot.songEvents).forEach(([k, v]) => ySongEvents.set(k, v as string));
     yHints.delete(0, yHints.length);
     if (slot.hints.length > 0) yHints.push(slot.hints);
     spoilerLocations = slot.spoilerLocations ?? {};
@@ -3281,7 +3509,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     ? Object.entries(spoilerSpecialConditions).filter(([, cond]) => cond.count > 0 || Object.values(cond).some(v => v === true))
     : [];
 
-  $: conditionProgress = ($_itemsRevStore, spoilerSpecialConditions ? computeConditionProgress(spoilerSpecialConditions, spoilerCoinCounts) : null);
+  $: conditionProgress = trackDep($_itemsRevStore, spoilerSpecialConditions ? computeConditionProgress(spoilerSpecialConditions, spoilerCoinCounts) : null);
 
   function computeConditionProgress(conditions: import('./util/spoilerParser').SpecialConditionsMap, coinCounts: Record<string, number>): Record<string, Record<string, { obtained: number; total: number }>> {
     const result: Record<string, Record<string, { obtained: number; total: number }>> = {};
@@ -3393,11 +3621,13 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
           <button class="game-filter-btn" class:active={(displaySettings.OOTMM ?? 'both') === 'both'} on:click|stopPropagation={() => { if (isWatchMode) return; saveDisplaySetting('OOTMM', 'both'); }}>Both</button>
           <button class="game-filter-btn" class:active={(displaySettings.OOTMM ?? 'both') === 'oot'} on:click|stopPropagation={() => { if (isWatchMode) return; saveDisplaySetting('OOTMM', 'oot'); }}>OoT</button>
           <button class="game-filter-btn" class:active={(displaySettings.OOTMM ?? 'both') === 'mm'} on:click|stopPropagation={() => { if (isWatchMode) return; saveDisplaySetting('OOTMM', 'mm'); }}>MM</button>
+          <button class="game-filter-btn" class:active={(displaySettings.OOTMM ?? 'both') === 'none'} on:click|stopPropagation={() => { if (isWatchMode) return; saveDisplaySetting('OOTMM', 'none'); }}>None</button>
           <span class="summary-sep"></span>
           <span class="game-filter-label">Dungeons</span>
           <button class="game-filter-btn" class:active={(displaySettings.OOTMMDungeons ?? 'both') === 'both'} on:click|stopPropagation={() => { if (isWatchMode) return; saveDisplaySetting('OOTMMDungeons', 'both'); }}>Both</button>
           <button class="game-filter-btn" class:active={(displaySettings.OOTMMDungeons ?? 'both') === 'ootdungeons'} on:click|stopPropagation={() => { if (isWatchMode) return; saveDisplaySetting('OOTMMDungeons', 'ootdungeons'); }}>OoT</button>
           <button class="game-filter-btn" class:active={(displaySettings.OOTMMDungeons ?? 'both') === 'mmdungeons'} on:click|stopPropagation={() => { if (isWatchMode) return; saveDisplaySetting('OOTMMDungeons', 'mmdungeons'); }}>MM</button>
+          <button class="game-filter-btn" class:active={(displaySettings.OOTMMDungeons ?? 'both') === 'none'} on:click|stopPropagation={() => { if (isWatchMode) return; saveDisplaySetting('OOTMMDungeons', 'none'); }}>None</button>
         </summary>
         <div id="general-container" class="flex flex-wrap" style="margin-top: 0.8em">
           <form class="pure-form pure-form-stacked">
@@ -3406,7 +3636,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
                 Show OOT/MM Overworld
                 <select
                   value={displaySettings.OOTMM ?? 'both'}
-                  on:change={e => { if (isWatchMode) return; saveDisplaySetting('OOTMM', e.target.value); }}
+                  on:change={e => { if (isWatchMode) return; saveDisplaySetting('OOTMM', selectValue(e)); }}
                   class="dropdown-select"
                   disabled={isWatchMode}
                 >
@@ -3488,10 +3718,26 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
                     <td>Hash</td>
                     <td style="display:flex; align-items:center; gap:0.4em;">
                       <span title={spoilerSeedInfo.hash} style="cursor:help;">{spoilerSeedInfo.hash.slice(0, 16)}…</span>
-                      <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-noninteractive-element-interactions -->
-                      <span class="copy-hash-btn" title="Copy full hash" on:click={copyHash}>{hashCopied ? '✓' : '⧉'}</span>
+                      <button type="button" class="copy-hash-btn" title="Copy full hash" on:click={copyHash}>{hashCopied ? '✓' : '⧉'}</button>
                     </td>
                   </tr>
+                  {#if spoilerPlayers > 1}
+                    <tr>
+                      <td>Player</td>
+                      <td>
+                        <select
+                          value={spoilerPlayerWorld === 0 ? '' : String(spoilerPlayerWorld)}
+                          on:change={e => setPlayerWorld(parseInt(e.currentTarget.value, 10))}
+                          style="background:#222; color:#eee; border:1px solid #555; border-radius:4px; padding:0.15em 0.3em;"
+                        >
+                          <option value="" disabled selected={spoilerPlayerWorld === 0}>— select —</option>
+                          {#each Array.from({length: spoilerPlayers}, (_, i) => i + 1) as n}
+                            <option value={String(n)}>Player {n}</option>
+                          {/each}
+                        </select>
+                      </td>
+                    </tr>
+                  {/if}
                   {#if spoilerSeedInfo.mode}<tr><td>Mode</td><td>{spoilerSeedInfo.mode}</td></tr>{/if}
                   {#if spoilerSeedInfo.games && spoilerSeedInfo.games !== 'ootmm'}<tr><td>Games</td><td>{spoilerSeedInfo.games}</td></tr>{/if}
                   {#if spoilerSeedInfo.version}<tr><td>Version</td><td>{spoilerSeedInfo.version}</td></tr>{/if}
@@ -3500,8 +3746,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
                       <td>Settings</td>
                       <td style="display:flex; align-items:center; gap:0.4em;">
                         <span title={spoilerSeedInfo.settingsString} style="cursor:help;">{spoilerSeedInfo.settingsString.slice(0, 20)}…</span>
-                        <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-noninteractive-element-interactions -->
-                        <span class="copy-hash-btn" title="Copy full settings string" on:click={copySettings}>{settingsCopied ? '✓' : '⧉'}</span>
+                        <button type="button" class="copy-hash-btn" title="Copy full settings string" on:click={copySettings}>{settingsCopied ? '✓' : '⧉'}</button>
                       </td>
                     </tr>
                   {/if}
@@ -3520,7 +3765,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
               {#if gameStatePresent}
                 {#if showGameState}
                 <table class="seed-table" style="margin-top: 0.4em;">
-                  <tr><td colspan="2" style="font-weight:600; padding-bottom:0.2em;">Game State <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-noninteractive-element-interactions --><span class="hide-btn" title="Hide Game State" on:click|stopPropagation={() => { showGameState = false; localStorage.setItem('sec_showgamestate', 'false'); } }>✕</span></td></tr>
+                  <tr><td colspan="2" style="font-weight:600; padding-bottom:0.2em;">Game State <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-noninteractive-element-interactions --><button type="button" class="hide-btn" title="Hide Game State" on:click|stopPropagation={() => { showGameState = false; localStorage.setItem('sec_showgamestate', 'false'); } }>✕</button></td></tr>
                   {#each gameStateSettings as gs}
                     {#if $sSettings.get(gs.id) != null}
                       <tr>
@@ -3531,7 +3776,9 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
                   {/each}
                 </table>
                 {:else}
-                <div class="spoiler-reveal" on:click={() => { showGameState = true; localStorage.setItem('sec_showgamestate', 'true'); } }>
+                <div class="spoiler-reveal" role="button" tabindex="0"
+                  on:click={() => { showGameState = true; localStorage.setItem('sec_showgamestate', 'true'); } }
+                  on:keydown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();showGameState=true;localStorage.setItem('sec_showgamestate','true');}}}>
                   ⚠️ Game State — click to reveal (spoilers)
                 </div>
                 {/if}
@@ -3578,7 +3825,9 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
                     <p class="spoiler-no-log">No spoiler loaded — use <em>Import Spoiler</em> to enable search.</p>
                   {:else}
                     {#if spoilerUnmatched.length > 0}
-                      <p class="spoiler-warn" title={spoilerUnmatched.join('\n')} on:click={() => console.table(spoilerUnmatched)} style="cursor:help">
+                      <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+                      <p class="spoiler-warn" title={spoilerUnmatched.join('\n')}
+                        on:click={() => console.table(spoilerUnmatched)} on:keydown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();console.table(spoilerUnmatched);}}} style="cursor:help">
                         {spoilerUnmatched.length} location{spoilerUnmatched.length > 1 ? 's' : ''} in spoiler not found in pool (hover/click for details)
                       </p>
                     {/if}
@@ -3586,7 +3835,11 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
                     {#if spoilerSearchResults.length > 0}
                       <ul class="spoiler-results">
                         {#each spoilerSearchResults as r}
-                          <li on:click={() => { if (isWatchMode) return; jumpToCheck(r.loc); }} style={isWatchMode ? '' : 'cursor:pointer'} title={isWatchMode ? '' : 'Click to jump to check'} class:spoiler-result-checked={($sChecks.get(r.loc) ?? T.CheckState.unchecked) === T.CheckState.checked}>
+                          <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+                          <li
+                            on:click={() => { if (isWatchMode) return; jumpToCheck(r.loc); }}
+                            on:keydown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();if(!isWatchMode)jumpToCheck(r.loc);}}}
+                            style={isWatchMode ? '' : 'cursor:pointer'} title={isWatchMode ? '' : 'Click to jump to check'} class:spoiler-result-checked={($sChecks.get(r.loc) ?? T.CheckState.unchecked) === T.CheckState.checked}>
                             {#if r.matchedLoc}
                               <span class="spoiler-loc">{r.loc}</span>
                               <span class="spoiler-arrow">→</span>
@@ -3703,7 +3956,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
             {#if connectionProvider == null}
               <form
                 class="pure-form"
-                on:submit|preventDefault={e => { persistRelocationCode(null, 'join-room-form'); joinCoopRoom(e.target?.querySelector('#room-code-input').value); }}
+                on:submit|preventDefault={e => { persistRelocationCode(null, 'join-room-form'); joinCoopRoom(getRoomCode(e)); }}
               >
                 <fieldset>
                   <input id="room-code-input" type="text" placeholder="Room code (or code-password)" required />
@@ -3803,7 +4056,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
                   <button class="pure-button" on:click|preventDefault={() => { if (isWatchMode) return; randoImportOpen = !randoImportOpen; randoImportError = ''; randoImportOk = false; }} disabled={isWatchMode}>🎲 Import Hash</button>
                   <button class="bg-danger pure-button" on:click|preventDefault={reset} disabled={isWatchMode}>Clear Checks</button>
                   <button class="bg-danger pure-button" on:click|preventDefault={resetSettings} disabled={isWatchMode}>Reset Settings</button>
-                {#if spoilerSyncedFromPeer}<span class="spoiler-sync-notice">📥 Spoiler received from co-op partner</span>{/if}
+                {#if spoilerSyncedFromPeer}<div class="spoiler-sync-toast">📥 Spoiler synced</div>{/if}
               </div>
               {#if randoImportOpen}
                 <div class="rando-import-panel">
@@ -3878,14 +4131,22 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
       <details style="margin-top: 0.8em" id="er-tracker-details" bind:open={secEr} on:toggle={() => localStorage.setItem('sec_er', String(secEr))}>
         <summary>
           <strong class="interactable">Entrance Rando Tracker</strong>
-          {#if $sEntrances.size > 0}<span class="section-badge">{$sEntrances.size}</span>{/if}
+          {#if entranceValuesMap.size > 0}<span class="section-badge">{entranceValuesMap.size}</span>{/if}
+          {#if spoilerEntrances}
+            <button
+              class="spoiler-fill-btn"
+              class:active={spoilerFillEntrances}
+              on:click|stopPropagation={toggleSpoilerFillEntrances}
+              title={spoilerFillEntrances ? 'Spoiler fill ON — cliquer pour revenir au manuel' : 'Remplir depuis le spoiler'}
+            >{spoilerFillEntrances ? '📋 Spoiler' : '📋'}</button>
+          {/if}
         </summary>
         <div class="er-tabs" role="tablist">
           <button class="er-tab" class:active={erTab === 'tracker'} on:click={() => erTab = 'tracker'} role="tab">Tracker</button>
           <button class="er-tab" class:active={erTab === 'pathfinder'} on:click={() => erTab = 'pathfinder'} role="tab">Pathfinder</button>
         </div>
         {#if erTab === 'tracker'}
-          <ERTracker {yEntrances} entranceValues={entranceValuesMap} {spoilerErSettings} {spoilerExtraEr} {isWatchMode} />
+          <ERTracker {yEntrances} entranceValues={entranceValuesMap} {spoilerErSettings} {spoilerExtraEr} isWatchMode={isWatchMode || spoilerFillEntrances} bind:activeErSettings={activeErSettings} on:openMapForEntrance={e => openMapForEntrance(e.detail.entranceId)} />
         {:else}
           <Pathfinder entranceValues={entranceValuesMap} />
         {/if}
@@ -3909,6 +4170,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
           {yHints} {hints}
           {notesEntries} {shopEntries}
           {isWatchMode}
+          {ySongEvents} {yItems} {songEventShuffle}
           onEditNote={handleEditNote}
           onEditShop={handleShopEditByName}
           onDeleteNote={(id) => { if (!isWatchMode) yNotes.delete(id); }}
@@ -3944,7 +4206,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
                           {option.label}
                           <select
                             value={$sSettings.get(option.id) ?? option.default}
-                            on:change={e => { if (isWatchMode) return; ySettings.set(option.id, e.target.value); }}
+                            on:change={e => { if (isWatchMode) return; ySettings.set(option.id, selectValue(e)); }}
                             class="dropdown-select"
                             disabled={isWatchMode}
                           >
@@ -3972,7 +4234,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
                           {option.label}
                           <select
                             value={$sSettings.get(option.id) ?? option.default}
-                            on:change={e => { if (isWatchMode) return; ySettings.set(option.id, e.target.value); }}
+                            on:change={e => { if (isWatchMode) return; ySettings.set(option.id, selectValue(e)); }}
                             class="dropdown-select"
                             disabled={isWatchMode}
                           >
@@ -4063,6 +4325,25 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
               on:click={() => (showShortcuts = !showShortcuts)}
               title="Keyboard shortcuts"
             >⌨️</button>
+            <button
+              class="pure-button legend-toggle-btn"
+              type="button"
+              on:click={exportAllEntranceMarkers}
+              title="Export all entrance markers (CSV)"
+            >🚪⬇️</button>
+            <button
+              class="pure-button legend-toggle-btn"
+              type="button"
+              on:click={triggerImportEntranceMarkers}
+              title="Import entrance markers (CSV)"
+            >🚪⬆️</button>
+            <button
+              class="pure-button legend-toggle-btn"
+              type="button"
+              on:click={clearAllEntranceMarkers}
+              title="Clear all entrance markers"
+            >🚪✕</button>
+            <input type="file" accept=".csv" style="display:none" bind:this={importFileInput} on:change={importEntranceMarkers} />
                 </fieldset>
               </form>
       </section>
@@ -4104,7 +4385,15 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
         </div>
       {/if}
 
+      <!-- Multiworld: no player selected warning -->
+      {#if spoilerPlayers > 1 && spoilerPlayerWorld === 0}
+        <div class="multiworld-no-player-banner">
+          ⚠ Multiworld spoiler loaded — select your player number in the seed info to view your checks
+        </div>
+      {/if}
+
       <!-- Check groups -->
+      <div class:checks-locked={spoilerPlayers > 1 && spoilerPlayerWorld === 0}>
       {#if sortedChecks != null}
         {#each sortedChecks as group (group.groupName)}
           <section>
@@ -4137,7 +4426,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
                   state={$sChecks.get(check.name) ?? T.CheckState.unchecked}
                   shopItem={$sShopItems.get(check.name) ?? ''}
                   shopPrice={$sShopPrices.get(check.name) ?? null}
-                  isShop={check.type === T.CheckType.scrub ||
+                  isShop={check.type === T.CheckType.deku_scrub ||
                     check.type === T.CheckType.shop ||
                     priceEditIds.has(check.id)}
                   showPrice={!itemOnlyIds.has(check.id)}
@@ -4186,6 +4475,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
           </section>
         {/each}
       {/if}
+      </div>
     </section>
 
     <!-- ===== MAP MODAL ===== -->
@@ -4203,13 +4493,12 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
         variantSettings={$sVariantSettings}
         bind:showAgeFilter
         bind:ageFilter
-        on:close={() => {
-          showMapModal = false;
-        }}
+        on:close={() => { showMapModal = false; mapInitialSubscene = ''; }}
         on:toggleCheck={handleMapToggle}
         on:changeScene={e => {
           currentMapScene = e.detail.scene;
-          currentSceneData = mapData[e.detail.scene];
+          currentSceneData = mapData?.[e.detail.scene] ?? null;
+          if (e.detail.subscene) mapInitialSubscene = e.detail.subscene;
         }}
         shopItems={shopItemsMap}
         shopPrices={shopPricesMap}
@@ -4217,6 +4506,9 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
         on:shopEdit={e => handleMapShopEdit(e.detail.checkName)}
         scenePings={scenePingsForMap}
         on:ping={handleMapPing}
+        erSettings={erSettingsForMap}
+        entranceValues={entranceValuesMap}
+        initialSubscene={mapInitialSubscene}
       />
     {/if}
 
@@ -4424,6 +4716,24 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     color: #fff;
     opacity: 0.85;
     vertical-align: middle;
+  }
+  .spoiler-fill-btn {
+    margin-left: 0.6em;
+    padding: 1px 7px;
+    font-size: 0.72em;
+    border-radius: 6px;
+    border: 1px solid #555;
+    background: #2a2a2a;
+    color: #aaa;
+    cursor: pointer;
+    vertical-align: middle;
+    opacity: 0.8;
+  }
+  .spoiler-fill-btn.active {
+    background: #1a3a1a;
+    border-color: #4a9a4a;
+    color: #7dca7d;
+    opacity: 1;
   }
 
   .shortcuts-panel {
@@ -4986,11 +5296,35 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
   }
   .webrtc-warning code { font-size: 0.95em; }
 
-  .spoiler-sync-notice {
-    display: inline-block;
-    margin-left: 0.5em;
-    font-size: 0.82em;
-    color: #2a7a2a;
+  .checks-locked {
+    pointer-events: none;
+    opacity: 0.35;
+    user-select: none;
+  }
+
+  .multiworld-no-player-banner {
+    margin: 0.8em 0;
+    padding: 0.75em 1em;
+    border-radius: 6px;
+    background: #3a2800;
+    border: 1px solid #c8901a;
+    color: #f0b840;
+    font-size: 1em;
+    font-weight: bold;
+    text-align: center;
+  }
+
+  .spoiler-sync-toast {
+    position: fixed;
+    bottom: 1.2em;
+    right: 1.2em;
+    z-index: 9999;
+    padding: 0.45em 0.9em;
+    border-radius: 6px;
+    background: #1e5c1e;
+    color: #d4f0d4;
+    font-size: 0.85em;
+    pointer-events: none;
     animation: fadeOut 4s forwards;
   }
   @keyframes fadeOut {
