@@ -581,7 +581,8 @@ yKeepalive.observe((event: any) => {
   const FORCE_TURN_RELAY = false;
 
   // TURN credentials fetched from signaling server (avoids hardcoding API key)
-  let turnIceServers: RTCIceServer[] = [
+  // Mutate the array in-place so peerOpts always uses the same reference.
+  const turnIceServers: RTCIceServer[] = [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
   ];
@@ -589,13 +590,19 @@ yKeepalive.observe((event: any) => {
     try {
       if (!force) {
         const cached = localStorage.getItem('turnIceServers');
-        if (cached) { turnIceServers = [...turnIceServers, ...JSON.parse(cached)]; return; }
+        if (cached) {
+          const parsed: RTCIceServer[] = JSON.parse(cached);
+          // Avoid duplicating if already loaded
+          if (turnIceServers.length <= 2) turnIceServers.push(...parsed);
+          return;
+        }
       }
       const res = await fetch('https://ootmmr-checklist.mobby45.deno.net/api/turn-credentials');
       if (!res.ok) return;
       const data = await res.json();
       if (data.iceServers?.length) {
-        turnIceServers = [...turnIceServers, ...data.iceServers];
+        // Only add if not already present (from cache)
+        if (turnIceServers.length <= 2) turnIceServers.push(...data.iceServers);
         localStorage.setItem('turnIceServers', JSON.stringify(data.iceServers));
       }
     } catch {}
