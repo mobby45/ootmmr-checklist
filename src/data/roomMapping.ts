@@ -93,8 +93,8 @@ export const OoTRooms: Record<string, RoomInfo[]> = {
 export const MMRooms: Record<string, RoomInfo[]> = {
 
   MM_OBSERVATORY: [
+    { roomId: 1, roomName: "Passage", imagePath: "MM/mm_observatory_passage.png" },
     { roomId: 0, roomName: "Observatory", imagePath: "MM/mm_observatory.png" },
-    { roomId: 1, roomName: "Passage", imagePath: "MM/mm_observatory_passage.png" }
   ],
 
   MM_STOCK_POT_INN: [

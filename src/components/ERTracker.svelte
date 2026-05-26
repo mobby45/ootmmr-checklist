@@ -3,6 +3,12 @@
   import { defaultErSettings, type ErSettings } from '../util/spoilerParser';
   import type { Map as YMap } from 'yjs';
   import EntranceSelect from './EntranceSelect.svelte';
+  import { createEventDispatcher } from 'svelte';
+  import { entrancePositions } from '../data/entrancePositions';
+
+  const dispatch = createEventDispatcher();
+
+  $: entranceHasMap = new Set(entrancePositions.map(p => p.entranceId));
 
   export let yEntrances: YMap<string>;
   export let entranceValues: Map<string, string>;
@@ -32,7 +38,7 @@
     }
   }
 
-  let activeErSettings: ErSettings = spoilerErSettings ?? manualErSettings;
+  export let activeErSettings: ErSettings = spoilerErSettings ?? manualErSettings;
   $: activeErSettings = spoilerErSettings ?? manualErSettings;
 
   function saveManualErSettings() {
@@ -43,6 +49,10 @@
   function toggleErSetting(key: string) {
     manualErSettings[key as keyof ErSettings] = !manualErSettings[key as keyof ErSettings];
     saveManualErSettings();
+  }
+
+  function isErActive(key: string): boolean {
+    return activeErSettings[key as keyof ErSettings];
   }
 
   const erLabels: Record<string, string> = {
@@ -60,7 +70,7 @@
   const subTypeGroups = [
     { parent: 'erDungeons', label: 'Dungeons', keys: ['erMajorDungeons', 'erMinorDungeons', 'erGanonCastle', 'erGanonTower', 'erMoon', 'erSpiderHouses', 'erPirateFortress', 'erBeneathWell', 'erIkanaCastle', 'erSecretShrine'] },
     { parent: 'erIndoors', label: 'Interiors', keys: ['erIndoorsMajor', 'erIndoorsExtra', 'erIndoorsGameLinks'] },
-    { parent: 'erOneWays', label: 'One-Ways', keys: ['erOneWaysMajor', 'erOneWaysIkana', 'erOneWaysSongs', 'erOneWaysStatues', 'erOneWaysWoods', 'erOneWaysWaterVoids', 'erOneWaysAnywhere', 'erOneWaysOwls'] },
+    { parent: 'erOneWays', label: 'One-Ways', keys: ['erOneWaysMajor', 'erOneWaysIkana', 'erOneWaysSongs', 'erOneWaysStatues', 'erOneWaysWaterVoids', 'erOneWaysAnywhere', 'erOneWaysOwls'] },
   ];
 
   // Track which sub-types have at least one entrance in the current data
@@ -88,11 +98,12 @@
   ) as Record<string, Set<string>>;
 
   // Active/total sub-type count per parent key
+  // Reference manualErSettings directly so Svelte tracks it as a dependency
   $: subTypeCounts = Object.fromEntries(
     subTypeGroups
       .filter(g => hasPopulatedSubGroup(g))
       .map(g => [g.parent, {
-        active: g.keys.filter(k => getSub(k)).length,
+        active: g.keys.filter(k => (manualErSettings as any)[k] ?? false).length,
         total: g.keys.filter(k => hasPopulatedSub(k)).length,
       }])
   ) as Record<string, { active: number; total: number }>;
@@ -136,7 +147,7 @@
   }
 
   $: activeErTypes = new Set<ErSettingKey>(
-    (Object.keys(activeErSettings) as (keyof ErSettings)[]).filter(k => activeErSettings[k])
+    (Object.keys(activeErSettings) as ErSettingKey[]).filter(k => activeErSettings[k as keyof ErSettings])
   );
 
   $: filteredEntrances = allEntrances.filter(e => {
@@ -191,7 +202,7 @@
       {#each Object.entries(erLabels) as [key, label]}
         <button
           class="er-toggle-btn"
-          class:active={key === 'erMixed' ? manualErSettings.erMixed : activeErSettings[key]}
+          class:active={key === 'erMixed' ? manualErSettings.erMixed : isErActive(key)}
           class:from-spoiler={spoilerErSettings !== null && key !== 'erMixed'}
           class:always-manual={key === 'erMixed'}
           disabled={isWatchMode || (spoilerErSettings !== null && key !== 'erMixed')}
@@ -273,6 +284,9 @@
     {entrance.game.toUpperCase()}
   </span>
   <span class="er-name" title={entrance.name}>{entrance.name}</span>
+  {#if entranceHasMap.has(entrance.id)}
+    <button class="er-map-btn" title="Open map" on:click={() => dispatch('openMapForEntrance', { entranceId: entrance.id })}>🗺️</button>
+  {/if}
   <span class="er-arrow">→</span>
   <div class="er-select-wrap" style="width: {currentValue ? Math.max(160, currentValue.length * 7.2) : 160}px">
     <EntranceSelect
@@ -480,6 +494,18 @@
     opacity: 0.5;
     flex-shrink: 0;
   }
+
+  .er-map-btn {
+    background: none;
+    border: none;
+    padding: 0 2px;
+    cursor: pointer;
+    font-size: 0.85em;
+    opacity: 0.5;
+    flex-shrink: 0;
+    line-height: 1;
+  }
+  .er-map-btn:hover { opacity: 1; }
 
 .er-select-wrap {
   flex: 1;

@@ -6,6 +6,9 @@
 export interface SubsceneInfo {
   renderscene: string;
   displayName?: string;
+  imagePath?: string;
+  jpOnly?: boolean;
+  usOnly?: boolean;
 }
 
 export type SubsceneEntry = string | SubsceneInfo;
@@ -34,6 +37,7 @@ export const zoneMapping: Record<string, { game: 'oot' | 'mm'; subscenes: Subsce
       { renderscene: 'OOT_GROTTO_DEATH_TRIAL_COW', displayName: 'Cow Grotto' },
       { renderscene: 'OOT_GROTTO_DEATH_TRIAL_STORMS', displayName: 'Song of Storms Grotto' },
       { renderscene: 'OOT_GREAT_FAIRY_MAGIC', displayName: 'Great Fairy Fountain' },
+      { renderscene: 'OOT_DEATH_MOUNTAIN_TRAIL_ROOM_2', displayName: 'Upper Trail', imagePath: 'OoT/oot_death_mountain_trail_top.png' },
     ]
   },
 
@@ -162,6 +166,7 @@ export const zoneMapping: Record<string, { game: 'oot' | 'mm'; subscenes: Subsce
       { renderscene: 'OOT_KOKIRI_TWINS', displayName: "Twins's House" },
       { renderscene: 'OOT_KOKIRI_SHOP', displayName: 'Shop' },
       { renderscene: 'OOT_GROTTO_KOKIRI_FOREST_STORMS', displayName: 'Song of Storms Grotto' },
+      { renderscene: 'OOT_DEKU_TREE_MEADOW', displayName: 'Near Deku Tree' },
     ]
   },
 
@@ -203,17 +208,20 @@ export const zoneMapping: Record<string, { game: 'oot' | 'mm'; subscenes: Subsce
     game: 'oot',
     displayName: 'Market',
     subscenes: [
+      { renderscene: 'OOT_MARKET_ENTRYWAY', displayName: 'Market Entryway' },
+      { renderscene: 'OOT_GUARD_HOUSE', displayName: 'Guard House' },
       { renderscene: 'OOT_MARKET_CHILD_DAY', displayName: 'Market - Day' },
       { renderscene: 'OOT_MARKET_CHILD_NIGHT', displayName: 'Market - Night' },
-      { renderscene: 'OOT_TREASURE_SHOP', displayName: 'Treasure Shop' },
-      { renderscene: 'OOT_BACK_ALLEY_HOUSE', displayName: "Back Alley's House" },
-      { renderscene: 'OOT_BACK_ALLEY_HOUSE2', displayName: "Dog Lady's House" },
+      { renderscene: 'OOT_TEMPLE_OF_TIME_ENTRYWAY', displayName: 'Temple of Time Entryway' },
       { renderscene: 'OOT_MARKET_BAZAAR', displayName: 'Bazaar' },
-      { renderscene: 'OOT_BOMBCHU_SHOP', displayName: 'Bombchu Shop' },
-      { renderscene: 'OOT_GUARD_HOUSE', displayName: 'Guard House' },
       { renderscene: 'OOT_MARKET_POTION_SHOP', displayName: 'Potion Shop' },
+      { renderscene: 'OOT_TREASURE_SHOP', displayName: 'Treasure Shop' },
       { renderscene: 'OOT_MARKET_SHOOTING', displayName: 'Shooting Gallery' },
       { renderscene: 'OOT_BOMBCHU_BOWLING_ALLEY', displayName: 'Bombchu Bowling' },
+      { renderscene: 'OOT_BACK_ALLEY', displayName: 'Back Alley' },
+      { renderscene: 'OOT_BOMBCHU_SHOP', displayName: 'Bombchu Shop' },
+      { renderscene: 'OOT_BACK_ALLEY_HOUSE', displayName: "Back Alley's House" },
+      { renderscene: 'OOT_BACK_ALLEY_HOUSE2', displayName: "Dog Lady's House" },
     ]
   },
 
@@ -282,9 +290,7 @@ export const zoneMapping: Record<string, { game: 'oot' | 'mm'; subscenes: Subsce
   OOT_INSIDE_JABU_JABU: {
     game: 'oot',
     displayName: "Jabu Jabu's Belly",
-    subscenes: [
-      { renderscene: 'OOT_LAIR_BARINADE', displayName: 'Boss (Barinade)' },
-    ]
+    subscenes: []
   },
 
   OOT_BOTTOM_OF_THE_WELL: {
@@ -302,41 +308,31 @@ export const zoneMapping: Record<string, { game: 'oot' | 'mm'; subscenes: Subsce
   OOT_TEMPLE_FOREST: {
     game: 'oot',
     displayName: 'Forest Temple',
-    subscenes: [
-      { renderscene: 'OOT_LAIR_PHANTOM_GANON', displayName: 'Boss (Phantom Ganon)' },
-    ]
+    subscenes: []
   },
 
   OOT_TEMPLE_FIRE: {
     game: 'oot',
     displayName: 'Fire Temple',
-    subscenes: [
-      { renderscene: 'OOT_LAIR_VOLVAGIA', displayName: 'Boss (Volvagia)' },
-    ]
+    subscenes: []
   },
 
   OOT_TEMPLE_WATER: {
     game: 'oot',
     displayName: 'Water Temple',
-    subscenes: [
-      { renderscene: 'OOT_LAIR_MORPHA', displayName: 'Boss (Morpha)' },
-    ]
+    subscenes: []
   },
 
   OOT_TEMPLE_SHADOW: {
     game: 'oot',
     displayName: 'Shadow Temple',
-    subscenes: [
-      { renderscene: 'OOT_LAIR_BONGO_BONGO', displayName: 'Boss (Bongo Bongo)' },
-    ]
+    subscenes: []
   },
 
   OOT_TEMPLE_SPIRIT: {
     game: 'oot',
     displayName: 'Spirit Temple',
-    subscenes: [
-      { renderscene: 'OOT_LAIR_TWINROVA', displayName: 'Boss (Twinrova)' },
-    ]
+    subscenes: []
   },
 
   OOT_INSIDE_GANON_CASTLE: {
@@ -379,7 +375,7 @@ export const zoneMapping: Record<string, { game: 'oot' | 'mm'; subscenes: Subsce
       { renderscene: 'MM_CLOCK_TOWN_EAST', displayName: 'East Clock Town' },
       { renderscene: 'MM_TREASURE_SHOP', displayName: 'Treasure Shop' },
       { renderscene: 'MM_HONEY_DARLING', displayName: 'Honey & Darling' },
-      { renderscene: 'MM_SHOOTING_GALLERY', displayName: 'Shooting Gallery' },
+      { renderscene: 'MM_SHOOTING_GALLERY', displayName: 'Town Archery' },
       { renderscene: 'MM_MAYOR_HOUSE', displayName: "Mayor's Office" },
       { renderscene: 'MM_MILK_BAR', displayName: 'Milk Bar' },
       { renderscene: 'MM_OBSERVATORY', displayName: 'Astral Observatory' },
@@ -417,7 +413,8 @@ export const zoneMapping: Record<string, { game: 'oot' | 'mm'; subscenes: Subsce
       { renderscene: 'MM_GROTTO_DEKU_PALACE_BEANS', displayName: 'Beans Grotto' },
       { renderscene: 'MM_DEKU_SHRINE', displayName: "Deku's Shrine" },
       { renderscene: 'MM_DEKU_KING_CHAMBER', displayName: "Deku King's Chamber" },
-      { renderscene: 'MM_GROTTO_DEKU_PALACE_GENERIC', displayName: 'Deku Palace Grotto' },
+      { renderscene: 'MM_GROTTO_DEKU_PALACE_JP_CLIMB', displayName: 'Deku Palace JP Climb Grotto', imagePath: 'MM/mm_grotto_deku_palace_jp_climb.jpg', jpOnly: true },
+      { renderscene: 'MM_GROTTO_DEKU_PALACE_JP_LINE', displayName: 'Deku Palace JP Line Grotto', imagePath: 'MM/mm_grotto_deku_palace_jp_line.jpg', jpOnly: true },
     ]
   },
     MM_GORON_VILLAGE: {
@@ -439,6 +436,7 @@ export const zoneMapping: Record<string, { game: 'oot' | 'mm'; subscenes: Subsce
       { renderscene: 'MM_GROTTO_GREAT_BAY_COAST_COW', displayName: 'Cow Grotto' },
       { renderscene: 'MM_GROTTO_GREAT_BAY_COAST_FISHERMAN', displayName: 'Fisherman Grotto' },
       { renderscene: 'MM_LABORATORY', displayName: 'Laboratory' },
+      { renderscene: 'MM_FISHER_HUT', displayName: "Fisherman's Hut", imagePath: 'MM/mm_fisherman_hut.png' },
     ]
   },
 
@@ -452,6 +450,15 @@ export const zoneMapping: Record<string, { game: 'oot' | 'mm'; subscenes: Subsce
       { renderscene: 'MM_GHOST_HUT', displayName: 'Ghost Hut' },
       { renderscene: 'MM_SAKON_HIDEOUT', displayName: "Sakon's Hideout" },
       { renderscene: 'MM_FAIRY_IKANA', displayName: "Great Fairy" },
+      { renderscene: 'MM_IKANA_CAVERN', displayName: 'Spring Water Cave', imagePath: 'MM/mm_ikana_cavern.png' },
+    ]
+  },
+
+  MM_SECRET_SHRINE: {
+    game: 'mm',
+    displayName: 'Secret Shrine',
+    subscenes: [
+      { renderscene: 'MM_SECRET_SHRINE', displayName: 'Secret Shrine' },
     ]
   },
 
@@ -477,7 +484,7 @@ export const zoneMapping: Record<string, { game: 'oot' | 'mm'; subscenes: Subsce
 
   MM_PATH_MOUNTAIN_VILLAGE: {
     game: 'mm',
-    displayName: 'Path to Snowhead',
+    displayName: 'Path to Mountain Village',
     subscenes: [
       { renderscene: 'MM_PATH_MOUNTAIN_VILLAGE_WINTER', displayName: 'Path to Mountain Village Winter' },
       { renderscene: 'MM_PATH_MOUNTAIN_VILLAGE_SPRING', displayName: 'Path to Mountain Village Spring' },
@@ -525,6 +532,15 @@ MM_MOUNTAIN_VILLAGE: {
     ]
   },
 
+  MM_STONE_TOWER: {
+    game: 'mm',
+    displayName: 'Stone Tower',
+    subscenes: [
+      { renderscene: 'MM_STONE_TOWER', displayName: 'Stone Tower' },
+      { renderscene: 'MM_STONE_TOWER_INVERTED', displayName: 'Stone Tower (Inverted)' },
+    ]
+  },
+
   MM_ROAD_SOUTHERN_SWAMP: {
     game: 'mm',
     displayName: 'Road to Southern Swamp',
@@ -540,9 +556,19 @@ MM_MOUNTAIN_VILLAGE: {
     displayName: 'Romani Ranch',
     subscenes: [
       { renderscene: 'MM_ROMANI_RANCH', displayName: 'Romani Ranch' },
+      { renderscene: 'MM_RANCH_HOUSE', displayName: 'Ranch House', imagePath: 'MM/mm_ranch_house.png' },
       { renderscene: 'MM_RANCH_HOUSE_BARN', displayName: 'Stables' },
       { renderscene: 'MM_CUCCO_SHACK', displayName: 'Cucco Shack' },
       { renderscene: 'MM_DOG_RACETRACK', displayName: 'Dog Racetrack' },
+    ]
+  },
+
+  MM_WOODFALL: {
+    game: 'mm',
+    displayName: 'Woodfall',
+    subscenes: [
+      { renderscene: 'MM_WOODFALL', displayName: 'Woodfall' },
+      { renderscene: 'MM_FAIRY_WOODFALL', displayName: 'Great Fairy Fountain' },
     ]
   },
 
@@ -568,13 +594,13 @@ MM_MOUNTAIN_VILLAGE: {
       { renderscene: 'MM_GROTTO_TERMINA_CANYON_GOSSIP', displayName: 'Canyon Gossip Grotto' },
       { renderscene: 'MM_GROTTO_TERMINA_COW', displayName: 'Cow Grotto' },
       { renderscene: 'MM_GROTTO_TERMINA_DODONGO', displayName: 'Dodongo Grotto' },
+      { renderscene: 'MM_GROTTO_TERMINA_MOUNTAIN_GOSSIP', displayName: 'Mountain Gossip Grotto' },
       { renderscene: 'MM_GROTTO_TERMINA_OCEAN_GOSSIP', displayName: 'Ocean Gossip Grotto' },
       { renderscene: 'MM_GROTTO_TERMINA_PEAHAT', displayName: 'Peahat Grotto' },
+      { renderscene: 'MM_GROTTO_TERMINA_SWAMP_GOSSIP', displayName: 'Swamp Gossip Grotto' },
       { renderscene: 'MM_GROTTO_TERMINA_PILLAR', displayName: 'Pillar Grotto' },
       { renderscene: 'MM_GROTTO_TERMINA_SCRUB', displayName: 'Scrub Grotto' },
       { renderscene: 'MM_GROTTO_TERMINA_TALL_GRASS', displayName: 'Tall Grass Grotto' },
-      { renderscene: 'MM_FAIRY_FOUNTAIN', displayName: 'Fairy Fountain' },
-      
     ]
   },
 
@@ -606,8 +632,10 @@ MM_MOUNTAIN_VILLAGE: {
     displayName: 'Zora Hall',
     subscenes: [
       { renderscene: 'MM_ZORA_HALL', displayName: 'Zora Hall' },
-      { renderscene: 'MM_ZORA_HALL_ROOMS', displayName: 'Zora Hall Rooms' },
-      { renderscene: 'MM_ZORA_EVANS_ROOM', displayName: 'Zora Evans Room' },
+      { renderscene: 'MM_ZORA_LULU_ROOM', displayName: "Zora Lulu's Room", imagePath: 'MM/mm_zora_hall_rooms.png' },
+      { renderscene: 'MM_ZORA_EVANS_ROOM', displayName: "Zora Evan's Room" },
+      { renderscene: 'MM_ZORA_JAPAS_ROOM', displayName: "Zora Japas' Room" },
+      { renderscene: 'MM_ZORA_TIJO_ROOM', displayName: "Zora Tijo's Room" },
       { renderscene: 'MM_ZORA_SHOP', displayName: 'Zora Shop' },
     ]
   },
@@ -629,25 +657,19 @@ MM_MOUNTAIN_VILLAGE: {
   MM_TEMPLE_WOODFALL: {
     game: 'mm',
     displayName: 'Woodfall Temple',
-    subscenes: [
-      { renderscene: 'MM_LAIR_ODOLWA', displayName: 'Boss (Odolwa)' },
-    ]
+    subscenes: []
   },
 
   MM_TEMPLE_SNOWHEAD: {
     game: 'mm',
     displayName: 'Snowhead Temple',
-    subscenes: [
-      { renderscene: 'MM_LAIR_GOHT', displayName: 'Boss (Goht)' },
-    ]
+    subscenes: []
   },
 
   MM_TEMPLE_GREAT_BAY: {
     game: 'mm',
     displayName: 'Great Bay Temple',
-    subscenes: [
-      { renderscene: 'MM_LAIR_GYORG', displayName: 'Boss (Gyorg)' },
-    ]
+    subscenes: []
   },
 
 MM_TEMPLE_STONE_TOWER: {
@@ -659,9 +681,7 @@ MM_TEMPLE_STONE_TOWER: {
 MM_TEMPLE_STONE_TOWER_INVERTED: {
   game: 'mm',
   displayName: 'Inverted Stone Tower Temple', 
-  subscenes: [
-    { renderscene: 'MM_LAIR_TWINMOLD', displayName: 'Boss (Twinmold)' },
-  ]
+  subscenes: []
 },
 
   MM_BENEATH_THE_WELL: {
@@ -675,9 +695,7 @@ MM_TEMPLE_STONE_TOWER_INVERTED: {
   MM_CASTLE_IKANA: {
     game: 'mm',
     displayName: 'Ikana Castle',
-    subscenes: [
-      { renderscene: 'MM_LAIR_IKANA', displayName: 'Boss ( Ikana)' },
-    ]
+    subscenes: []
   },
 
   MM_SPIDER_HOUSE_SWAMP: {

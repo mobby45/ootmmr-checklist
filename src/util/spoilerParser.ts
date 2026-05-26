@@ -134,6 +134,9 @@ export interface SpoilerData {
   OOTMMDungeons: 'both' | 'ootdungeons' | 'mmdungeons';
   seedInfo: SeedInfo | null;
   specialConditions: SpecialConditionsMap;
+  players: number;
+  worldLocations: Record<number, Record<string, string>>;
+  worldEntrances: Record<number, Record<string, string>>;
 }
 
 function parseValue(spoilerKey: string, rawValue: string): any {
@@ -146,11 +149,21 @@ function parseValue(spoilerKey: string, rawValue: string): any {
 export function parseSpoilerLog(text: string): SpoilerData {
   const lines = text.split('\n');
 
+  const playersLine = lines.find(l => /^  players:\s/.test(l));
+  const players = playersLine ? parseInt(playersLine.split(':')[1].trim(), 10) : 1;
+  const isMultiworld = players > 1;
+
   const settings: Record<string, any> = {};
   const locations: Record<string, string> = {};
   const entrances: Record<string, string> = {};
   const spheres: SpoilerSphere[] = [];
   const rawEr: Record<string, string> = {};
+
+  const worldLocations: Record<number, Record<string, string>> = {};
+  const worldEntrances: Record<number, Record<string, string>> = {};
+  for (let i = 1; i <= players; i++) { worldLocations[i] = {}; worldEntrances[i] = {}; }
+  let currentLocationWorld = 1;
+  let currentEntranceWorld = 1;
 
   let inSettings = false;
   let inLocations = false;
@@ -194,18 +207,41 @@ export function parseSpoilerLog(text: string): SpoilerData {
     }
 
     if (inEntrances) {
-      const match = line.match(/^  .+?\(([^)]+)\)\s*->\s*(.+?)\s*\([^)]+\)\s*$/);
-      if (match) {
-        const [, fromId, toName] = match;
-        entrances[fromId.trim()] = toName.trim();
+      if (isMultiworld) {
+        const worldMatch = line.match(/^  World (\d+)\s*$/);
+        if (worldMatch) { currentEntranceWorld = parseInt(worldMatch[1], 10); }
+        const match = line.match(/^    .+?\(([^)]+)\)\s*->\s*(.+?)\s*\([^)]+\)\s*$/);
+        if (match) {
+          const [, fromId, toName] = match;
+          worldEntrances[currentEntranceWorld][fromId.trim()] = toName.trim();
+        }
+      } else {
+        const match = line.match(/^  .+?\(([^)]+)\)\s*->\s*(.+?)\s*\([^)]+\)\s*$/);
+        if (match) {
+          const [, fromId, toName] = match;
+          entrances[fromId.trim()] = toName.trim();
+        }
       }
     }
 
     if (inLocations) {
-      const match = line.match(/^    (.+?):\s*(.+)$/);
-      if (match) {
-        const [, locationName, itemName] = match;
-        if (!locationName.match(/\(\d+\)$/)) locations[locationName.trim()] = itemName.trim();
+      if (isMultiworld) {
+        const worldMatch = line.match(/^  World (\d+)/);
+        if (worldMatch) { currentLocationWorld = parseInt(worldMatch[1], 10); }
+        const match = line.match(/^      (.+?):\s*(.+)$/);
+        if (match) {
+          const [, locationName, rawItem] = match;
+          if (!locationName.match(/\(\d+\)$/)) {
+            const item = rawItem.trim().replace(/^Player \d+ /, '');
+            worldLocations[currentLocationWorld][locationName.trim()] = item;
+          }
+        }
+      } else {
+        const match = line.match(/^    (.+?):\s*(.+)$/);
+        if (match) {
+          const [, locationName, itemName] = match;
+          if (!locationName.match(/\(\d+\)$/)) locations[locationName.trim()] = itemName.trim();
+        }
       }
     }
 
@@ -237,12 +273,15 @@ export function parseSpoilerLog(text: string): SpoilerData {
       }
       const locationMatch = line.match(/^\s*Location\s+-\s+(.+):\s*(.+)$/);
       if (locationMatch && currentSphere) {
-        currentSphere.entries.push({ type: 'Location', location: locationMatch[1].trim(), item: locationMatch[2].trim() });
+        const loc = locationMatch[1].trim().replace(/^World \d+ /, '');
+        const item = locationMatch[2].trim().replace(/^Player \d+ /, '');
+        currentSphere.entries.push({ type: 'Location', location: loc, item });
         continue;
       }
       const eventMatch = line.match(/^\s*Event\s+-\s+(.+)$/);
       if (eventMatch && currentSphere) {
-        currentSphere.entries.push({ type: 'Event', event: eventMatch[1].trim() });
+        const ev = eventMatch[1].trim().replace(/^World \d+ /, '');
+        currentSphere.entries.push({ type: 'Event', event: ev });
         continue;
       }
     }
@@ -324,5 +363,10 @@ export function parseSpoilerLog(text: string): SpoilerData {
     settingsString: settingsStringLine ? settingsStringLine.replace('SettingsString:', '').trim() : '',
   } : null;
 
-  return { settings, locations, entrances, spheres, erSettings, OOTMM, OOTMMDungeons, seedInfo, specialConditions: specialConditions as SpecialConditionsMap };
+  if (isMultiworld) {
+    Object.assign(locations, worldLocations[1]);
+    Object.assign(entrances, worldEntrances[1]);
+  }
+
+  return { settings, locations, entrances, spheres, erSettings, OOTMM, OOTMMDungeons, seedInfo, specialConditions: specialConditions as SpecialConditionsMap, players, worldLocations, worldEntrances };
 }

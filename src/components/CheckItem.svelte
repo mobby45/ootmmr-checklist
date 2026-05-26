@@ -7,7 +7,7 @@
 export let name = '';
 export let vanillaItem = '';
 export let type: any;
-export let state = T.CheckState.unchecked;
+export let state: T.CheckState = T.CheckState.unchecked;
 export let shopItem: string = '';
 export let shopPrice: number | null = null;
 export let isShop: boolean = false;
@@ -27,40 +27,40 @@ export let zone: string = '';
 export let filter: string = '';
 
 $: isShopOrScrub = shopTypes.includes(type) || isShop;
-const shopTypes = [T.CheckType.shop, T.CheckType.scrub];
+const shopTypes = [T.CheckType.shop, T.CheckType.deku_scrub];
 
 type TypeColors = { bg: string; border: string } | null;
 
 function typeColors(t: T.CheckType): TypeColors {
   switch (t) {
-    case T.CheckType.gs:         return { bg: 'rgba(255,190,0,0.18)',    border: '#c8960a' };
-    case T.CheckType.scrub:
+    case T.CheckType.gold_skulltula: return { bg: 'rgba(255,190,0,0.18)',    border: '#c8960a' };
+    case T.CheckType.deku_scrub:
     case T.CheckType.shop:       return { bg: 'rgba(40,180,80,0.18)',    border: '#2a9e50' };
     case T.CheckType.cow:        return { bg: 'rgba(210,175,110,0.20)',  border: '#b08040' };
-    case T.CheckType.sf:
-    case T.CheckType.fairy:
+    case T.CheckType.stray_fairy:
+    case T.CheckType.fairy_fountain:
     case T.CheckType.fairy_spot: return { bg: 'rgba(0,210,230,0.16)',    border: '#00b8cc' };
-    case T.CheckType.sr:         return { bg: 'rgba(160,160,220,0.18)',  border: '#8888cc' };
+    case T.CheckType.silver_rupee: return { bg: 'rgba(160,160,220,0.18)',  border: '#8888cc' };
     case T.CheckType.pot:
     case T.CheckType.crate:
     case T.CheckType.barrel:
-    case T.CheckType.hive:       return { bg: 'rgba(180,120,40,0.18)',   border: '#9a6820' };
+    case T.CheckType.beehive:       return { bg: 'rgba(180,120,40,0.18)',   border: '#9a6820' };
     case T.CheckType.grass:
     case T.CheckType.tree:
     case T.CheckType.bush:
-    case T.CheckType.soil:
+    case T.CheckType.soft_soil:
     case T.CheckType.snowball:   return { bg: 'rgba(70,150,60,0.16)',    border: '#4a9640' };
     case T.CheckType.rock:
-    case T.CheckType.redboulder:
+    case T.CheckType.red_boulder:
     case T.CheckType.icicle:
-    case T.CheckType.redice:     return { bg: 'rgba(200,65,50,0.15)',    border: '#b04030' };
+    case T.CheckType.red_ice:     return { bg: 'rgba(200,65,50,0.15)',    border: '#b04030' };
     case T.CheckType.rupee:
     case T.CheckType.heart:
-    case T.CheckType.wonder:
+    case T.CheckType.wonder_item:
     case T.CheckType.fish:
     case T.CheckType.butterfly:
     case T.CheckType.collectible:
-    case T.CheckType.npc:        return { bg: 'rgba(65,135,255,0.15)',   border: '#4488dd' };
+    case T.CheckType.npc_reward:        return { bg: 'rgba(65,135,255,0.15)',   border: '#4488dd' };
     default:                     return null;
   }
 }
@@ -70,21 +70,21 @@ $: typeBg     = disableTypeColor ? '' : (tc?.bg ?? '');
 $: typeBorder = disableTypeColor ? '' : (tc?.border ?? '');
 
 const typeLabels: Partial<Record<T.CheckType, string>> = {
-  [T.CheckType.chest]: 'Chest', [T.CheckType.gs]: 'Gold Skulltula',
-  [T.CheckType.scrub]: 'Scrub', [T.CheckType.shop]: 'Shop',
-  [T.CheckType.cow]: 'Cow', [T.CheckType.sf]: 'Stray Fairy',
-  [T.CheckType.fairy]: 'Fairy', [T.CheckType.fairy_spot]: 'Fairy Spot',
-  [T.CheckType.sr]: 'Silver Rupee', [T.CheckType.pot]: 'Pot',
+  [T.CheckType.chest]: 'Chest', [T.CheckType.gold_skulltula]: 'Gold Skulltula',
+  [T.CheckType.deku_scrub]: 'Deku Scrub', [T.CheckType.shop]: 'Shop',
+  [T.CheckType.cow]: 'Cow', [T.CheckType.stray_fairy]: 'Stray Fairy',
+  [T.CheckType.fairy_fountain]: 'Fairy Fountain', [T.CheckType.fairy_spot]: 'Fairy Spot',
+  [T.CheckType.silver_rupee]: 'Silver Rupee', [T.CheckType.pot]: 'Pot',
   [T.CheckType.crate]: 'Crate', [T.CheckType.barrel]: 'Barrel',
-  [T.CheckType.hive]: 'Beehive', [T.CheckType.grass]: 'Grass',
+  [T.CheckType.beehive]: 'Beehive', [T.CheckType.grass]: 'Grass',
   [T.CheckType.rock]: 'Rock', [T.CheckType.tree]: 'Tree',
-  [T.CheckType.bush]: 'Bush', [T.CheckType.soil]: 'Soil Patch',
+  [T.CheckType.bush]: 'Bush', [T.CheckType.soft_soil]: 'Soft Soil',
   [T.CheckType.rupee]: 'Rupee', [T.CheckType.heart]: 'Heart',
-  [T.CheckType.wonder]: 'Wonder Item', [T.CheckType.snowball]: 'Snowball',
-  [T.CheckType.butterfly]: 'Butterfly', [T.CheckType.redboulder]: 'Red Boulder',
-  [T.CheckType.icicle]: 'Icicle', [T.CheckType.redice]: 'Red Ice',
+  [T.CheckType.wonder_item]: 'Wonder Item', [T.CheckType.snowball]: 'Snowball',
+  [T.CheckType.butterfly]: 'Butterfly', [T.CheckType.red_boulder]: 'Red Boulder',
+  [T.CheckType.icicle]: 'Icicle', [T.CheckType.red_ice]: 'Red Ice',
   [T.CheckType.fish]: 'Fish', [T.CheckType.collectible]: 'Collectible',
-  [T.CheckType.npc]: 'NPC',
+  [T.CheckType.npc_reward]: 'NPC Reward',
 };
 
 function escapeHtml(s: string): string {

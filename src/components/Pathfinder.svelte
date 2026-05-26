@@ -173,7 +173,7 @@
         <button class="pf-input-clear" on:click={() => fromInput = ''} tabindex="-1">✕</button>
       {/if}
       {#if fromFocused && fromSuggestions.length > 0}
-        <div class="pf-suggestions" on:mousedown|preventDefault={() => {}}>
+        <div class="pf-suggestions" role="listbox" tabindex="0" on:mousedown|preventDefault={() => {}}>
           {#each fromSuggestions as s}
             <button class="pf-suggestion" on:click={() => pickFrom(s)}>{s}</button>
           {/each}
@@ -189,7 +189,7 @@
         <button class="pf-input-clear" on:click={() => toInput = ''} tabindex="-1">✕</button>
       {/if}
       {#if toFocused && toSuggestions.length > 0}
-        <div class="pf-suggestions" on:mousedown|preventDefault={() => {}}>
+        <div class="pf-suggestions" role="listbox" tabindex="0" on:mousedown|preventDefault={() => {}}>
           {#each toSuggestions as s}
             <button class="pf-suggestion" on:click={() => pickTo(s)}>{s}</button>
           {/each}
