@@ -613,6 +613,8 @@ yKeepalive.observe((event: any) => {
   let yjsRelayWs: WebSocket | null = null;
   let yjsRelayHandler: ((update: Uint8Array, origin: any) => void) | null = null;
   let yjsRelayReconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  let yjsRelayReconnectAttempt = 0;
+  let yjsRelayConnectTimeout: ReturnType<typeof setTimeout> | null = null;
   let connectingHintTimer: ReturnType<typeof setTimeout> | null = null;
   let showConnectingHint = false;
   const DEBUG = true;
@@ -958,22 +960,38 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
   function connectYjsRelay(room: string) {
     disconnectYjsRelay();
 
+    // Use a dedicated relay topic so y-webrtc signaling messages don't cross-contaminate
+    const relayTopic = room + '__relay';
+
     const ws = new WebSocket('wss://ootmmr-checklist.mobby45.deno.net');
 
+    // Timeout: if the ws stays CONNECTING for >10s, close it to trigger reconnect
+    yjsRelayConnectTimeout = setTimeout(() => {
+      if (ws.readyState !== WebSocket.OPEN) {
+        dbg('[yjsRelay] connection timeout, retrying…');
+        ws.close();
+      }
+    }, 10000);
+
     ws.onopen = () => {
-      ws.send(JSON.stringify({ type: 'subscribe', topics: [room] }));
+      if (yjsRelayConnectTimeout) { clearTimeout(yjsRelayConnectTimeout); yjsRelayConnectTimeout = null; }
+      yjsRelayReconnectAttempt = 0;
+      ws.send(JSON.stringify({ type: 'subscribe', topics: [relayTopic] }));
       // Send full current state to any peer that may be waiting
       const fullState = Y.encodeStateAsUpdate(ydoc);
-      ws.send(JSON.stringify({ type: 'yjsUpdate', topic: room, data: bytesToBase64(fullState) }));
+      ws.send(JSON.stringify({ type: 'yjsUpdate', topic: relayTopic, data: bytesToBase64(fullState) }));
       // Request full state from existing peers
-      ws.send(JSON.stringify({ type: 'yjsSyncRequest', topic: room }));
+      ws.send(JSON.stringify({ type: 'yjsSyncRequest', topic: relayTopic }));
+      // Re-publish our presence: updatePeerInfo() called before ws was OPEN gets dropped.
+      // Calling it here guarantees peers see us as soon as the relay opens.
+      updatePeerInfo();
     };
 
     ws.onmessage = (e) => {
       let msg: any;
       try { msg = JSON.parse(e.data); } catch { return; }
       if (!msg || msg.type === 'pong') return;
-      if (msg.topic !== room) return;
+      if (msg.topic !== relayTopic) return;
 
       if (msg.type === 'yjsUpdate' && msg.data) {
         try {
@@ -992,14 +1010,19 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
         }
       } else if (msg.type === 'yjsSyncRequest') {
         const fullState = Y.encodeStateAsUpdate(ydoc);
-        ws.send(JSON.stringify({ type: 'yjsSyncResponse', topic: room, data: bytesToBase64(fullState) }));
+        ws.send(JSON.stringify({ type: 'yjsSyncResponse', topic: relayTopic, data: bytesToBase64(fullState) }));
       }
     };
 
     ws.onclose = () => {
+      if (yjsRelayConnectTimeout) { clearTimeout(yjsRelayConnectTimeout); yjsRelayConnectTimeout = null; }
+      // Exponential backoff: 1s, 2s, 4s, 8s, 16s, capped at 30s, plus jitter
+      const delay = Math.min(1000 * Math.pow(2, yjsRelayReconnectAttempt), 30000) + Math.random() * 1000;
+      yjsRelayReconnectAttempt++;
+      dbg(`[yjsRelay] closed, retry #${yjsRelayReconnectAttempt} in ${Math.round(delay)}ms`);
       yjsRelayReconnectTimer = setTimeout(() => {
         if (roomName) connectYjsRelay(roomName);
-      }, 5000);
+      }, delay);
     };
 
     ws.onerror = (err) => console.error('[yjsRelay] error:', err);
@@ -1009,15 +1032,17 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     yjsRelayHandler = (update: Uint8Array, origin: any) => {
       if (origin === 'yjsRelay') return;
       if (ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: 'yjsUpdate', topic: room, data: bytesToBase64(update) }));
+        ws.send(JSON.stringify({ type: 'yjsUpdate', topic: relayTopic, data: bytesToBase64(update) }));
       }
     };
     ydoc.on('update', yjsRelayHandler);
   }
 
   function disconnectYjsRelay() {
+    if (yjsRelayConnectTimeout) { clearTimeout(yjsRelayConnectTimeout); yjsRelayConnectTimeout = null; }
     if (yjsRelayReconnectTimer) { clearTimeout(yjsRelayReconnectTimer); yjsRelayReconnectTimer = null; }
     if (yjsRelayHandler) { ydoc.off('update', yjsRelayHandler); yjsRelayHandler = null; }
+    yjsRelayReconnectAttempt = 0;
     if (yjsRelayWs) {
       yjsRelayWs.onclose = null;
       yjsRelayWs.close();
