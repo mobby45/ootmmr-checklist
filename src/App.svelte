@@ -10,6 +10,9 @@
   import { IndexeddbPersistence } from 'y-indexeddb';
   import Peer from 'simple-peer/simplepeer.min.js';
 
+  const SIGNALING_URL = (import.meta.env.VITE_SIGNALING_URL ?? 'https://ootmmr-checklist.mobby45.deno.net') as string;
+  const SIGNALING_WSS = SIGNALING_URL.replace(/^http/, 'ws');
+
   // Two complementary patches to fix unidirectional data in glare scenario:
   // 1. _setupData — links each SimplePeer instance to its RTCPeerConnection (__ocPeer)
   // 2. setRemoteDescription — ensures ondatachannel is ALWAYS set when remote SDP arrives
@@ -597,7 +600,7 @@ yKeepalive.observe((event: any) => {
           return;
         }
       }
-      const res = await fetch('https://ootmmr-checklist.mobby45.deno.net/api/turn-credentials');
+      const res = await fetch(`${SIGNALING_URL}/api/turn-credentials`);
       if (!res.ok) return;
       const data = await res.json();
       if (data.iceServers?.length) {
@@ -768,9 +771,7 @@ yKeepalive.observe((event: any) => {
     else sessionStorage.removeItem('coopRoomPassword');
 
     const rtcOpts = {
-      signaling: [
-        'wss://ootmmr-checklist.mobby45.deno.net',
-      ],
+      signaling: [SIGNALING_WSS],
       peerOpts: {
         config: {
           iceServers: turnIceServers,
@@ -962,7 +963,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     // Use a dedicated relay topic so y-webrtc signaling messages don't cross-contaminate
     const relayTopic = room + '__relay';
 
-    const ws = new WebSocket('wss://ootmmr-checklist.mobby45.deno.net');
+    const ws = new WebSocket(SIGNALING_WSS);
 
     // Timeout: if the ws stays CONNECTING for >10s, close it to trigger reconnect
     yjsRelayConnectTimeout = setTimeout(() => {
