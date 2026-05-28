@@ -615,6 +615,8 @@ yKeepalive.observe((event: any) => {
   let yjsRelayReconnectTimer: ReturnType<typeof setTimeout> | null = null;
   let yjsRelayReconnectAttempt = 0;
   let yjsRelayConnectTimeout: ReturnType<typeof setTimeout> | null = null;
+  let yjsRelayPingTimer: ReturnType<typeof setInterval> | null = null;
+  let yjsRelayPongDeadline: ReturnType<typeof setTimeout> | null = null;
   let connectingHintTimer: ReturnType<typeof setTimeout> | null = null;
   let showConnectingHint = false;
   const DEBUG = true;
@@ -985,12 +987,26 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
       // Re-publish our presence: updatePeerInfo() called before ws was OPEN gets dropped.
       // Calling it here guarantees peers see us as soon as the relay opens.
       updatePeerInfo();
+      // Watchdog: ping every 25s, close if no pong within 10s.
+      // Detects silent TCP drops (proxy/firewall idle timeout) where onclose never fires.
+      yjsRelayPingTimer = setInterval(() => {
+        if (ws.readyState !== WebSocket.OPEN) return;
+        yjsRelayPongDeadline = setTimeout(() => {
+          dbg('[yjsRelay] pong timeout — connection silently dead, closing…');
+          ws.close();
+        }, 10000);
+        ws.send(JSON.stringify({ type: 'ping' }));
+      }, 25000);
     };
 
     ws.onmessage = (e) => {
       let msg: any;
       try { msg = JSON.parse(e.data); } catch { return; }
-      if (!msg || msg.type === 'pong') return;
+      if (!msg) return;
+      if (msg.type === 'pong') {
+        if (yjsRelayPongDeadline) { clearTimeout(yjsRelayPongDeadline); yjsRelayPongDeadline = null; }
+        return;
+      }
       if (msg.topic !== relayTopic) return;
 
       if (msg.type === 'yjsUpdate' && msg.data) {
@@ -1016,6 +1032,8 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
 
     ws.onclose = () => {
       if (yjsRelayConnectTimeout) { clearTimeout(yjsRelayConnectTimeout); yjsRelayConnectTimeout = null; }
+      if (yjsRelayPingTimer) { clearInterval(yjsRelayPingTimer); yjsRelayPingTimer = null; }
+      if (yjsRelayPongDeadline) { clearTimeout(yjsRelayPongDeadline); yjsRelayPongDeadline = null; }
       // Exponential backoff: 1s, 2s, 4s, 8s, 16s, capped at 30s, plus jitter
       const delay = Math.min(1000 * Math.pow(2, yjsRelayReconnectAttempt), 30000) + Math.random() * 1000;
       yjsRelayReconnectAttempt++;
@@ -1040,6 +1058,8 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
 
   function disconnectYjsRelay() {
     if (yjsRelayConnectTimeout) { clearTimeout(yjsRelayConnectTimeout); yjsRelayConnectTimeout = null; }
+    if (yjsRelayPingTimer) { clearInterval(yjsRelayPingTimer); yjsRelayPingTimer = null; }
+    if (yjsRelayPongDeadline) { clearTimeout(yjsRelayPongDeadline); yjsRelayPongDeadline = null; }
     if (yjsRelayReconnectTimer) { clearTimeout(yjsRelayReconnectTimer); yjsRelayReconnectTimer = null; }
     if (yjsRelayHandler) { ydoc.off('update', yjsRelayHandler); yjsRelayHandler = null; }
     yjsRelayReconnectAttempt = 0;

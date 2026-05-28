@@ -10,13 +10,14 @@ function broadcastToTopic(topic: string, data: any, exclude: WebSocket | null) {
   });
 }
 
-function forwardToOneInTopic(topic: string, data: any, exclude: WebSocket | null) {
+function forwardToOneInTopic(topic: string, data: any, exclude: WebSocket | null): boolean {
   for (const peer of topics.get(topic) ?? []) {
     if (peer !== exclude && peer.readyState === WebSocket.OPEN) {
       peer.send(JSON.stringify(data));
-      return;
+      return true;
     }
   }
+  return false;
 }
 
 function setupConn(ws: WebSocket) {
@@ -50,14 +51,18 @@ function setupConn(ws: WebSocket) {
         subscribedTopics.delete(t);
       }
     } else if (data.type === 'publish' || data.type === 'yjsUpdate' || data.type === 'yjsSyncRequest' || data.type === 'yjsSyncResponse') {
-      // Broadcast locally with sender excluded
       if (data.type === 'publish' || data.type === 'yjsUpdate' || data.type === 'yjsSyncResponse') {
         broadcastToTopic(data.topic, data, ws);
+        // Relay to other instances so they broadcast to their local peers
+        xc.postMessage({ instanceId, topic: data.topic, data });
       } else {
-        forwardToOneInTopic(data.topic, data, ws);
+        // yjsSyncRequest: only relay cross-instance if no local peer could handle it.
+        // Avoids flooding the requester with multiple full-state responses.
+        const handledLocally = forwardToOneInTopic(data.topic, data, ws);
+        if (!handledLocally) {
+          xc.postMessage({ instanceId, topic: data.topic, data });
+        }
       }
-      // Relay to other instances (they'll broadcast to their local peers)
-      xc.postMessage({ instanceId, topic: data.topic, data });
     }
   };
 }
