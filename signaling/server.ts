@@ -1,6 +1,4 @@
 const topics = new Map<string, Set<WebSocket>>();
-const xc = new BroadcastChannel('signaling');
-const instanceId = crypto.randomUUID();
 
 function broadcastToTopic(topic: string, data: any, exclude: WebSocket | null) {
   topics.get(topic)?.forEach(receiver => {
@@ -42,8 +40,6 @@ function setupConn(ws: WebSocket) {
         topics.get(t)!.add(ws);
         subscribedTopics.add(t);
       }
-      // Broadcast via BC so other instances know about this connection
-      xc.postMessage({ instanceId, type: '_peer_joined', topic: data.topics[0] });
     } else if (data.type === 'unsubscribe') {
       for (const t of (data.topics ?? [])) {
         topics.get(t)?.delete(ws);
@@ -51,34 +47,15 @@ function setupConn(ws: WebSocket) {
         subscribedTopics.delete(t);
       }
     } else if (data.type === 'publish' || data.type === 'yjsUpdate' || data.type === 'yjsSyncRequest' || data.type === 'yjsSyncResponse') {
-      if (data.type === 'publish' || data.type === 'yjsUpdate' || data.type === 'yjsSyncResponse') {
-        broadcastToTopic(data.topic, data, ws);
-        // Relay to other instances so they broadcast to their local peers
-        xc.postMessage({ instanceId, topic: data.topic, data });
+      if (data.type === 'yjsSyncRequest') {
+        // Forward to one peer only to avoid multiple full-state responses
+        forwardToOneInTopic(data.topic, data, ws);
       } else {
-        // yjsSyncRequest: only relay cross-instance if no local peer could handle it.
-        // Avoids flooding the requester with multiple full-state responses.
-        const handledLocally = forwardToOneInTopic(data.topic, data, ws);
-        if (!handledLocally) {
-          xc.postMessage({ instanceId, topic: data.topic, data });
-        }
+        broadcastToTopic(data.topic, data, ws);
       }
     }
   };
 }
-
-// Cross-instance relay: receive from other instances, broadcast locally
-xc.onmessage = (e) => {
-  const msg = e.data;
-  // Skip messages from self (already broadcast locally above)
-  if (msg.instanceId === instanceId) return;
-  if (msg.type === '_peer_joined') return;
-  if (msg.data.type === 'publish' || msg.data.type === 'yjsUpdate' || msg.data.type === 'yjsSyncResponse') {
-    broadcastToTopic(msg.topic, msg.data, null);
-  } else if (msg.data.type === 'yjsSyncRequest') {
-    forwardToOneInTopic(msg.topic, msg.data, null);
-  }
-};
 
 // TURN credentials cache (refresh every 12h)
 let turnCache: { iceServers: any[] } | null = null;
@@ -102,7 +79,8 @@ async function getTurnCredentials(): Promise<{ iceServers: any[] }> {
   }
 }
 
-Deno.serve(async req => {
+const port = parseInt(Deno.env.get('PORT') ?? '8000');
+Deno.serve({ port }, async req => {
   const url = new URL(req.url);
   if (url.pathname === '/api/turn-credentials' && req.method === 'GET') {
     const creds = await getTurnCredentials();
