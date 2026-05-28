@@ -770,9 +770,6 @@ yKeepalive.observe((event: any) => {
     const rtcOpts = {
       signaling: [
         'wss://ootmmr-checklist.mobby45.deno.net',
-        'wss://signaling.yjs.dev',
-        'wss://y-webrtc-signaling-eu.fly.dev',
-        'wss://y-webrtc-signaling-us.fly.dev',
       ],
       peerOpts: {
         config: {
