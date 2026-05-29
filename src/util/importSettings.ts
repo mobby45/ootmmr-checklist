@@ -82,6 +82,12 @@ const KEY_MAP: Record<string, string> = {
   sharedSongRequiem:            'sharedSongRequiem',
   sharedSongNocturne:           'sharedSongNocturne',
   sharedSongPrelude:            'sharedSongPrelude',
+  // Songs shared between games (same song in both pools, not cross-game shuffled)
+  sharedSongEpona:              'sharedSongEpona',
+  sharedSongStorms:             'sharedSongStorms',
+  sharedSongTime:               'sharedSongTime',
+  sharedSongSun:                'sharedSongSun',
+  sharedSongElegy:              'sharedSongElegy',
 };
 
 // camelCase value → snake_case, plus special-case overrides
