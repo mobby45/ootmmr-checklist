@@ -643,7 +643,7 @@ yKeepalive.observe((event: any) => {
     if (!peerId) return;
     const name = pseudo || 'Anonymous';
     const color = pingColor;
-    yPeerInfo.set(peerId, JSON.stringify({ name, color, ts: Date.now() }));
+    yPeerInfo.set(peerId, JSON.stringify({ name, color, ts: Date.now(), room: roomBaseCode }));
   }
 
   function cleanupStalePeers() {
@@ -653,7 +653,8 @@ yKeepalive.observe((event: any) => {
         if (id === peerId) continue;
         try {
           const d = JSON.parse(val as string);
-          if (!d.ts || now - d.ts > 30000) yPeerInfo.delete(id);
+          if (!d.ts || now - d.ts > 30000) { yPeerInfo.delete(id); continue; }
+          if (d.room && roomBaseCode && d.room !== roomBaseCode) yPeerInfo.delete(id);
         } catch { yPeerInfo.delete(id); }
       }
     });
@@ -679,6 +680,7 @@ yKeepalive.observe((event: any) => {
       try {
         const d = JSON.parse(val as string);
         if (roomStartTime && d.ts && d.ts < roomStartTime) continue;
+        if (d.room && roomBaseCode && d.room !== roomBaseCode) continue;
         seen.add(id);
         entries.push({ name: d.name || 'Anonymous', color: d.color || '#888', isHost: id === hostPeerId });
       } catch { /* skip malformed entries */ }
