@@ -10,7 +10,7 @@
   import { IndexeddbPersistence } from 'y-indexeddb';
   import Peer from 'simple-peer/simplepeer.min.js';
 
-  const SIGNALING_URL = (import.meta.env.VITE_SIGNALING_URL ?? 'https://ootmmr-checklist-production.up.railway.app') as string;
+  const SIGNALING_URL = (import.meta.env.VITE_SIGNALING_URL ?? 'https://ootmmr-signaling.petitmewen.workers.dev') as string;
   const SIGNALING_WSS = SIGNALING_URL.replace(/^http/, 'ws');
 
   // Two complementary patches to fix unidirectional data in glare scenario:
