@@ -124,7 +124,9 @@ const yMessages: Y.Array<any> = ydoc.getArray('messages');
 const yKeepalive: Y.Map<number> = ydoc.getMap('keepalive');
 const yPeerInfo: Y.Map<string> = ydoc.getMap('peerInfo');
 const yJoinOrder: Y.Array<string> = ydoc.getArray('joinOrder');
+const yHostOverride: Y.Map<string> = ydoc.getMap('hostOverride');
 let peerId = '';
+let roomJoinedAt = 0;
 let peerInfoObserved = false;
 let lastRemoteKeepalive = 0;
 yKeepalive.observe((event: any) => {
@@ -548,7 +550,7 @@ yKeepalive.observe((event: any) => {
   let roomHasPassword = false;
   let connectionProvider: WebrtcProvider | null = null;
   let watchRelayProvider: WebrtcProvider | null = null;
-  let connectedUsers: { name: string; color: string; isHost: boolean }[] = [];
+  let connectedUsers: { name: string; color: string; isHost: boolean; peerId: string }[] = [];
   let roomStartTime = 0;
   let relocationCode: string | null = sessionStorage.getItem('relocationCode');
   function persistRelocationCode(v: string | null, reason?: string) {
@@ -644,7 +646,8 @@ yKeepalive.observe((event: any) => {
     if (!peerId) return;
     const name = pseudo || 'Anonymous';
     const color = pingColor;
-    yPeerInfo.set(peerId, JSON.stringify({ name, color, ts: Date.now(), room: roomBaseCode, joinedAt: roomStartTime }));
+    if (roomBaseCode) sessionStorage.setItem(`roomLastSeen_${roomBaseCode}`, String(Date.now()));
+    yPeerInfo.set(peerId, JSON.stringify({ name, color, ts: Date.now(), room: roomBaseCode, joinedAt: roomJoinedAt }));
   }
 
   function cleanupStalePeers() {
@@ -671,25 +674,29 @@ yKeepalive.observe((event: any) => {
     }
     const sortedAware = Array.from(connectionProvider.awareness.getStates().entries())
       .sort(([a], [b]) => a - b);
-    // Host = peer who joined earliest (smallest joinedAt in yPeerInfo).
-    // Fallback to smallest awareness clientId for peers without joinedAt.
+    // Host priority: 1) manual override, 2) earliest joinedAt, 3) smallest awareness clientId
+    const overridePeerId = yHostOverride.get('peerId') ?? null;
     let hostPeerId: string | null = null;
     let hostJoinedAt = Infinity;
+    // Collect active peerIds first to validate override
+    const activePeerIds = new Set<string>();
     for (const [id, val] of yPeerInfo) {
       try {
         const d = JSON.parse(val as string);
         if (roomStartTime && d.ts && d.ts < roomStartTime) continue;
         if (d.room && roomBaseCode && d.room !== roomBaseCode) continue;
+        activePeerIds.add(id);
         const j = d.joinedAt ?? Infinity;
         if (j < hostJoinedAt) { hostJoinedAt = j; hostPeerId = id; }
       } catch { /* skip */ }
     }
+    if (overridePeerId && activePeerIds.has(overridePeerId)) hostPeerId = overridePeerId;
     if (hostPeerId === null) {
       hostPeerId = sortedAware.length > 0 ? ((sortedAware[0][1] as any)?.user?.peerId ?? null) : null;
     }
     // Merge peers from awareness (immediate) with richer data from yPeerInfo
     const seen = new Set<string>();
-    const entries: { name: string; color: string; isHost: boolean }[] = [];
+    const entries: { name: string; color: string; isHost: boolean; peerId: string }[] = [];
     // First, add peers from yPeerInfo (richer data, may lag behind)
     for (const [id, val] of yPeerInfo) {
       try {
@@ -697,7 +704,7 @@ yKeepalive.observe((event: any) => {
         if (roomStartTime && d.ts && d.ts < roomStartTime) continue;
         if (d.room && roomBaseCode && d.room !== roomBaseCode) continue;
         seen.add(id);
-        entries.push({ name: d.name || 'Anonymous', color: d.color || '#888', isHost: id === hostPeerId });
+        entries.push({ name: d.name || 'Anonymous', color: d.color || '#888', isHost: id === hostPeerId, peerId: id });
       } catch { /* skip malformed entries */ }
     }
     // Then, add peers from awareness not yet in yPeerInfo (immediate visibility)
@@ -705,7 +712,7 @@ yKeepalive.observe((event: any) => {
       const u = (state as any)?.user;
       if (u?.peerId && !seen.has(u.peerId)) {
         seen.add(u.peerId);
-        entries.push({ name: u.name || 'Anonymous', color: u.color || '#888', isHost: u.peerId === hostPeerId });
+        entries.push({ name: u.name || 'Anonymous', color: u.color || '#888', isHost: u.peerId === hostPeerId, peerId: u.peerId });
       }
     }
     const prev = connectedUsers.map(u => u.name).join(',');
@@ -802,6 +809,18 @@ yKeepalive.observe((event: any) => {
     };
     peerId = crypto.randomUUID();
     lastRemoteKeepalive = 0;
+    // Preserve host crown through quick refreshes (< 35s absence).
+    // After a long absence, use current time so the crown stays with whoever held it.
+    const _storedJoinedAt = sessionStorage.getItem(`roomJoinedAt_${base}`);
+    const _lastSeen = sessionStorage.getItem(`roomLastSeen_${base}`);
+    const _recentRefresh = _lastSeen && Date.now() - parseInt(_lastSeen) < 35000;
+    roomJoinedAt = (_storedJoinedAt && _recentRefresh) ? parseInt(_storedJoinedAt) : roomStartTime;
+    sessionStorage.setItem(`roomJoinedAt_${base}`, String(roomJoinedAt));
+    // Clear ephemeral chat/pings from previous room
+    ydoc.transact(() => {
+      yMessages.delete(0, yMessages.length);
+      for (const key of yPings.keys()) yPings.delete(key);
+    });
     // Auto-load the saved slot for this room if one exists
     const roomSlot = saveSlots.find(s => s.name === `Room: ${base}`);
     if (roomSlot) applySlot(roomSlot);
@@ -1144,6 +1163,10 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
       roomHasPassword = false;
       sessionStorage.removeItem('coopRoomPassword');
       sessionStorage.removeItem('coopRoomCode');
+      if (roomBaseCode) {
+        sessionStorage.removeItem(`roomJoinedAt_${roomBaseCode}`);
+        sessionStorage.removeItem(`roomLastSeen_${roomBaseCode}`);
+      }
       window.location.hash = '';
       if (operaWarningTimer) { clearTimeout(operaWarningTimer); operaWarningTimer = null; }
       showOperaWarning = false;
@@ -4116,6 +4139,9 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
                   {#each connectedUsers as u}
                     <span class="connected-dot" style="background:{u.color}" title={u.name}></span>
                     <span class="connected-name">{u.name}{#if u.isHost} 👑{/if}</span>
+                    {#if !isWatchMode && connectedUsers.find(x => x.peerId === peerId)?.isHost && u.peerId !== peerId}
+                      <button class="give-host-btn" title="Give host to {u.name}" on:click={() => yHostOverride.set('peerId', u.peerId)}>👑</button>
+                    {/if}
                   {/each}
                 </div>
               {/if}
@@ -5439,6 +5465,8 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     border: 1px solid rgba(255,255,255,0.3);
   }
   .connected-name { color: var(--color-text); opacity: 0.8; }
+  .give-host-btn { background: none; border: none; cursor: pointer; font-size: 0.75em; opacity: 0.5; padding: 0 2px; line-height: 1; }
+  .give-host-btn:hover { opacity: 1; }
 
   .preset-migration-warning {
     margin-top: 0.4em;
