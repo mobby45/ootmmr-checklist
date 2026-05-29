@@ -787,6 +787,9 @@ yKeepalive.observe((event: any) => {
       }
     };
     peerId = crypto.randomUUID();
+    // Auto-load the saved slot for this room if one exists
+    const roomSlot = saveSlots.find(s => s.name === `Room: ${base}`);
+    if (roomSlot) applySlot(roomSlot);
     // Connect Yjs relay BEFORE y-webrtc so data sync starts immediately
     connectYjsRelay(full);
     connectionProvider = new WebrtcProvider(full, ydoc, rtcOpts);
@@ -3000,8 +3003,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     persistSlots();
   }
 
-  function loadSlot(slot: SaveSlot) {
-    if (!window.confirm(`Load slot "${slot.name}"? This will replace the current state.`)) return;
+  function applySlot(slot: SaveSlot) {
     [...yChecks.keys()].forEach(k => yChecks.delete(k));
     Object.entries(slot.checks).forEach(([k, v]) => yChecks.set(k, v));
     [...ySettings.keys()].forEach(k => ySettings.delete(k));
@@ -3038,6 +3040,11 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     localStorage.setItem('spoilerSpecialConditions', JSON.stringify(spoilerSpecialConditions));
     currentSlotId = slot.id;
     localStorage.setItem('currentSlotId', slot.id);
+  }
+
+  function loadSlot(slot: SaveSlot) {
+    if (!window.confirm(`Load slot "${slot.name}"? This will replace the current state.`)) return;
+    applySlot(slot);
   }
 
   function deleteSlot(id: string) {
