@@ -715,6 +715,7 @@ yKeepalive.observe((event: any) => {
         entries.push({ name: u.name || 'Anonymous', color: u.color || '#888', isHost: u.peerId === hostPeerId, peerId: u.peerId });
       }
     }
+    entries.sort((a, b) => a.name.localeCompare(b.name));
     const prev = connectedUsers.map(u => u.name).join(',');
     const cur = entries.map(u => u.name).join(',');
     if (prev !== cur) dbg('users:', prev, '->', cur);
