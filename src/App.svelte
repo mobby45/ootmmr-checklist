@@ -1066,6 +1066,8 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     if (yjsRelayHandler) { ydoc.off('update', yjsRelayHandler); yjsRelayHandler = null; }
     yjsRelayReconnectAttempt = 0;
     if (yjsRelayWs) {
+      yjsRelayWs.onmessage = null;
+      yjsRelayWs.onerror = null;
       yjsRelayWs.onclose = null;
       yjsRelayWs.close();
       yjsRelayWs = null;
