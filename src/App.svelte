@@ -735,13 +735,17 @@ yKeepalive.observe((event: any) => {
     await fetchingTurnCreds;
     if (aloneHintTimer) { clearTimeout(aloneHintTimer); aloneHintTimer = undefined; }
     showAloneHint = false;
-    // Disconnect any existing provider before creating a new one
+    // If already connected, reload to guarantee clean WebRTC state.
+    // provider.disconnect() doesn't close existing P2P channels synchronously,
+    // so stale connections survive and leak Yjs state across rooms.
     if (connectionProvider) {
-      if (peerId) { yPeerInfo.delete(peerId); peerId = ''; }
-      connectionProvider.disconnect();
-      connectionProvider = null;
-      watchRelayProvider?.disconnect();
-      watchRelayProvider = null;
+      const base = name ?? crypto.randomUUID();
+      const full = password ? `${base}-${password}` : base;
+      autoSaveRoomSlot();
+      sessionStorage.setItem('coopRoomCode', full);
+      sessionStorage.removeItem('coopRoomPassword');
+      window.location.reload();
+      return;
     }
     disconnectYjsRelay();
     if (peerKeepaliveInterval) { clearInterval(peerKeepaliveInterval); peerKeepaliveInterval = null; }
