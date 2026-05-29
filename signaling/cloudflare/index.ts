@@ -26,7 +26,6 @@ async function getTurnCredentials(apiKey: string): Promise<{ iceServers: unknown
   }
 }
 
-// Durable Object — single instance, all connections share the same in-memory topics Map
 export class SignalingHub {
   private topics = new Map<string, Set<WebSocket>>();
 
@@ -36,20 +35,14 @@ export class SignalingHub {
     if (req.headers.get('upgrade') !== 'websocket') {
       return new Response('SignalingHub', { status: 200 });
     }
-    const pair = new WebSocketPair();
-    const client = pair[0];
-    const server = pair[1];
-    // Use accept() (not state.acceptWebSocket) to keep DO alive and topics Map accurate
-    (server as any).accept();
-    server.addEventListener('message', (e: MessageEvent) => this.onMessage(server, e.data as string));
-    server.addEventListener('close', () => this.onClose(server));
-    server.addEventListener('error', () => this.onClose(server));
+    const { 0: client, 1: server } = new WebSocketPair();
+    this.state.acceptWebSocket(server);
     return new Response(null, { status: 101, webSocket: client });
   }
 
-  private onMessage(ws: WebSocket, raw: string) {
+  async webSocketMessage(ws: WebSocket, message: string | ArrayBuffer) {
     let data: any;
-    try { data = JSON.parse(raw); } catch { return; }
+    try { data = JSON.parse(message as string); } catch { return; }
 
     if (data.type === 'ping') {
       try { ws.send(JSON.stringify({ type: 'pong' })); } catch { /* closed */ }
@@ -78,11 +71,15 @@ export class SignalingHub {
     }
   }
 
-  private onClose(ws: WebSocket) {
+  async webSocketClose(ws: WebSocket) {
     this.topics.forEach((sockets, topic) => {
       sockets.delete(ws);
       if (sockets.size === 0) this.topics.delete(topic);
     });
+  }
+
+  async webSocketError(ws: WebSocket) {
+    await this.webSocketClose(ws);
   }
 
   private broadcast(topic: string, data: unknown, exclude: WebSocket) {
