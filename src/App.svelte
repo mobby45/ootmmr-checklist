@@ -644,7 +644,7 @@ yKeepalive.observe((event: any) => {
     if (!peerId) return;
     const name = pseudo || 'Anonymous';
     const color = pingColor;
-    yPeerInfo.set(peerId, JSON.stringify({ name, color, ts: Date.now(), room: roomBaseCode }));
+    yPeerInfo.set(peerId, JSON.stringify({ name, color, ts: Date.now(), room: roomBaseCode, joinedAt: roomStartTime }));
   }
 
   function cleanupStalePeers() {
@@ -669,10 +669,24 @@ yKeepalive.observe((event: any) => {
       bumpConnectedUsersRev();
       return;
     }
-    // Host = peer with smallest awareness clientId (immediate via signaling, no Yjs sync)
     const sortedAware = Array.from(connectionProvider.awareness.getStates().entries())
       .sort(([a], [b]) => a - b);
-    const hostPeerId = sortedAware.length > 0 ? (sortedAware[0][1] as any)?.user?.peerId : null;
+    // Host = peer who joined earliest (smallest joinedAt in yPeerInfo).
+    // Fallback to smallest awareness clientId for peers without joinedAt.
+    let hostPeerId: string | null = null;
+    let hostJoinedAt = Infinity;
+    for (const [id, val] of yPeerInfo) {
+      try {
+        const d = JSON.parse(val as string);
+        if (roomStartTime && d.ts && d.ts < roomStartTime) continue;
+        if (d.room && roomBaseCode && d.room !== roomBaseCode) continue;
+        const j = d.joinedAt ?? Infinity;
+        if (j < hostJoinedAt) { hostJoinedAt = j; hostPeerId = id; }
+      } catch { /* skip */ }
+    }
+    if (hostPeerId === null) {
+      hostPeerId = sortedAware.length > 0 ? ((sortedAware[0][1] as any)?.user?.peerId ?? null) : null;
+    }
     // Merge peers from awareness (immediate) with richer data from yPeerInfo
     const seen = new Set<string>();
     const entries: { name: string; color: string; isHost: boolean }[] = [];
