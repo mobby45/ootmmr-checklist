@@ -125,6 +125,7 @@ const yKeepalive: Y.Map<number> = ydoc.getMap('keepalive');
 const yPeerInfo: Y.Map<string> = ydoc.getMap('peerInfo');
 const yJoinOrder: Y.Array<string> = ydoc.getArray('joinOrder');
 let peerId = '';
+let peerInfoObserved = false;
 let lastRemoteKeepalive = 0;
 yKeepalive.observe((event: any) => {
   if (!event.transaction?.local) { lastRemoteKeepalive = Date.now(); dbg('keepalive received from remote'); }
@@ -793,10 +794,13 @@ yKeepalive.observe((event: any) => {
     updatePeerInfo();
     // Record join order: first to push stays first (CRDT ensures deterministic ordering)
     ydoc.transact(() => { if (!yJoinOrder.toArray().includes(peerId)) yJoinOrder.push([peerId]); });
-    yPeerInfo.unobserve(onPeerInfoChange);
+    if (peerInfoObserved) {
+      yPeerInfo.unobserve(onPeerInfoChange);
+      yJoinOrder.unobserve(onPeerInfoChange);
+    }
     yPeerInfo.observe(onPeerInfoChange);
-    yJoinOrder.unobserve(onPeerInfoChange);
     yJoinOrder.observe(onPeerInfoChange);
+    peerInfoObserved = true;
     if (peerKeepaliveInterval) clearInterval(peerKeepaliveInterval);
     peerKeepaliveInterval = setInterval(() => updatePeerInfo(), 15000);
     if (peerCleanupInterval) clearInterval(peerCleanupInterval);
