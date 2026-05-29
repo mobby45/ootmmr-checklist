@@ -787,6 +787,7 @@ yKeepalive.observe((event: any) => {
       }
     };
     peerId = crypto.randomUUID();
+    lastRemoteKeepalive = 0;
     // Auto-load the saved slot for this room if one exists
     const roomSlot = saveSlots.find(s => s.name === `Room: ${base}`);
     if (roomSlot) applySlot(roomSlot);
@@ -891,7 +892,7 @@ yKeepalive.observe((event: any) => {
       const recentRemoteData = lastRemoteKeepalive > 0 && Date.now() - lastRemoteKeepalive < 25000;
       dbg('health verify — aware:', awCount, '| P2P:', p2pState, '| flap counter:', p2pFlapCounter, '| recentRemoteData:', recentRemoteData);
       p2pFlapCounter = 0;
-      const stillBroken = p2pState === 0 || (awCount <= 1 && !recentRemoteData);
+      const stillBroken = p2pState > 0 && awCount <= 1 && !recentRemoteData;
       if (stillBroken) {
         failedReconnects++;
         dbg('❌ verify FAIL #' + failedReconnects);
