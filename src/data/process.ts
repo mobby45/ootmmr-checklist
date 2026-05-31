@@ -134,9 +134,18 @@ for (let game in T.Game) {
             )
         );
 
-        // Apply exclusions to both sceneEntries and otherEntries
-        const poolEntries = [...sceneEntries, ...otherEntries]
-            .filter(x => !excluded.has(x.location));
+        // Deduplicate: if the same location appears in both sceneEntries and otherEntries,
+        // or in both firstScene and tailScenes, prefer the entry with a real type (not 'none').
+        // 'none' entries are placeholder cross-references; the real entry with type+coords is in tailScenes.
+        const _seenByLoc = new Map<string, T.RawPoolEntry>();
+        for (const x of [...sceneEntries, ...otherEntries]) {
+            if (excluded.has(x.location)) continue;
+            const existing = _seenByLoc.get(x.location);
+            if (!existing || existing.type === 'none') {
+                _seenByLoc.set(x.location, x);
+            }
+        }
+        const poolEntries = [..._seenByLoc.values()];
 
         poolEntries.sort((a, b) => {
             const aIsTingle = a.location.startsWith('Tingle Map');

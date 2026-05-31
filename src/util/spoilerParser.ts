@@ -37,6 +37,7 @@ export interface ErSettings {
   erOneWaysWaterVoids: boolean;
   erOneWaysAnywhere: boolean;
   erOneWaysOwls: boolean;
+  erDecoupled: boolean;
 }
 
 export const defaultErSettings: ErSettings = {
@@ -71,6 +72,7 @@ export const defaultErSettings: ErSettings = {
   erOneWaysWaterVoids: false,
   erOneWaysAnywhere: false,
   erOneWaysOwls: false,
+  erDecoupled: false,
 };
 
 export interface SeedInfo {
@@ -134,7 +136,33 @@ export interface SpoilerData {
   OOTMMDungeons: 'both' | 'ootdungeons' | 'mmdungeons';
   seedInfo: SeedInfo | null;
   specialConditions: SpecialConditionsMap;
+  players: number;
+  worldLocations: Record<number, Record<string, string>>;
+  worldEntrances: Record<number, Record<string, string>>;
+  songEvents: Record<string, string>;
 }
+
+const SONG_NAME_TO_ID: Record<string, string> = {
+  "Zelda's Lullaby": 'oot_song_zelda',
+  "Epona's Song": 'oot_song_epona',
+  "Saria's Song": 'oot_song_saria',
+  "Sun's Song": 'oot_song_sun',
+  "Song of Time": 'oot_song_time',
+  "Song of Storms": 'oot_song_storms',
+  "Minuet of Forest": 'oot_song_minuet',
+  "Bolero of Fire": 'oot_song_bolero',
+  "Serenade of Water": 'oot_song_serenade',
+  "Requiem of Spirit": 'oot_song_requiem',
+  "Nocturne of Shadow": 'oot_song_nocturne',
+  "Prelude of Light": 'oot_song_prelude',
+  "Elegy of Emptiness": 'oot_elegy',
+  "Song of Healing": 'mm_song_healing',
+  "Song of Soaring": 'mm_song_soaring',
+  "Sonata of Awakening": 'mm_song_sonata',
+  "Goron's Lullaby": 'mm_song_lullaby',
+  "New Wave Bossa Nova": 'mm_song_nova',
+  "Oath to Order": 'mm_song_oath',
+};
 
 function parseValue(spoilerKey: string, rawValue: string): any {
   if (rawValue === 'true') return true;
@@ -146,11 +174,21 @@ function parseValue(spoilerKey: string, rawValue: string): any {
 export function parseSpoilerLog(text: string): SpoilerData {
   const lines = text.split('\n');
 
+  const playersLine = lines.find(l => /^  players:\s/.test(l));
+  const players = playersLine ? parseInt(playersLine.split(':')[1].trim(), 10) : 1;
+  const isMultiworld = players > 1;
+
   const settings: Record<string, any> = {};
   const locations: Record<string, string> = {};
   const entrances: Record<string, string> = {};
   const spheres: SpoilerSphere[] = [];
   const rawEr: Record<string, string> = {};
+
+  const worldLocations: Record<number, Record<string, string>> = {};
+  const worldEntrances: Record<number, Record<string, string>> = {};
+  for (let i = 1; i <= players; i++) { worldLocations[i] = {}; worldEntrances[i] = {}; }
+  let currentLocationWorld = 1;
+  let currentEntranceWorld = 1;
 
   let inSettings = false;
   let inLocations = false;
@@ -160,15 +198,31 @@ export function parseSpoilerLog(text: string): SpoilerData {
   let inSpecialConditions = false;
   let currentCondition: string | null = null;
   const specialConditions: Record<string, Record<string, any>> = {};
+  let inSongEvents = false;
+  const songEvents: Record<string, string> = {};
 
   for (const line of lines) {
-    if (line.trim() === 'Settings') { inSettings = true; inLocations = false; inEntrances = false; inSpecialConditions = false; continue; }
-    if (line.trim() === 'Entrances') { inEntrances = true; inSettings = false; inLocations = false; inSpecialConditions = false; continue; }
+    if (line.trim() === 'Settings') { inSettings = true; inLocations = false; inEntrances = false; inSpecialConditions = false; inSongEvents = false; continue; }
+    if (line.trim() === 'Entrances') { inEntrances = true; inSettings = false; inLocations = false; inSpecialConditions = false; inSongEvents = false; continue; }
+    if (line.trim() === 'Song Events') { inSongEvents = true; inSettings = false; inEntrances = false; inSpecialConditions = false; continue; }
     if (line.startsWith('Special Conditions')) {
-      inSettings = false; inEntrances = false; inSpecialConditions = true; currentCondition = null; continue;
+      inSettings = false; inEntrances = false; inSpecialConditions = true; inSongEvents = false; currentCondition = null; continue;
     }
     if (line.startsWith('Tricks') || line.startsWith('World Flags') || line.startsWith('Hints') || line.startsWith('Paths') || line.startsWith('Junk Locations') || line.startsWith('Plando')) {
-      inSettings = false; inEntrances = false; inSpecialConditions = false; currentCondition = null;
+      inSettings = false; inEntrances = false; inSpecialConditions = false; inSongEvents = false; currentCondition = null;
+    }
+
+    if (inSongEvents) {
+      // Format: "  OoT Slot N: Song Name" or "  MM Slot N: Song Name"
+      const match = line.match(/^\s+(OoT|MM)\s+Slot\s+(\d+):\s*(.+)$/i);
+      if (match) {
+        const game = match[1].toLowerCase();
+        const slot = match[2];
+        const songId = SONG_NAME_TO_ID[match[3].trim()];
+        if (songId) songEvents[`${game}_${slot}`] = songId;
+      } else if (line && !line.startsWith(' ')) {
+        inSongEvents = false;
+      }
     }
     if (line.startsWith('Location List')) { inLocations = true; inSettings = false; inEntrances = false; inSpheres = false; currentSphere = null; inSpecialConditions = false; continue; }
     if (line.trim() === 'Spheres') { inSpheres = true; inSettings = false; inLocations = false; inEntrances = false; currentSphere = null; inSpecialConditions = false; continue; }
@@ -194,18 +248,41 @@ export function parseSpoilerLog(text: string): SpoilerData {
     }
 
     if (inEntrances) {
-      const match = line.match(/^  .+?\(([^)]+)\)\s*->\s*(.+?)\s*\([^)]+\)\s*$/);
-      if (match) {
-        const [, fromId, toName] = match;
-        entrances[fromId.trim()] = toName.trim();
+      if (isMultiworld) {
+        const worldMatch = line.match(/^  World (\d+)\s*$/);
+        if (worldMatch) { currentEntranceWorld = parseInt(worldMatch[1], 10); }
+        const match = line.match(/^    .+?\(([^)]+)\)\s*->\s*(.+?)\s*\([^)]+\)\s*$/);
+        if (match) {
+          const [, fromId, toName] = match;
+          worldEntrances[currentEntranceWorld][fromId.trim()] = toName.trim();
+        }
+      } else {
+        const match = line.match(/^  .+?\(([^)]+)\)\s*->\s*(.+?)\s*\([^)]+\)\s*$/);
+        if (match) {
+          const [, fromId, toName] = match;
+          entrances[fromId.trim()] = toName.trim();
+        }
       }
     }
 
     if (inLocations) {
-      const match = line.match(/^    (.+?):\s*(.+)$/);
-      if (match) {
-        const [, locationName, itemName] = match;
-        if (!locationName.match(/\(\d+\)$/)) locations[locationName.trim()] = itemName.trim();
+      if (isMultiworld) {
+        const worldMatch = line.match(/^  World (\d+)/);
+        if (worldMatch) { currentLocationWorld = parseInt(worldMatch[1], 10); }
+        const match = line.match(/^      (.+?):\s*(.+)$/);
+        if (match) {
+          const [, locationName, rawItem] = match;
+          if (!locationName.match(/\(\d+\)$/)) {
+            const item = rawItem.trim().replace(/^Player \d+ /, '');
+            worldLocations[currentLocationWorld][locationName.trim()] = item;
+          }
+        }
+      } else {
+        const match = line.match(/^    (.+?):\s*(.+)$/);
+        if (match) {
+          const [, locationName, itemName] = match;
+          if (!locationName.match(/\(\d+\)$/)) locations[locationName.trim()] = itemName.trim();
+        }
       }
     }
 
@@ -237,12 +314,15 @@ export function parseSpoilerLog(text: string): SpoilerData {
       }
       const locationMatch = line.match(/^\s*Location\s+-\s+(.+):\s*(.+)$/);
       if (locationMatch && currentSphere) {
-        currentSphere.entries.push({ type: 'Location', location: locationMatch[1].trim(), item: locationMatch[2].trim() });
+        const loc = locationMatch[1].trim().replace(/^World \d+ /, '');
+        const item = locationMatch[2].trim().replace(/^Player \d+ /, '');
+        currentSphere.entries.push({ type: 'Location', location: loc, item });
         continue;
       }
       const eventMatch = line.match(/^\s*Event\s+-\s+(.+)$/);
       if (eventMatch && currentSphere) {
-        currentSphere.entries.push({ type: 'Event', event: eventMatch[1].trim() });
+        const ev = eventMatch[1].trim().replace(/^World \d+ /, '');
+        currentSphere.entries.push({ type: 'Event', event: ev });
         continue;
       }
     }
@@ -259,7 +339,7 @@ export function parseSpoilerLog(text: string): SpoilerData {
     erDungeons:   isErActive(rawEr['erDungeons']),
     erGrottos:    isErActive(rawEr['erGrottos']),
     erIndoors:    isErActive(rawEr['erIndoors']),
-    erOverworld:  isErActive(rawEr['erOverworld']),
+    erOverworld:  isErActive(rawEr['erOverworld']) || isErActive(rawEr['erRegions']),
     erOneWays:    isErActive(rawEr['erOneWays']),
     erOwls:       rawEr['erOneWaysOwls'] === 'true',
     erWallmasters: isErActive(rawEr['erWallmasters']),
@@ -286,6 +366,7 @@ export function parseSpoilerLog(text: string): SpoilerData {
     erOneWaysWaterVoids: rawEr['erOneWaysWaterVoids'] === 'true',
     erOneWaysAnywhere:   rawEr['erOneWaysAnywhere'] === 'true',
     erOneWaysOwls:       rawEr['erOneWaysOwls'] === 'true',
+    erDecoupled:         rawEr['erDecoupled'] === 'true',
   };
 
   // Store sub-type / extra ER settings in general settings record
@@ -324,5 +405,10 @@ export function parseSpoilerLog(text: string): SpoilerData {
     settingsString: settingsStringLine ? settingsStringLine.replace('SettingsString:', '').trim() : '',
   } : null;
 
-  return { settings, locations, entrances, spheres, erSettings, OOTMM, OOTMMDungeons, seedInfo, specialConditions: specialConditions as SpecialConditionsMap };
+  if (isMultiworld) {
+    Object.assign(locations, worldLocations[1]);
+    Object.assign(entrances, worldEntrances[1]);
+  }
+
+  return { settings, locations, entrances, spheres, erSettings, OOTMM, OOTMMDungeons, seedInfo, specialConditions: specialConditions as SpecialConditionsMap, players, worldLocations, worldEntrances, songEvents };
 }

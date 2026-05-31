@@ -22,7 +22,7 @@ export const sharedToOot: Record<string, string[]> = {
   'sh_scale':          ['scale'],
   'sh_strength':       ['strength'],
   'sh_hammer':         ['hammer'],
-  'sh_wallet':         ['wallet'],
+  // wallet intentionally omitted — OoT and MM are independent (cross-game ≠ shared)
   'sh_sword':          ['sword_kokiri'],
   'sh_shield_deku':    ['deku_shield'],
   'sh_shield_hylian':  ['hyrule_shield'],
@@ -43,21 +43,6 @@ export const sharedToOot: Record<string, string[]> = {
   'sh_song_storms':    ['oot_song_storms'],
   'sh_song_time':      ['oot_song_time'],
   'sh_song_sun':       ['oot_song_sun'],
-  'sh_song_elegy':     ['oot_elegy'],
-  'sh_song_healing':   ['oot_song_healing'],
-  'sh_song_soaring':   ['oot_song_soaring'],
-  'sh_song_sonata':    ['oot_song_sonata'],
-  'sh_song_lullaby':   ['oot_song_lullaby'],
-  'sh_song_nova':      ['oot_song_nova'],
-  'sh_song_oath':      ['oot_song_oath'],
-  'sh_song_zelda':     ['oot_song_zelda'],
-  'sh_song_saria':     ['oot_song_saria'],
-  'sh_song_minuet':    ['oot_song_minuet'],
-  'sh_song_bolero':    ['oot_song_bolero'],
-  'sh_song_serenade':  ['oot_song_serenade'],
-  'sh_song_requiem':   ['oot_song_requiem'],
-  'sh_song_nocturne':  ['oot_song_nocturne'],
-  'sh_song_prelude':   ['oot_song_prelude'],
 };
 
 export const sharedToMm: Record<string, string[]> = {
@@ -78,7 +63,7 @@ export const sharedToMm: Record<string, string[]> = {
   'sh_scale':          ['mm_scale'],
   'sh_strength':       ['mm_strength'],
   'sh_hammer':         ['mm_hammer'],
-  'sh_wallet':         ['mm_wallet'],
+  // wallet intentionally omitted — OoT and MM are independent
   'sh_sword':          ['mm_sword'],
   'sh_shield_deku':    ['mm_shield_deku'],
   'sh_din':            ['mm_spell_fire'],
@@ -98,21 +83,6 @@ export const sharedToMm: Record<string, string[]> = {
   'sh_song_storms':    ['mm_song_storms'],
   'sh_song_time':      ['mm_song_time'],
   'sh_song_sun':       ['mm_song_sun'],
-  'sh_song_elegy':     ['mm_song_elegy'],
-  'sh_song_healing':   ['mm_song_healing'],
-  'sh_song_soaring':   ['mm_song_soaring'],
-  'sh_song_sonata':    ['mm_song_sonata'],
-  'sh_song_lullaby':   ['mm_song_lullaby'],
-  'sh_song_nova':      ['mm_song_nova'],
-  'sh_song_oath':      ['mm_song_oath'],
-  'sh_song_zelda':     ['mm_song_zelda'],
-  'sh_song_saria':     ['mm_song_saria'],
-  'sh_song_minuet':    ['mm_song_minuet'],
-  'sh_song_bolero':    ['mm_song_bolero'],
-  'sh_song_serenade':  ['mm_song_serenade'],
-  'sh_song_requiem':   ['mm_song_requiem'],
-  'sh_song_nocturne':  ['mm_song_nocturne'],
-  'sh_song_prelude':   ['mm_song_prelude'],
 };
 
 // Direct OoT↔MM sync pairs for items with no sh_* intermediary (souls, ocarina buttons)

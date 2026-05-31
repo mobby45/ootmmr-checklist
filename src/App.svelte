@@ -2868,6 +2868,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
   function resetSettings() {
     if (!window.confirm('Are you sure you want to reset all settings to default?')) return;
     [...ySettings.keys()].forEach(k => ySettings.delete(k));
+    [...yEntrances.keys()].forEach(k => yEntrances.delete(k));
     saveDisplaySetting('OOTMM', 'both');
     saveDisplaySetting('OOTMMDungeons', 'both');
     saveDisplaySetting('showUnshuffledGS', false);
@@ -2913,8 +2914,11 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     randoImportError = '';
     randoImportOk = false;
     try {
-      const { appSettings, unmapped } = await importRandomizerSettings(randoImportStr);
-      Object.entries(appSettings).forEach(([k, v]) => ySettings.set(k, v));
+      const { appSettings, clearedKeys, unmapped } = await importRandomizerSettings(randoImportStr);
+      ydoc.transact(() => {
+        Object.entries(appSettings).forEach(([k, v]) => ySettings.set(k, v));
+        clearedKeys.forEach(k => ySettings.delete(k));
+      });
       randoImportOk = true;
       randoImportStr = '';
       if (unmapped.length) console.info('Unmapped settings:', unmapped);

@@ -1,4 +1,4 @@
-// Decodes an OoTMM randomizer settings string (v2.x format) and maps it to app settings.
+﻿// Decodes an OoTMM randomizer settings string (v2.x format) and maps it to app settings.
 // Format: "v2." + base64url(deflateRaw(JSON.stringify(settingsDiff)))
 
 const KEY_MAP: Record<string, string> = {
@@ -66,28 +66,136 @@ const KEY_MAP: Record<string, string> = {
   shuffleMasterSword:           'shuffleMasterSword',
   shuffleGerudoCard:            'shuffleGerudoCard',
   shuffleOcarinasOot:           'shuffleOcarinasOot',
+  // MM extensions (OoT items in MM pool)
+  spellFireMm:          'spellFireMm',
+  spellWindMm:          'spellWindMm',
+  spellLoveMm:          'spellLoveMm',
+  stoneAgonyMm:         'stoneAgonyMm',
+  hammerMm:             'hammerMm',
+  strengthMm:           'strengthMm',
+  scalesMm:             'scalesMm',
+  dekuShieldMm:         'dekuShieldMm',
+  bootsIronMm:          'bootsIronMm',
+  bootsHoverMm:         'bootsHoverMm',
+  tunicGoronMm:         'tunicGoronMm',
+  tunicZoraMm:          'tunicZoraMm',
+  boomerangMm:          'boomerangMm',
+  shortHookshotMm:      'shortHookshotMm',
+  fairyOcarinaMm:       'fairyOcarinaMm',
+  transcendentFairy:    'transcendentFairy',
+  clocks:               'clocks',
+  skeletonKeyMm:        'skeletonKeyMm',
+  platinumTokenMm:      'platinumTokenMm',
+  // OoT extensions (MM items in OoT pool)
+  elegyOot:             'crossGameSongElegy',
+  spinUpgradeOot:       'spinUpgradeOot',
+  extraChildSwordsOot:  'extraChildSwordsOot',
+  blastMaskOot:         'blastMaskOot',
+  stoneMaskOot:         'stoneMaskOot',
+  kamaroMaskOot:        'kamaroMaskOot',
+  skeletonKeyOot:       'skeletonKeyOot',
+  platinumTokenOot:     'platinumTokenOot',
+  magicalRupee:         'magicalRupee',
+  // OoT behavior/pool extensions
+  sunlightArrows:       'sunlightArrows',
+  blueFireArrows:       'blueFireArrows',
+  bronzeScale:          'bronzeScale',
+  childWallets:         'childWallets',
+  colossalWallets:      'colossalWallets',
+  bottomlessWallets:    'bottomlessWallets',
+  bottleContentShuffle: 'bottleContentShuffle',
+  sticksNutsUpgradesMm: 'sticksNutsUpgradesMm',
+  sharedBottles:        'sharedBottles',
+  // Individual song pool extensions (MM songs in OoT)
+  songSoaringOot:       'songSoaringOot',
+  songHealingOot:       'songHealingOot',
+  songAwakeningOot:     'songAwakeningOot',
+  songGoronOot:         'songGoronOot',
+  songZoraOot:          'songZoraOot',
+  songOrderOot:         'songOrderOot',
+  songOfDoubleTimeOot:  'songOfDoubleTimeOot',
+  // Individual song pool extensions (OoT songs in MM)
+  songZeldaLullabyMm:   'songZeldaLullabyMm',
+  songSariasMm:         'songSariasMm',
+  songSunMm:            'songSunMm',
+  songMinuetMm:         'songMinuetMm',
+  songBoleroMm:         'songBoleroMm',
+  songSerenadeMm:       'songSerenadeMm',
+  songRequiemMm:        'songRequiemMm',
+  songNocturneMm:       'songNocturneMm',
+  songPreludeMm:        'songPreludeMm',
+  // Souls (OoTMM key → tracker key rename)
+  soulsEnemyOot:        'enemySoulsOot',
+  soulsBossOot:         'bossSoulsOot',
+  soulsNpcOot:          'npcSoulsOot',
+  soulsAnimalOot:       'animalSoulsOot',
+  soulsMiscOot:         'miscSoulsOot',
+  soulsEnemyMm:         'enemySoulsMm',
+  soulsBossMm:          'bossSoulsMm',
+  soulsNpcMm:           'npcSoulsMm',
+  soulsAnimalMm:        'animalSoulsMm',
+  soulsMiscMm:          'miscSoulsMm',
   // Cross-game songs (MM songs in OoT pool)
-  sharedSongHealing:            'sharedSongHealing',
-  sharedSongSoaring:            'sharedSongSoaring',
-  sharedSongSonata:             'sharedSongSonata',
-  sharedSongLullaby:            'sharedSongLullaby',
-  sharedSongNova:               'sharedSongNova',
-  sharedSongOath:               'sharedSongOath',
+  crossGameSongHealing:            'crossGameSongHealing',
+  crossGameSongSoaring:            'crossGameSongSoaring',
+  crossGameSongSonata:             'crossGameSongSonata',
+  crossGameSongLullaby:            'crossGameSongLullaby',
+  crossGameSongNova:               'crossGameSongNova',
+  crossGameSongOath:               'crossGameSongOath',
   // Cross-game songs (OoT songs in MM pool)
-  sharedSongZeldaLullaby:       'sharedSongZeldaLullaby',
-  sharedSongSaria:              'sharedSongSaria',
-  sharedSongMinuet:             'sharedSongMinuet',
-  sharedSongBolero:             'sharedSongBolero',
-  sharedSongSerenade:           'sharedSongSerenade',
-  sharedSongRequiem:            'sharedSongRequiem',
-  sharedSongNocturne:           'sharedSongNocturne',
-  sharedSongPrelude:            'sharedSongPrelude',
+  crossGameSongZelda:       'crossGameSongZelda',
+  crossGameSongSaria:              'crossGameSongSaria',
+  crossGameSongMinuet:             'crossGameSongMinuet',
+  crossGameSongBolero:             'crossGameSongBolero',
+  crossGameSongSerenade:           'crossGameSongSerenade',
+  crossGameSongRequiem:            'crossGameSongRequiem',
+  crossGameSongNocturne:           'crossGameSongNocturne',
+  crossGameSongPrelude:            'crossGameSongPrelude',
   // Songs shared between games (same song in both pools, not cross-game shuffled)
   sharedSongEpona:              'sharedSongEpona',
   sharedSongStorms:             'sharedSongStorms',
   sharedSongTime:               'sharedSongTime',
   sharedSongSun:                'sharedSongSun',
-  sharedSongElegy:              'sharedSongElegy',
+  crossGameSongElegy:              'crossGameSongElegy',
+  // Entrance Randomizer
+  erSelfLoops:          'erSelfLoops',
+  erNoPolarity:         'erNoPolarity',
+  erDecoupled:          'erDecoupled',
+  erBoss:               'erBoss',
+  erDungeons:           'erDungeons',
+  erMajorDungeons:      'erMajorDungeons',
+  erMinorDungeons:      'erMinorDungeons',
+  erGanonCastle:        'erGanonCastle',
+  erGanonTower:         'erGanonTower',
+  erMoon:               'erMoon',
+  erSpiderHouses:       'erSpiderHouses',
+  erPirateFortress:     'erPirateFortress',
+  erBeneathWell:        'erBeneathWell',
+  erIkanaCastle:        'erIkanaCastle',
+  erSecretShrine:       'erSecretShrine',
+  erGrottos:            'erGrottos',
+  erIndoors:            'erIndoors',
+  erIndoorsMajor:       'erIndoorsMajor',
+  erIndoorsExtra:       'erIndoorsExtra',
+  erIndoorsGameLinks:   'erIndoorsGameLinks',
+  erRegions:            'erRegions',
+  erRegionsExtra:       'erRegionsExtra',
+  erRegionsShortcuts:   'erRegionsShortcuts',
+  erPiratesWorld:       'erPiratesWorld',
+  erMixed:              'erMixed',
+  erMixedDungeons:      'erMixedDungeons',
+  erMixedGrottos:       'erMixedGrottos',
+  erMixedIndoors:       'erMixedIndoors',
+  erMixedRegions:       'erMixedRegions',
+  erSpawns:             'erSpawns',
+  erWallmasters:        'erWallmasters',
+  erWarps:              'erWarps',
+  erOneWays:            'erOneWays',
+  erOneWaysMajor:       'erOneWaysMajor',
+  erOneWaysIkana:       'erOneWaysIkana',
+  erOneWaysOwls:        'erOneWaysOwls',
+  erOneWaysWaterVoids:  'erOneWaysWaterVoids',
+  erOneWaysAnywhere:    'erOneWaysAnywhere',
 };
 
 // camelCase value → snake_case, plus special-case overrides
@@ -139,9 +247,11 @@ const KNOWN_UNTRACKED = new Set([
   'csmcCow', 'openMaskShop', 'ocarinaButtonsShuffleOot', 'ocarinaButtonsShuffleMm',
 ]);
 
-// Returns {appSettings, unmapped} where unmapped lists OoTMM keys we couldn't translate
+// Returns {appSettings, clearedKeys, unmapped}
+// clearedKeys = mapped tracker keys absent from the hash → should be deleted (reset to default)
 export async function importRandomizerSettings(str: string): Promise<{
   appSettings: Record<string, unknown>;
+  clearedKeys: string[];
   unmapped: string[];
 }> {
   const raw = await decodeRandomizerSettings(str);
@@ -156,23 +266,22 @@ export async function importRandomizerSettings(str: string): Promise<{
     } else if (ootmmKey === 'bossKeyShuffleMm') {
       appSettings['bossKeyMmEnabled'] = value !== 'removed';
     } else if (!KNOWN_UNTRACKED.has(ootmmKey)) {
-      // Skip non-shuffle settings (tricks, logic, etc.) silently — only report shuffle ones
       const isShuffleLike = /shuffle|cow|scrub|shop|fairy|egg|fish|frog|merchant|lottery|actor|zelda/i.test(ootmmKey);
       if (isShuffleLike) unmapped.push(ootmmKey);
     }
-  }
-  // Auto-enable UI toggles derived from multiple OoTMM settings
-  const crossGameKeys = [
-    'sharedSongHealing','sharedSongSoaring','sharedSongSonata','sharedSongLullaby','sharedSongNova','sharedSongOath',
-    'sharedSongZeldaLullaby','sharedSongSaria','sharedSongMinuet','sharedSongBolero',
-    'sharedSongSerenade','sharedSongRequiem','sharedSongNocturne','sharedSongPrelude',
-  ];
-  if (crossGameKeys.some(k => appSettings[k] === true)) {
-    appSettings['crossGameSongs'] = true;
   }
   if (raw['songEventsShuffleOot'] === true || raw['songEventsShuffleMm'] === true) {
     appSettings['songEventShuffle'] = true;
   }
 
-  return { appSettings, unmapped };
+  // Keys mapped in KEY_MAP but absent from the hash = OoTMM default = disabled
+  // Return them so the caller can delete them from ySettings
+  const setAppKeys = new Set(Object.keys(appSettings));
+  const clearedKeys = Object.values(KEY_MAP).filter(k => !setAppKeys.has(k));
+  // Also clear derived keys if their source keys are absent
+  if (!('bossKeyOotEnabled' in appSettings)) clearedKeys.push('bossKeyOotEnabled');
+  if (!('bossKeyMmEnabled' in appSettings)) clearedKeys.push('bossKeyMmEnabled');
+  if (!('songEventShuffle' in appSettings)) clearedKeys.push('songEventShuffle');
+
+  return { appSettings, clearedKeys, unmapped };
 }
