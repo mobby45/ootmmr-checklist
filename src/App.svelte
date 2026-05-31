@@ -2001,6 +2001,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     const newState = toggleState(yChecks.get(actual) ?? T.CheckState.unchecked);
     yChecks.set(actual, newState);
     setAuthor(actual, newState);
+    if (newState === T.CheckState.checked) yNotes.delete(actual);
   }
 
   // ==========================================
@@ -2869,6 +2870,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     for (let i = lastAction.checkIndex + 1; i <= checkIndex; i++) {
       yChecks.set(group.checks[i].name, lastAction.newState);
       setAuthor(group.checks[i].name, lastAction.newState);
+      if (lastAction.newState === T.CheckState.checked) yNotes.delete(group.checks[i].name);
     }
   }
 
@@ -2884,7 +2886,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     if (isWatchMode) return;
     const allChecked = group.checks.every(({ name }) => yChecks.get(name) === T.CheckState.checked);
     const val = allChecked ? T.CheckState.unchecked : T.CheckState.checked;
-    group.checks.forEach(({ name }) => { yChecks.set(name, val); setAuthor(name, val); });
+    group.checks.forEach(({ name }) => { yChecks.set(name, val); setAuthor(name, val); if (val === T.CheckState.checked) yNotes.delete(name); });
   }
 
   function markWholeGroup(group: T.CheckGroup) {
