@@ -1465,6 +1465,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
   let spoilerErSettings: ErSettings | null = JSON.parse(localStorage.getItem('spoilerErSettings') ?? 'null');
   let spoilerExtraEr: Record<string, any> | null = JSON.parse(localStorage.getItem('spoilerExtraEr') ?? 'null');
   let spoilerEntrances: Record<string, string> | null = JSON.parse(localStorage.getItem('spoilerEntrances') ?? 'null');
+  let spoilerSongEvents: Record<string, string> = JSON.parse(localStorage.getItem('spoilerSongEvents') ?? '{}');
   let spoilerFillEntrances = localStorage.getItem('spoilerFillEntrances') === 'true';
 
   function toggleSpoilerFillEntrances() {
@@ -1557,6 +1558,8 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
       localStorage.setItem('spoilerExtraEr', JSON.stringify(spoilerExtraEr));
       spoilerEntrances = Object.keys(data.entrances).length ? data.entrances : null;
       localStorage.setItem('spoilerEntrances', JSON.stringify(spoilerEntrances));
+      spoilerSongEvents = data.songEvents;
+      localStorage.setItem('spoilerSongEvents', JSON.stringify(data.songEvents));
       spoilerSpecialConditions = data.specialConditions;
       localStorage.setItem('spoilerSpecialConditions', JSON.stringify(data.specialConditions));
       spoilerCoinCounts = {
@@ -1780,6 +1783,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
   let showAgeFilter = true;
   let ageFilter: 'child' | 'adult' = 'child';
   let scrollPosition = 0;
+  let erHighlightId: string | null = null;
 
   // Rebuild map data when MQ settings change
   $: if ($sMqSettings) {
@@ -1867,6 +1871,22 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     return allEntrances.find(e => { const p = parts(e); return p !== null && p[1] === nSrc && p[0].startsWith(nDst + ' '); });
   }
 
+  async function handleOpenErForEntrance(entranceId: string) {
+    erHighlightId = entranceId;
+    showMapModal = false;
+    secEr = true;
+    erTab = 'tracker';
+    localStorage.setItem('sec_er', 'true');
+    // Wait for modal close + scroll restore, then scroll to ER section and flash the row
+    setTimeout(async () => {
+      const el = document.getElementById('er-tracker-details');
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      await tick();
+      // Clear highlight after animation completes
+      setTimeout(() => { erHighlightId = null; }, 2500);
+    }, 120);
+  }
+
   async function openMapForEntrance(entranceId: string) {
     if (!mapData) return;
     // If a destination is assigned, navigate to the spawn point (reverse entrance interior) if available
@@ -1875,11 +1895,13 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     if (destName) {
       const destEntrance = allEntrances.find(e => e.name === destName);
       if (destEntrance) {
-        const rev = findReverseEntrance(destEntrance);
-        if (rev && entrancePositions.some(p => p.entranceId === rev.id)) {
-          targetId = rev.id;
-        } else if (entrancePositions.some(p => p.entranceId === destEntrance.id)) {
+        // Prefer the destination's own position (the scene you arrive in)
+        // Fallback: reverse of destination (exterior perspective)
+        if (entrancePositions.some(p => p.entranceId === destEntrance.id)) {
           targetId = destEntrance.id;
+        } else {
+          const rev = findReverseEntrance(destEntrance);
+          if (rev && entrancePositions.some(p => p.entranceId === rev.id)) targetId = rev.id;
         }
       }
     }
@@ -2831,7 +2853,6 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     [...yEntrances.keys()].forEach(k => yEntrances.delete(k));
     [...yItems.keys()].forEach(k => yItems.delete(k));
     [...yNotes.keys()].forEach(k => yNotes.delete(k));
-    [...ySongEvents.keys()].forEach(k => ySongEvents.delete(k));
     yHints.delete(0, yHints.length);
     spoilerLocations = {};
     localStorage.removeItem('spoilerLocations');
@@ -2845,6 +2866,8 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     localStorage.removeItem('spoilerExtraEr');
     spoilerEntrances = null;
     localStorage.removeItem('spoilerEntrances');
+    spoilerSongEvents = {};
+    localStorage.removeItem('spoilerSongEvents');
     spoilerFillEntrances = false;
     localStorage.removeItem('spoilerFillEntrances');
     spoilerSpecialConditions = null;
@@ -2870,6 +2893,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
   function resetSettings() {
     if (!window.confirm('Are you sure you want to reset all settings to default?')) return;
     [...ySettings.keys()].forEach(k => ySettings.delete(k));
+    [...ySongEvents.keys()].forEach(k => ySongEvents.delete(k));
     [...yEntrances.keys()].forEach(k => yEntrances.delete(k));
     saveDisplaySetting('OOTMM', 'both');
     saveDisplaySetting('OOTMMDungeons', 'both');
@@ -2918,14 +2942,19 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     try {
       const { appSettings, clearedKeys, unmapped } = await importRandomizerSettings(randoImportStr);
       ydoc.transact(() => {
+        // Apply settings present in the hash
         Object.entries(appSettings).forEach(([k, v]) => ySettings.set(k, v));
+        // Delete settings absent from hash (= OoTMM default = disabled)
         clearedKeys.forEach(k => ySettings.delete(k));
       });
       randoImportOk = true;
       randoImportStr = '';
-      if (unmapped.length) console.info('Unmapped settings:', unmapped);
+      console.info('[Hash Import] Applied:', appSettings);
+      console.info('[Hash Import] Cleared:', clearedKeys);
+      if (unmapped.length) console.info('[Hash Import] Unmapped:', unmapped);
       setTimeout(() => { randoImportOpen = false; randoImportOk = false; }, 1200);
     } catch (e: any) {
+      console.error('[Hash Import] Error:', e);
       randoImportError = e?.message ?? 'Unknown error';
     }
   }
@@ -4271,7 +4300,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
           <button class="er-tab" class:active={erTab === 'pathfinder'} on:click={() => erTab = 'pathfinder'} role="tab">Pathfinder</button>
         </div>
         {#if erTab === 'tracker'}
-          <ERTracker {yEntrances} entranceValues={entranceValuesMap} {spoilerErSettings} {spoilerExtraEr} isWatchMode={isWatchMode || spoilerFillEntrances} bind:activeErSettings={activeErSettings} on:openMapForEntrance={e => openMapForEntrance(e.detail.entranceId)} />
+          <ERTracker {yEntrances} entranceValues={entranceValuesMap} {spoilerErSettings} {spoilerExtraEr} isWatchMode={isWatchMode || spoilerFillEntrances} bind:activeErSettings={activeErSettings} highlightedEntranceId={erHighlightId} on:openMapForEntrance={e => openMapForEntrance(e.detail.entranceId)} />
         {:else}
           <Pathfinder entranceValues={entranceValuesMap} />
         {/if}
@@ -4286,7 +4315,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
       <!-- Hint Tracker -->
       <details style="margin-top: 0.8em" id="hint-tracker-details" bind:open={secHint} on:toggle={() => localStorage.setItem('sec_hint', String(secHint))}>
         <summary>
-          <strong class="interactable">Hint Tracker / Notes</strong>
+          <strong class="interactable">Hint Tracker / Notes / Song Events</strong>
           {#if hints.length + notesEntries.length + shopEntries.length > 0}
             <span class="section-badge">{hints.length + notesEntries.length + shopEntries.length}</span>
           {/if}
@@ -4295,7 +4324,8 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
           {yHints} {hints}
           {notesEntries} {shopEntries}
           {isWatchMode}
-          {ySongEvents} {yItems} {songEventShuffle}
+          {ySongEvents} {yItems} {ySettings} {songEventShuffle}
+          songEventAssignments={spoilerSongEvents}
           onEditNote={handleEditNote}
           onEditShop={handleShopEditByName}
           onDeleteNote={(id) => { if (!isWatchMode) yNotes.delete(id); }}
@@ -4619,6 +4649,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
         bind:showAgeFilter
         bind:ageFilter
         on:close={() => { showMapModal = false; mapInitialSubscene = ''; }}
+        on:openErForEntrance={e => handleOpenErForEntrance(e.detail.entranceId)}
         on:toggleCheck={handleMapToggle}
         on:changeScene={e => {
           currentMapScene = e.detail.scene;
