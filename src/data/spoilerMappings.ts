@@ -153,7 +153,7 @@ export const directBoolKeys = new Set([
   'sticksNutsUpgradesMm', 'sharedBottles',
   'songSoaringOot', 'songHealingOot', 'songAwakeningOot', 'songGoronOot',
   'songZoraOot', 'songOrderOot', 'songOfDoubleTimeOot',
-  'songZeldaLullabyMm', 'songSariasMm', 'songSunMm', 'sunSongMm',
+  'songZeldaLullabyMm', 'songSariasMm', 'sunSongMm',
   'songMinuetMm', 'songBoleroMm', 'songSerenadeMm',
   'songRequiemMm', 'songNocturneMm', 'songPreludeMm',
 ]);
