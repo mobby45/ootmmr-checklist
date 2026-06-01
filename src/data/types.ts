@@ -1,6 +1,5 @@
 // jq '.oot+.mm | map(.type) | unique' < src/data/input/data-pool.json
 export enum CheckType {
-    none,
     chest,
     collectible,
     cow,
@@ -35,7 +34,7 @@ export enum CheckType {
 
 export interface RawPoolEntry {
     location: string;
-    type: keyof typeof CheckType;
+    type: keyof typeof CheckType | 'none';
     hint: string;
     scene: string;
     id: string;
