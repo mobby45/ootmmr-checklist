@@ -15,6 +15,7 @@ export interface ErSettings {
   erWallmasters: boolean;
   erMixed: boolean;
   erAlterLw: boolean;
+  erDecoupled: boolean;
   // Sub-types
   erMajorDungeons: boolean;
   erMinorDungeons: boolean;
@@ -50,6 +51,7 @@ export const defaultErSettings: ErSettings = {
   erWallmasters: false,
   erMixed: false,
   erAlterLw: false,
+  erDecoupled: false,
   erMajorDungeons: false,
   erMinorDungeons: false,
   erGanonCastle: false,
@@ -298,12 +300,13 @@ export function parseSpoilerLog(text: string): SpoilerData {
     erDungeons:   isErActive(rawEr['erDungeons']),
     erGrottos:    isErActive(rawEr['erGrottos']),
     erIndoors:    isErActive(rawEr['erIndoors']),
-    erOverworld:  isErActive(rawEr['erOverworld']),
+    erOverworld:  isErActive(rawEr['erOverworld']) || isErActive(rawEr['erRegions']),
     erOneWays:    isErActive(rawEr['erOneWays']),
     erOwls:       rawEr['erOneWaysOwls'] === 'true',
     erWallmasters: isErActive(rawEr['erWallmasters']),
     erMixed:      isErActive(rawEr['erMixed']) || rawEr['erMixed'] === 'dungeon',
     erAlterLw:    rawEr['alterLostWoodsExits'] === 'true',
+    erDecoupled:  rawEr['erDecoupled'] === 'true',
     erMajorDungeons:     rawEr['erMajorDungeons'] === 'true',
     erMinorDungeons:     rawEr['erMinorDungeons'] === 'true',
     erGanonCastle:       rawEr['erGanonCastle'] === 'true',

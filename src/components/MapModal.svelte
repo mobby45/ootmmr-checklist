@@ -298,7 +298,7 @@
   $: filteredChecks = currentData
     ? currentData.checks.filter(check => {
         const nameWithoutPrefix = check.name.replace(/^(OOT|MM) /, '');
-        const matchesName = filteredCheckNames.has(check.name) || filteredCheckNames.has(nameWithoutPrefix);
+        const matchesName = filteredCheckNames.size === 0 || filteredCheckNames.has(check.name) || filteredCheckNames.has(nameWithoutPrefix);
 
         const matchesAge =
           sceneData.game !== 'oot' ||
@@ -352,12 +352,14 @@
     const destName = entranceValues.get(entranceId);
 
     if (destName) {
-      // Assigned: prefer spawn point (reverse of destination), fallback on destination itself
+      // Prefer destination's own position (the scene you arrive in)
       const destEnt = allEntrances.find(e => e.name === destName);
       if (destEnt) {
-        const rev = findReverseEntrance(destEnt);
-        if (rev && entrancePositions.some(p => p.entranceId === rev.id)) targetId = rev.id;
-        else if (entrancePositions.some(p => p.entranceId === destEnt.id)) targetId = destEnt.id;
+        if (entrancePositions.some(p => p.entranceId === destEnt.id)) targetId = destEnt.id;
+        else {
+          const rev = findReverseEntrance(destEnt);
+          if (rev && entrancePositions.some(p => p.entranceId === rev.id)) targetId = rev.id;
+        }
       }
     } else {
       // Unassigned: navigate to vanilla destination via the entrance's own reverse
@@ -402,6 +404,18 @@
   function handleEntranceClick(entranceId: string) {
     if (hasDragged) return;
     if (!placementMode) { navigateToEntrance(entranceId); return; }
+  }
+
+  function handleEntranceContextMenu(e: MouseEvent, markerUid: string, entranceId: string, isAuto: boolean) {
+    e.preventDefault(); e.stopPropagation();
+    if (!placementMode) { dispatch('openErForEntrance', { entranceId }); return; }
+    if (isAuto) {
+      const atIdx = markerUid.lastIndexOf('_at_');
+      const posId = atIdx >= 0 ? markerUid.slice(atIdx + 4) : entranceId;
+      deleteAutoMarker(posId);
+    } else {
+      deleteEntranceMarker(markerUid);
+    }
   }
 
   function toggleCheck(check: MapCheck) {
@@ -606,9 +620,11 @@
   $: currentPrecomputed = entrancePositions.filter(p => p.renderscene === currentSubscene);
 
   // In placement mode or showAllEntrances: show all precomputed markers regardless of erSettings
-  $: visiblePrecomputed = currentPrecomputed.filter(p =>
-    placementMode || showAllEntrances || isEntranceVisible(allEntrances.find(e => e.id === p.entranceId), p.entranceId)
-  );
+  $: visiblePrecomputed = currentPrecomputed.filter(p => {
+    if (placementMode || showAllEntrances) return true;
+    if (entranceValues.has(p.entranceId)) return false;
+    return isEntranceVisible(allEntrances.find(e => e.id === p.entranceId), p.entranceId);
+  });
 
   function filterByAge(items: typeof visiblePrecomputed, age: 'child' | 'adult', game: string) {
     return items.filter(p => !p.ageFilter || game !== 'oot' || p.ageFilter === age);
@@ -695,11 +711,15 @@
         _auto: true as const,
       });
       if (sources?.length) {
-        // Primary displacement: show sources only (exterior side)
+        // Primary displacement: source known → show source markers only
         return sources.map((srcId, i) => mk(srcId, i));
       }
-      // Own marker + any additional sources from reverse lookup (interior side)
-      const own = [{
+      if (revSources?.length) {
+        // Interior exit: connection known via reverse → show source markers only
+        return revSources.map((srcId, i) => mk(srcId, i));
+      }
+      // Unknown connection — show own vanilla marker
+      return [{
         uid: 'auto_' + p.entranceId + '_' + p.renderscene + '_' + p.x + '_' + p.y,
         id: p.entranceId,
         renderscene: p.renderscene,
@@ -707,10 +727,6 @@
         y: p.y,
         _auto: true as const,
       }];
-      if (revSources?.length) {
-        return [...own, ...revSources.map((srcId, i) => mk(srcId, i + 1))];
-      }
-      return own;
     });
 
   // ==========================================
@@ -884,7 +900,7 @@
         on:pointercancel={onPointerUp}
         on:contextmenu={handleMapContextMenu}
         on:click={e => { if (placementMode && selectedPlacementEntrances.length && !hasDragged) placeEntranceAt(e); }}
-        style="cursor: {placementMode && selectedPlacementEntrances.length ? 'crosshair' : scale > 1 ? (isPanning ? 'grabbing' : 'grab') : 'default'};"
+        style="cursor: {placementMode && selectedPlacementEntrances.length ? 'crosshair' : placementMode ? 'default' : scale > 1 ? (isPanning ? 'grabbing' : 'grab') : 'default'};"
       >
         <div class="map-container" class:show-labels={showEntranceLabels} style="--cs:{counterScale};--ms:{scale};transform: scale({scale}) translate({panX / scale}px, {panY / scale}px); transform-origin: top left;">
         <img
@@ -966,7 +982,7 @@
                 on:pointermove={entrancePointerMove}
                 on:pointerup={entrancePointerUp}
                 on:click|stopPropagation={() => handleEntranceClick(marker.id)}
-                on:contextmenu|preventDefault|stopPropagation={() => deleteAutoMarker(marker.id)}
+                on:contextmenu|preventDefault|stopPropagation={e => handleEntranceContextMenu(e, marker.uid, marker.id, true)}
               >
                 <span class="entrance-diamond"></span>
                 {#if draggingEntranceUid !== marker.uid}<span class="entrance-lbl">{_lbl}</span>{/if}
@@ -997,7 +1013,7 @@
                 on:pointermove={entrancePointerMove}
                 on:pointerup={entrancePointerUp}
                 on:click|stopPropagation={() => handleEntranceClick(marker.id)}
-                on:contextmenu|preventDefault|stopPropagation={() => { if (placementMode) deleteEntranceMarker(marker.uid); }}
+                on:contextmenu|preventDefault|stopPropagation={e => handleEntranceContextMenu(e, marker.uid, marker.id, false)}
               >
                 <span class="entrance-diamond"></span>
                 {#if draggingEntranceUid !== marker.uid}<span class="entrance-lbl">{lbl}</span>{/if}

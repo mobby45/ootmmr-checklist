@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { allEntrances, entranceSubTypes, subTypeToParent, subTypeLabels, type EntranceType, type ErSettingKey } from '../data/entranceData';
+  import { allEntrances, entranceSubTypes, subTypeLabels, type ErSettingKey } from '../data/entranceData';
   import { defaultErSettings, type ErSettings } from '../util/spoilerParser';
   import type { Map as YMap } from 'yjs';
   import EntranceSelect from './EntranceSelect.svelte';
-  import { createEventDispatcher } from 'svelte';
+  import { createEventDispatcher, tick } from 'svelte';
   import { entrancePositions } from '../data/entrancePositions';
 
   const dispatch = createEventDispatcher();
@@ -41,9 +41,31 @@
   export let activeErSettings: ErSettings = spoilerErSettings ?? manualErSettings;
   $: activeErSettings = spoilerErSettings ?? manualErSettings;
 
+  export let highlightedEntranceId: string | null = null;
+
+  let erListEl: HTMLElement | undefined;
+  let _prevHighlight = '';
+  $: if (highlightedEntranceId && highlightedEntranceId !== _prevHighlight) {
+    _prevHighlight = highlightedEntranceId;
+    tick().then(() => {
+      const el = erListEl?.querySelector(`[data-eid="${highlightedEntranceId}"]`) as HTMLElement | null;
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        el.classList.add('er-row-highlight');
+        setTimeout(() => el.classList.remove('er-row-highlight'), 1800);
+      }
+    });
+  }
+
   function saveManualErSettings() {
     localStorage.setItem('erSettings', JSON.stringify(manualErSettings));
     manualErSettings = { ...manualErSettings };
+  }
+
+  const alwaysManualKeys = new Set(['erMixed', 'erDecoupled']);
+
+  function getManualBool(key: string): boolean {
+    return (manualErSettings as any)[key] ?? false;
   }
 
   function toggleErSetting(key: string) {
@@ -65,6 +87,7 @@
     erWallmasters: '👁️ Wallmasters',
     erAlterLw: '🌲 Alter LW Exits',
     erMixed: '🔀 Cross-game destinations',
+    erDecoupled: '🔓 Decoupled',
   };
 
   const subTypeGroups = [
@@ -83,7 +106,8 @@
   type GameFilter = 'both' | 'oot' | 'mm';
   let gameFilter: GameFilter = 'both';
   let searchFilter = '';
-  let showOnlyUnknown = false;
+  let showOnlyKnown = false;
+  let showHelp = false;
 
   // Which sub-type groups have at least one visible group (parent active + populated)
   // NOTE: must reference activeErSettings directly, not through a function,
@@ -118,9 +142,6 @@
   function getSub(key: string): boolean {
     return (manualErSettings as any)[key] ?? false;
   }
-  function parentIsActive(parentKey: string): boolean {
-    return (activeErSettings as any)[parentKey] ?? false;
-  }
   function hasPopulatedSub(key: string): boolean {
     return populatedSubTypes.has(key);
   }
@@ -151,11 +172,12 @@
   );
 
   $: filteredEntrances = allEntrances.filter(e => {
+    if (highlightedEntranceId && e.id === highlightedEntranceId) return true;
     if (!activeErTypes.has(e.erType)) return false;
     if (!entranceMatchesSubTypes(e.id, e.erType)) return false;
     if (gameFilter !== 'both' && e.game !== gameFilter) return false;
     if (searchFilter && !e.name.toLowerCase().includes(searchFilter.toLowerCase())) return false;
-    if (showOnlyUnknown && entranceValues.get(e.id)) return false;
+    if (showOnlyKnown && !entranceValues.get(e.id)) return false;
     return true;
   });
 
@@ -172,6 +194,20 @@
     if (isWatchMode) return;
     if (!confirm('Clear all entrance connections?')) return;
     Array.from(yEntrances.keys()).forEach(k => yEntrances.delete(k));
+  }
+
+  function normEntName(s: string): string {
+    return s.replace(/ \(Game Link\)$/, '').replace(/ from .+$/, '');
+  }
+
+  function findReverseEntranceName(name: string): string | undefined {
+    const i = name.indexOf(' to ');
+    if (i < 0) return undefined;
+    const nSrc = normEntName(name.slice(0, i));
+    const nDst = normEntName(name.slice(i + 4));
+    const parts = (e: { name: string }) => { const j = e.name.indexOf(' to '); return j < 0 ? null : [normEntName(e.name.slice(0, j)), normEntName(e.name.slice(j + 4))] as const; };
+    const rev = allEntrances.find(e => { const p = parts(e); return p !== null && p[0] === nDst && p[1] === nSrc; });
+    return rev?.name;
   }
 
   $: knownCount = filteredEntrances.filter(e => getValue(e.id)).length;
@@ -202,12 +238,12 @@
       {#each Object.entries(erLabels) as [key, label]}
         <button
           class="er-toggle-btn"
-          class:active={key === 'erMixed' ? manualErSettings.erMixed : isErActive(key)}
-          class:from-spoiler={spoilerErSettings !== null && key !== 'erMixed'}
-          class:always-manual={key === 'erMixed'}
-          disabled={isWatchMode || (spoilerErSettings !== null && key !== 'erMixed')}
-          on:click={() => !isWatchMode && (key === 'erMixed' || spoilerErSettings === null) && toggleErSetting(key)}
-          title={key === 'erMixed' ? 'Always manual — show both games as destinations' : spoilerErSettings ? 'Set by spoiler log' : 'Click to toggle'}
+          class:active={alwaysManualKeys.has(key) ? getManualBool(key) : isErActive(key)}
+          class:from-spoiler={spoilerErSettings !== null && !alwaysManualKeys.has(key)}
+          class:always-manual={alwaysManualKeys.has(key)}
+          disabled={isWatchMode || (spoilerErSettings !== null && !alwaysManualKeys.has(key))}
+          on:click={() => !isWatchMode && (alwaysManualKeys.has(key) || spoilerErSettings === null) && toggleErSetting(key)}
+          title={key === 'erDecoupled' ? 'Always manual — reverse auto-fill disabled when ON' : key === 'erMixed' ? 'Always manual — show both games as destinations' : spoilerErSettings ? 'Set by spoiler log' : 'Click to toggle'}
         >
           {label}
           {#if subTypeCounts[key]}
@@ -251,22 +287,45 @@
 
   <div class="er-controls">
     <div class="er-filters">
-      <input
-        type="text"
-        placeholder="Search entrance..."
-        bind:value={searchFilter}
-        class="er-search"
-      />
+      <div class="er-search-wrap">
+        <input
+          type="text"
+          placeholder="Search entrance..."
+          bind:value={searchFilter}
+          class="er-search"
+        />
+        {#if searchFilter}
+          <button class="er-search-clear" on:click={() => searchFilter = ''} title="Clear search">×</button>
+        {/if}
+      </div>
       <select bind:value={gameFilter} class="er-select">
         <option value="both">OoT + MM</option>
         <option value="oot">OoT only</option>
         <option value="mm">MM only</option>
       </select>
       <label class="er-checkbox">
-        <input type="checkbox" bind:checked={showOnlyUnknown} />
-        Unknown only
+        <input type="checkbox" bind:checked={showOnlyKnown} />
+        Filled only
       </label>
+      <button class="er-help-btn" on:click={() => showHelp = !showHelp} title="Help">?</button>
     </div>
+    {#if showHelp}
+      <div class="er-help-panel">
+        <strong>How to use the ER Tracker</strong><br><br>
+        Each row = one shuffled entrance. <strong>Left side</strong> = where you stand in the game. <strong>Right side</strong> = where you end up.<br><br>
+        <strong>📝 Manual tracking (no spoiler log):</strong><br>
+        1. Walk through an entrance in-game.<br>
+        2. Note where you appear.<br>
+        3. Find the row for the entrance you went through.<br>
+        4. Set the dropdown to the area you landed in.<br><br>
+        <strong>💡 Tips:</strong><br>
+        • If <strong>Decoupled</strong> is off: setting A→B automatically fills the reverse (B→A).<br>
+        • <strong>Filled only</strong>: shows only entrances you've already discovered.<br>
+        • Right-click a 🔷 on the map to jump to the matching tracker row.<br>
+        • The 🗺️ button opens the entrance on the map.<br>
+        <button class="er-help-close" on:click={() => showHelp = false}>✕ Close</button>
+      </div>
+    {/if}
     <div class="er-stats">
       <span>{knownCount}/{totalActive} known</span>
       <button class="er-clear-btn" on:click={clearAll} disabled={isWatchMode}>Clear all</button>
@@ -276,10 +335,10 @@
   {#if activeErTypes.size === 0}
     <div class="er-empty">No entrance types enabled. Enable some types above or import a spoiler log.</div>
   {:else}
-    <div class="er-list">
+    <div class="er-list" bind:this={erListEl}>
       {#each filteredEntrances as entrance (entrance.id)}
         {@const currentValue = getValue(entrance.id)}
-        <div class="er-row" class:filled={!!currentValue}>
+        <div class="er-row" class:filled={!!currentValue} class:er-row-highlighted={entrance.id === highlightedEntranceId} data-eid={entrance.id}>
   <span class="er-game-badge er-game-{entrance.game}">
     {entrance.game.toUpperCase()}
   </span>
@@ -294,8 +353,23 @@
       value={currentValue}
       on:change={e => {
         if (isWatchMode) return;
-        if (e.detail.trim() === '') clearValue(entrance.id);
-        else yEntrances.set(entrance.id, e.detail);
+        const newVal = e.detail.trim();
+        if (newVal === '') clearValue(entrance.id);
+        else {
+          yEntrances.set(entrance.id, newVal);
+          if (!manualErSettings.erDecoupled) {
+            const revName = findReverseEntranceName(entrance.name);
+            if (revName) {
+              const revDestName = findReverseEntranceName(newVal);
+              if (revDestName) {
+                const revId = allEntrances.find(e => e.name === revName)?.id;
+                if (revId && !entranceValues.get(revId)) {
+                  yEntrances.set(revId, revDestName);
+                }
+              }
+            }
+          }
+        }
       }}
     />
   </div>
@@ -384,13 +458,81 @@
     align-items: center;
   }
 
-  .er-search {
-    padding: 0.4em 0.6em;
+  .er-search-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+  }
+  .er-search-wrap .er-search {
+    padding: 0.4em 1.6em 0.4em 0.6em;
+  }
+  .er-search-clear {
+    position: absolute;
+    right: 4px;
+    background: none;
+    border: none;
+    color: var(--color-text);
+    cursor: pointer;
+    font-size: 1.1em;
+    opacity: 0.5;
+    padding: 0 4px;
+    line-height: 1;
+  }
+  .er-search-clear:hover { opacity: 1; }
+  .er-help-btn {
+    background: none;
+    border: 1px solid var(--color-border);
+    border-radius: 50%;
+    width: 1.4em;
+    height: 1.4em;
+    font-size: 0.85em;
+    cursor: pointer;
+    color: var(--color-text);
+    opacity: 0.5;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    line-height: 1;
+  }
+  .er-help-btn:hover { opacity: 1; }
+  .er-help-panel {
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    padding: 0.8em;
+    margin-bottom: 0.8em;
+    font-size: 0.82em;
+    line-height: 1.5;
+    max-width: 500px;
+  }
+  .er-help-close {
+    margin-top: 0.4em;
+    background: none;
     border: 1px solid var(--color-border);
     border-radius: 4px;
-    background: var(--color-bg);
+    cursor: pointer;
     color: var(--color-text);
-    width: 180px;
+    padding: 0.2em 0.6em;
+    font-size: 0.9em;
+  }
+  .er-row:nth-child(odd) {
+    background: rgba(255,255,255,0.05);
+  }
+  .er-row.filled:nth-child(odd) {
+    background: rgba(100, 150, 255, 0.09);
+  }
+  @keyframes er-flash {
+    0%   { background: rgba(255, 200, 50, 0.35); }
+    60%  { background: rgba(255, 200, 50, 0.15); }
+    100% { background: transparent; }
+  }
+  .er-row-highlight {
+    animation: er-flash 1.8s ease-out forwards;
+  }
+  .er-row.er-row-highlighted {
+    outline: 1px solid rgba(255, 200, 50, 0.5);
+    border-radius: 3px;
   }
 
   .er-select {

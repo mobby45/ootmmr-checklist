@@ -1780,6 +1780,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
   let showAgeFilter = true;
   let ageFilter: 'child' | 'adult' = 'child';
   let scrollPosition = 0;
+  let erHighlightId: string | null = null;
 
   // Rebuild map data when MQ settings change
   $: if ($sMqSettings) {
@@ -1867,6 +1868,20 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     return allEntrances.find(e => { const p = parts(e); return p !== null && p[1] === nSrc && p[0].startsWith(nDst + ' '); });
   }
 
+  async function handleOpenErForEntrance(entranceId: string) {
+    erHighlightId = entranceId;
+    showMapModal = false;
+    secEr = true;
+    erTab = 'tracker';
+    localStorage.setItem('sec_er', 'true');
+    setTimeout(async () => {
+      const el = document.getElementById('er-tracker-details');
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      await tick();
+      setTimeout(() => { erHighlightId = null; }, 2500);
+    }, 120);
+  }
+
   async function openMapForEntrance(entranceId: string) {
     if (!mapData) return;
     // If a destination is assigned, navigate to the spawn point (reverse entrance interior) if available
@@ -1875,11 +1890,12 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     if (destName) {
       const destEntrance = allEntrances.find(e => e.name === destName);
       if (destEntrance) {
-        const rev = findReverseEntrance(destEntrance);
-        if (rev && entrancePositions.some(p => p.entranceId === rev.id)) {
-          targetId = rev.id;
-        } else if (entrancePositions.some(p => p.entranceId === destEntrance.id)) {
+        // Prefer destination's own position (the scene you arrive in)
+        if (entrancePositions.some(p => p.entranceId === destEntrance.id)) {
           targetId = destEntrance.id;
+        } else {
+          const rev = findReverseEntrance(destEntrance);
+          if (rev && entrancePositions.some(p => p.entranceId === rev.id)) targetId = rev.id;
         }
       }
     }
@@ -4283,7 +4299,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
           <button class="er-tab" class:active={erTab === 'pathfinder'} on:click={() => erTab = 'pathfinder'} role="tab">Pathfinder</button>
         </div>
         {#if erTab === 'tracker'}
-          <ERTracker {yEntrances} entranceValues={entranceValuesMap} {spoilerErSettings} {spoilerExtraEr} isWatchMode={isWatchMode || spoilerFillEntrances} bind:activeErSettings={activeErSettings} on:openMapForEntrance={e => openMapForEntrance(e.detail.entranceId)} />
+          <ERTracker {yEntrances} entranceValues={entranceValuesMap} {spoilerErSettings} {spoilerExtraEr} isWatchMode={isWatchMode || spoilerFillEntrances} bind:activeErSettings={activeErSettings} highlightedEntranceId={erHighlightId} on:openMapForEntrance={e => openMapForEntrance(e.detail.entranceId)} />
         {:else}
           <Pathfinder entranceValues={entranceValuesMap} />
         {/if}
@@ -4646,6 +4662,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
         erSettings={erSettingsForMap}
         entranceValues={entranceValuesMap}
         initialSubscene={mapInitialSubscene}
+        on:openErForEntrance={e => handleOpenErForEntrance(e.detail.entranceId)}
       />
     {/if}
 
