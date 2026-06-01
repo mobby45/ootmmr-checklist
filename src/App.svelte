@@ -2131,9 +2131,10 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     let matchesScrubsOOT = true;
     if (check.type === T.CheckType.deku_scrub && !check.tags.includes(T.Tag.special_scrub)) {
       matchesScrubsOOT = $sSettings.get('ScrubsOOT') ?? false;
-      if (check.name === 'Lost Woods Scrub Sticks Upgrade') console.debug('[Scrub Debug]', { checkType: check.type, deku_scrub: T.CheckType.deku_scrub, ScrubsOOT: $sSettings.get('ScrubsOOT'), matchesScrubsOOT });
-    } else if (check.name === 'Lost Woods Scrub Sticks Upgrade') {
-      console.debug('[Scrub Debug BYPASS]', { checkType: check.type, deku_scrub: T.CheckType.deku_scrub, tags: check.tags, special_scrub: T.Tag.special_scrub });
+    }
+    if (check.name === 'Lost Woods Scrub Sticks Upgrade') {
+      const result = matchesFilter && matchesOverworld && matchesScrubsOOT && matchesMq && matchesVariant && matchesHide;
+      console.log('[Scrub]', { checkType: check.type, deku_scrub: T.CheckType.deku_scrub, tags: check.tags, special_scrub: T.Tag.special_scrub, ScrubsOOT: $sSettings.get('ScrubsOOT'), matchesScrubsOOT, matchesOverworld, matchesFilter, matchesMq, matchesVariant, matchesHide, result });
     }
 
     let matchesScrubsMM = true;
