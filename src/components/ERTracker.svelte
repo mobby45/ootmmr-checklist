@@ -106,7 +106,7 @@
   type GameFilter = 'both' | 'oot' | 'mm';
   let gameFilter: GameFilter = 'both';
   let searchFilter = '';
-  let showOnlyKnown = false;
+  let showMode: 'all' | 'filled' | 'unfilled' = 'all';
   let showHelp = false;
 
   // Which sub-type groups have at least one visible group (parent active + populated)
@@ -177,7 +177,8 @@
     if (!entranceMatchesSubTypes(e.id, e.erType)) return false;
     if (gameFilter !== 'both' && e.game !== gameFilter) return false;
     if (searchFilter && !e.name.toLowerCase().includes(searchFilter.toLowerCase())) return false;
-    if (showOnlyKnown && !entranceValues.get(e.id)) return false;
+    if (showMode === 'filled' && !entranceValues.get(e.id)) return false;
+    if (showMode === 'unfilled' && entranceValues.get(e.id)) return false;
     return true;
   });
 
@@ -303,11 +304,12 @@
         <option value="oot">OoT only</option>
         <option value="mm">MM only</option>
       </select>
-      <label class="er-checkbox">
-        <input type="checkbox" bind:checked={showOnlyKnown} />
-        Filled only
-      </label>
       <button class="er-help-btn" on:click={() => showHelp = !showHelp} title="Help">?</button>
+      <div class="er-mode-group">
+        <button class="er-mode-btn" class:active={showMode === 'all'} on:click={() => showMode = 'all'}>All</button>
+        <button class="er-mode-btn" class:active={showMode === 'filled'} on:click={() => showMode = 'filled'}>Filled</button>
+        <button class="er-mode-btn" class:active={showMode === 'unfilled'} on:click={() => showMode = 'unfilled'}>Unfilled</button>
+      </div>
     </div>
     {#if showHelp}
       <div class="er-help-panel">
@@ -319,8 +321,8 @@
         3. Find the row for the entrance you went through.<br>
         4. Set the dropdown to the area you landed in.<br><br>
         <strong>💡 Tips:</strong><br>
-        • If <strong>Decoupled</strong> is off: setting A→B automatically fills the reverse (B→A).<br>
-        • <strong>Filled only</strong>: shows only entrances you've already discovered.<br>
+        • If <strong>Decoupled</strong> is off: setting A→B automatically fills the reverse (B→A). Example: set OOT Lake Hylia → OOT Hyrule Field → OOT Gerudo Valley Falls → OOT Lake Hylia auto-fills.<br>
+        • <strong>All / Filled / Unfilled</strong> buttons: filter the list to show all, only discovered, or only unknown entrances.<br>
         • Right-click a 🔷 on the map to jump to the matching tracker row.<br>
         • The 🗺️ button opens the entrance on the map.<br>
         <button class="er-help-close" on:click={() => showHelp = false}>✕ Close</button>
@@ -544,14 +546,30 @@
     cursor: pointer;
   }
 
-  .er-checkbox {
-    display: flex;
-    align-items: center;
-    gap: 0.3em;
-    cursor: pointer;
-    color: var(--color-text);
-    font-size: 0.9em;
+  .er-mode-group {
+    display: inline-flex;
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    overflow: hidden;
   }
+  .er-mode-btn {
+    background: var(--color-bg);
+    color: var(--color-text);
+    border: none;
+    border-right: 1px solid var(--color-border);
+    padding: 0.3em 0.5em;
+    font-size: 0.8em;
+    cursor: pointer;
+    opacity: 0.5;
+    transition: all 0.15s;
+  }
+  .er-mode-btn:last-child { border-right: none; }
+  .er-mode-btn.active {
+    opacity: 1;
+    background: rgba(0, 120, 231, 0.15);
+    color: #4da8ff;
+  }
+  .er-mode-btn:hover:not(.active) { opacity: 0.8; }
 
   .er-stats {
     display: flex;
