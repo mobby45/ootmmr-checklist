@@ -313,19 +313,17 @@
     </div>
     {#if showHelp}
       <div class="er-help-panel">
-        <strong>How to use the ER Tracker</strong><br><br>
-        Each row = one shuffled entrance. <strong>Left side</strong> = where you stand in the game. <strong>Right side</strong> = where you end up.<br><br>
-        <strong>📝 Manual tracking (no spoiler log):</strong><br>
-        1. Walk through an entrance in-game.<br>
-        2. Note where you appear.<br>
-        3. Find the row for the entrance you went through.<br>
-        4. Set the dropdown to the area you landed in.<br><br>
-        <strong>💡 Tips:</strong><br>
-        • If <strong>Decoupled</strong> is off: setting A→B automatically fills the reverse (B→A). Example: set OOT Lake Hylia → OOT Hyrule Field → OOT Gerudo Valley Falls → OOT Lake Hylia auto-fills.<br>
-        • <strong>All / Filled / Unfilled</strong> buttons: filter the list to show all, only discovered, or only unknown entrances.<br>
-        • Right-click a 🔷 on the map to jump to the matching tracker row.<br>
-        • The 🗺️ button opens the entrance on the map.<br>
-        <button class="er-help-close" on:click={() => showHelp = false}>✕ Close</button>
+        <strong>How to use the ER Tracker</strong>
+        <button class="er-help-close" on:click={() => showHelp = false}>✕</button>
+        <div class="er-help-body">
+          Each row = one entrance. <strong>Left</strong> = where you enter. <strong>Right</strong> = where you appear.<br><br>
+          <strong>Example:</strong> In-game you go through <em>Death Mountain Trail → Death Mountain Crater</em>. Find the row "OOT Death Mountain Trail → …", set the dropdown to "OOT Death Mountain Crater".<br><br>
+          <strong>Tips:</strong><br>
+          • <strong>Decoupled OFF</strong> → setting A→B auto-fills B→A.<br>
+          • <strong>All / Filled / Unfilled</strong> to filter the list.<br>
+          • Right-click a 🔷 on the map → jumps to this row.<br>
+          • 🗺️ button → opens the entrance on the map.
+        </div>
       </div>
     {/if}
     <div class="er-stats">
@@ -458,6 +456,7 @@
     flex-wrap: wrap;
     gap: 0.5em;
     align-items: center;
+    position: relative;
   }
 
   .er-search-wrap {
@@ -499,24 +498,31 @@
   }
   .er-help-btn:hover { opacity: 1; }
   .er-help-panel {
+    position: absolute;
+    z-index: 100;
     background: var(--color-bg);
     border: 1px solid var(--color-border);
     border-radius: 6px;
-    padding: 0.8em;
-    margin-bottom: 0.8em;
-    font-size: 0.82em;
-    line-height: 1.5;
-    max-width: 500px;
+    padding: 0.6em;
+    margin: 0;
+    font-size: 0.78em;
+    line-height: 1.4;
+    max-width: 380px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+  .er-help-body {
+    margin-top: 0.4em;
   }
   .er-help-close {
-    margin-top: 0.4em;
+    float: right;
     background: none;
     border: 1px solid var(--color-border);
     border-radius: 4px;
     cursor: pointer;
     color: var(--color-text);
-    padding: 0.2em 0.6em;
-    font-size: 0.9em;
+    padding: 0.1em 0.4em;
+    font-size: 0.85em;
+    line-height: 1;
   }
   .er-row:nth-child(odd) {
     background: rgba(255,255,255,0.05);
