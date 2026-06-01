@@ -88,12 +88,14 @@
     erAlterLw: '🌲 Alter LW Exits',
     erMixed: '🔀 Cross-game destinations',
     erDecoupled: '🔓 Decoupled',
+    // TODO: erSpawns n'a pas encore de sub-type filtrant — les entrées spawn (OOT_SPAWN_CHILD, OOT_SPAWN_ADULT) sont sous erOverworld. Ce toggle est inactif visuellement tant que le filtrage n'est pas implémenté.
+    erSpawns: '📍 Spawns',
   };
 
   const subTypeGroups = [
     { parent: 'erDungeons', label: 'Dungeons', keys: ['erMajorDungeons', 'erMinorDungeons', 'erGanonCastle', 'erGanonTower', 'erMoon', 'erSpiderHouses', 'erPirateFortress', 'erBeneathWell', 'erIkanaCastle', 'erSecretShrine'] },
     { parent: 'erIndoors', label: 'Interiors', keys: ['erIndoorsMajor', 'erIndoorsExtra', 'erIndoorsGameLinks'] },
-    { parent: 'erOneWays', label: 'One-Ways', keys: ['erOneWaysMajor', 'erOneWaysIkana', 'erOneWaysSongs', 'erOneWaysStatues', 'erOneWaysWaterVoids', 'erOneWaysAnywhere', 'erOneWaysOwls'] },
+    { parent: 'erOneWays', label: 'One-Ways', keys: ['erOneWaysMajor', 'erOneWaysIkana', 'erOneWaysSongs', 'erOneWaysStatues', 'erOneWaysWoods', 'erOneWaysWaterVoids', 'erOneWaysAnywhere', 'erOneWaysOwls'] },
   ];
 
   // Track which sub-types have at least one entrance in the current data
