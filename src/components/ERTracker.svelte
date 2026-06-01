@@ -3,7 +3,7 @@
   import { defaultErSettings, type ErSettings } from '../util/spoilerParser';
   import type { Map as YMap } from 'yjs';
   import EntranceSelect from './EntranceSelect.svelte';
-  import { createEventDispatcher, tick } from 'svelte';
+  import { createEventDispatcher, tick, onMount, onDestroy } from 'svelte';
   import { entrancePositions } from '../data/entrancePositions';
 
   const dispatch = createEventDispatcher();
@@ -108,6 +108,14 @@
   let searchFilter = '';
   let showMode: 'all' | 'filled' | 'unfilled' = 'all';
   let showHelp = false;
+
+  function onClickOutside(e: MouseEvent) {
+    const target = e.target as HTMLElement;
+    if (showHelp && !target.closest('.er-help-panel') && !target.closest('.er-help-btn')) {
+      showHelp = false;
+    }
+  }
+  onMount(() => { document.addEventListener('click', onClickOutside); return () => document.removeEventListener('click', onClickOutside); });
 
   // Which sub-type groups have at least one visible group (parent active + populated)
   // NOTE: must reference activeErSettings directly, not through a function,
@@ -498,17 +506,14 @@
   }
   .er-help-btn:hover { opacity: 1; }
   .er-help-panel {
-    position: absolute;
-    z-index: 100;
     background: var(--color-bg);
     border: 1px solid var(--color-border);
     border-radius: 6px;
-    padding: 0.6em;
-    margin: 0;
-    font-size: 0.78em;
-    line-height: 1.4;
-    max-width: 380px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    padding: 0.5em 0.6em;
+    margin-bottom: 0.5em;
+    font-size: 0.75em;
+    line-height: 1.35;
+    max-width: 420px;
   }
   .er-help-body {
     margin-top: 0.4em;
