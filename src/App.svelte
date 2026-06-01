@@ -2904,6 +2904,11 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     saveDisplaySetting('showTypeColors', true);
     [...yMqSettings.keys()].forEach(k => yMqSettings.set(k, false));
     [...yVariantSettings.keys()].forEach(k => yVariantSettings.set(k, 0));
+    localStorage.removeItem('erSettings');
+    localStorage.removeItem('spoilerErSettings');
+    spoilerErSettings = null;
+    spoilerExtraEr = { ...defaultErSettings };
+    localStorage.setItem('spoilerExtraEr', JSON.stringify(spoilerExtraEr));
   }
 
   function exportData() {
@@ -2952,6 +2957,19 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
       console.debug('[Hash Import] Applied:', appSettings);
       console.debug('[Hash Import] Cleared:', clearedKeys);
       if (unmapped.length) console.debug('[Hash Import] Unmapped:', unmapped);
+      // Sync ER settings to ERTracker
+      const erKeys = Object.keys(defaultErSettings);
+      const mergedEr: Record<string, boolean> = {};
+      for (const k of erKeys) {
+        const v = appSettings[k];
+        if (v !== undefined) {
+          mergedEr[k] = typeof v === 'boolean' ? v : v === 'full' || v === 'ownGame' || v === 'dungeon' || v === 'true';
+        } else {
+          mergedEr[k] = false;
+        }
+      }
+      spoilerExtraEr = mergedEr;
+      localStorage.setItem('spoilerExtraEr', JSON.stringify(mergedEr));
       setTimeout(() => { randoImportOpen = false; randoImportOk = false; }, 1200);
     } catch (e: any) {
       console.error('[Hash Import] Error:', e);
