@@ -247,7 +247,7 @@
       {#each Object.entries(erLabels) as [key, label]}
         <button
           class="er-toggle-btn"
-          class:active={alwaysManualKeys.has(key) ? getManualBool(key) : isErActive(key)}
+          class:active={alwaysManualKeys.has(key) ? (manualErSettings as any)[key] ?? false : isErActive(key)}
           class:from-spoiler={spoilerErSettings !== null && !alwaysManualKeys.has(key)}
           class:always-manual={alwaysManualKeys.has(key)}
           disabled={isWatchMode || (spoilerErSettings !== null && !alwaysManualKeys.has(key))}
