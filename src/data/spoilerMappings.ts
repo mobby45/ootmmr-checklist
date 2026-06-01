@@ -147,4 +147,13 @@ export const directBoolKeys = new Set([
   'ocarinaButtonsShuffleOot', 'ocarinaButtonsShuffleMm', 'spinUpgradeOot', 'stoneAgonyMm',
   'spellFireMm', 'spellWindMm', 'spellLoveMm', 'bootsIronMm', 'bootsHoverMm',
   'tunicGoronMm', 'tunicZoraMm', 'scalesMm', 'strengthMm', 'hammerMm', 'dekuShieldMm',
+  'boomerangMm', 'kamaroMaskOot', 'extraChildSwordsOot',
+  'sunlightArrows', 'blueFireArrows', 'bronzeScale',
+  'childWallets', 'colossalWallets', 'bottleContentShuffle',
+  'sticksNutsUpgradesMm', 'sharedBottles',
+  'songSoaringOot', 'songHealingOot', 'songAwakeningOot', 'songGoronOot',
+  'songZoraOot', 'songOrderOot', 'songOfDoubleTimeOot',
+  'songZeldaLullabyMm', 'songSariasMm', 'songSunMm', 'sunSongMm',
+  'songMinuetMm', 'songBoleroMm', 'songSerenadeMm',
+  'songRequiemMm', 'songNocturneMm', 'songPreludeMm',
 ]);
