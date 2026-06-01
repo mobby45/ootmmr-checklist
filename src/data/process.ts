@@ -12,21 +12,6 @@ const LOCATION_CORRECTIONS: Record<string, string> = {
     'Secret Shrine Dinalfos Chest': 'Secret Shrine Dinolfos Chest',
 };
 
-// CSV uses short type names; map to proper CheckType member names
-const TYPE_ALIASES: Record<string, keyof typeof T.CheckType> = {
-    scrub: 'deku_scrub',
-    gs: 'gold_skulltula',
-    sf: 'stray_fairy',
-    sr: 'silver_rupee',
-    hive: 'beehive',
-    npc: 'npc_reward',
-    soil: 'soft_soil',
-    wonder: 'wonder_item',
-    redboulder: 'red_boulder',
-    redice: 'red_ice',
-    fairy: 'fairy_fountain',
-};
-
 function parseLocalPool(filePath: string, gamePrefix: string, scenePrefix: string): T.RawPoolEntry[] {
     const content = readFileSync(filePath, 'utf-8');
     const records: Record<string, string>[] = parseCsv(content, { columns: true, skip_empty_lines: true, trim: true, delimiter: ';' });
@@ -34,15 +19,14 @@ function parseLocalPool(filePath: string, gamePrefix: string, scenePrefix: strin
     const entries: T.RawPoolEntry[] = [];
     for (const record of records) {
         if (!record.type || record.type === 'none') continue;
-        const mappedType = TYPE_ALIASES[record.type] ?? record.type;
-        if (!(mappedType in T.CheckType)) continue;
+        if (!(record.type in T.CheckType)) continue;
         const raw = record.location.replace(new RegExp(`^${gamePrefix} `), '');
         const location = LOCATION_CORRECTIONS[raw] ?? raw;
         if (seen.has(location)) continue;
         seen.add(location);
         entries.push({
             location,
-            type: mappedType,
+            type: record.type as keyof typeof T.CheckType,
             hint: '',
             scene: record.scene.replace(new RegExp(`^${scenePrefix}_`), ''),
             id: record.id ?? '',
