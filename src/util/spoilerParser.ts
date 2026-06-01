@@ -16,6 +16,7 @@ export interface ErSettings {
   erMixed: boolean;
   erAlterLw: boolean;
   erDecoupled: boolean;
+  erSpawns: boolean;
   // Sub-types
   erMajorDungeons: boolean;
   erMinorDungeons: boolean;
@@ -52,6 +53,7 @@ export const defaultErSettings: ErSettings = {
   erMixed: false,
   erAlterLw: false,
   erDecoupled: false,
+  erSpawns: false,
   erMajorDungeons: false,
   erMinorDungeons: false,
   erGanonCastle: false,
@@ -307,6 +309,7 @@ export function parseSpoilerLog(text: string): SpoilerData {
     erMixed:      isErActive(rawEr['erMixed']) || rawEr['erMixed'] === 'dungeon',
     erAlterLw:    rawEr['alterLostWoodsExits'] === 'true',
     erDecoupled:  rawEr['erDecoupled'] === 'true',
+    erSpawns:     rawEr['erSpawns'] !== undefined && rawEr['erSpawns'] !== 'none',
     erMajorDungeons:     rawEr['erMajorDungeons'] === 'true',
     erMinorDungeons:     rawEr['erMinorDungeons'] === 'true',
     erGanonCastle:       rawEr['erGanonCastle'] === 'true',

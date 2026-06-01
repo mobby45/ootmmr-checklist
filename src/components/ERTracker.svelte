@@ -86,6 +86,7 @@
     erOneWays: '➡️ One-Ways',
     erWallmasters: '👁️ Wallmasters',
     erAlterLw: '🌲 Alter LW Exits',
+    erSpawns: '📍 Spawns',
     erMixed: '🔀 Cross-game destinations',
     erDecoupled: '🔓 Decoupled',
   };

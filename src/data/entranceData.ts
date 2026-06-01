@@ -3,7 +3,7 @@
 // ==========================================
 
 export type EntranceType = 'boss' | 'dungeon' | 'grotto' | 'owl' | 'interior' | 'overworld';
-export type ErSettingKey = 'erBoss' | 'erDungeons' | 'erGrottos' | 'erIndoors' | 'erOneWays' | 'erOwls' | 'erOverworld' | 'erWallmasters' | 'erAlterLw';
+export type ErSettingKey = 'erBoss' | 'erDungeons' | 'erGrottos' | 'erIndoors' | 'erOneWays' | 'erOwls' | 'erOverworld' | 'erWallmasters' | 'erAlterLw' | 'erSpawns';
 
 export interface EntranceInfo {
   id: string;
@@ -14,8 +14,8 @@ export interface EntranceInfo {
 }
 
 export const allEntrances: EntranceInfo[] = [
-  { id: 'OOT_SPAWN_CHILD', name: "OOT Spawn Child to OOT Link's House", type: 'overworld', erType: 'erOverworld', game: 'oot' },
-  { id: 'OOT_SPAWN_ADULT', name: "OOT Spawn Adult to OOT Temple of Time", type: 'overworld', erType: 'erOverworld', game: 'oot' },
+  { id: 'OOT_SPAWN_CHILD', name: "OOT Spawn Child to OOT Link's House", type: 'overworld', erType: 'erSpawns', game: 'oot' },
+  { id: 'OOT_SPAWN_ADULT', name: "OOT Spawn Adult to OOT Temple of Time", type: 'overworld', erType: 'erSpawns', game: 'oot' },
   { id: 'OOT_BOSS_DEKU_TREE', name: "OOT Deku Tree Before Boss to OOT Deku Tree Boss", type: 'boss', erType: 'erBoss', game: 'oot' },
   { id: 'OOT_BOSS_DODONGO_CAVERN', name: "OOT Dodongo Cavern Pre-Boss Lobby to OOT Dodongo Cavern Boss", type: 'boss', erType: 'erBoss', game: 'oot' },
   { id: 'OOT_BOSS_JABU_JABU', name: "OOT Jabu-Jabu Pre-Boss Room to OOT Jabu-Jabu Boss", type: 'boss', erType: 'erBoss', game: 'oot' },
@@ -195,7 +195,6 @@ export const allEntrances: EntranceInfo[] = [
   { id: 'OOT_KAKARIKO_FROM_BAZAAR', name: "OOT Kakariko Bazaar to OOT Kakariko", type: 'interior', erType: 'erIndoors', game: 'oot' },
   { id: 'OOT_KAKARIKO_FROM_ARCHERY', name: "OOT Shooting Gallery Adult to OOT Kakariko", type: 'interior', erType: 'erIndoors', game: 'oot' },
   { id: 'OOT_OUTSIDE_GANON_FROM_FAIRY', name: "OOT Fairy Fountain Defense to OOT Near Fairy Fountain Defense", type: 'interior', erType: 'erIndoors', game: 'oot' },
-  { id: 'OOT_LAKE_HYLIA_FROM_VALLEY', name: "OOT Gerudo Valley Falls to OOT Lake Hylia", type: 'overworld', erType: 'erOneWays', game: 'oot' },
   { id: 'OOT_VILLAGE_OWL', name: "OOT Death Mountain Summit to OOT Kakariko Rooftop", type: 'overworld', erType: 'erOneWays', game: 'oot' },
   { id: 'OOT_FIELD_OWL', name: "OOT Lake Hylia to OOT Hyrule Field Drawbridge", type: 'overworld', erType: 'erOneWays', game: 'oot' },
   { id: 'OOT_WALLMASTER_FOREST_CORRIDOR_WEST', name: "OOT Forest Temple Wallmaster West to OOT Void", type: 'overworld', erType: 'erWallmasters', game: 'oot' },
