@@ -2132,11 +2132,6 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     if (check.type === T.CheckType.deku_scrub && !check.tags.includes(T.Tag.special_scrub)) {
       matchesScrubsOOT = $sSettings.get('ScrubsOOT') ?? false;
     }
-    if (check.name === 'Lost Woods Scrub Sticks Upgrade') {
-      const result = matchesFilter && matchesOverworld && matchesScrubsOOT && matchesMq && matchesVariant && matchesHide;
-      console.log('[Scrub]', { checkType: check.type, deku_scrub: T.CheckType.deku_scrub, tags: check.tags, special_scrub: T.Tag.special_scrub, ScrubsOOT: $sSettings.get('ScrubsOOT'), matchesScrubsOOT, matchesOverworld, matchesFilter, matchesMq, matchesVariant, matchesHide, result });
-    }
-
     let matchesScrubsMM = true;
     if (check.game === T.Game.mm && check.id?.startsWith('SCRUB_')) {
       const special = ['SCRUB_TELESCOPE', 'SCRUB_BOMB_BAG'];
@@ -2954,9 +2949,9 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
       });
       randoImportOk = true;
       randoImportStr = '';
-      console.info('[Hash Import] Applied:', appSettings);
-      console.info('[Hash Import] Cleared:', clearedKeys);
-      if (unmapped.length) console.info('[Hash Import] Unmapped:', unmapped);
+      console.debug('[Hash Import] Applied:', appSettings);
+      console.debug('[Hash Import] Cleared:', clearedKeys);
+      if (unmapped.length) console.debug('[Hash Import] Unmapped:', unmapped);
       setTimeout(() => { randoImportOpen = false; randoImportOk = false; }, 1200);
     } catch (e: any) {
       console.error('[Hash Import] Error:', e);

@@ -99,7 +99,7 @@ function createCheckEntry(
 
     shortName = shortName.trim();
 
-    return { shortName, name: poolEntry.location, type: T.CheckType[poolEntry.type], game, canBeMq, isMq, canHaveVariant, variantNumber, tags, scene: poolEntry.scene, item: poolEntry.item, id: poolEntry.id };
+    return { shortName, name: poolEntry.location, type: T.CheckType[poolEntry.type as keyof typeof T.CheckType], game, canBeMq, isMq, canHaveVariant, variantNumber, tags, scene: poolEntry.scene, item: poolEntry.item, id: poolEntry.id };
 }
 
 for (let game in T.Game) {
