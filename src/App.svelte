@@ -1802,11 +1802,14 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
   let scrollPosition = 0;
   let erHighlightId: string | null = null;
 
-  // Rebuild map data when MQ settings change
-  $: if ($sMqSettings) {
-    buildMapData($sMqSettings).then(data => {
-      mapData = data;
-    });
+  // Rebuild map data only when MQ settings actually change
+  let lastMqKey = '';
+  $: {
+    const key = JSON.stringify([...$sMqSettings.entries()].sort());
+    if (key !== lastMqKey) {
+      lastMqKey = key;
+      buildMapData($sMqSettings).then(data => { mapData = data; });
+    }
   }
 
   let mapImagesPreloaded = false;
