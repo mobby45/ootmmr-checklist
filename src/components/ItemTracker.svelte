@@ -507,7 +507,7 @@
   }
 
   function getItemKey(item: VItem): string {
-    return getItemKey(item);
+    return item.key!;
   }
 
   // ==========================================

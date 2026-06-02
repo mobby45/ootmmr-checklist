@@ -47,43 +47,48 @@
     { id: 'other',    label: 'Other',    color: '#9b59b6' },
   ];
 
-  // Song Events Shuffle data — separate OoT and MM event lists
-  const OOT_SONG_EVENTS: ({ label: string } | null)[] = [
-    { label: 'ToT Door of Time' },
-    { label: 'HC Great Fairy' },
-    { label: 'Royal Family\'s Tomb' },
-    { label: 'GC Darunia\'s Room' },
-    { label: 'DMTrail Great Fairy' },
-    { label: 'ZR Waterfall' },
-    { label: 'ZF Great Fairy' },
-    { label: 'Kakariko Windmill' },
-    { label: 'BotW Water Level' },
-    { label: 'DMCrater Great Fairy' },
-    null,
-    { label: 'Desert Great Fairy' },
-    { label: 'Spirit Temple Statue' },
-    { label: 'Spirit Temple Lower' },
-    { label: 'Spirit Temple Upper' },
-    { label: 'Shadow Temple Boat' },
-    { label: 'OGC Great Fairy' },
-    { label: 'Ganon Light Trial' },
+  // Song Events Shuffle data
+  // vanilla: the song that triggers this event in the unrandomized game
+  // doneNA: Done? column shows N/A (event not song-triggered in vanilla)
+  type SongEventEntry = { id: string; label: string; vanilla: string; doneNA?: true };
+
+  const OOT_EVENTS: SongEventEntry[] = [
+    { id: 'oot_0',  label: 'ToT Door of Time',    vanilla: 'oot_song_time'     },
+    { id: 'oot_1',  label: 'HC Great Fairy',       vanilla: 'oot_song_zelda'    },
+    { id: 'oot_2',  label: "Royal Family's Tomb",  vanilla: 'oot_song_sun'      },
+    { id: 'oot_3',  label: "GC Darunia's Room",    vanilla: 'oot_song_saria'    },
+    { id: 'oot_4',  label: 'DMTrail Great Fairy',  vanilla: 'oot_song_zelda'    },
+    { id: 'oot_5',  label: 'ZR Waterfall',         vanilla: 'oot_song_zelda'    },
+    { id: 'oot_6',  label: 'ZF Great Fairy',       vanilla: 'oot_song_zelda'    },
+    { id: 'oot_7',  label: 'Kakariko Windmill',    vanilla: 'oot_song_storms'   },
+    { id: 'oot_8',  label: 'BotW Water Level',     vanilla: 'oot_song_zelda'    },
+    { id: 'oot_9',  label: 'DMCrater Great Fairy', vanilla: 'oot_song_zelda'    },
+    { id: 'oot_10', label: 'Water Temple Levels',  vanilla: 'oot_song_zelda',   doneNA: true },
+    { id: 'oot_11', label: 'Desert Great Fairy',   vanilla: 'oot_song_zelda'    },
+    { id: 'oot_12', label: 'Spirit Temple Statue', vanilla: 'oot_song_zelda'    },
+    { id: 'oot_13', label: 'Spirit Temple Lower',  vanilla: 'oot_song_requiem'  },
+    { id: 'oot_14', label: 'Spirit Temple Upper',  vanilla: 'oot_song_requiem'  },
+    { id: 'oot_15', label: 'Shadow Temple Boat',   vanilla: 'oot_song_nocturne' },
+    { id: 'oot_16', label: 'OGC Great Fairy',      vanilla: 'oot_song_zelda'    },
+    { id: 'oot_17', label: 'Ganon Light Trial',    vanilla: 'oot_song_zelda'    },
   ];
 
-  const MM_SONG_EVENTS: ({ label: string } | null)[] = [
-    { label: 'CTR Moon Access' },
-    { label: 'Heal Kamaro' },
-    { label: 'Woodfall Entrance' },
-    { label: 'Wake SSH Deku Scrub' },
-    { label: 'Shrine Goron Baby' },
-    { label: 'Heal Darmani' },
-    { label: 'Snowhead Entrance' },
-    { label: 'Heal Mikau' },
-    { label: 'Great Bay Entrance' },
-    { label: 'Wake Captain Keeta' },
-    { label: 'Lift Ikana\'s Curse' },
-    { label: 'Heal Pamala\'s Father' },
-    null, null, null, null, null, null,
+  const MM_EVENTS: SongEventEntry[] = [
+    { id: 'mm_0',  label: 'CTR Moon Access',       vanilla: 'mm_song_oath'    },
+    { id: 'mm_1',  label: 'Heal Kamaro',            vanilla: 'mm_song_healing' },
+    { id: 'mm_2',  label: 'Woodfall Entrance',      vanilla: 'mm_song_sonata'  },
+    { id: 'mm_3',  label: 'Wake SSH Deku Scrub',    vanilla: 'mm_song_sonata'  },
+    { id: 'mm_4',  label: 'Shrine Goron Baby',      vanilla: 'mm_song_lullaby' },
+    { id: 'mm_5',  label: 'Heal Darmani',           vanilla: 'mm_song_healing' },
+    { id: 'mm_6',  label: 'Snowhead Entrance',      vanilla: 'mm_song_lullaby' },
+    { id: 'mm_7',  label: 'Heal Mikau',             vanilla: 'mm_song_healing' },
+    { id: 'mm_8',  label: 'Great Bay Entrance',     vanilla: 'mm_song_nova'    },
+    { id: 'mm_9',  label: 'Wake Captain Keeta',     vanilla: 'mm_song_elegy'   },
+    { id: 'mm_10', label: "Lift Ikana's Curse",     vanilla: 'mm_song_storms'  },
+    { id: 'mm_11', label: "Heal Pamala's Father",   vanilla: 'mm_song_healing' },
   ];
+
+  const SONG_EVENT_ROWS = OOT_EVENTS.map((oot, i) => ({ oot, mm: MM_EVENTS[i] ?? null }));
 
   const songChoices = allTrackerItems.filter(i => i.category === 'songs' && i.maxLevel >= 1);
 
@@ -103,6 +108,13 @@
     if (isWatchMode || !ySongEvents) return;
     if (songId) ySongEvents.set(key, songId);
     else ySongEvents.delete(key);
+  }
+
+  function toggleDone(key: string) {
+    if (isWatchMode || !ySongEvents) return;
+    const doneKey = key + '_done';
+    if (songEventMap[doneKey] === 'yes') ySongEvents.delete(doneKey);
+    else ySongEvents.set(doneKey, 'yes');
   }
 
   function isSongObtained(songId: string): boolean {
@@ -335,53 +347,89 @@
       {/each}
     {/if}
   {:else if view === 'songs'}
-    <div class="se-wrap">
-      {#each [{ game: 'oot', label: 'Ocarina of Time', events: OOT_SONG_EVENTS, accent: '#4a8a4a' }, { game: 'mm', label: "Majora's Mask", events: MM_SONG_EVENTS, accent: '#4a4a8a' }] as panel}
-        <div class="se-panel">
-          <div class="se-panel-header" style="--accent: {panel.accent}">
-            <span class="se-game-dot"></span>
-            {panel.label}
-          </div>
-          <div class="se-list">
-            {#each panel.events as evt, i}
-              {#if evt === null}
-                <div class="se-item se-item-na">
-                  <span class="se-item-na-text">— N/A —</span>
-                </div>
+    <!-- Song Events Shuffle -->
+    <table class="song-events-table">
+      <thead>
+        <tr>
+          <th colspan="3" class="game-header oot-game-header">Ocarina of Time</th>
+          <th colspan="3" class="game-header mm-game-header">Majora's Mask</th>
+        </tr>
+        <tr>
+          <th class="event-th">Song Event</th>
+          <th class="song-th">Required Song</th>
+          <th class="done-th">Done?</th>
+          <th class="event-th">Song Event</th>
+          <th class="song-th">Required Song</th>
+          <th class="done-th">Done?</th>
+        </tr>
+      </thead>
+      <tbody>
+        {#each SONG_EVENT_ROWS as row}
+          {@const ootSel = songEventMap[row.oot.id] ?? ''}
+          {@const ootEff = ootSel || row.oot.vanilla}
+          {@const ootDone = songEventMap[row.oot.id + '_done'] === 'yes'}
+          {@const mmSel  = row.mm ? (songEventMap[row.mm.id] ?? '') : null}
+          {@const mmEff  = row.mm ? (mmSel || row.mm.vanilla) : null}
+          {@const mmDone = row.mm ? songEventMap[row.mm.id + '_done'] === 'yes' : false}
+          <tr class:row-oot-done={ootDone} class:row-mm-done={mmDone}>
+            <td class="event-cell oot-event" title={row.oot.label}>{row.oot.label}</td>
+            <td>
+              <select
+                value={ootEff}
+                on:change={e => setSongEvent(row.oot.id, selectValue(e))}
+                disabled={isWatchMode}
+                class="song-select"
+                class:vanilla-select={!ootSel}
+              >
+                <option value="">—</option>
+                {#each songChoices as song}
+                  <option value={song.id}>{song.name}</option>
+                {/each}
+              </select>
+            </td>
+            <td class="done-cell">
+              {#if row.oot.doneNA}
+                <span class="na-text">N/A</span>
               {:else}
-                {@const sk = panel.game + '_' + i}
-                {@const selectedId = songEventMap[sk] ?? ''}
-                {@const obtained = selectedId ? isSongObtained(selectedId) : null}
-                <div class="se-item" class:se-item-done={obtained === true} class:se-item-assigned={!!selectedId && obtained !== true}>
-                  <div class="se-item-status">
-                    {#if obtained === true}
-                      <span class="se-dot se-dot-ok" title="Obtained">✓</span>
-                    {:else if selectedId}
-                      <span class="se-dot se-dot-no" title="Not yet obtained">✗</span>
-                    {:else}
-                      <span class="se-dot se-dot-empty"></span>
-                    {/if}
-                  </div>
-                  <span class="se-item-label">{evt.label}</span>
-                  <select
-                    class="se-item-select"
-                    value={selectedId}
-                    on:change={e => setSongEvent(sk, selectValue(e))}
-                    disabled={isWatchMode}
-                    title={selectedId ? songChoices.find(s => s.id === selectedId)?.name ?? '' : 'Assign a song…'}
-                  >
-                    <option value="">— assign song —</option>
-                    {#each songChoices as song}
-                      <option value={song.id}>{song.name}</option>
-                    {/each}
-                  </select>
-                </div>
+                <button class="done-btn" class:done-yes={ootDone} on:click={() => toggleDone(row.oot.id)} disabled={isWatchMode}>
+                  {ootDone ? '✓' : '✗'}
+                </button>
               {/if}
-            {/each}
-          </div>
-        </div>
-      {/each}
-    </div>
+            </td>
+            <td class="event-cell mm-event" title={row.mm?.label ?? ''}>{row.mm?.label ?? ''}</td>
+            <td>
+              {#if row.mm}
+                {@const mmEvt = row.mm}
+                <select
+                  value={mmEff ?? ''}
+                  on:change={e => setSongEvent(mmEvt.id, selectValue(e))}
+                  disabled={isWatchMode}
+                  class="song-select"
+                  class:vanilla-select={!mmSel}
+                >
+                  <option value="">—</option>
+                  {#each songChoices as song}
+                    <option value={song.id}>{song.name}</option>
+                  {/each}
+                </select>
+              {:else}
+                <span class="na-text">N/A</span>
+              {/if}
+            </td>
+            <td class="done-cell">
+              {#if !row.mm}
+                <span class="na-text">N/A</span>
+              {:else}
+                {@const mmEvt2 = row.mm}
+                <button class="done-btn" class:done-yes={mmDone} on:click={() => toggleDone(mmEvt2.id)} disabled={isWatchMode}>
+                  {mmDone ? '✓' : '✗'}
+                </button>
+              {/if}
+            </td>
+          </tr>
+        {/each}
+      </tbody>
+    </table>
   {/if}
 </div>
 
@@ -634,107 +682,54 @@
   .del-btn:hover { opacity: 1; }
 
   /* ── Song Events ── */
-  .se-wrap {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0.6em;
-    font-size: 0.82em;
-  }
-  @media (max-width: 640px) { .se-wrap { grid-template-columns: 1fr; } }
+  .song-events-table { width: 100%; border-collapse: collapse; font-size: 0.8em; }
+  .song-events-table th,
+  .song-events-table td { padding: 3px 5px; border-bottom: 1px solid var(--color-border); text-align: left; }
+  .song-events-table tr:last-child td { border-bottom: none; }
+  .song-events-table tbody tr:hover { background: rgba(255,255,255,0.04); }
 
-  .se-panel {
+  .game-header { text-align: center; font-weight: bold; font-size: 1em; padding: 4px; }
+  .oot-game-header { background: rgba(70,130,210,0.18); color: #7eb8ff; border-bottom: 2px solid #4682d2; }
+  .mm-game-header  { background: rgba(200,60,60,0.15);  color: #ff9090; border-bottom: 2px solid #c03030; border-left: 2px solid var(--color-border); }
+
+  .event-th { opacity: 0.6; font-weight: normal; min-width: 9em; }
+  .song-th  { opacity: 0.6; font-weight: normal; }
+  .done-th  { opacity: 0.6; font-weight: normal; width: 3.5em; text-align: center; }
+
+  .event-cell { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 11em; }
+  .oot-event { color: #7eb8ff; }
+  .mm-event  { color: #ff9090; border-left: 2px solid var(--color-border); padding-left: 6px; }
+
+  .done-cell { width: 3.5em; text-align: center; }
+  .na-text { opacity: 0.35; font-size: 0.85em; }
+
+  .song-select {
+    background: var(--color-bg);
+    color: var(--color-text);
     border: 1px solid var(--color-border);
-    border-radius: 8px;
-    overflow: hidden;
-  }
-  .se-panel-header {
-    display: flex;
-    align-items: center;
-    gap: 0.5em;
-    padding: 0.45em 0.8em;
-    background: color-mix(in srgb, var(--accent) 30%, transparent);
-    border-bottom: 2px solid var(--accent);
-    font-weight: 700;
-    font-size: 0.95em;
-    color: var(--color-text);
-    letter-spacing: 0.02em;
-  }
-  .se-game-dot {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    background: var(--accent);
-    flex-shrink: 0;
-  }
-
-  .se-list { display: flex; flex-direction: column; }
-
-  .se-item {
-    display: flex;
-    align-items: center;
-    gap: 0.5em;
-    padding: 0.3em 0.6em;
-    border-bottom: 1px solid rgba(255,255,255,0.05);
-    transition: background 0.1s;
-  }
-  .se-item:last-child { border-bottom: none; }
-  .se-item:hover { background: rgba(255,255,255,0.04); }
-  .se-item-done { background: rgba(50,180,80,0.07) !important; }
-  .se-item-assigned { background: rgba(200,150,50,0.06) !important; }
-
-  .se-item-na {
-    padding: 0.3em 0.6em;
-    border-bottom: 1px solid rgba(255,255,255,0.05);
-  }
-  .se-item-na:last-child { border-bottom: none; }
-  .se-item-na-text {
-    color: var(--color-text);
-    opacity: 0.2;
+    border-radius: 3px;
+    padding: 1px 3px;
     font-size: 0.9em;
-    display: block;
-    text-align: center;
-    padding: 0.1em 0;
+    width: 100%;
+    max-width: 13em;
   }
+  .vanilla-select { opacity: 0.55; font-style: italic; }
+  .vanilla-select:focus, .vanilla-select:hover { opacity: 1; font-style: normal; }
 
-  .se-item-status { flex-shrink: 0; width: 1.2em; text-align: center; }
-  .se-dot {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 1.1em; height: 1.1em;
-    border-radius: 50%;
-    font-size: 0.75em;
-    font-weight: 700;
-  }
-  .se-dot-ok   { background: rgba(50,180,80,0.25);  color: #6be07c; border: 1px solid rgba(50,180,80,0.5); }
-  .se-dot-no   { background: rgba(220,60,60,0.2);   color: #e07070; border: 1px solid rgba(220,60,60,0.4); }
-  .se-dot-empty { border: 1px solid rgba(255,255,255,0.15); }
-
-  .se-item-label {
-    flex: 1;
-    min-width: 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    color: var(--color-text);
-    font-size: 0.9em;
-  }
-
-  .se-item-select {
-    flex-shrink: 0;
-    max-width: 110px;
-    padding: 0.15em 0.3em;
-    border: 1px solid rgba(255,255,255,0.12);
-    border-radius: 5px;
-    background: rgba(255,255,255,0.06);
-    color: var(--color-text);
-    font-size: 0.85em;
+  .done-btn {
+    background: none;
+    border: 1px solid var(--color-border);
+    border-radius: 3px;
+    color: #e74c3c;
     cursor: pointer;
-    outline: none;
-    transition: border-color 0.15s;
+    font-size: 0.9em;
+    padding: 1px 5px;
+    width: 100%;
   }
-  .se-item-select:hover  { border-color: rgba(255,255,255,0.3); }
-  .se-item-select:focus  { border-color: rgba(255,255,255,0.5); }
-  .se-item-done .se-item-select { border-color: rgba(50,180,80,0.35); }
-  .se-item-assigned .se-item-select { border-color: rgba(200,150,50,0.35); }
+  .done-btn:disabled { cursor: default; opacity: 0.5; }
+  .done-btn.done-yes { color: #2ecc71; border-color: #2ecc71; }
+
+  .row-oot-done .oot-event { opacity: 0.5; }
+  .row-mm-done  .mm-event  { opacity: 0.5; }
 
 </style>

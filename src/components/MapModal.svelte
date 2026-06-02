@@ -11,8 +11,8 @@
   import { rendersceneToDisplayName } from '../util/mapData';
   import * as T from '../data/types';
   import { onMount, onDestroy, tick } from 'svelte';
-  import { allEntrances } from '../data/entranceData';
-  import type { EntranceInfo } from '../data/entranceData';
+import { allEntrances, findReverseEntrance } from '../data/entranceData';
+import type { EntranceInfo } from '../data/entranceData';
   import { entrancePositions } from '../data/entrancePositions';
   import { YAML_ENTRANCE_IDS } from '../data/yamlEntranceIds';
 
@@ -636,47 +636,7 @@
     .filter(p => !p.jpOnly || (variantSettings.get(p.jpOnly) ?? 0) === 1)
     .filter(p => !p.usOnly || (variantSettings.get(p.usOnly) ?? 0) === 0);
 
-  // Strip asymmetric trailing qualifiers before name comparison
-  function normEntName(s: string): string {
-    return s.replace(/ \(Game Link\)$/, '').replace(/ from .+$/, '');
-  }
 
-  // Find the semantic "A to B" split: both sides must start with OOT/MM prefix
-  function splitEntName(name: string): [string, string] | null {
-    let pos = 0;
-    while (true) {
-      const i = name.indexOf(' to ', pos);
-      if (i < 0) return null;
-      const src = name.slice(0, i);
-      const dst = name.slice(i + 4);
-      if ((src.startsWith('OOT ') || src.startsWith('MM ')) &&
-          (dst.startsWith('OOT ') || dst.startsWith('MM ')))
-        return [normEntName(src), normEntName(dst)];
-      pos = i + 4;
-    }
-  }
-
-  // Find the reverse entrance ("B to A" given "A to B"), tolerating name qualifiers
-  function findReverseEntrance(ent: EntranceInfo): EntranceInfo | undefined {
-    const split = splitEntName(ent.name);
-    if (!split) return undefined;
-    const [nSrc, nDst] = split;
-    const parts = (e: EntranceInfo) => splitEntName(e.name);
-    // 1. Exact match on normalized names — handles Game Link and "from X" qualifiers automatically
-    const exact = allEntrances.find(e => { const p = parts(e); return p !== null && p[0] === nDst && p[1] === nSrc; });
-    if (exact) return exact;
-    // 2. Reverse source has extra qualifier (e.g. "Lost Woods Lost Forest" vs "Lost Woods")
-    const fb2 = allEntrances.find(e => { const p = parts(e); return p !== null && p[1] === nSrc && p[0].startsWith(nDst + ' '); });
-    if (fb2) return fb2;
-    // 3. Reverse destination has extra qualifier (e.g. "Desert Colossus Spirit Exit" vs "Desert Colossus")
-    const fb3 = allEntrances.find(e => { const p = parts(e); return p !== null && p[0] === nDst && p[1].startsWith(nSrc + ' '); });
-    if (fb3) return fb3;
-    // 4. Our destination has extra qualifier vs candidate source (e.g. looking for reverse of "A to B+extra" → finds "B to A")
-    const fb4 = allEntrances.find(e => { const p = parts(e); return p !== null && nDst.startsWith(p[0] + ' ') && p[1] === nSrc; });
-    if (fb4) return fb4;
-    // 5. Our source has extra qualifier vs candidate destination (e.g. "A Main" → reverse has "A")
-    return allEntrances.find(e => { const p = parts(e); return p !== null && p[0] === nDst && nSrc.startsWith(p[1] + ' '); });
-  }
 
   // Primary: destination entrance ID → source IDs (source marker replaces destination marker)
   // Secondary: reverse entrance ID → source IDs (source marker added alongside reverse marker)
@@ -799,7 +759,11 @@
 <div class="modal-overlay" on:click={closeModal}>
   <div class="modal-content" on:click|stopPropagation={() => typeDropdownOpen = false}>
     <button class="close-button" on:click={closeModal}>✕</button>
-    <h2>{sceneData.displayName || rendersceneToDisplayName(scene)}</h2>
+    <div class="map-title-row">
+      <button class="nav-btn" on:click={() => { const i = allScenes.indexOf(scene); changeMainScene(allScenes[(i - 1 + allScenes.length) % allScenes.length]); }} title="Previous zone" disabled={allScenes.length <= 1}>‹</button>
+      <h2>{sceneData.displayName || rendersceneToDisplayName(scene)}</h2>
+      <button class="nav-btn" on:click={() => { const i = allScenes.indexOf(scene); changeMainScene(allScenes[(i + 1) % allScenes.length]); }} title="Next zone" disabled={allScenes.length <= 1}>›</button>
+    </div>
 
     {#if allScenes.length > 1}
       <div class="filter-controls">
@@ -1133,6 +1097,32 @@
     align-items: center;
     justify-content: center;
   }
+
+  .map-title-row {
+    display: flex;
+    align-items: center;
+    gap: 0.4em;
+    margin-bottom: 0.3em;
+  }
+  .map-title-row h2 {
+    margin: 0;
+    font-size: 1.2em;
+    white-space: nowrap;
+  }
+  .nav-btn {
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    color: var(--color-text);
+    cursor: pointer;
+    font-size: 1.3em;
+    padding: 0.1em 0.4em;
+    line-height: 1.2;
+    opacity: 0.6;
+    transition: opacity 0.15s;
+  }
+  .nav-btn:hover { opacity: 1; }
+  .nav-btn:disabled { opacity: 0.2; cursor: default; }
 
   .close-button {
     position: absolute;

@@ -991,9 +991,51 @@ export const subTypeToParent: Record<string, ErSettingKey> = {
   erBeneathWell: 'erDungeons', erIkanaCastle: 'erDungeons', erSecretShrine: 'erDungeons',
   erIndoorsMajor: 'erIndoors', erIndoorsExtra: 'erIndoors', erIndoorsGameLinks: 'erIndoors',
   erOneWaysMajor: 'erOneWays', erOneWaysIkana: 'erOneWays', erOneWaysSongs: 'erOneWays',
-  erOneWaysStatues: 'erOneWays', erOneWaysWoods: 'erOneWays',
+  erOneWaysStatues: 'erOneWays', erOneWaysWoods: 'erAlterLw',
   erOneWaysWaterVoids: 'erOneWays', erOneWaysAnywhere: 'erOneWays', erOneWaysOwls: 'erOneWays',
 };
+
+// Strip asymmetric trailing qualifiers before name comparison
+function normEntName(s: string): string {
+  return s.replace(/ \(Game Link\)$/, '').replace(/ from .+$/, '');
+}
+
+// Find the semantic "A to B" split: both sides must start with OOT/MM prefix
+function splitEntName(name: string): [string, string] | null {
+  let pos = 0;
+  while (true) {
+    const i = name.indexOf(' to ', pos);
+    if (i < 0) return null;
+    const src = name.slice(0, i);
+    const dst = name.slice(i + 4);
+    if ((src.startsWith('OOT ') || src.startsWith('MM ')) &&
+        (dst.startsWith('OOT ') || dst.startsWith('MM ')))
+      return [normEntName(src), normEntName(dst)];
+    pos = i + 4;
+  }
+}
+
+// Find the reverse entrance ("B to A" given "A to B"), tolerating name qualifiers
+export function findReverseEntrance(ent: EntranceInfo): EntranceInfo | undefined {
+  const split = splitEntName(ent.name);
+  if (!split) return undefined;
+  const [nSrc, nDst] = split;
+  const parts = (e: EntranceInfo) => splitEntName(e.name);
+  // 1. Exact match on normalized names
+  const exact = allEntrances.find(e => { const p = parts(e); return p !== null && p[0] === nDst && p[1] === nSrc; });
+  if (exact) return exact;
+  // 2. Reverse source has extra qualifier (e.g. "Lost Woods Lost Forest" vs "Lost Woods")
+  const fb2 = allEntrances.find(e => { const p = parts(e); return p !== null && p[1] === nSrc && p[0].startsWith(nDst + ' '); });
+  if (fb2) return fb2;
+  // 3. Reverse destination has extra qualifier (e.g. "Desert Colossus Spirit Exit" vs "Desert Colossus")
+  const fb3 = allEntrances.find(e => { const p = parts(e); return p !== null && p[0] === nDst && p[1].startsWith(nSrc + ' '); });
+  if (fb3) return fb3;
+  // 4. Our destination has extra qualifier vs candidate source
+  const fb4 = allEntrances.find(e => { const p = parts(e); return p !== null && nDst.startsWith(p[0] + ' ') && p[1] === nSrc; });
+  if (fb4) return fb4;
+  // 5. Our source has extra qualifier vs candidate destination
+  return allEntrances.find(e => { const p = parts(e); return p !== null && p[0] === nDst && nSrc.startsWith(p[1] + ' '); });
+}
 
 // Display labels for sub-type toggles (matching generator names)
 export const subTypeLabels: Record<string, string> = {

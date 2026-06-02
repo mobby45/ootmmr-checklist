@@ -58,7 +58,7 @@
   import type { ErSettings, SeedInfo, SpoilerSphere, SpecialConditionsMap } from './util/spoilerParser';
   import { defaultErSettings } from './util/spoilerParser';
   import { defaultPresets, defaultPresetNames, presetBaseSettings } from './data/presets';
-  import { allEntrances } from './data/entranceData';
+  import { allEntrances, findReverseEntrance } from './data/entranceData';
   import * as T from './data/types';
 
   import CheckGroup from './components/CheckGroup.svelte';
@@ -365,7 +365,7 @@ yKeepalive.observe((event: any) => {
     }
   });
   const sSettings = readableMap(ySettings);
-  $: songEventShuffle = $sSettings.get('songEventShuffle') === true;
+
   const sMqSettings = readableMap(yMqSettings);
   const sVariantSettings = readableMap(yVariantSettings);
   const sShopItems = readableMap(yShopItems);
@@ -1849,23 +1849,6 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     document.body.style.right = '';
     if (saved > 0) requestAnimationFrame(() => window.scrollTo(0, saved));
     scrollPosition = 0;
-  }
-
-  function normEntName(s: string): string {
-    return s.replace(/ \(Game Link\)$/, '').replace(/ from .+$/, '');
-  }
-
-  function findReverseEntrance(ent: { name: string; id: string }) {
-    const i = ent.name.indexOf(' to ');
-    if (i < 0) return undefined;
-    const nSrc = normEntName(ent.name.slice(0, i));
-    const nDst = normEntName(ent.name.slice(i + 4));
-    const parts = (e: { name: string }) => { const j = e.name.indexOf(' to '); return j < 0 ? null : [normEntName(e.name.slice(0, j)), normEntName(e.name.slice(j + 4))] as const; };
-    // 1. Exact match on normalized names — handles Game Link and "from X" qualifiers automatically
-    const exact = allEntrances.find(e => { const p = parts(e); return p !== null && p[0] === nDst && p[1] === nSrc; });
-    if (exact) return exact;
-    // 2. Source has extra qualifier beyond normalized dst (e.g. "Lost Woods Lost Forest" vs "Lost Woods")
-    return allEntrances.find(e => { const p = parts(e); return p !== null && p[1] === nSrc && p[0].startsWith(nDst + ' '); });
   }
 
   async function handleOpenErForEntrance(entranceId: string) {
@@ -4323,7 +4306,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
           {yHints} {hints}
           {notesEntries} {shopEntries}
           {isWatchMode}
-          {ySongEvents} {yItems} {songEventShuffle}
+          {ySongEvents} {yItems}
           onEditNote={handleEditNote}
           onEditShop={handleShopEditByName}
           onDeleteNote={(id) => { if (!isWatchMode) yNotes.delete(id); }}
@@ -5560,6 +5543,25 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
   .er-tab.active {
     color: #81c784;
     border-bottom-color: #81c784;
+  }
+
+  @media screen and (max-width: 1100px) {
+    .game-filter-label, .game-filter-btn { font-size: 0.75em; }
+    .summary-sep { margin: 0 0.25em; }
+    #general-settings-details summary { font-size: 0.85em; }
+    #general-settings-details .undo-btn { font-size: 0.75em; padding: 0.15em 0.4em; }
+  }
+  @media screen and (max-width: 820px) {
+    form.pure-form fieldset { flex-wrap: wrap; gap: 0.3em; }
+    input[type="text"][style*="16em"] { width: 10em !important; }
+    .check-stat { display: none; }
+    .legend-toggle-btn { padding: 0.2em 0.4em; font-size: 0.75em; }
+  }
+  @media screen and (max-width: 600px) {
+    form.pure-form fieldset { flex-direction: column; align-items: stretch; }
+    input[type="text"][style*="16em"] { width: auto !important; }
+    .game-filter-btn, .game-filter-label { display: none; }
+    details summary strong { font-size: 0.85em; }
   }
 
 </style>

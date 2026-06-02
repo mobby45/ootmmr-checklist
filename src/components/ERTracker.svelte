@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { allEntrances, entranceSubTypes, subTypeLabels, type ErSettingKey } from '../data/entranceData';
+  import { allEntrances, entranceSubTypes, subTypeLabels, findReverseEntrance, type ErSettingKey } from '../data/entranceData';
   import { defaultErSettings, type ErSettings } from '../util/spoilerParser';
   import type { Map as YMap } from 'yjs';
   import EntranceSelect from './EntranceSelect.svelte';
-  import { createEventDispatcher, tick, onMount, onDestroy } from 'svelte';
+  import { createEventDispatcher, tick, onMount, onDestroy, beforeUpdate, afterUpdate } from 'svelte';
   import { entrancePositions } from '../data/entrancePositions';
 
   const dispatch = createEventDispatcher();
@@ -191,6 +191,49 @@
     return true;
   });
 
+  const sectionOrder = ['erOverworld', 'erDungeons', 'erBoss', 'erIndoors', 'erGrottos', 'erOneWays', 'erOwls', 'erAlterLw', 'erWallmasters', 'erSpawns'];
+
+  const sectionLabels: Record<string, string> = {
+    erOverworld: '🌍 Overworld',
+    erDungeons: '🏰 Dungeons',
+    erBoss: '⚔️ Boss Rooms',
+    erIndoors: '🏠 Interiors',
+    erGrottos: '🕳️ Grottos',
+    erOneWays: '➡️ One-Ways',
+    erOwls: '🦉 Owls',
+    erAlterLw: '🌲 Alter Lost Woods',
+    erWallmasters: '👁️ Wallmasters',
+    erSpawns: '📍 Spawns',
+  };
+
+  $: groupedEntrances = (() => {
+    const byType = new Map<string, typeof allEntrances>();
+    for (const e of filteredEntrances) {
+      if (!byType.has(e.erType)) byType.set(e.erType, []);
+      byType.get(e.erType)!.push(e);
+    }
+    return sectionOrder
+      .filter(t => byType.has(t))
+      .map(t => ({ erType: t, label: sectionLabels[t] ?? t, entrances: byType.get(t)! }));
+  })();
+
+  let _savedScrollTop = 0;
+  let _needsScrollRestore = false;
+
+  beforeUpdate(() => {
+    if (erListEl) {
+      _savedScrollTop = erListEl.scrollTop;
+      _needsScrollRestore = true;
+    }
+  });
+
+  afterUpdate(() => {
+    if (_needsScrollRestore && erListEl && _savedScrollTop > 0) {
+      erListEl.scrollTop = _savedScrollTop;
+      _needsScrollRestore = false;
+    }
+  });
+
   function getValue(id: string): string {
     return entranceValues.get(id) ?? '';
   }
@@ -206,18 +249,10 @@
     Array.from(yEntrances.keys()).forEach(k => yEntrances.delete(k));
   }
 
-  function normEntName(s: string): string {
-    return s.replace(/ \(Game Link\)$/, '').replace(/ from .+$/, '');
-  }
-
   function findReverseEntranceName(name: string): string | undefined {
-    const i = name.indexOf(' to ');
-    if (i < 0) return undefined;
-    const nSrc = normEntName(name.slice(0, i));
-    const nDst = normEntName(name.slice(i + 4));
-    const parts = (e: { name: string }) => { const j = e.name.indexOf(' to '); return j < 0 ? null : [normEntName(e.name.slice(0, j)), normEntName(e.name.slice(j + 4))] as const; };
-    const rev = allEntrances.find(e => { const p = parts(e); return p !== null && p[0] === nDst && p[1] === nSrc; });
-    return rev?.name;
+    const ent = allEntrances.find(e => e.name === name);
+    if (!ent) return undefined;
+    return findReverseEntrance(ent)?.name;
   }
 
   $: knownCount = filteredEntrances.filter(e => getValue(e.id)).length;
@@ -345,44 +380,50 @@
     <div class="er-empty">No entrance types enabled. Enable some types above or import a spoiler log.</div>
   {:else}
     <div class="er-list" bind:this={erListEl}>
-      {#each filteredEntrances as entrance (entrance.id)}
-        {@const currentValue = getValue(entrance.id)}
-        <div class="er-row" class:filled={!!currentValue} class:er-row-highlighted={entrance.id === highlightedEntranceId} data-eid={entrance.id}>
-  <span class="er-game-badge er-game-{entrance.game}">
-    {entrance.game.toUpperCase()}
-  </span>
-  <span class="er-name" title={entrance.name}>{entrance.name}</span>
-  {#if entranceHasMap.has(entrance.id)}
-    <button class="er-map-btn" title="Open map" on:click={() => dispatch('openMapForEntrance', { entranceId: entrance.id })}>🗺️</button>
-  {/if}
-  <span class="er-arrow">→</span>
-  <div class="er-select-wrap" style="width: {currentValue ? Math.max(160, currentValue.length * 7.2) : 160}px">
-    <EntranceSelect
-      options={allEntrances.filter(e => (gameFilter === 'both' || manualErSettings.erMixed || e.game === entrance.game) && (!usedDestinations.has(e.name) || e.name === currentValue))}
-      value={currentValue}
-      on:change={e => {
-        if (isWatchMode) return;
-        const newVal = e.detail.trim();
-        if (newVal === '') clearValue(entrance.id);
-        else {
-          yEntrances.set(entrance.id, newVal);
-          if (!manualErSettings.erDecoupled) {
-            const revName = findReverseEntranceName(entrance.name);
-            if (revName) {
-              const revDestName = findReverseEntranceName(newVal);
-              if (revDestName) {
-                const revId = allEntrances.find(e => e.name === revName)?.id;
-                if (revId && !entranceValues.get(revId)) {
-                  yEntrances.set(revId, revDestName);
-                }
-              }
-            }
-          }
-        }
-      }}
-    />
-  </div>
-</div>
+      {#each groupedEntrances as group}
+        <h4 class="er-section-header" data-er-type={group.erType}>
+          {group.label}
+          <span class="er-section-count">{group.entrances.length}</span>
+        </h4>
+        {#each group.entrances as entrance (entrance.id)}
+          {@const currentValue = getValue(entrance.id)}
+          <div class="er-row" class:filled={!!currentValue} class:er-row-highlighted={entrance.id === highlightedEntranceId} data-eid={entrance.id}>
+            <span class="er-game-badge er-game-{entrance.game}">
+              {entrance.game.toUpperCase()}
+            </span>
+            <span class="er-name" title={entrance.name}>{entrance.name}</span>
+            {#if entranceHasMap.has(entrance.id)}
+              <button class="er-map-btn" title="Open map" on:click={() => dispatch('openMapForEntrance', { entranceId: entrance.id })}>🗺️</button>
+            {/if}
+            <span class="er-arrow">→</span>
+            <div class="er-select-wrap" style="width: {currentValue ? Math.max(160, currentValue.length * 7.2) : 160}px">
+              <EntranceSelect
+                options={allEntrances.filter(e => (gameFilter === 'both' || manualErSettings.erMixed || e.game === entrance.game) && (!usedDestinations.has(e.name) || e.name === currentValue))}
+                value={currentValue}
+                on:change={e => {
+                  if (isWatchMode) return;
+                  const newVal = e.detail.trim();
+                  if (newVal === '') clearValue(entrance.id);
+                  else {
+                    yEntrances.set(entrance.id, newVal);
+                    if (!manualErSettings.erDecoupled) {
+                      const revName = findReverseEntranceName(entrance.name);
+                      if (revName) {
+                        const revDestName = findReverseEntranceName(newVal);
+                        if (revDestName) {
+                          const revId = allEntrances.find(e => e.name === revName)?.id;
+                          if (revId && !entranceValues.get(revId)) {
+                            yEntrances.set(revId, revDestName);
+                          }
+                        }
+                      }
+                    }
+                  }
+                }}
+              />
+            </div>
+          </div>
+        {/each}
       {/each}
     </div>
   {/if}
@@ -607,6 +648,29 @@
     color: var(--color-text);
     opacity: 0.5;
     font-style: italic;
+  }
+
+  .er-section-header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    margin: 0;
+    padding: 0.35em 0.4em;
+    font-size: 0.8em;
+    color: var(--color-header, #ccc);
+    background: var(--color-bg, #1a1a2e);
+    border-bottom: 1px solid var(--color-border, #333);
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+  }
+  .er-section-header:not(:first-child) {
+    margin-top: 0.3em;
+  }
+  .er-section-count {
+    font-size: 0.8em;
+    opacity: 0.5;
+    font-weight: normal;
   }
 
   .er-list {
