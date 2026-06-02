@@ -2010,9 +2010,6 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     'LAIR_IKANA',
     'SPIDER_HOUSE_SWAMP',
     'SPIDER_HOUSE_OCEAN',
-    'PIRATE_FORTRESS_INTERIOR',
-    'PIRATE_FORTRESS_ENTRANCE',
-    'PIRATE_FORTRESS_EXTERIOR',
     'LAIR_MAJORA',
   ];
 
