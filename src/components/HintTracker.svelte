@@ -91,6 +91,9 @@
   const SONG_EVENT_ROWS = OOT_EVENTS.map((oot, i) => ({ oot, mm: MM_EVENTS[i] ?? null }));
 
   const songChoices = allTrackerItems.filter(i => i.category === 'songs' && i.maxLevel >= 1);
+  const ootSongs = songChoices.filter(s => s.game === 'oot');
+  const mmSongs  = songChoices.filter(s => s.game === 'mm');
+  const shSongs  = songChoices.filter(s => s.game !== 'oot' && s.game !== 'mm');
 
   let songEventMap: Record<string, string> = {};
   $: if (ySongEvents) {
@@ -381,9 +384,17 @@
                 class="song-select"
                 class:vanilla-select={!ootSel}
               >
-                {#each songChoices as song}
-                  <option value={song.id}>{song.name}</option>
-                {/each}
+                <optgroup label="── Ocarina of Time ──">
+                  {#each ootSongs as song}<option value={song.id}>{song.name}</option>{/each}
+                </optgroup>
+                <optgroup label="── Majora's Mask ──">
+                  {#each mmSongs as song}<option value={song.id}>{song.name}</option>{/each}
+                </optgroup>
+                {#if shSongs.length > 0}
+                  <optgroup label="── Shared ──">
+                    {#each shSongs as song}<option value={song.id}>{song.name}</option>{/each}
+                  </optgroup>
+                {/if}
               </select>
             </td>
             <td class="done-cell">
