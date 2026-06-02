@@ -376,12 +376,11 @@
             <td>
               <select
                 value={ootEff}
-                on:change={e => setSongEvent(row.oot.id, selectValue(e))}
+                on:change={e => { const v = selectValue(e); setSongEvent(row.oot.id, v === row.oot.vanilla ? '' : v); }}
                 disabled={isWatchMode}
                 class="song-select"
                 class:vanilla-select={!ootSel}
               >
-                <option value="">—</option>
                 {#each songChoices as song}
                   <option value={song.id}>{song.name}</option>
                 {/each}
@@ -402,12 +401,11 @@
                 {@const mmEvt = row.mm}
                 <select
                   value={mmEff ?? ''}
-                  on:change={e => setSongEvent(mmEvt.id, selectValue(e))}
+                  on:change={e => { const v = selectValue(e); setSongEvent(mmEvt.id, v === mmEvt.vanilla ? '' : v); }}
                   disabled={isWatchMode}
                   class="song-select"
                   class:vanilla-select={!mmSel}
                 >
-                  <option value="">—</option>
                   {#each songChoices as song}
                     <option value={song.id}>{song.name}</option>
                   {/each}

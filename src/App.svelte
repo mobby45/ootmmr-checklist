@@ -2867,6 +2867,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
   function resetSettings() {
     if (!window.confirm('Are you sure you want to reset all settings to default?')) return;
     [...ySettings.keys()].forEach(k => ySettings.delete(k));
+    [...ySongEvents.keys()].forEach(k => ySongEvents.delete(k));
     saveDisplaySetting('OOTMM', 'both');
     saveDisplaySetting('OOTMMDungeons', 'both');
     saveDisplaySetting('showUnshuffledGS', false);
