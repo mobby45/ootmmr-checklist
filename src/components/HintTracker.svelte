@@ -384,12 +384,7 @@
                 class="song-select"
                 class:vanilla-select={!ootSel}
               >
-                <optgroup label="── Ocarina of Time ──">
-                  {#each ootSongs as song}<option value={song.id}>{song.name}</option>{/each}
-                </optgroup>
-                <optgroup label="── Majora's Mask ──">
-                  {#each mmSongs as song}<option value={song.id}>{song.name}</option>{/each}
-                </optgroup>
+                {#each ootSongs as song}<option value={song.id}>{song.name}</option>{/each}
                 {#if shSongs.length > 0}
                   <optgroup label="── Shared ──">
                     {#each shSongs as song}<option value={song.id}>{song.name}</option>{/each}
@@ -417,9 +412,12 @@
                   class="song-select"
                   class:vanilla-select={!mmSel}
                 >
-                  {#each songChoices as song}
-                    <option value={song.id}>{song.name}</option>
-                  {/each}
+                  {#each mmSongs as song}<option value={song.id}>{song.name}</option>{/each}
+                  {#if shSongs.length > 0}
+                    <optgroup label="── Shared ──">
+                      {#each shSongs as song}<option value={song.id}>{song.name}</option>{/each}
+                    </optgroup>
+                  {/if}
                 </select>
               {:else}
                 <span class="na-text">N/A</span>
