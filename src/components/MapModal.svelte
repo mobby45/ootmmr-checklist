@@ -850,7 +850,8 @@ import type { EntranceInfo } from '../data/entranceData';
     {/if}
 
     <div class="map-with-panel">
-    <div class="map-scroll" bind:this={mapScrollEl}>
+    <div class="map-scroll" bind:this={mapScrollEl}
+      style={imageWidth > 1 ? `aspect-ratio: ${imageWidth}/${imageHeight}` : ''}>
     <!-- svelte-ignore a11y-no-static-element-interactions -->
     <!-- svelte-ignore a11y-click-events-have-key-events -->
     {#key currentSubscene}
@@ -1090,13 +1091,12 @@ import type { EntranceInfo } from '../data/entranceData';
 
   .map-scroll {
     overflow: hidden;
-    flex: 1;
     min-width: 0;
     min-height: 0;
+    max-height: calc(85vh - 6em);
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #000;
   }
 
   .map-title-row {
