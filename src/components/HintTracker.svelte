@@ -335,104 +335,52 @@
       {/each}
     {/if}
   {:else if view === 'songs'}
-    <!-- Song Events Shuffle — side-by-side OoT / MM -->
-    <div class="se-tracker">
-      <div class="se-col se-col-oot">
-        <div class="se-title">Ocarina of Time</div>
-        <div class="se-header-row">
-          <span class="se-h se-h-event">Song Event</span>
-          <span class="se-h se-h-song">Required Song</span>
-          <span class="se-h se-h-done">Done?</span>
+    <div class="se-wrap">
+      {#each [{ game: 'oot', label: 'Ocarina of Time', events: OOT_SONG_EVENTS, accent: '#4a8a4a' }, { game: 'mm', label: "Majora's Mask", events: MM_SONG_EVENTS, accent: '#4a4a8a' }] as panel}
+        <div class="se-panel">
+          <div class="se-panel-header" style="--accent: {panel.accent}">
+            <span class="se-game-dot"></span>
+            {panel.label}
+          </div>
+          <div class="se-list">
+            {#each panel.events as evt, i}
+              {#if evt === null}
+                <div class="se-item se-item-na">
+                  <span class="se-item-na-text">— N/A —</span>
+                </div>
+              {:else}
+                {@const sk = panel.game + '_' + i}
+                {@const selectedId = songEventMap[sk] ?? ''}
+                {@const obtained = selectedId ? isSongObtained(selectedId) : null}
+                <div class="se-item" class:se-item-done={obtained === true} class:se-item-assigned={!!selectedId && obtained !== true}>
+                  <div class="se-item-status">
+                    {#if obtained === true}
+                      <span class="se-dot se-dot-ok" title="Obtained">✓</span>
+                    {:else if selectedId}
+                      <span class="se-dot se-dot-no" title="Not yet obtained">✗</span>
+                    {:else}
+                      <span class="se-dot se-dot-empty"></span>
+                    {/if}
+                  </div>
+                  <span class="se-item-label">{evt.label}</span>
+                  <select
+                    class="se-item-select"
+                    value={selectedId}
+                    on:change={e => setSongEvent(sk, selectValue(e))}
+                    disabled={isWatchMode}
+                    title={selectedId ? songChoices.find(s => s.id === selectedId)?.name ?? '' : 'Assign a song…'}
+                  >
+                    <option value="">— assign song —</option>
+                    {#each songChoices as song}
+                      <option value={song.id}>{song.name}</option>
+                    {/each}
+                  </select>
+                </div>
+              {/if}
+            {/each}
+          </div>
         </div>
-        <div class="se-rows">
-          {#each OOT_SONG_EVENTS as evt, i}
-            {#if evt === null}
-              <div class="se-row se-row-na">
-                <span class="se-cell se-cell-event se-na">N/A</span>
-                <span class="se-cell se-cell-song se-na">N/A</span>
-                <span class="se-cell se-cell-done se-na">N/A</span>
-              </div>
-            {:else}
-              {@const sk = 'oot_' + i}
-              {@const selectedId = songEventMap[sk] ?? ''}
-              {@const obtained = selectedId ? isSongObtained(selectedId) : false}
-              <div class="se-row">
-                <span class="se-cell se-cell-event">{evt.label}</span>
-                <span class="se-cell se-cell-song">
-                  <span class="se-song-pill">
-                    <select
-                      value={selectedId}
-                      on:change={e => setSongEvent(sk, selectValue(e))}
-                      disabled={isWatchMode}
-                      class="se-select"
-                    >
-                      <option value="">—</option>
-                      {#each songChoices as song}
-                        <option value={song.id}>{song.name}</option>
-                      {/each}
-                    </select>
-                  </span>
-                </span>
-                <span class="se-cell se-cell-done">
-                  {#if obtained}
-                    <span class="se-ok">Yes</span>
-                  {:else}
-                    <span class="se-no">No</span>
-                  {/if}
-                </span>
-              </div>
-            {/if}
-          {/each}
-        </div>
-      </div>
-      <div class="se-col se-col-mm">
-        <div class="se-title">Majora's Mask</div>
-        <div class="se-header-row">
-          <span class="se-h se-h-event">Song Event</span>
-          <span class="se-h se-h-song">Required Song</span>
-          <span class="se-h se-h-done">Done?</span>
-        </div>
-        <div class="se-rows">
-          {#each MM_SONG_EVENTS as evt, i}
-            {#if evt === null}
-              <div class="se-row se-row-na">
-                <span class="se-cell se-cell-event se-na">N/A</span>
-                <span class="se-cell se-cell-song se-na">N/A</span>
-                <span class="se-cell se-cell-done se-na">N/A</span>
-              </div>
-            {:else}
-              {@const sk = 'mm_' + i}
-              {@const selectedId = songEventMap[sk] ?? ''}
-              {@const obtained = selectedId ? isSongObtained(selectedId) : false}
-              <div class="se-row">
-                <span class="se-cell se-cell-event">{evt.label}</span>
-                <span class="se-cell se-cell-song">
-                  <span class="se-song-pill">
-                    <select
-                      value={selectedId}
-                      on:change={e => setSongEvent(sk, selectValue(e))}
-                      disabled={isWatchMode}
-                      class="se-select"
-                    >
-                      <option value="">—</option>
-                      {#each songChoices as song}
-                        <option value={song.id}>{song.name}</option>
-                      {/each}
-                    </select>
-                  </span>
-                </span>
-                <span class="se-cell se-cell-done">
-                  {#if obtained}
-                    <span class="se-ok">Yes</span>
-                  {:else}
-                    <span class="se-no">No</span>
-                  {/if}
-                </span>
-              </div>
-            {/if}
-          {/each}
-        </div>
-      </div>
+      {/each}
     </div>
   {/if}
 </div>
@@ -685,97 +633,108 @@
   }
   .del-btn:hover { opacity: 1; }
 
-  .se-tracker {
+  /* ── Song Events ── */
+  .se-wrap {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 0;
+    gap: 0.6em;
+    font-size: 0.82em;
+  }
+  @media (max-width: 640px) { .se-wrap { grid-template-columns: 1fr; } }
+
+  .se-panel {
     border: 1px solid var(--color-border);
-    border-radius: 6px;
+    border-radius: 8px;
     overflow: hidden;
-    font-size: 0.8em;
   }
-  .se-col { display: flex; flex-direction: column; min-width: 0; }
-  .se-col-oot { border-right: 2px solid var(--color-border); }
-  .se-title {
-    text-align: center;
-    font-weight: bold;
-    font-size: 1em;
-    padding: 0.4em 0.5em;
-    background: var(--color-primary);
-    color: var(--color-text);
-  }
-  .se-header-row {
-    display: grid;
-    grid-template-columns: 1fr 1.2fr 0.6fr;
-    background: var(--color-border);
-    color: var(--color-text);
-    font-weight: bold;
-    text-align: center;
-    border-bottom: 1px solid var(--color-border);
-  }
-  .se-h { padding: 0.3em 0.3em; }
-  .se-rows { display: flex; flex-direction: column; }
-  .se-row {
-    display: grid;
-    grid-template-columns: 1fr 1.2fr 0.6fr;
-    border-bottom: 1px solid var(--color-border);
+  .se-panel-header {
+    display: flex;
     align-items: center;
-  }
-  .se-row:last-child { border-bottom: none; }
-  .se-cell { padding: 0.25em 0.4em; text-align: center; min-width: 0; }
-  .se-cell-event {
-    background: var(--color-unchecked);
+    gap: 0.5em;
+    padding: 0.45em 0.8em;
+    background: color-mix(in srgb, var(--accent) 30%, transparent);
+    border-bottom: 2px solid var(--accent);
+    font-weight: 700;
+    font-size: 0.95em;
     color: var(--color-text);
+    letter-spacing: 0.02em;
+  }
+  .se-game-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    flex-shrink: 0;
+  }
+
+  .se-list { display: flex; flex-direction: column; }
+
+  .se-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+    padding: 0.3em 0.6em;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    transition: background 0.1s;
+  }
+  .se-item:last-child { border-bottom: none; }
+  .se-item:hover { background: rgba(255,255,255,0.04); }
+  .se-item-done { background: rgba(50,180,80,0.07) !important; }
+  .se-item-assigned { background: rgba(200,150,50,0.06) !important; }
+
+  .se-item-na {
+    padding: 0.3em 0.6em;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+  .se-item-na:last-child { border-bottom: none; }
+  .se-item-na-text {
+    color: var(--color-text);
+    opacity: 0.2;
+    font-size: 0.9em;
+    display: block;
+    text-align: center;
+    padding: 0.1em 0;
+  }
+
+  .se-item-status { flex-shrink: 0; width: 1.2em; text-align: center; }
+  .se-dot {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.1em; height: 1.1em;
+    border-radius: 50%;
+    font-size: 0.75em;
+    font-weight: 700;
+  }
+  .se-dot-ok   { background: rgba(50,180,80,0.25);  color: #6be07c; border: 1px solid rgba(50,180,80,0.5); }
+  .se-dot-no   { background: rgba(220,60,60,0.2);   color: #e07070; border: 1px solid rgba(220,60,60,0.4); }
+  .se-dot-empty { border: 1px solid rgba(255,255,255,0.15); }
+
+  .se-item-label {
+    flex: 1;
+    min-width: 0;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-  }
-  .se-cell-song {
-    background: var(--color-bg);
-    color: var(--color-text);
-    padding: 0.25em 0.4em;
-  }
-  .se-song-pill {
-    display: inline-block;
-    background: var(--color-checked);
-    border: 1px solid var(--color-border);
-    border-radius: 999px;
-    padding: 0.1em 0.3em;
-    width: 90%;
-    max-width: 120px;
-  }
-  .se-select {
-    width: 100%;
-    border: none;
-    background: transparent;
     color: var(--color-text);
     font-size: 0.9em;
-    text-align: center;
+  }
+
+  .se-item-select {
+    flex-shrink: 0;
+    max-width: 110px;
+    padding: 0.15em 0.3em;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 5px;
+    background: rgba(255,255,255,0.06);
+    color: var(--color-text);
+    font-size: 0.85em;
     cursor: pointer;
     outline: none;
+    transition: border-color 0.15s;
   }
-  .se-cell-done { text-align: center; }
-  .se-ok {
-    display: inline-block;
-    padding: 1px 8px;
-    border-radius: 4px;
-    background: rgba(50, 180, 80, 0.25);
-    color: #5cd97a;
-    font-weight: bold;
-    font-size: 0.85em;
-    border: 1px solid rgba(50, 180, 80, 0.4);
-  }
-  .se-no {
-    display: inline-block;
-    padding: 1px 8px;
-    border-radius: 4px;
-    background: rgba(200, 50, 50, 0.25);
-    color: #e06060;
-    font-weight: bold;
-    font-size: 0.85em;
-    border: 1px solid rgba(200, 50, 50, 0.4);
-  }
-  .se-na { color: var(--color-text); opacity: 0.35; font-size: 0.85em; }
-  .se-row-na { opacity: 0.5; }
+  .se-item-select:hover  { border-color: rgba(255,255,255,0.3); }
+  .se-item-select:focus  { border-color: rgba(255,255,255,0.5); }
+  .se-item-done .se-item-select { border-color: rgba(50,180,80,0.35); }
+  .se-item-assigned .se-item-select { border-color: rgba(200,150,50,0.35); }
 
 </style>
