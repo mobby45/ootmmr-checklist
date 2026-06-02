@@ -1802,23 +1802,10 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
   let scrollPosition = 0;
   let erHighlightId: string | null = null;
 
-  const preloadedMapImages: HTMLImageElement[] = [];
-
   // Rebuild map data when MQ settings change
   $: if ($sMqSettings) {
     buildMapData($sMqSettings).then(data => {
       mapData = data;
-      preloadedMapImages.length = 0;
-      const srcs = [...new Set(
-        Object.values(data).flatMap(sd =>
-          Object.values(sd.subscenes).map(sub => `/ootmmr-checklist/maps/${sub.image}`)
-        )
-      )];
-      srcs.forEach(src => {
-        const img = new Image();
-        img.src = src;
-        preloadedMapImages.push(img);
-      });
     });
   }
 
