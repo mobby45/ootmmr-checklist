@@ -1328,6 +1328,13 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
   };
   $: showTypeColors = (displaySettings.showTypeColors ?? true) as boolean;
 
+  $: gameTab = (displaySettings.OOTMM ?? 'both') as string;
+
+  function setGameTab(tab: string) {
+    saveDisplaySetting('OOTMM', tab);
+    saveDisplaySetting('OOTMMDungeons', tab === 'oot' ? 'ootdungeons' : tab === 'mm' ? 'mmdungeons' : 'both');
+  }
+
   // ==========================================
   // SPOILER LOG
   // Locations are stored without OOT/MM prefix for check name lookup
@@ -2542,6 +2549,20 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     ? [...filteredChecks].sort((a, b) => (sortMode === 'alpha' ? a.groupName.localeCompare(b.groupName) : 0))
     : filteredChecks;
 
+  let splitShowOotDungeons = true;
+  let splitShowMmDungeons  = true;
+
+  function isDungeonGroup(g: T.CheckGroup): boolean {
+    return !!(g.checks[0]?.scene && allDungeons.includes(g.checks[0].scene));
+  }
+
+  $: ootSplitChecks = (sortedChecks ?? []).filter(g =>
+    g.checks.some(c => c.game === T.Game.oot) && (isDungeonGroup(g) ? splitShowOotDungeons : true)
+  );
+  $: mmSplitChecks = (sortedChecks ?? []).filter(g =>
+    g.checks.some(c => c.game === T.Game.mm) && (isDungeonGroup(g) ? splitShowMmDungeons : true)
+  );
+
   $: visibleGroupCount = sortedChecks?.length ?? 0;
   $: visibleCheckCount = sortedChecks?.reduce((a, g) => a + g.checks.length, 0) ?? 0;
 
@@ -3750,36 +3771,10 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
           {/if}
           <button class="undo-btn" on:click|stopPropagation={undo} disabled={isWatchMode || !canUndo} title="Undo (Ctrl+Z)">↩ Undo</button>
           <button class="undo-btn" on:click|stopPropagation={redo} disabled={isWatchMode || !canRedo} title="Redo (Ctrl+Y)">↪ Redo</button>
-          <span class="summary-sep"></span>
-          <span class="game-filter-label">Overworld</span>
-          <button class="game-filter-btn" class:active={(displaySettings.OOTMM ?? 'both') === 'both'} on:click|stopPropagation={() => { if (isWatchMode) return; saveDisplaySetting('OOTMM', 'both'); }}>Both</button>
-          <button class="game-filter-btn" class:active={(displaySettings.OOTMM ?? 'both') === 'oot'} on:click|stopPropagation={() => { if (isWatchMode) return; saveDisplaySetting('OOTMM', 'oot'); }}>OoT</button>
-          <button class="game-filter-btn" class:active={(displaySettings.OOTMM ?? 'both') === 'mm'} on:click|stopPropagation={() => { if (isWatchMode) return; saveDisplaySetting('OOTMM', 'mm'); }}>MM</button>
-          <button class="game-filter-btn" class:active={(displaySettings.OOTMM ?? 'both') === 'none'} on:click|stopPropagation={() => { if (isWatchMode) return; saveDisplaySetting('OOTMM', 'none'); }}>None</button>
-          <span class="summary-sep"></span>
-          <span class="game-filter-label">Dungeons</span>
-          <button class="game-filter-btn" class:active={(displaySettings.OOTMMDungeons ?? 'both') === 'both'} on:click|stopPropagation={() => { if (isWatchMode) return; saveDisplaySetting('OOTMMDungeons', 'both'); }}>Both</button>
-          <button class="game-filter-btn" class:active={(displaySettings.OOTMMDungeons ?? 'both') === 'ootdungeons'} on:click|stopPropagation={() => { if (isWatchMode) return; saveDisplaySetting('OOTMMDungeons', 'ootdungeons'); }}>OoT</button>
-          <button class="game-filter-btn" class:active={(displaySettings.OOTMMDungeons ?? 'both') === 'mmdungeons'} on:click|stopPropagation={() => { if (isWatchMode) return; saveDisplaySetting('OOTMMDungeons', 'mmdungeons'); }}>MM</button>
-          <button class="game-filter-btn" class:active={(displaySettings.OOTMMDungeons ?? 'both') === 'none'} on:click|stopPropagation={() => { if (isWatchMode) return; saveDisplaySetting('OOTMMDungeons', 'none'); }}>None</button>
         </summary>
         <div id="general-container" class="flex flex-wrap" style="margin-top: 0.8em">
           <form class="pure-form pure-form-stacked">
             <fieldset>
-              <label>
-                Show OOT/MM Overworld
-                <select
-                  value={displaySettings.OOTMM ?? 'both'}
-                  on:change={e => { if (isWatchMode) return; saveDisplaySetting('OOTMM', selectValue(e)); }}
-                  class="dropdown-select"
-                  disabled={isWatchMode}
-                >
-                  <option value="both">Both</option>
-                  <option value="oot">OoT</option>
-                  <option value="mm">MM</option>
-                  <option value="none">None</option>
-                </select>
-              </label>
               <label>
                 Show OOT/MM Dungeons
                 <select
@@ -4529,88 +4524,172 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
         </div>
       {/if}
 
+      <!-- Game tabs -->
+      <div class="game-tab-row">
+        <button class="game-tab-btn" class:active={gameTab === 'oot'} on:click={() => { if (!isWatchMode) setGameTab('oot'); }}>
+          Ocarina of Time
+        </button>
+        <button class="game-tab-btn" class:active={gameTab === 'mm'} on:click={() => { if (!isWatchMode) setGameTab('mm'); }}>
+          Majora's Mask
+        </button>
+        <button class="game-tab-btn" class:active={gameTab === 'both'} on:click={() => { if (!isWatchMode) setGameTab('both'); }}>
+          Both
+        </button>
+      </div>
+
       <!-- Check groups -->
-      <div class:checks-locked={spoilerPlayers > 1 && spoilerPlayerWorld === 0}>
+      <div class:checks-locked={spoilerPlayers > 1 && spoilerPlayerWorld === 0} class:split-layout={gameTab === 'both'}>
       {#if sortedChecks != null}
-        {#each sortedChecks as group (group.groupName)}
-          <section>
-            <CheckGroup
-              groupName={group.groupName}
-              canBeMq={group.canHaveMq}
-              isMq={$sMqSettings.get(group.groupName) ?? false}
-              canHaveVariant={group.canHaveVariant}
-              variant={$sVariantSettings.get(group.groupName) ?? 0}
-              forceOpen={groupStates.get(group.groupName) ?? allGroupsExpanded}
-              {forceOpenTimestamp}
-              allChecked={groupCompletionStatus[group.groupName] ?? false}
-              checkCount={groupCheckCounts[group.groupName] ?? { checked: 0, total: 0 }}
-              pingColor={groupPings.get(group.groupName) ?? ''}
-              {compact}
-              woth={wothGroups.has(group.groupName)}
-              barren={barrenGroups.has(group.groupName)}
-              on:toggleGroup={() => toggleWholeGroup(group)}
-              on:markGroup={() => markWholeGroup(group)}
-              on:toggleMq={() => toggleYmap(yMqSettings, group.groupName)}
-              on:cycleVariant={() => cycleVariant(group.groupName, group.maxVariant ?? 0)}
-              on:individualToggle={handleIndividualToggle}
-              on:openMap={() => openMap(group.groupName)}
-            >
-              {#each group.checks as check, checkIndex}
-                <CheckItem
-                  name={check.shortName}
-                  vanillaItem={check.item ?? ''}
-                  type={check.type}
-                  state={$sChecks.get(check.name) ?? T.CheckState.unchecked}
-                  shopItem={$sShopItems.get(check.name) ?? ''}
-                  shopPrice={$sShopPrices.get(check.name) ?? null}
-                  isShop={check.type === T.CheckType.deku_scrub ||
-                    check.type === T.CheckType.shop ||
-                    priceEditIds.has(check.id)}
-                  showPrice={!itemOnlyIds.has(check.id)}
-                  spoilerItem={showSpoilerItems ? (spoilerLocations[check.name] ?? '') : ''}
-                  author={connectionProvider ? ($sCheckAuthors.get(check.name) ?? '') : ''}
-                  pingColor={pinnedChecks.get(check.name) ?? ''}
-                  note={$sNotes.get(check.name) ?? ''}
-                  {compact}
-                  woth={wothCheckNames.has(check.name)}
-                  barren={barrenCheckNames.has(check.name)}
-                  disableTypeColor={!showTypeColors}
-                  highlighted={spoilerHighlight === check.name}
-                  spiderHouse={!!check.scene?.startsWith('MM_SPIDER_HOUSE')}
-                  checkName={check.name}
-                  zone={group.groupName}
-                  {filter}
-                  on:editNote={() => { if (!isWatchMode) handleEditNote(check.name); }}
-                  on:toggle={e => {
-                    if (isWatchMode) return;
-                    if (e.detail.range) {
-                      toggleRangeTo(group, checkIndex);
-                    } else {
-                      const newState = toggleState($sChecks.get(check.name) ?? T.CheckState.unchecked);
-                      lastAction = { group, checkIndex, newState };
-                      yChecks.set(check.name, newState);
-                      setAuthor(check.name, newState);
-                      if (newState === T.CheckState.checked) yNotes.delete(check.name);
-                    }
-                  }}
-                  on:mark={e => {
-                    if (isWatchMode) return;
-                    if (e.detail.range) {
-                      markRangeTo(group, checkIndex);
-                    } else {
-                      const cur = $sChecks.get(check.name) ?? T.CheckState.unchecked;
-                      const newState = cur === T.CheckState.marked ? T.CheckState.unchecked : T.CheckState.marked;
-                      lastMarkAction = { group, checkIndex, newState };
-                      yChecks.set(check.name, newState);
-                      setAuthor(check.name, newState);
-                    }
-                  }}
-                  on:shopEdit={() => { if (!isWatchMode) handleShopEdit(check.name, check.id); }}
-                />
+
+        {#if gameTab === 'both'}
+          <!-- ── Split view: OoT left / MM right ── -->
+          {#each [
+            { label: 'Ocarina of Time', groups: ootSplitChecks, count: ootCheckCount, cls: 'split-col-oot', showDung: splitShowOotDungeons, toggleDung: () => { splitShowOotDungeons = !splitShowOotDungeons; } },
+            { label: "Majora's Mask",   groups: mmSplitChecks,  count: mmCheckCount,  cls: 'split-col-mm',  showDung: splitShowMmDungeons,  toggleDung: () => { splitShowMmDungeons  = !splitShowMmDungeons;  } },
+          ] as col}
+            <div class="split-col {col.cls}">
+              <div class="split-col-header">
+                <span class="split-col-title">{col.label}</span>
+                <div class="split-col-actions">
+                  <button class="split-dung-btn" class:active={col.showDung} on:click={col.toggleDung} title="{col.showDung ? 'Hide' : 'Show'} dungeons">
+                    🏰
+                  </button>
+                  <span class="split-col-count">{col.count.checked}/{col.count.total}</span>
+                </div>
+              </div>
+              {#each col.groups as group (group.groupName)}
+                <section>
+                  <CheckGroup
+                    groupName={group.groupName}
+                    canBeMq={group.canHaveMq}
+                    isMq={$sMqSettings.get(group.groupName) ?? false}
+                    canHaveVariant={group.canHaveVariant}
+                    variant={$sVariantSettings.get(group.groupName) ?? 0}
+                    forceOpen={groupStates.get(group.groupName) ?? allGroupsExpanded}
+                    {forceOpenTimestamp}
+                    allChecked={groupCompletionStatus[group.groupName] ?? false}
+                    checkCount={groupCheckCounts[group.groupName] ?? { checked: 0, total: 0 }}
+                    pingColor={groupPings.get(group.groupName) ?? ''}
+                    {compact}
+                    woth={wothGroups.has(group.groupName)}
+                    barren={barrenGroups.has(group.groupName)}
+                    on:toggleGroup={() => toggleWholeGroup(group)}
+                    on:markGroup={() => markWholeGroup(group)}
+                    on:toggleMq={() => toggleYmap(yMqSettings, group.groupName)}
+                    on:cycleVariant={() => cycleVariant(group.groupName, group.maxVariant ?? 0)}
+                    on:individualToggle={handleIndividualToggle}
+                    on:openMap={() => openMap(group.groupName)}
+                  >
+                    {#each group.checks as check, checkIndex}
+                      <CheckItem
+                        name={check.shortName}
+                        vanillaItem={check.item ?? ''}
+                        type={check.type}
+                        state={$sChecks.get(check.name) ?? T.CheckState.unchecked}
+                        shopItem={$sShopItems.get(check.name) ?? ''}
+                        shopPrice={$sShopPrices.get(check.name) ?? null}
+                        isShop={check.type === T.CheckType.deku_scrub || check.type === T.CheckType.shop || priceEditIds.has(check.id)}
+                        showPrice={!itemOnlyIds.has(check.id)}
+                        spoilerItem={showSpoilerItems ? (spoilerLocations[check.name] ?? '') : ''}
+                        author={connectionProvider ? ($sCheckAuthors.get(check.name) ?? '') : ''}
+                        pingColor={pinnedChecks.get(check.name) ?? ''}
+                        note={$sNotes.get(check.name) ?? ''}
+                        {compact}
+                        woth={wothCheckNames.has(check.name)}
+                        barren={barrenCheckNames.has(check.name)}
+                        disableTypeColor={!showTypeColors}
+                        highlighted={spoilerHighlight === check.name}
+                        spiderHouse={!!check.scene?.startsWith('MM_SPIDER_HOUSE')}
+                        checkName={check.name}
+                        zone={group.groupName}
+                        {filter}
+                        on:editNote={() => { if (!isWatchMode) handleEditNote(check.name); }}
+                        on:toggle={e => {
+                          if (isWatchMode) return;
+                          if (e.detail.range) { toggleRangeTo(group, checkIndex); }
+                          else { const newState = toggleState($sChecks.get(check.name) ?? T.CheckState.unchecked); lastAction = { group, checkIndex, newState }; yChecks.set(check.name, newState); setAuthor(check.name, newState); if (newState === T.CheckState.checked) yNotes.delete(check.name); }
+                        }}
+                        on:mark={e => {
+                          if (isWatchMode) return;
+                          if (e.detail.range) { markRangeTo(group, checkIndex); }
+                          else { const cur = $sChecks.get(check.name) ?? T.CheckState.unchecked; const newState = cur === T.CheckState.marked ? T.CheckState.unchecked : T.CheckState.marked; lastMarkAction = { group, checkIndex, newState }; yChecks.set(check.name, newState); setAuthor(check.name, newState); }
+                        }}
+                        on:shopEdit={() => { if (!isWatchMode) handleShopEdit(check.name, check.id); }}
+                      />
+                    {/each}
+                  </CheckGroup>
+                </section>
               {/each}
-            </CheckGroup>
-          </section>
-        {/each}
+            </div>
+          {/each}
+
+        {:else}
+          <!-- ── Single column view ── -->
+          {#each sortedChecks as group (group.groupName)}
+            <section>
+              <CheckGroup
+                groupName={group.groupName}
+                canBeMq={group.canHaveMq}
+                isMq={$sMqSettings.get(group.groupName) ?? false}
+                canHaveVariant={group.canHaveVariant}
+                variant={$sVariantSettings.get(group.groupName) ?? 0}
+                forceOpen={groupStates.get(group.groupName) ?? allGroupsExpanded}
+                {forceOpenTimestamp}
+                allChecked={groupCompletionStatus[group.groupName] ?? false}
+                checkCount={groupCheckCounts[group.groupName] ?? { checked: 0, total: 0 }}
+                pingColor={groupPings.get(group.groupName) ?? ''}
+                {compact}
+                woth={wothGroups.has(group.groupName)}
+                barren={barrenGroups.has(group.groupName)}
+                on:toggleGroup={() => toggleWholeGroup(group)}
+                on:markGroup={() => markWholeGroup(group)}
+                on:toggleMq={() => toggleYmap(yMqSettings, group.groupName)}
+                on:cycleVariant={() => cycleVariant(group.groupName, group.maxVariant ?? 0)}
+                on:individualToggle={handleIndividualToggle}
+                on:openMap={() => openMap(group.groupName)}
+              >
+                {#each group.checks as check, checkIndex}
+                  <CheckItem
+                    name={check.shortName}
+                    vanillaItem={check.item ?? ''}
+                    type={check.type}
+                    state={$sChecks.get(check.name) ?? T.CheckState.unchecked}
+                    shopItem={$sShopItems.get(check.name) ?? ''}
+                    shopPrice={$sShopPrices.get(check.name) ?? null}
+                    isShop={check.type === T.CheckType.deku_scrub || check.type === T.CheckType.shop || priceEditIds.has(check.id)}
+                    showPrice={!itemOnlyIds.has(check.id)}
+                    spoilerItem={showSpoilerItems ? (spoilerLocations[check.name] ?? '') : ''}
+                    author={connectionProvider ? ($sCheckAuthors.get(check.name) ?? '') : ''}
+                    pingColor={pinnedChecks.get(check.name) ?? ''}
+                    note={$sNotes.get(check.name) ?? ''}
+                    {compact}
+                    woth={wothCheckNames.has(check.name)}
+                    barren={barrenCheckNames.has(check.name)}
+                    disableTypeColor={!showTypeColors}
+                    highlighted={spoilerHighlight === check.name}
+                    spiderHouse={!!check.scene?.startsWith('MM_SPIDER_HOUSE')}
+                    checkName={check.name}
+                    zone={group.groupName}
+                    {filter}
+                    on:editNote={() => { if (!isWatchMode) handleEditNote(check.name); }}
+                    on:toggle={e => {
+                      if (isWatchMode) return;
+                      if (e.detail.range) { toggleRangeTo(group, checkIndex); }
+                      else { const newState = toggleState($sChecks.get(check.name) ?? T.CheckState.unchecked); lastAction = { group, checkIndex, newState }; yChecks.set(check.name, newState); setAuthor(check.name, newState); if (newState === T.CheckState.checked) yNotes.delete(check.name); }
+                    }}
+                    on:mark={e => {
+                      if (isWatchMode) return;
+                      if (e.detail.range) { markRangeTo(group, checkIndex); }
+                      else { const cur = $sChecks.get(check.name) ?? T.CheckState.unchecked; const newState = cur === T.CheckState.marked ? T.CheckState.unchecked : T.CheckState.marked; lastMarkAction = { group, checkIndex, newState }; yChecks.set(check.name, newState); setAuthor(check.name, newState); }
+                    }}
+                    on:shopEdit={() => { if (!isWatchMode) handleShopEdit(check.name, check.id); }}
+                  />
+                {/each}
+              </CheckGroup>
+            </section>
+          {/each}
+        {/if}
+
       {/if}
       </div>
     </section>
@@ -4944,31 +5023,87 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     white-space: nowrap;
   }
 
-  .game-filter-label {
-    display: inline-block;
-    font-size: 0.75em;
-    font-weight: bold;
-    opacity: 0.5;
-    vertical-align: middle;
-    margin-left: 0.2em;
-    letter-spacing: 0.03em;
-    text-transform: uppercase;
-  }
 
-  .game-filter-btn {
-    margin-left: 0.2em;
-    padding: 0.2em 0.6em;
-    font-size: 0.85em;
+
+  /* ── Game tabs ── */
+  .game-tab-row {
+    display: flex;
+    gap: 0.4em;
+    border-bottom: 1px solid var(--color-border);
+    padding-bottom: 0.4em;
+    margin-top: 0.6em;
+  }
+  .game-tab-btn {
+    padding: 4px 14px;
     border: 1px solid var(--color-border);
-    border-radius: 4px;
-    background: var(--color-bg);
+    border-radius: 3px 3px 0 0;
+    background: transparent;
     color: var(--color-text);
     cursor: pointer;
-    vertical-align: middle;
-    opacity: 0.6;
+    font-size: 0.85em;
+    opacity: 0.5;
   }
-  .game-filter-btn:hover { opacity: 1; }
-  .game-filter-btn.active { opacity: 1; background: var(--color-primary); border-color: var(--color-primary); }
+  .game-tab-btn:hover { opacity: 0.8; }
+  .game-tab-btn.active { opacity: 1; background: var(--color-border); font-weight: bold; }
+
+  .split-layout {
+    display: flex;
+    gap: 0;
+    align-items: flex-start;
+  }
+  .split-col {
+    flex: 1;
+    min-width: 0;
+    overflow-y: auto;
+    max-height: calc(100vh - 12em);
+  }
+  .split-col-oot { border-right: 2px solid var(--color-border); }
+  .split-col-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.35em 0.7em;
+    font-weight: 700;
+    font-size: 0.85em;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    border-bottom: 2px solid;
+  }
+  .split-col-oot .split-col-header {
+    background: rgba(70,130,210,0.12);
+    border-bottom-color: rgba(70,130,210,0.5);
+    color: #7eb8ff;
+  }
+  .split-col-mm .split-col-header {
+    background: rgba(200,60,60,0.12);
+    border-bottom-color: rgba(200,60,60,0.5);
+    color: #ff9090;
+  }
+  .split-col-title { letter-spacing: 0.02em; }
+  .split-col-actions { display: flex; align-items: center; gap: 0.5em; }
+  .split-col-count {
+    font-weight: normal;
+    opacity: 0.75;
+    font-size: 0.88em;
+    background: rgba(255,255,255,0.07);
+    padding: 1px 6px;
+    border-radius: 10px;
+  }
+  .split-dung-btn {
+    background: none;
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 4px;
+    cursor: pointer;
+    padding: 1px 5px;
+    font-size: 0.85em;
+    opacity: 0.4;
+    transition: opacity 0.15s, border-color 0.15s;
+    line-height: 1.4;
+  }
+  .split-dung-btn:hover { opacity: 0.8; }
+  .split-dung-btn.active { opacity: 1; border-color: rgba(255,255,255,0.4); }
+
   main.modal-active {
     overflow: hidden;
   }
@@ -5547,7 +5682,6 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
   }
 
   @media screen and (max-width: 1100px) {
-    .game-filter-label, .game-filter-btn { font-size: 0.75em; }
     .summary-sep { margin: 0 0.25em; }
     #general-settings-details summary { font-size: 0.85em; }
     #general-settings-details .undo-btn { font-size: 0.75em; padding: 0.15em 0.4em; }
@@ -5561,7 +5695,6 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
   @media screen and (max-width: 600px) {
     form.pure-form fieldset { flex-direction: column; align-items: stretch; }
     input[type="text"][style*="16em"] { width: auto !important; }
-    .game-filter-btn, .game-filter-label { display: none; }
     details summary strong { font-size: 0.85em; }
   }
 
