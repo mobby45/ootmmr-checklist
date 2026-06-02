@@ -409,6 +409,7 @@ import type { EntranceInfo } from '../data/entranceData';
 
   function handleEntranceContextMenu(e: MouseEvent, markerUid: string, entranceId: string, isAuto: boolean) {
     e.preventDefault(); e.stopPropagation();
+    if (!placementMode) { dispatch('openErForEntrance', { entranceId }); return; }
     if (isAuto) {
       const atIdx = markerUid.lastIndexOf('_at_');
       const posId = atIdx >= 0 ? markerUid.slice(atIdx + 4) : entranceId;
@@ -757,9 +758,7 @@ import type { EntranceInfo } from '../data/entranceData';
 <!-- svelte-ignore a11y-click-events-have-key-events -->
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <div class="modal-overlay" on:click={closeModal}>
-  <div class="modal-content"
-    style={imageWidth > 1 ? `width: min(90vw, calc((80vh - 7em) * ${(imageWidth / imageHeight).toFixed(4)} + 4em))` : ''}
-    on:click|stopPropagation={() => typeDropdownOpen = false}>
+  <div class="modal-content" on:click|stopPropagation={() => typeDropdownOpen = false}>
     <button class="close-button" on:click={closeModal}>✕</button>
     <div class="map-title-row">
       <button class="nav-btn" on:click={() => { const nav = navScenes.length > 1 ? navScenes : allScenes; const i = nav.indexOf(scene); changeMainScene(nav[(i - 1 + nav.length) % nav.length]); }} title="Previous zone" disabled={(navScenes.length > 1 ? navScenes : allScenes).length <= 1}>‹</button>
@@ -1073,7 +1072,6 @@ import type { EntranceInfo } from '../data/entranceData';
     color: var(--color-text);
     padding: 2em;
     border-radius: 8px;
-    min-width: 400px;
     max-width: 90vw;
     max-height: 90vh;
     overflow: hidden;
@@ -1093,6 +1091,7 @@ import type { EntranceInfo } from '../data/entranceData';
 
   .map-scroll {
     overflow: hidden;
+    flex: 1;
     min-width: 0;
     min-height: 0;
     display: flex;
@@ -1173,24 +1172,19 @@ import type { EntranceInfo } from '../data/entranceData';
 
   .subscene-tabs {
     display: flex;
-    gap: 0.4em;
-    margin-bottom: 0.75em;
-    overflow-x: auto;
-    flex-wrap: nowrap;
-    padding-bottom: 2px;
+    gap: 0.5em;
+    margin-bottom: 1em;
+    flex-wrap: wrap;
   }
 
   .subscene-tab {
-    padding: 0.3em 0.7em;
-    font-size: 0.85em;
-    white-space: nowrap;
+    padding: 0.5em 1em;
     background: var(--color-bg);
     border: 2px solid var(--color-border);
     border-radius: 4px;
     cursor: pointer;
     color: var(--color-text);
     transition: all 0.2s;
-    flex-shrink: 0;
   }
 
   .subscene-tab:hover { background: var(--color-primary); opacity: 0.8; }
@@ -1290,9 +1284,6 @@ import type { EntranceInfo } from '../data/entranceData';
     user-select: none;
     -webkit-user-drag: none;
     pointer-events: none;
-    max-height: calc(80vh - 7em);
-    width: auto;
-    height: auto;
   }
 
   .map-image:not(.map-image-ready) {
