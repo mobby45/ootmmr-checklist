@@ -1116,7 +1116,6 @@ export const entrancePositions: EntrancePosition[] = [
   // OOT_TEMPLE_WATER_ROOM_2
 
   // Positions from beta working tree (188 entries ported)
-  { renderscene: 'MM_ZORA_HALL', entranceId: 'MM_ROOM_TIJO', x: 677, y: 300 },
   { renderscene: 'OOT_BACK_ALLEY', entranceId: 'OOT_ALLEY_HOUSE', x: 1199, y: 520 },
   { renderscene: 'OOT_MARKET_CHILD_DAY', entranceId: 'OOT_BACK_ALLEY_FROM_MARKET', x: 95, y: 609 },
   { renderscene: 'OOT_MARKET_CHILD_DAY', entranceId: 'OOT_BACK_ALLEY_FROM_MARKET', x: 175, y: 30 },
