@@ -850,8 +850,7 @@ import type { EntranceInfo } from '../data/entranceData';
     {/if}
 
     <div class="map-with-panel">
-    <div class="map-scroll" bind:this={mapScrollEl}
-      style={imageWidth > 1 ? `aspect-ratio: ${imageWidth}/${imageHeight}` : ''}>
+    <div class="map-scroll" bind:this={mapScrollEl}>
     <!-- svelte-ignore a11y-no-static-element-interactions -->
     <!-- svelte-ignore a11y-click-events-have-key-events -->
     {#key currentSubscene}
@@ -1088,15 +1087,12 @@ import type { EntranceInfo } from '../data/entranceData';
     flex: 1;
     min-height: 0;
     overflow: hidden;
-    justify-content: center;
-    align-items: center;
   }
 
   .map-scroll {
     overflow: hidden;
     min-width: 0;
     min-height: 0;
-    max-height: calc(85vh - 6em);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1177,7 +1173,8 @@ import type { EntranceInfo } from '../data/entranceData';
     display: flex;
     gap: 0.5em;
     margin-bottom: 1em;
-    flex-wrap: wrap;
+    overflow-x: auto;
+    flex-wrap: nowrap;
   }
 
   .subscene-tab {
@@ -1287,6 +1284,9 @@ import type { EntranceInfo } from '../data/entranceData';
     user-select: none;
     -webkit-user-drag: none;
     pointer-events: none;
+    max-height: calc(80vh - 7em);
+    width: auto;
+    height: auto;
   }
 
   .map-image:not(.map-image-ready) {
