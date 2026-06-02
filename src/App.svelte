@@ -4298,7 +4298,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
       <!-- Hint Tracker -->
       <details style="margin-top: 0.8em" id="hint-tracker-details" bind:open={secHint} on:toggle={() => localStorage.setItem('sec_hint', String(secHint))}>
         <summary>
-          <strong class="interactable">Hint Tracker / Notes</strong>
+          <strong class="interactable">Hint Tracker / Notes / Song Events</strong>
           {#if hints.length + notesEntries.length + shopEntries.length > 0}
             <span class="section-badge">{hints.length + notesEntries.length + shopEntries.length}</span>
           {/if}
@@ -4307,7 +4307,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
           {yHints} {hints}
           {notesEntries} {shopEntries}
           {isWatchMode}
-          {ySongEvents} {yItems}
+          {ySongEvents}
           onEditNote={handleEditNote}
           onEditShop={handleShopEditByName}
           onDeleteNote={(id) => { if (!isWatchMode) yNotes.delete(id); }}

@@ -1,7 +1,6 @@
 <script lang="ts">
   import type { Array as YArray, Map as YMap } from 'yjs';
   import { allTrackerItems } from '../data/itemData';
-  import { sharedToOot, sharedToMm, ootToShared, mmToShared } from '../data/sharedSync';
 
   export let yHints: YArray<any>;
   export let hints: any[] = [];
@@ -13,7 +12,6 @@
   export let onDeleteShop: ((id: string) => void) | null = null;
   export let isWatchMode = false;
   export let ySongEvents: YMap<string> | null = null;
-  export let yItems: YMap<number> | null = null;
 
 
   $: annotationCount = notesEntries.length + shopEntries.length;
@@ -98,18 +96,18 @@
 
   const ootSongs = songChoices.filter(s => s.game === 'oot' && !CROSS_IN_OOT.has(s.id));
   const mmSongs  = songChoices.filter(s => s.game === 'mm'  && !CROSS_IN_MM.has(s.id));
-  const shSongs  = songChoices.filter(s => s.game !== 'oot' && s.game !== 'mm');
+
+  // Songs that share a name across both games (Epona, Song of Time, Song of Storms, Sun's Song)
+  // → show only the home-game version to avoid duplicates in the "opposite" optgroup
+  const ootNames = new Set(ootSongs.map(s => s.name));
+  const mmNames  = new Set(mmSongs.map(s => s.name));
+  const mmOnlySongs  = mmSongs.filter(s => !ootNames.has(s.name)); // MM-exclusive for OoT select
+  const ootOnlySongs = ootSongs.filter(s => !mmNames.has(s.name)); // OoT-exclusive for MM select
 
   let songEventMap: Record<string, string> = {};
   $: if (ySongEvents) {
     ySongEvents.observe(() => { songEventMap = Object.fromEntries(ySongEvents!.entries()); });
     songEventMap = Object.fromEntries(ySongEvents.entries());
-  }
-
-  let itemMap: Record<string, number> = {};
-  $: if (yItems) {
-    yItems.observe(() => { itemMap = Object.fromEntries(yItems!.entries()); });
-    itemMap = Object.fromEntries(yItems.entries());
   }
 
   function setSongEvent(key: string, songId: string) {
@@ -125,17 +123,6 @@
     else ySongEvents.set(doneKey, 'yes');
   }
 
-  function isSongObtained(songId: string): boolean {
-    if ((itemMap[songId] ?? 0) > 0) return true;
-    // Check via shared ↔ game-specific counterparts
-    const shId = ootToShared[songId] ?? mmToShared[songId] ?? (songId.startsWith('sh_') ? songId : null);
-    if (shId) {
-      if ((itemMap[shId] ?? 0) > 0) return true;
-      for (const id of (sharedToOot[shId] ?? [])) if ((itemMap[id] ?? 0) > 0) return true;
-      for (const id of (sharedToMm[shId] ?? []))  if ((itemMap[id] ?? 0) > 0) return true;
-    }
-    return false;
-  }
 
   function selectValue(e: Event): string {
     return (e.target as HTMLSelectElement | null)?.value ?? '';
@@ -228,7 +215,7 @@
       Notes {#if annotationCount > 0}<span class="tab-count">{annotationCount}</span>{/if}
     </button>
     <button class="tab-btn" class:active={view === 'songs'} on:click={() => view = 'songs'}>
-      Songs
+      Song Events
     </button>
   </div>
 
@@ -389,12 +376,12 @@
                 class="song-select"
                 class:vanilla-select={!ootSel}
               >
-                {#each ootSongs as song}<option value={song.id}>{song.name}</option>{/each}
-                {#if shSongs.length > 0}
-                  <optgroup label="── Shared ──">
-                    {#each shSongs as song}<option value={song.id}>{song.name}</option>{/each}
-                  </optgroup>
-                {/if}
+                <optgroup label="Ocarina of Time">
+                  {#each ootSongs as song}<option value={song.id}>{song.name}</option>{/each}
+                </optgroup>
+                <optgroup label="Majora's Mask">
+                  {#each mmOnlySongs as song}<option value={song.id}>{song.name}</option>{/each}
+                </optgroup>
               </select>
             </td>
             <td class="done-cell">
@@ -417,12 +404,12 @@
                   class="song-select"
                   class:vanilla-select={!mmSel}
                 >
-                  {#each mmSongs as song}<option value={song.id}>{song.name}</option>{/each}
-                  {#if shSongs.length > 0}
-                    <optgroup label="── Shared ──">
-                      {#each shSongs as song}<option value={song.id}>{song.name}</option>{/each}
-                    </optgroup>
-                  {/if}
+                  <optgroup label="Ocarina of Time">
+                    {#each ootOnlySongs as song}<option value={song.id}>{song.name}</option>{/each}
+                  </optgroup>
+                  <optgroup label="Majora's Mask">
+                    {#each mmSongs as song}<option value={song.id}>{song.name}</option>{/each}
+                  </optgroup>
                 </select>
               {:else}
                 <span class="na-text">N/A</span>
