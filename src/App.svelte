@@ -1992,6 +1992,8 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     'ICE_CAVERN',
     'GANON_TOWER',
     'INSIDE_GANON_CASTLE',
+    'GERUDO_TRAINING_GROUND',
+    'GERUDO_FORTRESS',
   ];
 
   const mmDungeons = [
