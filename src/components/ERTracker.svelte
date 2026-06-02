@@ -181,7 +181,6 @@
   );
 
   $: filteredEntrances = allEntrances.filter(e => {
-    if (highlightedEntranceId && e.id === highlightedEntranceId) return true;
     if (!activeErTypes.has(e.erType)) return false;
     if (!entranceMatchesSubTypes(e.id, e.erType)) return false;
     if (gameFilter !== 'both' && e.game !== gameFilter) return false;

@@ -21,6 +21,7 @@ import type { EntranceInfo } from '../data/entranceData';
   export let scene: string = '';
   export let sceneData: SceneData;
   export let allScenes: string[] = [scene];
+  export let navScenes: string[] = [];   // checklist-ordered scenes for ‹ › navigation
   export let allScenesData: MapData | null = null;
   export let checkStates: Map<string, T.CheckState> = new Map();
   export let filteredCheckNames: Set<string> = new Set();
@@ -760,9 +761,9 @@ import type { EntranceInfo } from '../data/entranceData';
   <div class="modal-content" on:click|stopPropagation={() => typeDropdownOpen = false}>
     <button class="close-button" on:click={closeModal}>✕</button>
     <div class="map-title-row">
-      <button class="nav-btn" on:click={() => { const i = allScenes.indexOf(scene); changeMainScene(allScenes[(i - 1 + allScenes.length) % allScenes.length]); }} title="Previous zone" disabled={allScenes.length <= 1}>‹</button>
+      <button class="nav-btn" on:click={() => { const nav = navScenes.length > 1 ? navScenes : allScenes; const i = nav.indexOf(scene); changeMainScene(nav[(i - 1 + nav.length) % nav.length]); }} title="Previous zone" disabled={(navScenes.length > 1 ? navScenes : allScenes).length <= 1}>‹</button>
       <h2>{sceneData.displayName || rendersceneToDisplayName(scene)}</h2>
-      <button class="nav-btn" on:click={() => { const i = allScenes.indexOf(scene); changeMainScene(allScenes[(i + 1) % allScenes.length]); }} title="Next zone" disabled={allScenes.length <= 1}>›</button>
+      <button class="nav-btn" on:click={() => { const nav = navScenes.length > 1 ? navScenes : allScenes; const i = nav.indexOf(scene); changeMainScene(nav[(i + 1) % nav.length]); }} title="Next zone" disabled={(navScenes.length > 1 ? navScenes : allScenes).length <= 1}>›</button>
     </div>
 
     {#if allScenes.length > 1}

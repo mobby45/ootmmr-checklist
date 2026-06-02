@@ -1784,6 +1784,19 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
   let currentGroupName = '';
   let matchedScenes: string[] = [];
   let filteredCheckNames: Set<string> = new Set();
+
+  // Ordered list of primary scenes from the checklist (for ‹ › navigation)
+  $: checklistNavScenes = (sortedChecks ?? []).flatMap(g => {
+    const normalize = (s: string) => s.toLowerCase().replace(/[''']/g, '').replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
+    const overrides = (groupToSceneMapping as Record<string, string[]>)[g.groupName];
+    if (overrides?.length) return overrides.filter(s => mapData?.[s]).slice(0, 1);
+    const np = normalize(g.groupName);
+    const scene = Object.keys(mapData ?? {}).find(s => {
+      const ns = normalize(s);
+      return ns === np || ns.replace(/^(oot|mm) /, '') === np;
+    });
+    return scene ? [scene] : [];
+  });
   let showAgeFilter = true;
   let ageFilter: 'child' | 'adult' = 'child';
   let scrollPosition = 0;
@@ -4429,7 +4442,12 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
             <button class="pure-button" type="button" on:click={toggleAllGroups}>
               {shouldShowCollapse ? 'Collapse All' : 'Expand All'}
             </button>
-            <input type="text" style="width: 16em" placeholder="Filter… (Ctrl+F)" bind:value={filter} bind:this={filterInputEl} />
+            <div class="filter-wrap">
+              <input type="text" style="width: 16em" placeholder="Filter… (Ctrl+F)" bind:value={filter} bind:this={filterInputEl} />
+              {#if filter}
+                <button class="filter-clear-btn" on:click={() => { filter = ''; filterInputEl?.focus(); }} title="Clear (Esc)">✕</button>
+              {/if}
+            </div>
             <button
               class="pure-button"
               type="button"
@@ -4705,6 +4723,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
         sceneData={currentSceneData}
         groupName={currentGroupName}
         allScenes={matchedScenes}
+        navScenes={checklistNavScenes}
         allScenesData={mapData}
         checkStates={checkStatesMap}
         {filteredCheckNames}
@@ -5049,6 +5068,21 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
   }
   .game-tab-btn:hover { opacity: 0.8; }
   .game-tab-btn.active { opacity: 1; background: var(--color-border); font-weight: bold; }
+
+  .filter-wrap { position: relative; display: inline-flex; align-items: center; }
+  .filter-clear-btn {
+    position: absolute;
+    right: 3px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--color-text);
+    opacity: 0.5;
+    font-size: 0.85em;
+    padding: 0 3px;
+    line-height: 1;
+  }
+  .filter-clear-btn:hover { opacity: 1; }
 
   .split-layout {
     display: flex;

@@ -34,15 +34,14 @@
     return groups;
   })();
 
-  type HintType = 'woth' | 'barren' | 'location' | 'item' | 'junk' | 'other';
+  type HintType = 'woth' | 'barren' | 'item' | 'junk' | 'other';
 
   const hintTypes: { id: HintType; label: string; color: string }[] = [
-    { id: 'woth',     label: 'WotH',     color: '#3a7bd5' },
-    { id: 'barren',   label: 'Barren',   color: '#cc3333' },
-    { id: 'location', label: 'Location', color: '#2ecc71' },
-    { id: 'item',     label: 'Item',     color: '#e67e22' },
-    { id: 'junk',     label: 'Junk',     color: '#555' },
-    { id: 'other',    label: 'Other',    color: '#9b59b6' },
+    { id: 'woth',   label: 'WotH',   color: '#3a7bd5' },
+    { id: 'barren', label: 'Barren', color: '#cc3333' },
+    { id: 'item',   label: 'Item',   color: '#e67e22' },
+    { id: 'junk',   label: 'Junk',   color: '#555' },
+    { id: 'other',  label: 'Other',  color: '#9b59b6' },
   ];
 
   // Song Events Shuffle data
@@ -169,6 +168,15 @@
     if (idx !== -1) yHints.delete(idx, 1);
   }
 
+  function toggleHintDone(id: string) {
+    if (isWatchMode) return;
+    const idx = hints.findIndex(h => h.id === id);
+    if (idx === -1) return;
+    const h = hints[idx];
+    yHints.delete(idx, 1);
+    yHints.insert(idx, [{ ...h, done: !h.done }]);
+  }
+
   function clearAll() {
     if (isWatchMode) return;
     if (!confirm('Clear all hints?')) return;
@@ -272,7 +280,10 @@
     {:else}
       <ul class="hint-list">
         {#each filtered as hint (hint.id)}
-          <li class="hint-item">
+          <li class="hint-item" class:hint-done={hint.done}>
+            <button class="hint-done-btn" class:is-done={hint.done} on:click={() => toggleHintDone(hint.id)} title="{hint.done ? 'Mark undone' : 'Mark done'}" disabled={isWatchMode}>
+              {hint.done ? '✓' : '○'}
+            </button>
             <span class="hint-badge" style="background: {typeColor(hint.type)}">{typeLabel(hint.type)}</span>
             <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
             <span class="hint-text" on:click={() => copyHint(hint.id, hint.type, hint.text)} title="Click to copy" style="cursor:copy">
@@ -541,7 +552,24 @@
     border: 1px solid var(--color-border);
     border-radius: 4px;
     font-size: 0.85em;
+    transition: opacity 0.15s;
   }
+  .hint-done { opacity: 0.45; }
+  .hint-done .hint-text { text-decoration: line-through; }
+
+  .hint-done-btn {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1em;
+    padding: 0 2px;
+    opacity: 0.4;
+    color: var(--color-text);
+    line-height: 1;
+  }
+  .hint-done-btn:hover { opacity: 0.9; }
+  .hint-done-btn.is-done { opacity: 1; color: #2ecc71; }
 
   .hint-badge {
     flex-shrink: 0;
