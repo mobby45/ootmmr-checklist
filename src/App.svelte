@@ -4624,6 +4624,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
                         spiderHouse={!!check.scene?.startsWith('MM_SPIDER_HOUSE')}
                         checkName={check.name}
                         zone={group.groupName}
+                        age={check.age}
                         {filter}
                         on:editNote={() => { if (!isWatchMode) handleEditNote(check.name); }}
                         on:toggle={e => {

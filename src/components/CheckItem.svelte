@@ -25,6 +25,7 @@ export let spiderHouse: boolean = false;
 export let checkName: string = '';
 export let zone: string = '';
 export let filter: string = '';
+export let age: 'child' | 'adult' | 'both' | undefined = undefined;
 
 $: isShopOrScrub = shopTypes.includes(type) || isShop;
 const shopTypes = [T.CheckType.shop, T.CheckType.deku_scrub];
@@ -146,7 +147,7 @@ $: tooltip = [
   on:click|preventDefault={e => dispatch('toggle', { range: e.shiftKey ?? false })}
   on:contextmenu|preventDefault={handleContextMenu}
 >
-  <span class:crossed-out={checked}>{@html highlightText(name, filter)}</span>
+  <span class:crossed-out={checked}>{@html highlightText(name, filter)}</span>{#if age === 'child'}<span class="age-badge age-child" title="Child only">👶</span>{:else if age === 'adult'}<span class="age-badge age-adult" title="Adult only">🗡️</span>{/if}
   {#if isShopOrScrub}
     {#if shopItem}
       <span class="shop-info shop-item">{shopItem}</span>
@@ -264,6 +265,7 @@ $: tooltip = [
     text-decoration-line: line-through;
     box-shadow: none;
   }
+  .age-badge { font-size: 0.75em; margin-left: 3px; opacity: 0.7; }
   .shop-info {
     font-size: 0.85em;
     opacity: 0.8;

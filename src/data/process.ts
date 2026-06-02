@@ -40,6 +40,8 @@ function parseLocalPool(filePath: string, gamePrefix: string, scenePrefix: strin
         const location = LOCATION_CORRECTIONS[raw] ?? raw;
         if (seen.has(location)) continue;
         seen.add(location);
+        const ctx = (record.context ?? '').toLowerCase();
+        const age: T.RawPoolEntry['age'] = ctx === 'child' ? 'child' : ctx === 'adult' ? 'adult' : 'both';
         entries.push({
             location,
             type: mappedType,
@@ -47,6 +49,7 @@ function parseLocalPool(filePath: string, gamePrefix: string, scenePrefix: strin
             scene: record.scene.replace(new RegExp(`^${scenePrefix}_`), ''),
             id: record.id ?? '',
             item: '',
+            age,
         });
     }
     return entries;
@@ -115,7 +118,7 @@ function createCheckEntry(
 
     shortName = shortName.trim();
 
-    return { shortName, name: poolEntry.location, type: T.CheckType[poolEntry.type], game, canBeMq, isMq, canHaveVariant, variantNumber, tags, scene: poolEntry.scene, item: poolEntry.item, id: poolEntry.id };
+    return { shortName, name: poolEntry.location, type: T.CheckType[poolEntry.type], game, canBeMq, isMq, canHaveVariant, variantNumber, tags, scene: poolEntry.scene, item: poolEntry.item, id: poolEntry.id, age: poolEntry.age };
 }
 
 for (let game in T.Game) {
