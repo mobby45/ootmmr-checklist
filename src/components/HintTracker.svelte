@@ -14,7 +14,7 @@
   export let isWatchMode = false;
   export let ySongEvents: YMap<string> | null = null;
   export let yItems: YMap<number> | null = null;
-  export let songEventShuffle = false;
+
 
   $: annotationCount = notesEntries.length + shopEntries.length;
 
@@ -47,19 +47,42 @@
     { id: 'other',    label: 'Other',    color: '#9b59b6' },
   ];
 
-  // Song Events Shuffle data
-  const SONG_EVENT_SLOTS = [
-    { slot: 0,  oot: null,                      mm: 'Open Woodfall Temple' },
-    { slot: 1,  oot: 'Drain Well',              mm: 'Open Snowhead' },
-    { slot: 2,  oot: 'Open Royal Tomb',         mm: 'Wake Turtle' },
-    { slot: 4,  oot: 'Darunia (child)',         mm: 'Goron Graveyard Mask' },
-    { slot: 5,  oot: "Farore's Wind",           mm: 'Gibdo Mask' },
-    { slot: 6,  oot: "Din's Fire",              mm: 'Kamaro Mask' },
-    { slot: 7,  oot: "Nayru's Love",            mm: 'Zora Mask' },
-    { slot: 8,  oot: 'Magic Upgrade (DMT)',     mm: 'Wake Keeta' },
-    { slot: 9,  oot: 'Double Magic (DMC)',      mm: null },
-    { slot: 10, oot: 'Defense Upgrade',         mm: 'Goron Baby' },
-    { slot: 11, oot: null,                      mm: 'Lift Ikana Curse' },
+  // Song Events Shuffle data — separate OoT and MM event lists
+  const OOT_SONG_EVENTS: ({ label: string } | null)[] = [
+    { label: 'ToT Door of Time' },
+    { label: 'HC Great Fairy' },
+    { label: 'Royal Family\'s Tomb' },
+    { label: 'GC Darunia\'s Room' },
+    { label: 'DMTrail Great Fairy' },
+    { label: 'ZR Waterfall' },
+    { label: 'ZF Great Fairy' },
+    { label: 'Kakariko Windmill' },
+    { label: 'BotW Water Level' },
+    { label: 'DMCrater Great Fairy' },
+    null,
+    { label: 'Desert Great Fairy' },
+    { label: 'Spirit Temple Statue' },
+    { label: 'Spirit Temple Lower' },
+    { label: 'Spirit Temple Upper' },
+    { label: 'Shadow Temple Boat' },
+    { label: 'OGC Great Fairy' },
+    { label: 'Ganon Light Trial' },
+  ];
+
+  const MM_SONG_EVENTS: ({ label: string } | null)[] = [
+    { label: 'CTR Moon Access' },
+    { label: 'Heal Kamaro' },
+    { label: 'Woodfall Entrance' },
+    { label: 'Wake SSH Deku Scrub' },
+    { label: 'Shrine Goron Baby' },
+    { label: 'Heal Darmani' },
+    { label: 'Snowhead Entrance' },
+    { label: 'Heal Mikau' },
+    { label: 'Great Bay Entrance' },
+    { label: 'Wake Captain Keeta' },
+    { label: 'Lift Ikana\'s Curse' },
+    { label: 'Heal Pamala\'s Father' },
+    null, null, null, null, null, null,
   ];
 
   const songChoices = allTrackerItems.filter(i => i.category === 'songs' && i.maxLevel >= 1);
@@ -76,10 +99,10 @@
     itemMap = Object.fromEntries(yItems.entries());
   }
 
-  function setSongEvent(slot: number, songId: string) {
+  function setSongEvent(key: string, songId: string) {
     if (isWatchMode || !ySongEvents) return;
-    if (songId) ySongEvents.set(String(slot), songId);
-    else ySongEvents.delete(String(slot));
+    if (songId) ySongEvents.set(key, songId);
+    else ySongEvents.delete(key);
   }
 
   function isSongObtained(songId: string): boolean {
@@ -184,11 +207,9 @@
     <button class="tab-btn" class:active={view === 'notes'} on:click={() => view = 'notes'}>
       Notes {#if annotationCount > 0}<span class="tab-count">{annotationCount}</span>{/if}
     </button>
-    {#if songEventShuffle}
-      <button class="tab-btn" class:active={view === 'songs'} on:click={() => view = 'songs'}>
-        Songs
-      </button>
-    {/if}
+    <button class="tab-btn" class:active={view === 'songs'} on:click={() => view = 'songs'}>
+      Songs
+    </button>
   </div>
 
   {#if view === 'hints'}
@@ -314,49 +335,105 @@
       {/each}
     {/if}
   {:else if view === 'songs'}
-    <!-- Song Events Shuffle -->
-    <table class="song-events-table">
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>OoT effect</th>
-          <th>MM effect</th>
-          <th>Required song</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        {#each SONG_EVENT_SLOTS as evt}
-          {@const selectedId = songEventMap[String(evt.slot)] ?? ''}
-          {@const obtained = selectedId ? isSongObtained(selectedId) : null}
-          <tr>
-            <td class="slot-num">{evt.slot}</td>
-            <td class="effect-cell">{evt.oot ?? '—'}</td>
-            <td class="effect-cell">{evt.mm ?? '—'}</td>
-            <td>
-              <select
-                value={selectedId}
-                on:change={e => setSongEvent(evt.slot, selectValue(e))}
-                disabled={isWatchMode}
-                class="song-select"
-              >
-                <option value="">—</option>
-                {#each songChoices as song}
-                  <option value={song.id}>{song.name}</option>
-                {/each}
-              </select>
-            </td>
-            <td class="status-cell">
-              {#if obtained === true}
-                <span class="status-ok">✓</span>
-              {:else if obtained === false}
-                <span class="status-no">✗</span>
-              {/if}
-            </td>
-          </tr>
-        {/each}
-      </tbody>
-    </table>
+    <!-- Song Events Shuffle — side-by-side OoT / MM -->
+    <div class="se-tracker">
+      <div class="se-col se-col-oot">
+        <div class="se-title">Ocarina of Time</div>
+        <div class="se-header-row">
+          <span class="se-h se-h-event">Song Event</span>
+          <span class="se-h se-h-song">Required Song</span>
+          <span class="se-h se-h-done">Done?</span>
+        </div>
+        <div class="se-rows">
+          {#each OOT_SONG_EVENTS as evt, i}
+            {#if evt === null}
+              <div class="se-row se-row-na">
+                <span class="se-cell se-cell-event se-na">N/A</span>
+                <span class="se-cell se-cell-song se-na">N/A</span>
+                <span class="se-cell se-cell-done se-na">N/A</span>
+              </div>
+            {:else}
+              {@const sk = 'oot_' + i}
+              {@const selectedId = songEventMap[sk] ?? ''}
+              {@const obtained = selectedId ? isSongObtained(selectedId) : false}
+              <div class="se-row">
+                <span class="se-cell se-cell-event">{evt.label}</span>
+                <span class="se-cell se-cell-song">
+                  <span class="se-song-pill">
+                    <select
+                      value={selectedId}
+                      on:change={e => setSongEvent(sk, selectValue(e))}
+                      disabled={isWatchMode}
+                      class="se-select"
+                    >
+                      <option value="">—</option>
+                      {#each songChoices as song}
+                        <option value={song.id}>{song.name}</option>
+                      {/each}
+                    </select>
+                  </span>
+                </span>
+                <span class="se-cell se-cell-done">
+                  {#if obtained}
+                    <span class="se-ok">Yes</span>
+                  {:else}
+                    <span class="se-no">No</span>
+                  {/if}
+                </span>
+              </div>
+            {/if}
+          {/each}
+        </div>
+      </div>
+      <div class="se-col se-col-mm">
+        <div class="se-title">Majora's Mask</div>
+        <div class="se-header-row">
+          <span class="se-h se-h-event">Song Event</span>
+          <span class="se-h se-h-song">Required Song</span>
+          <span class="se-h se-h-done">Done?</span>
+        </div>
+        <div class="se-rows">
+          {#each MM_SONG_EVENTS as evt, i}
+            {#if evt === null}
+              <div class="se-row se-row-na">
+                <span class="se-cell se-cell-event se-na">N/A</span>
+                <span class="se-cell se-cell-song se-na">N/A</span>
+                <span class="se-cell se-cell-done se-na">N/A</span>
+              </div>
+            {:else}
+              {@const sk = 'mm_' + i}
+              {@const selectedId = songEventMap[sk] ?? ''}
+              {@const obtained = selectedId ? isSongObtained(selectedId) : false}
+              <div class="se-row">
+                <span class="se-cell se-cell-event">{evt.label}</span>
+                <span class="se-cell se-cell-song">
+                  <span class="se-song-pill">
+                    <select
+                      value={selectedId}
+                      on:change={e => setSongEvent(sk, selectValue(e))}
+                      disabled={isWatchMode}
+                      class="se-select"
+                    >
+                      <option value="">—</option>
+                      {#each songChoices as song}
+                        <option value={song.id}>{song.name}</option>
+                      {/each}
+                    </select>
+                  </span>
+                </span>
+                <span class="se-cell se-cell-done">
+                  {#if obtained}
+                    <span class="se-ok">Yes</span>
+                  {:else}
+                    <span class="se-no">No</span>
+                  {/if}
+                </span>
+              </div>
+            {/if}
+          {/each}
+        </div>
+      </div>
+    </div>
   {/if}
 </div>
 
@@ -608,22 +685,97 @@
   }
   .del-btn:hover { opacity: 1; }
 
-  .song-events-table { width: 100%; border-collapse: collapse; font-size: 0.82em; }
-  .song-events-table th, .song-events-table td { padding: 3px 6px; border-bottom: 1px solid var(--color-border); text-align: left; }
-  .song-events-table th { opacity: 0.6; font-weight: normal; }
-  .slot-num { width: 1.5em; text-align: center; opacity: 0.5; }
-  .effect-cell { color: var(--color-text-muted, #aaa); font-size: 0.9em; }
-  .song-select {
-    background: var(--color-bg-input, #1a1a1a);
-    color: var(--color-text);
+  .se-tracker {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
     border: 1px solid var(--color-border);
-    border-radius: 3px;
-    padding: 1px 4px;
-    font-size: 0.85em;
-    max-width: 14em;
+    border-radius: 6px;
+    overflow: hidden;
+    font-size: 0.8em;
   }
-  .status-cell { width: 1.5em; text-align: center; }
-  .status-ok { color: #2ecc71; font-weight: bold; }
-  .status-no { color: #e74c3c; font-weight: bold; }
+  .se-col { display: flex; flex-direction: column; min-width: 0; }
+  .se-col-oot { border-right: 2px solid var(--color-border); }
+  .se-title {
+    text-align: center;
+    font-weight: bold;
+    font-size: 1em;
+    padding: 0.4em 0.5em;
+    background: var(--color-primary);
+    color: var(--color-text);
+  }
+  .se-header-row {
+    display: grid;
+    grid-template-columns: 1fr 1.2fr 0.6fr;
+    background: var(--color-border);
+    color: var(--color-text);
+    font-weight: bold;
+    text-align: center;
+    border-bottom: 1px solid var(--color-border);
+  }
+  .se-h { padding: 0.3em 0.3em; }
+  .se-rows { display: flex; flex-direction: column; }
+  .se-row {
+    display: grid;
+    grid-template-columns: 1fr 1.2fr 0.6fr;
+    border-bottom: 1px solid var(--color-border);
+    align-items: center;
+  }
+  .se-row:last-child { border-bottom: none; }
+  .se-cell { padding: 0.25em 0.4em; text-align: center; min-width: 0; }
+  .se-cell-event {
+    background: var(--color-unchecked);
+    color: var(--color-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .se-cell-song {
+    background: var(--color-bg);
+    color: var(--color-text);
+    padding: 0.25em 0.4em;
+  }
+  .se-song-pill {
+    display: inline-block;
+    background: var(--color-checked);
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    padding: 0.1em 0.3em;
+    width: 90%;
+    max-width: 120px;
+  }
+  .se-select {
+    width: 100%;
+    border: none;
+    background: transparent;
+    color: var(--color-text);
+    font-size: 0.9em;
+    text-align: center;
+    cursor: pointer;
+    outline: none;
+  }
+  .se-cell-done { text-align: center; }
+  .se-ok {
+    display: inline-block;
+    padding: 1px 8px;
+    border-radius: 4px;
+    background: rgba(50, 180, 80, 0.25);
+    color: #5cd97a;
+    font-weight: bold;
+    font-size: 0.85em;
+    border: 1px solid rgba(50, 180, 80, 0.4);
+  }
+  .se-no {
+    display: inline-block;
+    padding: 1px 8px;
+    border-radius: 4px;
+    background: rgba(200, 50, 50, 0.25);
+    color: #e06060;
+    font-weight: bold;
+    font-size: 0.85em;
+    border: 1px solid rgba(200, 50, 50, 0.4);
+  }
+  .se-na { color: var(--color-text); opacity: 0.35; font-size: 0.85em; }
+  .se-row-na { opacity: 0.5; }
 
 </style>
