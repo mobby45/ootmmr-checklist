@@ -118,7 +118,8 @@ function createCheckEntry(
 
     shortName = shortName.trim();
 
-    return { shortName, name: poolEntry.location, type: T.CheckType[poolEntry.type], game, canBeMq, isMq, canHaveVariant, variantNumber, tags, scene: poolEntry.scene, item: poolEntry.item, id: poolEntry.id, age: poolEntry.age };
+    const checkType = poolEntry.type === 'none' ? T.CheckType.chest : T.CheckType[poolEntry.type as keyof typeof T.CheckType];
+    return { shortName, name: poolEntry.location, type: checkType, game, canBeMq, isMq, canHaveVariant, variantNumber, tags, scene: poolEntry.scene, item: poolEntry.item, id: poolEntry.id, age: poolEntry.age };
 }
 
 for (let game in T.Game) {
@@ -153,9 +154,16 @@ for (let game in T.Game) {
             )
         );
 
-        // Apply exclusions to both sceneEntries and otherEntries
-        const poolEntries = [...sceneEntries, ...otherEntries]
-            .filter(x => !excluded.has(x.location));
+        // Deduplicate: prefer entry with a real type over 'none' when same location appears multiple times
+        const _seenByLoc = new Map<string, T.RawPoolEntry>();
+        for (const x of [...sceneEntries, ...otherEntries]) {
+            if (excluded.has(x.location)) continue;
+            const existing = _seenByLoc.get(x.location);
+            if (!existing || existing.type === 'none') {
+                _seenByLoc.set(x.location, x);
+            }
+        }
+        const poolEntries = [..._seenByLoc.values()];
 
         poolEntries.sort((a, b) => {
             const aIsTingle = a.location.startsWith('Tingle Map');

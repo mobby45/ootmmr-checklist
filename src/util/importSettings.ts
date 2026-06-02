@@ -196,7 +196,6 @@ const KEY_MAP: Record<string, string> = {
   sharedSongStorms:             'sharedSongStorms',
   sharedSongTime:               'sharedSongTime',
   sharedSongSun:                'sharedSongSun',
-  sharedSongElegy:              'sharedSongElegy',
 };
 
 // camelCase value → snake_case, plus special-case overrides

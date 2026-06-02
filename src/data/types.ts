@@ -34,7 +34,7 @@ export enum CheckType {
 
 export interface RawPoolEntry {
     location: string;
-    type: keyof typeof CheckType;
+    type: keyof typeof CheckType | 'none';
     hint: string;
     scene: string;
     id: string;
