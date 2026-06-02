@@ -1072,6 +1072,7 @@ import type { EntranceInfo } from '../data/entranceData';
     color: var(--color-text);
     padding: 2em;
     border-radius: 8px;
+    width: fit-content;
     max-width: 90vw;
     max-height: 90vh;
     overflow: hidden;
