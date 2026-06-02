@@ -757,7 +757,9 @@ import type { EntranceInfo } from '../data/entranceData';
 <!-- svelte-ignore a11y-click-events-have-key-events -->
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <div class="modal-overlay" on:click={closeModal}>
-  <div class="modal-content" on:click|stopPropagation={() => typeDropdownOpen = false}>
+  <div class="modal-content"
+    style={imageWidth > 1 ? `width: min(90vw, calc((80vh - 7em) * ${(imageWidth / imageHeight).toFixed(4)} + 4em))` : ''}
+    on:click|stopPropagation={() => typeDropdownOpen = false}>
     <button class="close-button" on:click={closeModal}>✕</button>
     <div class="map-title-row">
       <button class="nav-btn" on:click={() => { const nav = navScenes.length > 1 ? navScenes : allScenes; const i = nav.indexOf(scene); changeMainScene(nav[(i - 1 + nav.length) % nav.length]); }} title="Previous zone" disabled={(navScenes.length > 1 ? navScenes : allScenes).length <= 1}>‹</button>
@@ -1071,7 +1073,6 @@ import type { EntranceInfo } from '../data/entranceData';
     color: var(--color-text);
     padding: 2em;
     border-radius: 8px;
-    width: fit-content;
     max-width: 90vw;
     max-height: 90vh;
     overflow: hidden;
