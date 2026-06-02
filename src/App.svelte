@@ -2549,18 +2549,22 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     ? [...filteredChecks].sort((a, b) => (sortMode === 'alpha' ? a.groupName.localeCompare(b.groupName) : 0))
     : filteredChecks;
 
-  let splitShowOotDungeons = true;
-  let splitShowMmDungeons  = true;
+  let splitModeOot: 'ow' | 'dj' | 'both' = 'both';
+  let splitModeMm:  'ow' | 'dj' | 'both' = 'both';
 
   function isDungeonGroup(g: T.CheckGroup): boolean {
     return !!(g.checks[0]?.scene && allDungeons.includes(g.checks[0].scene));
   }
+  function splitFilter(isDungeon: boolean, mode: 'ow' | 'dj' | 'both'): boolean {
+    if (mode === 'both') return true;
+    return mode === 'dj' ? isDungeon : !isDungeon;
+  }
 
   $: ootSplitChecks = (sortedChecks ?? []).filter(g =>
-    g.checks.some(c => c.game === T.Game.oot) && (isDungeonGroup(g) ? splitShowOotDungeons : true)
+    g.checks.some(c => c.game === T.Game.oot) && splitFilter(isDungeonGroup(g), splitModeOot)
   );
   $: mmSplitChecks = (sortedChecks ?? []).filter(g =>
-    g.checks.some(c => c.game === T.Game.mm) && (isDungeonGroup(g) ? splitShowMmDungeons : true)
+    g.checks.some(c => c.game === T.Game.mm) && splitFilter(isDungeonGroup(g), splitModeMm)
   );
 
   $: visibleGroupCount = sortedChecks?.length ?? 0;
@@ -4544,16 +4548,18 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
         {#if gameTab === 'both'}
           <!-- ── Split view: OoT left / MM right ── -->
           {#each [
-            { label: 'Ocarina of Time', groups: ootSplitChecks, count: ootCheckCount, cls: 'split-col-oot', showDung: splitShowOotDungeons, toggleDung: () => { splitShowOotDungeons = !splitShowOotDungeons; } },
-            { label: "Majora's Mask",   groups: mmSplitChecks,  count: mmCheckCount,  cls: 'split-col-mm',  showDung: splitShowMmDungeons,  toggleDung: () => { splitShowMmDungeons  = !splitShowMmDungeons;  } },
+            { label: 'Ocarina of Time', groups: ootSplitChecks, count: ootCheckCount, cls: 'split-col-oot', mode: splitModeOot, setMode: (m) => { splitModeOot = m; } },
+            { label: "Majora's Mask",   groups: mmSplitChecks,  count: mmCheckCount,  cls: 'split-col-mm',  mode: splitModeMm,  setMode: (m) => { splitModeMm  = m; } },
           ] as col}
             <div class="split-col {col.cls}">
               <div class="split-col-header">
                 <span class="split-col-title">{col.label}</span>
                 <div class="split-col-actions">
-                  <button class="split-dung-btn" class:active={col.showDung} on:click={col.toggleDung} title="{col.showDung ? 'Hide' : 'Show'} dungeons">
-                    🏰
-                  </button>
+                  <div class="split-seg">
+                    {#each [['ow','OW'],['dj','Dj'],['both','Both']] as [val, lbl]}
+                      <button class="split-seg-btn" class:active={col.mode === val} on:click={() => col.setMode(val)}>{lbl}</button>
+                    {/each}
+                  </div>
                   <span class="split-col-count">{col.count.checked}/{col.count.total}</span>
                 </div>
               </div>
@@ -5090,19 +5096,27 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     padding: 1px 6px;
     border-radius: 10px;
   }
-  .split-dung-btn {
-    background: none;
+  .split-seg {
+    display: flex;
     border: 1px solid rgba(255,255,255,0.15);
     border-radius: 4px;
-    cursor: pointer;
-    padding: 1px 5px;
-    font-size: 0.85em;
-    opacity: 0.4;
-    transition: opacity 0.15s, border-color 0.15s;
-    line-height: 1.4;
+    overflow: hidden;
   }
-  .split-dung-btn:hover { opacity: 0.8; }
-  .split-dung-btn.active { opacity: 1; border-color: rgba(255,255,255,0.4); }
+  .split-seg-btn {
+    background: none;
+    border: none;
+    border-right: 1px solid rgba(255,255,255,0.1);
+    color: var(--color-text);
+    cursor: pointer;
+    padding: 1px 6px;
+    font-size: 0.78em;
+    opacity: 0.4;
+    transition: opacity 0.12s, background 0.12s;
+    line-height: 1.5;
+  }
+  .split-seg-btn:last-child { border-right: none; }
+  .split-seg-btn:hover { opacity: 0.75; }
+  .split-seg-btn.active { opacity: 1; background: rgba(255,255,255,0.12); font-weight: 600; }
 
   main.modal-active {
     overflow: hidden;
