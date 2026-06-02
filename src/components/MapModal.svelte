@@ -1073,6 +1073,7 @@ import type { EntranceInfo } from '../data/entranceData';
     color: var(--color-text);
     padding: 2em;
     border-radius: 8px;
+    min-width: 400px;
     max-width: 90vw;
     max-height: 90vh;
     overflow: hidden;
@@ -1172,20 +1173,24 @@ import type { EntranceInfo } from '../data/entranceData';
 
   .subscene-tabs {
     display: flex;
-    gap: 0.5em;
-    margin-bottom: 1em;
+    gap: 0.4em;
+    margin-bottom: 0.75em;
     overflow-x: auto;
     flex-wrap: nowrap;
+    padding-bottom: 2px;
   }
 
   .subscene-tab {
-    padding: 0.5em 1em;
+    padding: 0.3em 0.7em;
+    font-size: 0.85em;
+    white-space: nowrap;
     background: var(--color-bg);
     border: 2px solid var(--color-border);
     border-radius: 4px;
     cursor: pointer;
     color: var(--color-text);
     transition: all 0.2s;
+    flex-shrink: 0;
   }
 
   .subscene-tab:hover { background: var(--color-primary); opacity: 0.8; }
