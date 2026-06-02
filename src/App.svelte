@@ -2562,6 +2562,25 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
 
   let splitModeOot: 'ow' | 'dj' | 'both' = 'both';
   let splitModeMm:  'ow' | 'dj' | 'both' = 'both';
+  let splitRatio = parseFloat(localStorage.getItem('splitRatio') ?? '50');
+
+  function startSplitResize(e: PointerEvent) {
+    const el = (e.currentTarget as HTMLElement).closest('.split-layout') as HTMLElement;
+    if (!el) return;
+    e.preventDefault();
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    function onMove(ev: PointerEvent) {
+      const rect = el.getBoundingClientRect();
+      splitRatio = Math.min(80, Math.max(20, ((ev.clientX - rect.left) / rect.width) * 100));
+    }
+    function onUp() {
+      localStorage.setItem('splitRatio', String(splitRatio));
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+    }
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  }
 
   function isDungeonGroup(g: T.CheckGroup): boolean {
     return !!(g.checks[0]?.scene && allDungeons.includes(g.checks[0].scene));
@@ -4566,8 +4585,9 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
           {#each [
             { label: 'Ocarina of Time', groups: ootSplitChecks, count: ootCheckCount, cls: 'split-col-oot', mode: splitModeOot, setMode: (m) => { splitModeOot = m; } },
             { label: "Majora's Mask",   groups: mmSplitChecks,  count: mmCheckCount,  cls: 'split-col-mm',  mode: splitModeMm,  setMode: (m) => { splitModeMm  = m; } },
-          ] as col}
-            <div class="split-col {col.cls}">
+          ] as col, i}
+            {#if i === 1}<div class="split-resizer" on:pointerdown={startSplitResize}></div>{/if}
+            <div class="split-col {col.cls}" style={i === 0 ? `flex: 0 0 ${splitRatio}%; max-width: ${splitRatio}%` : ''}>
               <div class="split-col-header">
                 <span class="split-col-title">{col.label}</span>
                 <div class="split-col-actions">
@@ -5089,6 +5109,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     display: flex;
     gap: 0;
     align-items: flex-start;
+    position: relative;
   }
   .split-col {
     flex: 1;
@@ -5096,7 +5117,21 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     overflow-y: auto;
     max-height: calc(100vh - 12em);
   }
-  .split-col-oot { border-right: 2px solid var(--color-border); }
+  .split-resizer {
+    flex: 0 0 5px;
+    width: 5px;
+    align-self: stretch;
+    cursor: col-resize;
+    background: var(--color-border);
+    opacity: 0.4;
+    transition: opacity 0.15s, background 0.15s;
+    z-index: 2;
+  }
+  .split-resizer:hover, .split-resizer:active {
+    opacity: 1;
+    background: var(--color-primary);
+  }
+  .split-col-oot { border-right: none; }
   .split-col-header {
     display: flex;
     justify-content: space-between;
