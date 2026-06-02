@@ -147,7 +147,7 @@ $: tooltip = [
   on:click|preventDefault={e => dispatch('toggle', { range: e.shiftKey ?? false })}
   on:contextmenu|preventDefault={handleContextMenu}
 >
-  <span class:crossed-out={checked}>{@html highlightText(name, filter)}</span>{#if age === 'child'}<span class="age-badge age-child" title="Child only">👶</span>{:else if age === 'adult'}<span class="age-badge age-adult" title="Adult only">🗡️</span>{/if}
+  <span class:crossed-out={checked}>{@html highlightText(name, filter)}</span>{#if age === 'child'}<span class="age-badge age-child" title="Child only">C</span>{:else if age === 'adult'}<span class="age-badge age-adult" title="Adult only">A</span>{/if}
   {#if isShopOrScrub}
     {#if shopItem}
       <span class="shop-info shop-item">{shopItem}</span>
@@ -265,7 +265,27 @@ $: tooltip = [
     text-decoration-line: line-through;
     box-shadow: none;
   }
-  .age-badge { font-size: 0.75em; margin-left: 3px; opacity: 0.7; }
+  .age-badge {
+    display: inline-block;
+    font-size: 0.65em;
+    font-weight: bold;
+    margin-left: 4px;
+    padding: 0 3px;
+    border-radius: 3px;
+    vertical-align: middle;
+    line-height: 1.4;
+    opacity: 0.85;
+  }
+  .age-child {
+    background: rgba(80, 160, 255, 0.25);
+    color: #5ab0ff;
+    border: 1px solid rgba(80, 160, 255, 0.4);
+  }
+  .age-adult {
+    background: rgba(220, 120, 40, 0.25);
+    color: #e0803a;
+    border: 1px solid rgba(220, 120, 40, 0.4);
+  }
   .shop-info {
     font-size: 0.85em;
     opacity: 0.8;
