@@ -4556,7 +4556,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
                 <span class="split-col-title">{col.label}</span>
                 <div class="split-col-actions">
                   <div class="split-seg">
-                    {#each [['ow','OW'],['dj','Dj'],['both','Both']] as [val, lbl]}
+                    {#each [['ow','Overworld'],['dj','Dungeon'],['both','Both']] as [val, lbl]}
                       <button class="split-seg-btn" class:active={col.mode === val} on:click={() => col.setMode(val)}>{lbl}</button>
                     {/each}
                   </div>
