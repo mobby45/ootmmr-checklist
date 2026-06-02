@@ -1087,6 +1087,8 @@ import type { EntranceInfo } from '../data/entranceData';
     flex: 1;
     min-height: 0;
     overflow: hidden;
+    justify-content: center;
+    align-items: center;
   }
 
   .map-scroll {
