@@ -1965,6 +1965,14 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
       matchedScenes = foundScenes;
       currentMapScene = foundScenes[0];
       currentSceneData = mapData[foundScenes[0]];
+      for (const scene of foundScenes) {
+        const sd = mapData[scene];
+        if (!sd) continue;
+        for (const sub of Object.values(sd.subscenes)) {
+          const img = new Image();
+          img.src = `/ootmmr-checklist/maps/${sub.image}`;
+        }
+      }
       showMapModal = true;
     } else {
       alert('Map not found for this area');
