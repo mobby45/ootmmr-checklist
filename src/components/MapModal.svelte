@@ -409,7 +409,6 @@ import type { EntranceInfo } from '../data/entranceData';
 
   function handleEntranceContextMenu(e: MouseEvent, markerUid: string, entranceId: string, isAuto: boolean) {
     e.preventDefault(); e.stopPropagation();
-    if (!placementMode) { dispatch('openErForEntrance', { entranceId }); return; }
     if (isAuto) {
       const atIdx = markerUid.lastIndexOf('_at_');
       const posId = atIdx >= 0 ? markerUid.slice(atIdx + 4) : entranceId;
@@ -1097,6 +1096,7 @@ import type { EntranceInfo } from '../data/entranceData';
     display: flex;
     align-items: center;
     justify-content: center;
+    background: #000;
   }
 
   .map-title-row {

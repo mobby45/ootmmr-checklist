@@ -153,7 +153,7 @@
         const h = hints[i];
         if (h.type === opposite) {
           const hl = h.text.toLowerCase();
-          if (tl.includes(hl) || hl.includes(tl)) yHints.delete(i, 1);
+          if (tl === hl) yHints.delete(i, 1);
         }
       }
     }
