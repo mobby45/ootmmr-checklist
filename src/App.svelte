@@ -1806,6 +1806,21 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
   $: if ($sMqSettings) {
     buildMapData($sMqSettings).then(data => {
       mapData = data;
+      const srcs = [...new Set(
+        Object.values(data).flatMap(sd =>
+          Object.values(sd.subscenes).map(sub => `/ootmmr-checklist/maps/${sub.image}`)
+        )
+      )];
+      setTimeout(() => {
+        const BATCH = 20;
+        let idx = 0;
+        function loadBatch() {
+          srcs.slice(idx, idx + BATCH).forEach(src => { const img = new Image(); img.src = src; });
+          idx += BATCH;
+          if (idx < srcs.length) setTimeout(loadBatch, 150);
+        }
+        loadBatch();
+      }, 2000);
     });
   }
 
