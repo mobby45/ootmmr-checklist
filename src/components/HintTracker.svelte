@@ -91,8 +91,13 @@
   const SONG_EVENT_ROWS = OOT_EVENTS.map((oot, i) => ({ oot, mm: MM_EVENTS[i] ?? null }));
 
   const songChoices = allTrackerItems.filter(i => i.category === 'songs' && i.maxLevel >= 1);
-  const ootSongs = songChoices.filter(s => s.game === 'oot');
-  const mmSongs  = songChoices.filter(s => s.game === 'mm');
+
+  // Cross-game clones: MM songs placed in OoT pool and OoT songs placed in MM pool
+  const CROSS_IN_OOT = new Set(['oot_elegy','oot_song_healing','oot_song_soaring','oot_song_sonata','oot_song_lullaby','oot_song_nova','oot_song_oath']);
+  const CROSS_IN_MM  = new Set(['mm_song_zelda','mm_song_saria','mm_song_minuet','mm_song_bolero','mm_song_serenade','mm_song_requiem','mm_song_nocturne','mm_song_prelude']);
+
+  const ootSongs = songChoices.filter(s => s.game === 'oot' && !CROSS_IN_OOT.has(s.id));
+  const mmSongs  = songChoices.filter(s => s.game === 'mm'  && !CROSS_IN_MM.has(s.id));
   const shSongs  = songChoices.filter(s => s.game !== 'oot' && s.game !== 'mm');
 
   let songEventMap: Record<string, string> = {};
