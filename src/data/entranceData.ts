@@ -40,8 +40,6 @@ export const allEntrances: EntranceInfo[] = [
   { id: 'OOT_KOKIRI_FOREST_FROM_DEKU_TREE', name: "OOT Deku Tree to OOT Kokiri Forest Near Deku Tree", type: 'dungeon', erType: 'erDungeons', game: 'oot' },
   { id: 'OOT_MOUNTAIN_TRAIL_FROM_DODONGO_CAVERN', name: "OOT Dodongo Cavern to OOT Death Mountain", type: 'dungeon', erType: 'erDungeons', game: 'oot' },
   { id: 'OOT_ZORA_FOUNTAIN_FROM_JABU_JABU', name: "OOT Jabu-Jabu to OOT Zora Fountain", type: 'dungeon', erType: 'erDungeons', game: 'oot' },
-  { id: 'OOT_JABU_JABU_PRE_BOSS_ROOM', name: "OOT Jabu-Jabu to OOT Jabu-Jabu Pre-Boss Room", type: 'overworld', erType: 'erOverworld', game: 'oot' },
-  { id: 'OOT_PRE_BOSS_ROOM_JABU_JABU', name: "OOT Jabu-Jabu Pre-Boss Room to OOT Jabu-Jabu", type: 'overworld', erType: 'erOverworld', game: 'oot' },
   { id: 'OOT_SACRED_MEADOW_FROM_TEMPLE_FOREST', name: "OOT Forest Temple to OOT Sacred Meadow Forest Platform", type: 'dungeon', erType: 'erDungeons', game: 'oot' },
   { id: 'OOT_DEATH_CRATER_FROM_TEMPLE_FIRE', name: "OOT Fire Temple to OOT Death Mountain Crater Near Temple", type: 'dungeon', erType: 'erDungeons', game: 'oot' },
   { id: 'OOT_LAKE_HYLIA_FROM_TEMPLE_WATER', name: "OOT Water Temple to OOT Lake Hylia Near Water Temple", type: 'dungeon', erType: 'erDungeons', game: 'oot' },
