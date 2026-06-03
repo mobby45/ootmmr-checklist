@@ -94,8 +94,7 @@
   <header class="topbar">
     <span class="title">Entrance Validator</span>
     <span class="stat">Entrances: <b>{entDone}/{entTotal}</b>{#if entBad > 0} <em>⚠{entBad}</em>{/if}</span>
-    <span class="stat">Maps: <b>{mapDone}/{mapZones.length}</b>{#if mapBad > 0} <em>⚠{mapBad}</em>{/if}</span>
-    <div class="pbar"><div class="fill" style="width:{entTotal?((entDone+mapDone)/(entTotal+mapZones.length)*100).toFixed(1):0}%"></div></div>
+    <div class="pbar"><div class="fill" style="width:{entTotal?(entDone/entTotal*100).toFixed(1):0}%"></div></div>
     <button class="reset-btn" on:click={resetAll}>Reset all</button>
   </header>
 
