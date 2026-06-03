@@ -16,4 +16,12 @@ export default defineConfig({
         }),
     ],
     base: '/ootmmr-checklist/',
+    build: {
+        rollupOptions: {
+            input: {
+                main: 'index.html',
+                validator: 'validator.html',
+            },
+        },
+    },
 });
