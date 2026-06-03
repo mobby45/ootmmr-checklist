@@ -62,9 +62,6 @@
     return '—';
   }
 
-  // ── Tabs ─────────────────────────────────────────────────
-  let tab: 'entrances' | 'maps' = 'entrances';
-
   // ── Entrance filters ──────────────────────────────────────
   let filterType = 'all', filterStatus = 'all', filterGame = 'all', search = '';
   const typeLabels: Record<string, string> = {
@@ -86,42 +83,10 @@
     })
     .filter(e => !search || e.name.toLowerCase().includes(search.toLowerCase()) || e.id.toLowerCase().includes(search.toLowerCase()));
 
-  // ── Zone map button list (mirrors groupToSceneMapping + all scenes) ──
-  const mapZones: { label: string; expected: string }[] = [
-    { label: "Hyrule/Ganon's Castle Exterior", expected: 'OOT_HYRULE_GANON_CASTLE' },
-    { label: "Jabu Jabu's Belly",   expected: 'OOT_INSIDE_JABU_JABU' },
-    { label: 'Forest Temple',       expected: 'OOT_TEMPLE_FOREST' },
-    { label: 'Fire Temple',         expected: 'OOT_TEMPLE_FIRE' },
-    { label: 'Water Temple',        expected: 'OOT_TEMPLE_WATER' },
-    { label: 'Shadow Temple',       expected: 'OOT_TEMPLE_SHADOW' },
-    { label: 'Spirit Temple',       expected: 'OOT_TEMPLE_SPIRIT' },
-    { label: "Ganon's Castle",      expected: 'OOT_INSIDE_GANON_CASTLE' },
-    { label: 'South Clock Town',    expected: 'MM_CLOCK_TOWN_SOUTH' },
-    { label: 'North Clock Town',    expected: 'MM_CLOCK_TOWN_NORTH' },
-    { label: 'East Clock Town',     expected: 'MM_CLOCK_TOWN_EAST' },
-    { label: 'West Clock Town',     expected: 'MM_CLOCK_TOWN_WEST' },
-    { label: 'Road To Southern Swamp', expected: 'MM_ROAD_SOUTHERN_SWAMP' },
-    { label: 'Swamp Spider House',  expected: 'MM_SPIDER_HOUSE_SWAMP' },
-    { label: 'Path To Mountain Village', expected: 'MM_PATH_MOUNTAIN_VILLAGE' },
-    { label: 'Mountain Village',    expected: 'MM_MOUNTAIN_VILLAGE_SPRING' },
-    { label: 'Path To Snowhead',    expected: 'MM_PATH_SNOWHEAD' },
-    { label: 'Pirates Fortress',    expected: 'MM_PIRATE_FORTRESS' },
-    { label: 'Ocean Spider House',  expected: 'MM_SPIDER_HOUSE_OCEAN' },
-    { label: 'Road To Ikana',       expected: 'MM_ROAD_IKANA' },
-    { label: 'Ikana Castle',        expected: 'MM_CASTLE_IKANA' },
-    { label: 'Woodfall Temple',     expected: 'MM_TEMPLE_WOODFALL' },
-    { label: 'Snowhead Temple',     expected: 'MM_TEMPLE_SNOWHEAD' },
-    { label: 'Great Bay Temple',    expected: 'MM_TEMPLE_GREAT_BAY' },
-    { label: 'Stone Tower Temple',  expected: 'MM_TEMPLE_STONE_TOWER / MM_TEMPLE_STONE_TOWER_INVERTED' },
-    { label: 'The Moon',            expected: 'MM_MOON' },
-  ];
-
   // ── Stats ─────────────────────────────────────────────────
   $: entTotal = allEntrances.filter(e => !bossExitIds.has(e.id) && activeErTypes.has(e.erType) && matchesSubTypes(e.id, e.erType)).length;
-  $: entDone  = Object.entries(results).filter(([k,v]) => k.startsWith('e_') && v !== '').length;
-  $: entBad   = Object.entries(results).filter(([k,v]) => k.startsWith('e_') && v === 'wrong').length;
-  $: mapDone  = Object.entries(results).filter(([k,v]) => k.startsWith('m_') && v !== '').length;
-  $: mapBad   = Object.entries(results).filter(([k,v]) => k.startsWith('m_') && v === 'wrong').length;
+  $: entDone  = Object.values(results).filter(v => v !== '').length;
+  $: entBad   = Object.values(results).filter(v => v === 'wrong').length;
 </script>
 
 <div class="page">
@@ -134,87 +99,53 @@
     <button class="reset-btn" on:click={resetAll}>Reset all</button>
   </header>
 
-  <div class="tabs">
-    <button class="tab" class:active={tab==='entrances'} on:click={() => tab='entrances'}>
-      Entrance markers ({entTotal})
-    </button>
-    <button class="tab" class:active={tab==='maps'} on:click={() => tab='maps'}>
-      Map buttons ({mapZones.length})
-    </button>
+  <div class="filters">
+    <input class="fsearch" placeholder="Search…" bind:value={search} />
+    <select bind:value={filterGame}>
+      <option value="all">All</option><option value="oot">OoT</option><option value="mm">MM</option>
+    </select>
+    <select bind:value={filterType}>
+      <option value="all">All types</option>
+      {#each Object.entries(typeLabels) as [v,l]}<option value={v}>{l}</option>{/each}
+    </select>
+    <select bind:value={filterStatus}>
+      <option value="all">All</option><option value="pending">Pending</option>
+      <option value="ok">OK</option><option value="wrong">Wrong</option>
+    </select>
+    <span class="fcount">{entRows.length}</span>
   </div>
 
-  {#if tab === 'entrances'}
-    <div class="filters">
-      <input class="fsearch" placeholder="Search…" bind:value={search} />
-      <select bind:value={filterGame}>
-        <option value="all">All</option><option value="oot">OoT</option><option value="mm">MM</option>
-      </select>
-      <select bind:value={filterType}>
-        <option value="all">All types</option>
-        {#each Object.entries(typeLabels) as [v,l]}<option value={v}>{l}</option>{/each}
-      </select>
-      <select bind:value={filterStatus}>
-        <option value="all">All</option><option value="pending">Pending</option>
-        <option value="ok">OK</option><option value="wrong">Wrong</option>
-      </select>
-      <span class="fcount">{entRows.length}</span>
-    </div>
+  <div class="help">
+    Test in the real tracker · <b>🗺</b> = has map position · <b>🖱R</b> on marker → navigates to destination below
+  </div>
 
-    <div class="help">
-      Test in the real tracker: <b>🖱 Left click</b> a marker → shows info panel &nbsp;·&nbsp;
-      <b>🖱 Right click</b> a marker → navigates to the destination shown below
-    </div>
-
-    <div class="list">
-      {#each entRows as ent}
-        {@const s = results['e_' + ent.id] ?? ''}
-        {@const nav = describeNav(ent)}
-        {@const hasPos = entrancePositions.some(p => p.entranceId === ent.id)}
-        <div class="row" class:row-ok={s==='ok'} class:row-bad={s==='wrong'}>
-          <div class="row-left">
-            <span class="tag t-{ent.type}">{typeLabels[ent.type] ?? ent.type}</span>
-            <span class="tag g-{ent.game}">{ent.game.toUpperCase()}</span>
-            <span class="ent-name" title={ent.id}>{ent.name}</span>
-            {#if !hasPos}<span class="no-pos" title="No map position">·</span>{/if}
-          </div>
-          <div class="row-right">
-            {#if hasPos}
-              <span class="nav-dest" title="🖱R navigates here">→ <code>{nav}</code></span>
-            {:else}
-              <span class="no-pos-txt">no map pos</span>
-            {/if}
-            <button class="rb ok" class:active={s==='ok'}
-              on:click={() => set('e_' + ent.id, s==='ok'?'':'ok')}>✓</button>
-            <button class="rb bad" class:active={s==='wrong'}
-              on:click={() => set('e_' + ent.id, s==='wrong'?'':'wrong')}>✗</button>
-          </div>
+  <div class="list">
+    {#each entRows as ent}
+      {@const s = results['e_' + ent.id] ?? ''}
+      {@const nav = describeNav(ent)}
+      {@const hasPos = entrancePositions.some(p => p.entranceId === ent.id)}
+      <div class="row" class:row-ok={s==='ok'} class:row-bad={s==='wrong'}>
+        <div class="row-left">
+          <span class="tag t-{ent.type}">{typeLabels[ent.type] ?? ent.type}</span>
+          <span class="tag g-{ent.game}">{ent.game.toUpperCase()}</span>
+          {#if hasPos}<span class="map-icon" title="Has map position">🗺</span>{/if}
+          <span class="ent-name" title={ent.id}>{ent.name}</span>
         </div>
-      {/each}
-      {#if entRows.length === 0}<div class="empty">No entrances match.</div>{/if}
-    </div>
-
-  {:else}
-    <div class="help">
-      Test in the real tracker: click the <b>🗺 map button</b> on a zone → verify it opens the expected scene below, then mark ✓/✗
-    </div>
-    <div class="list">
-      {#each mapZones as z}
-        {@const s = results['m_' + z.expected] ?? ''}
-        <div class="row" class:row-ok={s==='ok'} class:row-bad={s==='wrong'}>
-          <div class="row-left">
-            <span class="ent-name">{z.label}</span>
-          </div>
-          <div class="row-right">
-            <span class="nav-dest">→ <code>{z.expected}</code></span>
-            <button class="rb ok" class:active={s==='ok'}
-              on:click={() => set('m_' + z.expected, s==='ok'?'':'ok')}>✓</button>
-            <button class="rb bad" class:active={s==='wrong'}
-              on:click={() => set('m_' + z.expected, s==='wrong'?'':'wrong')}>✗</button>
-          </div>
+        <div class="row-right">
+          {#if hasPos && nav !== '—'}
+            <span class="nav-dest">🖱R → <code>{nav}</code></span>
+          {:else if !hasPos}
+            <span class="no-pos-txt">no map pos</span>
+          {/if}
+          <button class="rb ok" class:active={s==='ok'}
+            on:click={() => set('e_' + ent.id, s==='ok'?'':'ok')}>✓</button>
+          <button class="rb bad" class:active={s==='wrong'}
+            on:click={() => set('e_' + ent.id, s==='wrong'?'':'wrong')}>✗</button>
         </div>
-      {/each}
-    </div>
-  {/if}
+      </div>
+    {/each}
+    {#if entRows.length === 0}<div class="empty">No entrances match.</div>{/if}
+  </div>
 
 </div>
 
@@ -230,10 +161,7 @@
   .reset-btn { margin-left: auto; padding: 2px 8px; border: 1px solid #444; border-radius: 3px; background: transparent; color: #888; cursor: pointer; font-size: 0.8em; }
   .reset-btn:hover { color: #fff; }
 
-  .tabs { display: flex; border-bottom: 1px solid #333; flex-shrink: 0; background: #1a1a1a; }
-  .tab { flex: 1; padding: 0.45em; background: transparent; border: none; border-bottom: 2px solid transparent; color: #888; cursor: pointer; font-size: 0.83em; }
-  .tab:hover { color: #ccc; }
-  .tab.active { color: #66d1ff; border-bottom-color: #66d1ff; }
+  .map-icon { font-size: 0.75em; flex-shrink: 0; opacity: 0.6; }
 
   .filters { display: flex; gap: 0.4em; align-items: center; flex-wrap: wrap; padding: 0.4em 0.8em; background: #1a1a1a; border-bottom: 1px solid #242424; flex-shrink: 0; }
   .fsearch { width: 160px; padding: 3px 6px; border: 1px solid #333; border-radius: 3px; background: #252525; color: #e0e0e0; font-size: 0.82em; }
