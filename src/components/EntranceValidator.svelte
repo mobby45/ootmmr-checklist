@@ -144,7 +144,7 @@
       <span class="s-done">Entrances: {entDone}/{withPos}</span>
       {#if entIssues > 0}<span class="s-bad">⚠ {entIssues}</span>{/if}
       <span class="sep">·</span>
-      <span class="s-done">Maps: {mapDone}/{mapBtnRows.length}</span>
+      <span class="s-done">Maps: {mapDone}/{mapBtnBase.length}</span>
       {#if mapIssues > 0}<span class="s-bad">⚠ {mapIssues}</span>{/if}
     </div>
     <button class="reset-btn" on:click={resetAll}>Reset all</button>
