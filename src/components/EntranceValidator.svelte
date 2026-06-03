@@ -101,18 +101,33 @@
   }
 
   // ── Entrance filters ──────────────────────────────────────
-  let filterType = 'all', filterStatus = 'all', filterGame = 'all', search = '';
+  let filterStatus = 'all', filterGame = 'all', search = '';
   const typeLabels: Record<string, string> = {
     overworld: 'OW', interior: 'Int', dungeon: 'Dgn', grotto: 'Grotto', boss: 'Boss', owl: 'Owl',
   };
+  const erTypeOrder = ['erOverworld','erDungeons','erIndoors','erGrottos','erOwls','erOneWays','erWallmasters','erSpawns','erAlterLw'];
+  const erTypeLabels: Record<string, string> = {
+    erOverworld: 'Overworld', erDungeons: 'Dungeons', erIndoors: 'Indoors',
+    erGrottos: 'Grottos', erOwls: 'Owls', erOneWays: 'One-ways',
+    erWallmasters: 'Wallmasters', erSpawns: 'Spawns', erAlterLw: 'Lost Woods Alt',
+  };
 
-  $: entRows = allEntrances
+  let collapsedGroups: Set<string> = new Set(
+    JSON.parse(localStorage.getItem('validator-collapsed') ?? '[]')
+  );
+  function toggleGroup(key: string) {
+    if (collapsedGroups.has(key)) collapsedGroups.delete(key);
+    else collapsedGroups.add(key);
+    collapsedGroups = new Set(collapsedGroups);
+    localStorage.setItem('validator-collapsed', JSON.stringify([...collapsedGroups]));
+  }
+
+  $: baseRows = allEntrances
     .filter(e => !bossExitIds.has(e.id))
     .filter(e => e.erType !== 'erBoss')
     .filter(e => activeErTypes.has(e.erType))
     .filter(e => matchesSubTypes(e.id, e.erType))
     .filter(e => filterGame === 'all' || e.game === filterGame)
-    .filter(e => filterType === 'all' || e.type === filterType)
     .filter(e => {
       const s = results['e_' + e.id] ?? '';
       if (filterStatus === 'pending') return s === '';
@@ -122,6 +137,11 @@
     })
     .filter(e => !search || e.name.toLowerCase().includes(search.toLowerCase()) || e.id.toLowerCase().includes(search.toLowerCase()));
 
+  $: groupedRows = erTypeOrder
+    .map(ert => ({ ert, rows: baseRows.filter(e => e.erType === ert) }))
+    .filter(g => g.rows.length > 0);
+
+  $: entRows = baseRows; // for fcount
   // ── Stats ─────────────────────────────────────────────────
   $: entTotal = allEntrances.filter(e => !bossExitIds.has(e.id) && e.erType !== 'erBoss' && activeErTypes.has(e.erType) && matchesSubTypes(e.id, e.erType)).length;
   $: entDone  = Object.values(results).filter(v => v !== '').length;
@@ -142,10 +162,6 @@
     <select bind:value={filterGame}>
       <option value="all">All</option><option value="oot">OoT</option><option value="mm">MM</option>
     </select>
-    <select bind:value={filterType}>
-      <option value="all">All types</option>
-      {#each Object.entries(typeLabels) as [v,l]}<option value={v}>{l}</option>{/each}
-    </select>
     <select bind:value={filterStatus}>
       <option value="all">All</option><option value="pending">Pending</option>
       <option value="ok">OK</option><option value="wrong">Wrong</option>
@@ -158,35 +174,52 @@
   </div>
 
   <div class="list">
-    {#each entRows as ent}
-      {@const s = results['e_' + ent.id] ?? ''}
-      {@const nav = describeNav(ent)}
-      {@const hasPos = entrancePositions.some(p => p.entranceId === ent.id)}
-      <div class="row" class:row-ok={s==='ok'} class:row-bad={s==='wrong'}>
-        <div class="row-left">
-          <span class="tag t-{ent.type}">{typeLabels[ent.type] ?? ent.type}</span>
-          <span class="tag g-{ent.game}">{ent.game.toUpperCase()}</span>
-          {#if hasPos}<span class="map-icon" title="Has map position">🗺</span>{/if}
-          <span class="ent-name" title={ent.id}>{ent.name}</span>
-        </div>
-        <div class="row-right">
-          {#if hasPos && nav !== '—'}
-            <span class="nav-dest">🖱R → <code>{nav}</code></span>
-          {:else if !hasPos}
-            <span class="no-pos-txt">no map pos</span>
-          {/if}
-          <button class="rb ok" class:active={s==='ok'}
-            on:click={() => set('e_' + ent.id, s==='ok'?'':'ok')}>✓</button>
-          <button class="rb bad" class:active={s==='wrong'}
-            on:click={() => set('e_' + ent.id, s==='wrong'?'':'wrong')}>✗</button>
-          {#if hasPos}
-            <button class="rb map" class:active={activeMapEntId === ent.id}
-              on:click={() => toggleMap(ent)} disabled={!mapData}>🗺</button>
-          {/if}
-        </div>
+    {#each groupedRows as { ert, rows }}
+      {@const groupDone = rows.filter(e => (results['e_' + e.id] ?? '') !== '').length}
+      {@const groupOk   = rows.filter(e => (results['e_' + e.id] ?? '') === 'ok').length}
+      {@const groupBad  = rows.filter(e => (results['e_' + e.id] ?? '') === 'wrong').length}
+      {@const collapsed = collapsedGroups.has(ert)}
+      <!-- svelte-ignore a11y-click-events-have-key-events -->
+      <!-- svelte-ignore a11y-no-static-element-interactions -->
+      <div class="group-header" on:click={() => toggleGroup(ert)}>
+        <span class="group-toggle">{collapsed ? '▶' : '▼'}</span>
+        <span class="group-name">{erTypeLabels[ert] ?? ert}</span>
+        <span class="group-count">{groupDone}/{rows.length}</span>
+        {#if groupOk > 0}<span class="group-ok">✓{groupOk}</span>{/if}
+        {#if groupBad > 0}<span class="group-bad">✗{groupBad}</span>{/if}
       </div>
+      {#if !collapsed}
+        {#each rows as ent}
+          {@const s = results['e_' + ent.id] ?? ''}
+          {@const nav = describeNav(ent)}
+          {@const hasPos = entrancePositions.some(p => p.entranceId === ent.id)}
+          <div class="row" class:row-ok={s==='ok'} class:row-bad={s==='wrong'}>
+            <div class="row-left">
+              <span class="tag t-{ent.type}">{typeLabels[ent.type] ?? ent.type}</span>
+              <span class="tag g-{ent.game}">{ent.game.toUpperCase()}</span>
+              {#if hasPos}<span class="map-icon" title="Has map position">🗺</span>{/if}
+              <span class="ent-name" title={ent.id}>{ent.name}</span>
+            </div>
+            <div class="row-right">
+              {#if hasPos && nav !== '—'}
+                <span class="nav-dest">🖱R → <code>{nav}</code></span>
+              {:else if !hasPos}
+                <span class="no-pos-txt">no map pos</span>
+              {/if}
+              <button class="rb ok" class:active={s==='ok'}
+                on:click={() => set('e_' + ent.id, s==='ok'?'':'ok')}>✓</button>
+              <button class="rb bad" class:active={s==='wrong'}
+                on:click={() => set('e_' + ent.id, s==='wrong'?'':'wrong')}>✗</button>
+              {#if hasPos}
+                <button class="rb map" class:active={activeMapEntId === ent.id}
+                  on:click={() => toggleMap(ent)} disabled={!mapData}>🗺</button>
+              {/if}
+            </div>
+          </div>
+        {/each}
+      {/if}
     {/each}
-    {#if entRows.length === 0}<div class="empty">No entrances match.</div>{/if}
+    {#if groupedRows.length === 0}<div class="empty">No entrances match.</div>{/if}
   </div>
 
 </div>
@@ -243,6 +276,19 @@
   .help { padding: 0.35em 0.9em; font-size: 0.78em; color: #888; background: #1e1e1e; border-bottom: 1px solid #282828; flex-shrink: 0; }
 
   .list { flex: 1; overflow-y: auto; }
+
+  .group-header {
+    display: flex; align-items: center; gap: 0.5em;
+    padding: 5px 10px; background: #212121;
+    border-bottom: 1px solid #2a2a2a; border-top: 1px solid #2a2a2a;
+    cursor: pointer; user-select: none; position: sticky; top: 0; z-index: 2;
+  }
+  .group-header:hover { background: #262626; }
+  .group-toggle { font-size: 0.65em; color: #666; flex-shrink: 0; }
+  .group-name { font-weight: 600; font-size: 0.82em; }
+  .group-count { font-size: 0.75em; color: #888; margin-left: 0.2em; }
+  .group-ok  { font-size: 0.75em; color: #5d5; margin-left: auto; }
+  .group-bad { font-size: 0.75em; color: #e66; }
 
   .row { display: flex; align-items: center; justify-content: space-between; gap: 0.5em; padding: 4px 10px; border-bottom: 1px solid #222; border-left: 3px solid transparent; }
   .row:hover { background: #212121; }
