@@ -284,6 +284,7 @@ import type { EntranceInfo } from '../data/entranceData';
   export let mqSettings: Map<string, boolean> = new Map();
   export let groupName: string = '';
   export let variantSettings: Map<string, number> = new Map();
+  export let validationMode: boolean = false;
 
   const priceEditIds = new Set([
     'TINGLE_MAP_CLOCK_TOWN', 'TINGLE_MAP_WOODFALL', 'TINGLE_MAP_SNOWHEAD',
@@ -404,7 +405,10 @@ import type { EntranceInfo } from '../data/entranceData';
 
   function handleEntranceClick(entranceId: string) {
     if (hasDragged) return;
-    if (!placementMode) { navigateToEntrance(entranceId); return; }
+    if (!placementMode) {
+      if (validationMode) { dispatch('validateEntrance', { entranceId }); return; }
+      navigateToEntrance(entranceId); return;
+    }
   }
 
   function handleEntranceContextMenu(e: MouseEvent, markerUid: string, entranceId: string, isAuto: boolean) {
