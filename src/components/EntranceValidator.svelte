@@ -1,40 +1,14 @@
 <script lang="ts">
-  import { allEntrances, findReverseEntrance, bossExitIds, entranceSubTypes, type ErSettingKey } from '../data/entranceData';
+  import { allEntrances, findReverseEntrance, type ErSettingKey } from '../data/entranceData';
   import { entrancePositions } from '../data/entrancePositions';
   import type { EntranceInfo } from '../data/entranceData';
   import { defaultErSettings, type ErSettings } from '../util/spoilerParser';
+  import { filterEntrances } from '../util/erFilter';
 
-  // ── Replicate ER tracker filter from localStorage erSettings ──
   const erSettings: ErSettings = JSON.parse(
     localStorage.getItem('erSettings') ?? JSON.stringify(defaultErSettings)
   );
-
-  const subTypeGroups = [
-    { parent: 'erDungeons', keys: ['erMajorDungeons','erMinorDungeons','erGanonCastle','erGanonTower','erMoon','erSpiderHouses','erPirateFortress','erBeneathWell','erIkanaCastle','erSecretShrine'] },
-    { parent: 'erIndoors',  keys: ['erIndoorsMajor','erIndoorsExtra','erIndoorsGameLinks'] },
-    { parent: 'erOneWays',  keys: ['erOneWaysMajor','erOneWaysIkana','erOneWaysSongs','erOneWaysStatues','erOneWaysWaterVoids','erOneWaysAnywhere','erOneWaysOwls'] },
-  ];
-  const subTypeIdSets = Object.fromEntries(
-    Object.entries(entranceSubTypes).map(([k, ids]) => [k, new Set(ids)])
-  ) as Record<string, Set<string>>;
-  const activeErTypes = new Set<ErSettingKey>(
-    (Object.keys(erSettings) as ErSettingKey[]).filter(k => erSettings[k as keyof ErSettings])
-  );
-  const hasActiveSubTypes = new Set(
-    subTypeGroups.filter(g => g.keys.some(k => (erSettings as any)[k])).map(g => g.parent)
-  );
-  function hasSubTypeGroup(erType: string) { return subTypeGroups.some(g => g.parent === erType); }
-  function matchesSubTypes(id: string, erType: ErSettingKey): boolean {
-    if (!hasSubTypeGroup(erType)) return true;
-    if (!hasActiveSubTypes.has(erType)) return false;
-    for (const g of subTypeGroups) {
-      if (g.parent !== erType) continue;
-      for (const k of g.keys) {
-        if ((erSettings as any)[k] && subTypeIdSets[k]?.has(id)) return true;
-      }
-    }
-    return false;
-  }
+  const filteredBase = filterEntrances(allEntrances, erSettings);
 
   // ── Validation state ──────────────────────────────────────
   const KEY = 'entrance-validator-v5';
@@ -89,11 +63,7 @@
     localStorage.setItem('validator-collapsed', JSON.stringify([...collapsedGroups]));
   }
 
-  $: baseRows = allEntrances
-    .filter(e => !bossExitIds.has(e.id))
-    .filter(e => e.erType !== 'erBoss')
-    .filter(e => activeErTypes.has(e.erType))
-    .filter(e => matchesSubTypes(e.id, e.erType))
+  $: baseRows = filteredBase
     .filter(e => filterGame === 'all' || e.game === filterGame)
     .filter(e => {
       const s = results['e_' + e.id] ?? '';
@@ -110,8 +80,8 @@
 
   $: entRows = baseRows; // for fcount
   // ── Stats ─────────────────────────────────────────────────
-  $: entTotal   = allEntrances.filter(e => !bossExitIds.has(e.id) && e.erType !== 'erBoss' && activeErTypes.has(e.erType) && matchesSubTypes(e.id, e.erType)).length;
-  $: mapTotal   = allEntrances.filter(e => !bossExitIds.has(e.id) && e.erType !== 'erBoss' && activeErTypes.has(e.erType) && matchesSubTypes(e.id, e.erType) && entrancePositions.some(p => p.entranceId === e.id)).length;
+  $: entTotal = filteredBase.length;
+  $: mapTotal = filteredBase.filter(e => entrancePositions.some(p => p.entranceId === e.id)).length;
   $: entDone    = Object.entries(results).filter(([k,v]) => !k.startsWith('m_') && v !== '').length;
   $: mapDone    = Object.entries(results).filter(([k,v]) => k.startsWith('m_') && v !== '').length;
   $: entBad     = Object.entries(results).filter(([k,v]) => !k.startsWith('m_') && v === 'wrong').length;

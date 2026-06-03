@@ -1,6 +1,7 @@
 <script lang="ts">
   import { allEntrances, entranceSubTypes, subTypeLabels, findReverseEntrance, bossExitIds, type ErSettingKey } from '../data/entranceData';
   import { defaultErSettings, type ErSettings } from '../util/spoilerParser';
+  import { filterEntrances, erActiveTypes, erMatchesSubTypes, erSubTypeGroups } from '../util/erFilter';
   import type { Map as YMap } from 'yjs';
   import EntranceSelect from './EntranceSelect.svelte';
   import { createEventDispatcher, tick, onMount, onDestroy, beforeUpdate, afterUpdate } from 'svelte';
@@ -176,14 +177,9 @@
     return false;
   }
 
-  $: activeErTypes = new Set<ErSettingKey>(
-    (Object.keys(activeErSettings) as ErSettingKey[]).filter(k => activeErSettings[k as keyof ErSettings])
-  );
+  $: activeErTypes = erActiveTypes(activeErSettings);
 
-  $: filteredEntrances = allEntrances.filter(e => {
-    if (bossExitIds.has(e.id)) return false;
-    if (!activeErTypes.has(e.erType)) return false;
-    if (!entranceMatchesSubTypes(e.id, e.erType)) return false;
+  $: filteredEntrances = filterEntrances(allEntrances, activeErSettings).filter(e => {
     if (gameFilter !== 'both' && e.game !== gameFilter) return false;
     if (searchFilter && !e.name.toLowerCase().includes(searchFilter.toLowerCase())) return false;
     if (showMode === 'filled' && !entranceValues.get(e.id)) return false;
