@@ -1,8 +1,46 @@
 <script lang="ts">
-  import { allEntrances, findReverseEntrance, bossExitIds, entranceSubTypes, type ErSettingKey } from '../data/entranceData';
+  import { onMount } from 'svelte';
+  import { allEntrances, findReverseEntrance, bossExitIds, entranceSubTypes, entranceById, type ErSettingKey } from '../data/entranceData';
   import { entrancePositions } from '../data/entrancePositions';
   import type { EntranceInfo } from '../data/entranceData';
   import { defaultErSettings, type ErSettings } from '../util/spoilerParser';
+  import { buildMapData, type MapData, type SceneData } from '../util/mapData';
+  import MapModal from './MapModal.svelte';
+
+  let mapData: MapData | null = null;
+  onMount(async () => { mapData = await buildMapData(new Map()); });
+
+  let showMap = false;
+  let mapSceneKey = '';
+  let mapSceneData: SceneData | null = null;
+  let mapInitialSubscene = '';
+  let clickedEntrance: EntranceInfo | null = null;
+  let activeMapEntId: string | null = null;
+
+  function toggleMap(ent: EntranceInfo) {
+    if (activeMapEntId === ent.id) { showMap = false; activeMapEntId = null; clickedEntrance = null; return; }
+    if (!mapData) return;
+    const pos = entrancePositions.find(p => p.entranceId === ent.id);
+    if (!pos) return;
+    const entry = Object.entries(mapData).find(([, sd]) => sd.subscenes[pos.renderscene]);
+    if (!entry) return;
+    mapSceneKey = entry[0]; mapSceneData = entry[1];
+    mapInitialSubscene = pos.renderscene; clickedEntrance = null;
+    activeMapEntId = ent.id; showMap = true;
+  }
+
+  function handleValidateEntrance(e: CustomEvent<{entranceId: string}>) {
+    const ent = entranceById[e.detail.entranceId];
+    if (ent) clickedEntrance = ent;
+  }
+
+  function describeNavOf(ent: EntranceInfo): string {
+    const rev = findReverseEntrance(ent);
+    if (rev) { const pos = entrancePositions.find(p => p.entranceId === rev.id); if (pos) return pos.renderscene; }
+    const oneWay = entrancePositions.find(p => p.entranceId === ent.id && p.targetScene);
+    if (oneWay) return oneWay.targetScene! + ' (one-way)';
+    return '—';
+  }
 
   // ── Replicate ER tracker filter from localStorage erSettings ──
   const erSettings: ErSettings = JSON.parse(
@@ -70,6 +108,7 @@
 
   $: entRows = allEntrances
     .filter(e => !bossExitIds.has(e.id))
+    .filter(e => e.erType !== 'erBoss')
     .filter(e => activeErTypes.has(e.erType))
     .filter(e => matchesSubTypes(e.id, e.erType))
     .filter(e => filterGame === 'all' || e.game === filterGame)
@@ -84,7 +123,7 @@
     .filter(e => !search || e.name.toLowerCase().includes(search.toLowerCase()) || e.id.toLowerCase().includes(search.toLowerCase()));
 
   // ── Stats ─────────────────────────────────────────────────
-  $: entTotal = allEntrances.filter(e => !bossExitIds.has(e.id) && activeErTypes.has(e.erType) && matchesSubTypes(e.id, e.erType)).length;
+  $: entTotal = allEntrances.filter(e => !bossExitIds.has(e.id) && e.erType !== 'erBoss' && activeErTypes.has(e.erType) && matchesSubTypes(e.id, e.erType)).length;
   $: entDone  = Object.values(results).filter(v => v !== '').length;
   $: entBad   = Object.values(results).filter(v => v === 'wrong').length;
 </script>
@@ -140,6 +179,10 @@
             on:click={() => set('e_' + ent.id, s==='ok'?'':'ok')}>✓</button>
           <button class="rb bad" class:active={s==='wrong'}
             on:click={() => set('e_' + ent.id, s==='wrong'?'':'wrong')}>✗</button>
+          {#if hasPos}
+            <button class="rb map" class:active={activeMapEntId === ent.id}
+              on:click={() => toggleMap(ent)} disabled={!mapData}>🗺</button>
+          {/if}
         </div>
       </div>
     {/each}
@@ -147,6 +190,36 @@
   </div>
 
 </div>
+
+{#if showMap && mapSceneData && mapSceneKey}
+  <div class="map-overlay" on:click|self={() => { showMap = false; activeMapEntId = null; clickedEntrance = null; }}>
+    <div class="map-box">
+      <MapModal
+        scene={mapSceneKey}
+        sceneData={mapSceneData}
+        allScenesData={mapData}
+        initialSubscene={mapInitialSubscene}
+        validationMode={true}
+        on:validateEntrance={handleValidateEntrance}
+        on:close={() => { showMap = false; activeMapEntId = null; clickedEntrance = null; }}
+      />
+      {#if clickedEntrance}
+        {@const ce = clickedEntrance}
+        {@const nav = describeNavOf(ce)}
+        {@const cs = results['e_' + ce.id] ?? ''}
+        <div class="map-info">
+          <span class="mi-name">{ce.name}</span>
+          <span class="mi-nav">🖱R → <code>{nav}</code></span>
+          <div class="mi-btns">
+            <button class="rb ok" class:active={cs==='ok'} on:click={() => set('e_' + ce.id, cs==='ok'?'':'ok')}>✓ OK</button>
+            <button class="rb bad" class:active={cs==='wrong'} on:click={() => set('e_' + ce.id, cs==='wrong'?'':'wrong')}>✗ Wrong</button>
+          </div>
+          <button class="mi-close" on:click={() => clickedEntrance = null}>✕</button>
+        </div>
+      {/if}
+    </div>
+  </div>
+{/if}
 
 <style>
   :global(body) { margin: 0; background: #1a1a1a; color: #e0e0e0; font-family: sans-serif; font-size: 13px; }
@@ -187,8 +260,33 @@
 
   .rb { padding: 2px 8px; border: 1px solid #333; border-radius: 3px; background: transparent; cursor: pointer; font-size: 0.8em; color: #666; }
   .rb:hover { color: #aaa; }
-  .rb.ok.active  { background: rgba(50,200,80,0.2);  color: #5d5; border-color: #5d5; }
-  .rb.bad.active { background: rgba(220,80,60,0.2);  color: #e66; border-color: #e66; }
+  .rb.ok.active   { background: rgba(50,200,80,0.2);  color: #5d5; border-color: #5d5; }
+  .rb.bad.active  { background: rgba(220,80,60,0.2);  color: #e66; border-color: #e66; }
+  .rb.map.active  { background: rgba(102,209,255,0.2); color: #66d1ff; border-color: #66d1ff; }
+  .rb.map:disabled { opacity: 0.2; cursor: default; }
+
+  .map-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.75);
+    display: flex; align-items: center; justify-content: center; z-index: 100;
+  }
+  .map-box {
+    position: relative; width: min(95vw,900px); height: min(92vh,800px);
+    display: flex; flex-direction: column;
+    background: #1a1a1a; border-radius: 8px; overflow: hidden;
+  }
+  .map-box :global(.modal-overlay) { position: absolute !important; background: transparent !important; }
+  .map-box :global(.modal-content) { width: 100% !important; height: 100% !important; max-width: 100% !important; max-height: 100% !important; border-radius: 0 !important; flex: 1; }
+
+  .map-info {
+    background: #1e1e1e; border-top: 2px solid #444;
+    padding: 0.5em 0.9em; display: flex; align-items: center; gap: 0.8em; flex-shrink: 0;
+    position: relative;
+  }
+  .mi-name { font-size: 0.85em; font-weight: bold; color: #fff; }
+  .mi-nav  { font-size: 0.78em; color: #888; } .mi-nav code { color: #9cf; }
+  .mi-btns { display: flex; gap: 0.4em; margin-left: auto; }
+  .mi-close { background: transparent; border: none; color: #666; cursor: pointer; font-size: 1em; flex-shrink: 0; }
+  .mi-close:hover { color: #fff; }
 
   .tag { font-size: 0.65em; padding: 1px 3px; border-radius: 3px; white-space: nowrap; flex-shrink: 0; }
   .g-oot { background: rgba(70,130,210,0.2); color: #7eb8ff; }
