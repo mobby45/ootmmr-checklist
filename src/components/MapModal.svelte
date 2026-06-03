@@ -947,7 +947,7 @@ import type { EntranceInfo } from '../data/entranceData';
                 class="entrance-marker"
                 class:entrance-marker-dragging={draggingEntranceUid === marker.uid}
                 class:entrance-marker-unshuffled={_unshuffled}
-                style="left:{__ax}%;top:{__ay}%;--ec:{col};"
+                style="left:{__ax}%;top:{__ay}%;--ec:{col};--lbl-x:{__ax > 70 ? '-80%' : __ax < 30 ? '-20%' : '-50%'};"
                 on:mouseenter={e => startEntranceHoverTimer(_lbl, e)}
                 on:mouseleave={clearHoverTimer}
                 on:pointerdown={e => entrancePointerDown(e, marker)}
@@ -978,7 +978,7 @@ import type { EntranceInfo } from '../data/entranceData';
                 class:entrance-marker-sel={selectedPlacementEntrances.some(s => s.id === marker.id)}
                 class:entrance-marker-dragging={draggingEntranceUid === marker.uid}
                 class:entrance-marker-unshuffled={unshuffled}
-                style="left:{ax}%;top:{ay}%;--ec:{col};cursor:{cursorStyle};"
+                style="left:{ax}%;top:{ay}%;--ec:{col};cursor:{cursorStyle};--lbl-x:{ax > 70 ? '-80%' : ax < 30 ? '-20%' : '-50%'};"
                 on:mouseenter={e => startEntranceHoverTimer(ent ? shortEntranceName(ent) : marker.id, e)}
                 on:mouseleave={clearHoverTimer}
                 on:pointerdown={e => entrancePointerDown(e, marker)}
@@ -1512,6 +1512,7 @@ import type { EntranceInfo } from '../data/entranceData';
     white-space: normal;
     word-break: break-word;
     color: #fff;
+    transform: translateX(var(--lbl-x, -50%));
     text-shadow: 0 0 3px #000, 0 0 3px #000;
     pointer-events: none;
     order: -1;
