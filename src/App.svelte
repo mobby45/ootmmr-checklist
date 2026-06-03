@@ -2756,16 +2756,6 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
   let groupStates = new Map<string, boolean>();
   let forceOpenTimestamp = Date.now();
 
-  let categoryCollapsed: Set<string> = new Set(
-    JSON.parse(localStorage.getItem('categoryCollapsed') ?? '[]')
-  );
-  function toggleCategory(key: string) {
-    if (categoryCollapsed.has(key)) categoryCollapsed.delete(key);
-    else categoryCollapsed.add(key);
-    categoryCollapsed = new Set(categoryCollapsed);
-    localStorage.setItem('categoryCollapsed', JSON.stringify([...categoryCollapsed]));
-  }
-
   $: if (filteredChecks) {
     groupStates = new Map(
       filteredChecks.map(group => [
@@ -4634,20 +4624,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
                   <span class="split-col-count">{col.count.checked}/{col.count.total}</span>
                 </div>
               </div>
-              {#each [
-                { key: 'ow', label: 'Overworld', groups: col.groups.filter(g => !isDungeonGroup(g)) },
-                { key: 'dj', label: 'Dungeons',  groups: col.groups.filter(g =>  isDungeonGroup(g)) },
-              ] as cat}
-                {#if cat.groups.length > 0}
-                <!-- svelte-ignore a11y-click-events-have-key-events -->
-                <!-- svelte-ignore a11y-no-static-element-interactions -->
-                <div class="cat-header" on:click={() => toggleCategory(cat.key)}>
-                  <span class="cat-arrow">{categoryCollapsed.has(cat.key) ? '▶' : '▼'}</span>
-                  <span class="cat-label">{cat.label}</span>
-                  <span class="cat-count">{cat.groups.length}</span>
-                </div>
-                {#if !categoryCollapsed.has(cat.key)}
-              {#each cat.groups as group (group.groupName)}
+              {#each col.groups as group (group.groupName)}
                 <section>
                   <CheckGroup
                     groupName={group.groupName}
@@ -4711,28 +4688,12 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
                   </CheckGroup>
                 </section>
               {/each}
-              {/if}
-              {/if}
-              {/each}
             </div>
           {/each}
 
         {:else}
           <!-- ── Single column view ── -->
-          {#each [
-            { key: 'ow', label: 'Overworld', groups: sortedChecks.filter(g => !isDungeonGroup(g)) },
-            { key: 'dj', label: 'Dungeons',  groups: sortedChecks.filter(g =>  isDungeonGroup(g)) },
-          ] as cat}
-            {#if cat.groups.length > 0}
-            <!-- svelte-ignore a11y-click-events-have-key-events -->
-            <!-- svelte-ignore a11y-no-static-element-interactions -->
-            <div class="cat-header" on:click={() => toggleCategory(cat.key)}>
-              <span class="cat-arrow">{categoryCollapsed.has(cat.key) ? '▶' : '▼'}</span>
-              <span class="cat-label">{cat.label}</span>
-              <span class="cat-count">{cat.groups.length}</span>
-            </div>
-            {#if !categoryCollapsed.has(cat.key)}
-            {#each cat.groups as group (group.groupName)}
+          {#each sortedChecks as group (group.groupName)}
             <section>
               <CheckGroup
                 groupName={group.groupName}
@@ -4794,9 +4755,6 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
                 {/each}
               </CheckGroup>
             </section>
-          {/each}
-          {/if}
-          {/if}
           {/each}
         {/if}
 
@@ -5222,18 +5180,6 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     color: #ff9090;
   }
   .split-col-title { letter-spacing: 0.02em; }
-
-  .cat-header {
-    display: flex; align-items: center; gap: 0.45em;
-    padding: 4px 0.7em; cursor: pointer; user-select: none;
-    background: var(--color-bg); border-bottom: 1px solid var(--color-border);
-    border-top: 2px solid var(--color-border);
-    position: sticky; top: 0; z-index: 3;
-  }
-  .cat-header:hover { filter: brightness(1.15); }
-  .cat-arrow { font-size: 0.6em; color: var(--color-header); flex-shrink: 0; }
-  .cat-label { font-weight: 700; font-size: 0.8em; color: var(--color-header); letter-spacing: 0.05em; text-transform: uppercase; }
-  .cat-count { font-size: 0.72em; color: var(--color-header); opacity: 0.6; margin-left: auto; }
   .split-col-actions { display: flex; align-items: center; gap: 0.5em; }
   .split-col-count {
     font-weight: normal;
