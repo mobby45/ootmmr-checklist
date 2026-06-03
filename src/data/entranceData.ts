@@ -798,6 +798,19 @@ export const allEntrances: EntranceInfo[] = [
 
 export const entranceById = Object.fromEntries(allEntrances.map(e => [e.id, e]));
 
+// Boss-room exits (boss room → dungeon/overworld) — one-way, untestable, excluded from ER tracker
+export const bossExitIds = new Set([
+  'OOT_BOSS_GANON2_FROM_GANONDORF', 'OOT_WARP_BOSS_DEKU_TREE',
+  'OOT_BOSS_JABU_JABU_WARP_OUT', 'OOT_BOSS_SHADOW_TEMPLE_WARP_OUT',
+  'OOT_BOSS_GANONDORF', 'OOT_BOSS_DEKU_TREE_WARP_OUT',
+  'OOT_BOSS_DODONGO_CAVERN_WARP_OUT', 'OOT_BOSS_WATER_TEMPLE_WARP_OUT',
+  'OOT_BOSS_FOREST_TEMPLE_WARP_OUT', 'OOT_BOSS_SPIRIT_TEMPLE_WARP_OUT',
+  'OOT_BOSS_FIRE_TEMPLE_WARP_OUT', 'MM_WARP_BOSS_STONE_TOWER_INVERTED',
+  'MM_BOSS_TEMPLE_WOODFALL_WARP_OUT', 'MM_BOSS_TEMPLE_SNOWHEAD_WARP_OUT',
+  'MM_BOSS_TEMPLE_GREAT_BAY_WARP_OUT', 'MM_BOSS_TEMPLE_STONE_TOWER_INVERTED_WARP_OUT',
+  'MM_WARP_BOSS_MOUNTAIN_VILLAGE_SPRING', 'MM_WARP_BOSS_DEKU_PRINCESS',
+]);
+
 // Sub-type mappings — maps sub-type setting to entrance IDs that it controls
 export const entranceSubTypes: Record<string, string[]> = {
   erMajorDungeons: [

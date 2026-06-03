@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { allEntrances, entranceSubTypes, subTypeLabels, findReverseEntrance, type ErSettingKey } from '../data/entranceData';
+  import { allEntrances, entranceSubTypes, subTypeLabels, findReverseEntrance, bossExitIds, type ErSettingKey } from '../data/entranceData';
   import { defaultErSettings, type ErSettings } from '../util/spoilerParser';
   import type { Map as YMap } from 'yjs';
   import EntranceSelect from './EntranceSelect.svelte';
@@ -181,6 +181,7 @@
   );
 
   $: filteredEntrances = allEntrances.filter(e => {
+    if (bossExitIds.has(e.id)) return false;
     if (!activeErTypes.has(e.erType)) return false;
     if (!entranceMatchesSubTypes(e.id, e.erType)) return false;
     if (gameFilter !== 'both' && e.game !== gameFilter) return false;

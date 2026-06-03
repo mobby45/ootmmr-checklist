@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { allEntrances, findReverseEntrance } from '../data/entranceData';
+  import { allEntrances, findReverseEntrance, bossExitIds } from '../data/entranceData';
   import { entrancePositions } from '../data/entrancePositions';
   import type { EntranceInfo } from '../data/entranceData';
 
@@ -39,6 +39,7 @@
   };
 
   $: entRows = allEntrances
+    .filter(e => !bossExitIds.has(e.id))
     .filter(e => filterGame === 'all' || e.game === filterGame)
     .filter(e => filterType === 'all' || e.type === filterType)
     .filter(e => {
@@ -81,7 +82,7 @@
   ];
 
   // ── Stats ─────────────────────────────────────────────────
-  $: entTotal = allEntrances.length;
+  $: entTotal = allEntrances.filter(e => !bossExitIds.has(e.id)).length;
   $: entDone  = Object.entries(results).filter(([k,v]) => k.startsWith('e_') && v !== '').length;
   $: entBad   = Object.entries(results).filter(([k,v]) => k.startsWith('e_') && v === 'wrong').length;
   $: mapDone  = Object.entries(results).filter(([k,v]) => k.startsWith('m_') && v !== '').length;
