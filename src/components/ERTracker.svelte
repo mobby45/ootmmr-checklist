@@ -217,6 +217,16 @@
       .map(t => ({ erType: t, label: sectionLabels[t] ?? t, entrances: byType.get(t)! }));
   })();
 
+  let collapsedSections: Set<string> = new Set(
+    JSON.parse(localStorage.getItem('er-collapsed') ?? '[]')
+  );
+  function toggleSection(erType: string) {
+    if (collapsedSections.has(erType)) collapsedSections.delete(erType);
+    else collapsedSections.add(erType);
+    collapsedSections = new Set(collapsedSections);
+    localStorage.setItem('er-collapsed', JSON.stringify([...collapsedSections]));
+  }
+
   let _savedScrollTop = 0;
   let _needsScrollRestore = false;
 
@@ -381,10 +391,14 @@
   {:else}
     <div class="er-list" bind:this={erListEl}>
       {#each groupedEntrances as group}
-        <h4 class="er-section-header" data-er-type={group.erType}>
+        <!-- svelte-ignore a11y-click-events-have-key-events -->
+        <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+        <h4 class="er-section-header" data-er-type={group.erType} on:click={() => toggleSection(group.erType)}>
+          <span class="er-section-arrow">{collapsedSections.has(group.erType) ? '▶' : '▼'}</span>
           {group.label}
           <span class="er-section-count">{group.entrances.length}</span>
         </h4>
+        {#if !collapsedSections.has(group.erType)}
         {#each group.entrances as entrance (entrance.id)}
           {@const currentValue = getValue(entrance.id)}
           <div class="er-row" class:filled={!!currentValue} class:er-row-highlighted={entrance.id === highlightedEntranceId} data-eid={entrance.id}>
@@ -424,6 +438,7 @@
             </div>
           </div>
         {/each}
+        {/if}
       {/each}
     </div>
   {/if}
@@ -663,7 +678,11 @@
     display: flex;
     align-items: center;
     gap: 0.5em;
+    cursor: pointer;
+    user-select: none;
   }
+  .er-section-header:hover { filter: brightness(1.2); }
+  .er-section-arrow { font-size: 0.65em; opacity: 0.6; flex-shrink: 0; }
   .er-section-header:not(:first-child) {
     margin-top: 0.3em;
   }
