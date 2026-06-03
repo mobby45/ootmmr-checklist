@@ -87,14 +87,13 @@
     })
     .filter(e => !search || e.name.toLowerCase().includes(search.toLowerCase()) || e.id.toLowerCase().includes(search.toLowerCase()));
 
-  // ── Map button rows (zones that have a map) ───────────────
-  $: mapBtnRows = mapData
+  // ── Map button rows — computed without results to avoid tracking issues ──
+  $: mapBtnBase = mapData
     ? Object.entries(mapData)
         .map(([sceneKey, sd]) => {
-          const displayName = sd.subscenes[sceneKey]?.displayName ?? sceneKey;
+          const displayName = Object.values(sd.subscenes)[0]?.displayName ?? sceneKey;
           const override = Object.entries(groupToSceneMapping).find(([, scenes]) => scenes.includes(sceneKey));
-          const zoneName = override ? override[0] : displayName;
-          return { sceneKey, zoneName, displayName, s: results['map_' + sceneKey] ?? '' as 'ok'|'wrong'|'' };
+          return { sceneKey, zoneName: override ? override[0] : displayName };
         })
         .sort((a, b) => a.zoneName.localeCompare(b.zoneName))
     : [];
@@ -214,25 +213,30 @@
 
       {:else}
         <!-- MAP BUTTONS tab -->
-        <div class="list">
-          {#each mapBtnRows as { sceneKey, zoneName, displayName, s }}
-            <div class="row" class:row-ok={s==='ok'} class:row-bad={s==='wrong'}>
-              <div class="row-top">
-                <span class="ent-name">{zoneName}</span>
-                <button class="map-btn" on:click={() => openMapForScene(sceneKey)} disabled={!mapData}>🗺</button>
+        {#if !mapData}
+          <div class="empty">Loading map data…</div>
+        {:else}
+          <div class="list">
+            {#each mapBtnBase as { sceneKey, zoneName }}
+              {@const s = results['map_' + sceneKey] ?? ''}
+              <div class="row" class:row-ok={s==='ok'} class:row-bad={s==='wrong'}>
+                <div class="row-top">
+                  <span class="ent-name">{zoneName}</span>
+                  <button class="map-btn" on:click={() => openMapForScene(sceneKey)}>🗺</button>
+                </div>
+                <div class="row-nav">
+                  <span class="nav-desc">Expected: <code>{sceneKey}</code></span>
+                </div>
+                <div class="row-btns">
+                  <button class="rb ok" class:active={s==='ok'}
+                    on:click={() => setResult('map_' + sceneKey, s==='ok'?'':'ok')}>✓ OK</button>
+                  <button class="rb bad" class:active={s==='wrong'}
+                    on:click={() => setResult('map_' + sceneKey, s==='wrong'?'':'wrong')}>✗ Wrong</button>
+                </div>
               </div>
-              <div class="row-nav">
-                <span class="nav-desc">Expected: opens map for <code>{sceneKey}</code></span>
-              </div>
-              <div class="row-btns">
-                <button class="rb ok" class:active={s==='ok'}
-                  on:click={() => setResult('map_' + sceneKey, s==='ok'?'':'ok')}>✓ OK</button>
-                <button class="rb bad" class:active={s==='wrong'}
-                  on:click={() => setResult('map_' + sceneKey, s==='wrong'?'':'wrong')}>✗ Wrong</button>
-              </div>
-            </div>
-          {/each}
-        </div>
+            {/each}
+          </div>
+        {/if}
       {/if}
     </div>
 
@@ -264,12 +268,16 @@
             <div class="info-id">{ce.id}</div>
 
             <div class="info-block">
-              <div class="info-lbl">🖱 Left click does:</div>
+              <div class="info-lbl">🖱 Left click — shows this panel (what you just did)</div>
+            </div>
+
+            <div class="info-block">
+              <div class="info-lbl">🖱 Right click — executes navigation:</div>
               {#if nav.navigates}
-                <div class="info-nav">Navigates the map to <code>{nav.to}</code></div>
+                <div class="info-nav">Should navigate to <code>{nav.to}</code></div>
                 <div class="info-how">{nav.how}</div>
               {:else}
-                <div class="info-nonav">No navigation — {nav.how}</div>
+                <div class="info-nonav">No navigation expected — {nav.how}</div>
               {/if}
             </div>
 

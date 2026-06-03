@@ -413,7 +413,10 @@ import type { EntranceInfo } from '../data/entranceData';
 
   function handleEntranceContextMenu(e: MouseEvent, markerUid: string, entranceId: string, isAuto: boolean) {
     e.preventDefault(); e.stopPropagation();
-    if (!placementMode) { dispatch('openErForEntrance', { entranceId }); return; }
+    if (!placementMode) {
+      if (validationMode) { navigateToEntrance(entranceId); return; }
+      dispatch('openErForEntrance', { entranceId }); return;
+    }
     if (isAuto) {
       const atIdx = markerUid.lastIndexOf('_at_');
       const posId = atIdx >= 0 ? markerUid.slice(atIdx + 4) : entranceId;
