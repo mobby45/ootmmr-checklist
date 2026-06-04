@@ -718,6 +718,7 @@ import type { EntranceInfo } from '../data/entranceData';
 
   function entrancePointerDown(e: PointerEvent, marker: EntranceMarker) {
     if (!placementMode) return;
+    if (e.button === 2) return;
     e.stopPropagation();
     (e.currentTarget as Element).setPointerCapture(e.pointerId);
     draggingEntranceUid = marker.uid;
