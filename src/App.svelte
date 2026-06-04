@@ -4772,6 +4772,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
         navScenes={checklistNavScenes}
         allScenesData={mapData}
         checkStates={checkStatesMap}
+        {hideChecked}
         {filteredCheckNames}
         {checkNameMappingReverse}
         mqSettings={$sMqSettings}

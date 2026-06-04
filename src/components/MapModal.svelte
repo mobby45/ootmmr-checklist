@@ -24,6 +24,7 @@ import type { EntranceInfo } from '../data/entranceData';
   export let navScenes: string[] = [];   // checklist-ordered scenes for ‹ › navigation
   export let allScenesData: MapData | null = null;
   export let checkStates: Map<string, T.CheckState> = new Map();
+  export let hideChecked: boolean = false;
   export let filteredCheckNames: Set<string> = new Set();
   export let checkNameMappingReverse: Record<string, string> = {};
   export let showAgeFilter = true;
@@ -218,7 +219,11 @@ import type { EntranceInfo } from '../data/entranceData';
   $: availableTypes = [...new Set(filteredChecks.map(c => c.type))].sort();
   $: availableTypesSet = new Set(availableTypes);
   $: relevantHiddenCount = [...$hiddenTypesStore].filter(t => availableTypesSet.has(t)).length;
-  $: displayedChecks = filteredChecks.filter(c => !$hiddenTypesStore.has(c.type));
+  $: displayedChecks = filteredChecks.filter(c => {
+    if ($hiddenTypesStore.has(c.type)) return false;
+    if (hideChecked && (checkStates.get(getCheckKey(c)) ?? T.CheckState.unchecked) === T.CheckState.checked) return false;
+    return true;
+  });
 
   function toggleType(type: string) {
     hiddenTypesStore.update(s => {
