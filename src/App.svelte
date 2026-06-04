@@ -2063,7 +2063,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
   const toggleState = (x: T.CheckState) => (x !== T.CheckState.checked ? T.CheckState.checked : T.CheckState.unchecked);
 
   let filter = '';
-  let hideChecked = false;
+  let hideChecked: boolean = localStorage.getItem('hideChecked') === 'true';
 
   // ==========================================
   // CHECK FILTERING PREDICATE
@@ -4479,7 +4479,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
               class="pure-button"
               type="button"
               class:pure-button-active={hideChecked}
-              on:click={() => (hideChecked = !hideChecked)}
+              on:click={() => { hideChecked = !hideChecked; localStorage.setItem('hideChecked', String(hideChecked)); }}
             >
               {hideChecked ? 'Show Checked' : 'Hide Checked'}
             </button>
