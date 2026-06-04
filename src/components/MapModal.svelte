@@ -49,6 +49,7 @@ import type { EntranceInfo } from '../data/entranceData';
   let panX = 0;
   let panY = 0;
   let isPanning = false;
+  let dragCheckedKeys = new Set<string>();
   let panStartX = 0;
   let panStartY = 0;
   let panOriginX = 0;
@@ -122,6 +123,7 @@ import type { EntranceInfo } from '../data/entranceData';
 
   function onPointerDown(e: PointerEvent) {
     hasDragged = false;
+    dragCheckedKeys = new Set();
     if (scale <= 1) return;
     (e.currentTarget as Element).setPointerCapture(e.pointerId);
     isPanning = true;
@@ -925,8 +927,18 @@ import type { EntranceInfo } from '../data/entranceData';
               style="left: {left}%; top: {top}%; z-index: {zIndex};"
               on:mouseenter={e => startHoverTimer(check, e)}
               on:mouseleave={clearHoverTimer}
-              on:pointerdown|stopPropagation={() => {}}
-              on:click|stopPropagation={e => { if (placementMode && selectedPlacementEntrances.length) { placeEntranceAt(e); return; } toggleCheck(check); }}
+              on:pointerdown|stopPropagation={() => { dragCheckedKeys = new Set(); }}
+              on:pointerenter={e => {
+                if (placementMode || scale > 1 || e.buttons !== 1) return;
+                if (dragCheckedKeys.has(checkKey)) return;
+                dragCheckedKeys.add(checkKey);
+                toggleCheck(check);
+              }}
+              on:click|stopPropagation={e => {
+                if (placementMode && selectedPlacementEntrances.length) { placeEntranceAt(e); return; }
+                if (dragCheckedKeys.has(checkKey)) return;
+                toggleCheck(check);
+              }}
               on:contextmenu={e => handleMarkerContextMenu(e, check)}
             >
               {#if hasShopInfo}
