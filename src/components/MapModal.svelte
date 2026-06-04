@@ -574,6 +574,7 @@ import type { EntranceInfo } from '../data/entranceData';
   }
 
   $: currentEntranceMarkers = entranceMarkers.filter(m => m.renderscene === currentSubscene);
+  $: placementOverlapCount = currentEntranceMarkers.filter(m => currentPrecomputed.some(p => p.entranceId === m.id)).length;
 
   function loadDeletedAutoIds(): Set<string> {
     try { return new Set(JSON.parse(localStorage.getItem('deletedAutoMarkers') ?? '[]') as string[]); }
@@ -1017,6 +1018,12 @@ import type { EntranceInfo } from '../data/entranceData';
             {:else}
               Sélectionne une ou plusieurs entrances
             {/if}
+          </span>
+          <span class="placement-counter" title="auto (entrancePositions.ts) / manuel / superposés">
+            <span class="pc-auto">A:{currentPrecomputed.length}</span>
+            <span class="pc-sep">·</span>
+            <span class="pc-manual">M:{currentEntranceMarkers.length}</span>
+            {#if placementOverlapCount > 0}<span class="pc-overlap" title="{placementOverlapCount} manuel(s) superposé(s) à un auto">⚠{placementOverlapCount}</span>{/if}
           </span>
           <div class="placement-header-actions">
             <button class="age-button" on:click={resetDeletedAutoMarkers} title="Restaurer les marqueurs auto supprimés">↺</button>
@@ -1556,6 +1563,12 @@ import type { EntranceInfo } from '../data/entranceData';
     color: #000;
     font-weight: bold;
   }
+  .placement-counter { display: flex; align-items: center; gap: 0.3em; font-size: 0.82em; flex-shrink: 0; }
+  .pc-auto    { color: #8cf; }
+  .pc-sep     { color: #555; }
+  .pc-manual  { color: #fc8; }
+  .pc-overlap { color: #f84; font-weight: 700; }
+
   .placement-header {
     display: flex;
     align-items: center;
