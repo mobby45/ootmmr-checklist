@@ -3,9 +3,18 @@ import type { MacroTable } from './expr/eval';
 import { parseExpr } from './expr/parse';
 import type { ExprNode } from './types';
 
-// Parametrized macro: "soil_fairies(x)" → (x: ExprNode) => ExprNode
-// We detect these by checking if the macro string contains a parameter placeholder.
 const PARAM_RE = /^(\w[\w\d_]*)\(([^)]+)\)$/;
+
+// Extract the raw string value from a sentinel arg node produced by the parser.
+// parse.ts encodes bare identifiers/strings as {kind:'macro', name:'__str__VALUE'}
+// and numbers as {kind:'macro', name:'__num__VALUE'}.
+function argToString(node: ExprNode): string {
+  if (node.kind !== 'macro') return '0';
+  if (node.name.startsWith('__str__')) return node.name.slice(7);
+  if (node.name.startsWith('__num__')) return node.name.slice(7);
+  // Bare macro nodes (non-sentinel) — return the name itself (for identifier-type args)
+  return node.name;
+}
 
 function buildMacroTable(rawMacros: Record<string, string>): MacroTable {
   const table: MacroTable = new Map();
@@ -13,41 +22,26 @@ function buildMacroTable(rawMacros: Record<string, string>): MacroTable {
   for (const [key, expr] of Object.entries(rawMacros)) {
     const paramMatch = key.match(PARAM_RE);
     if (paramMatch) {
-      // Parametrized macro: "soil_fairies(x)" → factory function
       const macroName = paramMatch[1];
       const paramNames = paramMatch[2].split(',').map(s => s.trim());
+
+      // Use TEXT substitution: replace param names in the macro body string,
+      // then parse. This avoids the bug where numeric params get lost when
+      // pre-parsing turns `has(ITEM, x)` into `has(ITEM, 0)` because parseInt('x')=NaN.
       table.set(macroName, (...args: ExprNode[]) => {
-        // Substitute __str__PARAMNAME sentinel nodes with actual arg nodes
-        return substituteParams(parseExpr(expr), paramNames, args);
+        let body = expr;
+        for (let i = 0; i < paramNames.length; i++) {
+          const val = args[i] ? argToString(args[i]) : '0';
+          body = body.replace(new RegExp(`\\b${paramNames[i]}\\b`, 'g'), val);
+        }
+        return parseExpr(body);
       });
     } else {
-      // Simple macro: parse and store as ExprNode
       table.set(key, parseExpr(expr));
     }
   }
 
   return table;
-}
-
-function substituteParams(node: ExprNode, params: string[], args: ExprNode[]): ExprNode {
-  if (node.kind === 'macro') {
-    // Check if this is a parameter reference (__str__PARAMNAME)
-    if (node.name.startsWith('__str__')) {
-      const paramName = node.name.slice(7);
-      const idx = params.indexOf(paramName);
-      if (idx >= 0 && args[idx]) return args[idx];
-    }
-    // Check if it's a macro call with the param name as identifier (bare)
-    const idx = params.indexOf(node.name);
-    if (idx >= 0 && args[idx]) return args[idx];
-    // Recurse into macro args
-    return { ...node, args: node.args.map(a => substituteParams(a, params, args)) };
-  }
-  if (node.kind === 'and')  return { ...node, left: substituteParams(node.left, params, args), right: substituteParams(node.right, params, args) };
-  if (node.kind === 'or')   return { ...node, left: substituteParams(node.left, params, args), right: substituteParams(node.right, params, args) };
-  if (node.kind === 'not')  return { ...node, expr: substituteParams(node.expr, params, args) };
-  if (node.kind === 'cond') return { ...node, cond: substituteParams(node.cond, params, args), then: substituteParams(node.then, params, args), else: substituteParams(node.else, params, args) };
-  return node;
 }
 
 function buildWorldGraph(rawRegions: RawWorld): WorldGraph {

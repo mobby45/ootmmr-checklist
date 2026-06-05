@@ -58,9 +58,9 @@ export function trackerItemToLogic(id: string, level: number): ItemGrant[] {
     case 'din':       return [['DINS_FIRE', 1]];
     case 'farore':    return [['FARORES_WIND', 1]];
     case 'nayru':     return [['NAYRUS_LOVE', 1]];
-    case 'magic_oot': return [['MAGIC', level]];
-    case 'sticks_oot': return [['STICKS', 1]];
-    case 'nuts_oot':   return [['NUTS', 1]];
+    case 'magic_oot': return [['MAGIC_UPGRADE', level]];
+    case 'sticks_oot': return [['STICKS', 1], ['STICK', 1]];
+    case 'nuts_oot':   return [['NUTS', 1],  ['NUTS_5', 1]];
 
     // Arrows (OoT)
     case 'arrow_fire_oot':  return [['ARROWS_FIRE', 1]];
@@ -149,7 +149,7 @@ export function trackerItemToLogic(id: string, level: number): ItemGrant[] {
     case 'mm_bombchu':        return [['BOMBCHU', 1]];
     case 'mm_hookshot':       return [['HOOKSHOT', 1]];
     case 'mm_lens':           return [['LENS', 1]];
-    case 'mm_magic':          return [['MAGIC', level]];
+    case 'mm_magic':          return [['MAGIC_UPGRADE', level]];
 
     case 'mm_arrow_fire':     return [['ARROWS_FIRE', 1]];
     case 'mm_arrow_ice':      return [['ARROWS_ICE', 1]];
@@ -217,7 +217,7 @@ export function trackerItemToLogic(id: string, level: number): ItemGrant[] {
     case 'shared_arrow_fire': return [['ARROWS_FIRE', 1]];
     case 'shared_arrow_ice':  return [['ARROWS_ICE', 1]];
     case 'shared_arrow_light':return [['ARROWS_LIGHT', 1]];
-    case 'shared_magic':      return [['MAGIC', level]];
+    case 'shared_magic':      return [['MAGIC_UPGRADE', level]];
     case 'shared_hookshot':   return level === 2 ? [['HOOKSHOT', 1], ['LONGSHOT', 1]] : [['HOOKSHOT', 1]];
     case 'shared_lens':       return [['LENS', 1]];
     case 'shared_ocarina':    return [['OCARINA', level]];
