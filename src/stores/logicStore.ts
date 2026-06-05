@@ -6,6 +6,7 @@ import { computeReachability } from '../logic/engine';
 import type { ReachabilityResult } from '../logic/types';
 import type { MacroTable } from '../logic/expr/eval';
 import type { WorldGraph } from '../logic/types';
+import { defaultLogicSettings } from '../data/logicSettingsDef';
 
 // ─── Shared world data (loaded once) ─────────────────────────────────────────
 
@@ -22,9 +23,15 @@ export const logicAgeFilter = writable<'child' | 'adult'>(
   (localStorage.getItem('logicAgeFilter') as 'child' | 'adult') ?? 'child'
 );
 
+/** Manual logic settings — merged with spoiler settings (spoiler takes priority) */
+export const logicManualSettings = writable<Record<string, any>>(
+  JSON.parse(localStorage.getItem('logicManualSettings') ?? 'null') ?? defaultLogicSettings()
+);
+
 logicEnabled.subscribe(v => localStorage.setItem('logicEnabled', String(v)));
 showOutOfLogic.subscribe(v => localStorage.setItem('showOutOfLogic', String(v)));
 logicAgeFilter.subscribe(v => localStorage.setItem('logicAgeFilter', v));
+logicManualSettings.subscribe(v => localStorage.setItem('logicManualSettings', JSON.stringify(v)));
 
 // ─── Result store ─────────────────────────────────────────────────────────────
 
@@ -60,8 +67,15 @@ export function initLogicStore(
     }
 
     const itemsSnap    = new Map(yItems.entries()) as Map<string, number>;
-    const settingsSnap = new Map(get(settingsStore)) as Map<string, any>;
+    const spoilerSnap  = new Map(get(settingsStore)) as Map<string, any>;
     const erSnap       = new Map(get(entrancesStore)) as Map<string, string>;
+    const manualSnap   = get(logicManualSettings);
+
+    // Merge: spoiler settings take priority; manual fills in missing keys
+    const settingsSnap = new Map(spoilerSnap);
+    for (const [k, v] of Object.entries(manualSnap)) {
+      if (!settingsSnap.has(k)) settingsSnap.set(k, v);
+    }
 
     const state  = buildLogicState(itemsSnap, settingsSnap, erSnap);
     const result = computeReachability(_graph!, state, _macros!);
@@ -77,5 +91,6 @@ export function initLogicStore(
   settingsStore.subscribe(() => scheduleRecompute());
   entrancesStore.subscribe(() => scheduleRecompute());
   logicEnabled.subscribe(() => scheduleRecompute());
+  logicManualSettings.subscribe(() => scheduleRecompute());
   // age filter change does not require recompute — just re-reads the result
 }

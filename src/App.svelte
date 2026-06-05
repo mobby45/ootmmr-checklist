@@ -63,6 +63,7 @@
 
   import CheckGroup from './components/CheckGroup.svelte';
   import { initLogicStore, logicEnabled, showOutOfLogic, logicAgeFilter, logicResult, logicLoading } from './stores/logicStore';
+  import LogicSettings from './components/LogicSettings.svelte';
   import CheckItem from './components/CheckItem.svelte';
   import MapModal from './components/MapModal.svelte';
   import ERTracker from './components/ERTracker.svelte';
@@ -377,6 +378,7 @@ yKeepalive.observe((event: any) => {
   initLogicStore(yItems, ySettings, yEntrances, _itemsRevStore, sSettings, sEntrances);
 
   $: checkStatesMap = new Map($sChecks) as Map<string, T.CheckState>;
+  $: spoilerSettingKeys = new Set(($sSettings as Map<string, any>).keys());
   $: shopItemsMap = new Map($sShopItems) as Map<string, string>;
   $: shopPricesMap = new Map($sShopPrices) as Map<string, number>;
   $: entranceValuesMap = (spoilerFillEntrances && spoilerEntrances)
@@ -4512,6 +4514,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
                 <option value="child">🧒 Child</option>
                 <option value="adult">🧑 Adult</option>
               </select>
+              <LogicSettings spoilerKeys={spoilerSettingKeys} />
               {#if $logicLoading}<span class="logic-spinner">⏳</span>{/if}
             {/if}
             <div class="filter-wrap">
