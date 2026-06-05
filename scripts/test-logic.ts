@@ -65,7 +65,8 @@ const adultFull: State = {
     ['SCALE', 1], ['STRENGTH', 1],
     ['MAGIC_UPGRADE', 1], ['LENS', 1],
     ['OCARINA', 2], ['OCARINA_OF_TIME', 1],
-    ['ARROWS_FIRE', 1], ['ARROWS_ICE', 1], ['ARROWS_LIGHT', 1],
+    ['ARROW_FIRE', 1], ['ARROW_ICE', 1], ['ARROW_LIGHT', 1],
+    ['SPELL_FIRE', 1], ['SPELL_WIND', 1], ['SPELL_LOVE', 1],
     ['GERUDO_CARD', 1],
   ]),
   age: 'adult', events: new Set(['ARROWS', 'BOMBS', 'MAGIC', 'OPEN_DOJO']),
@@ -93,6 +94,8 @@ const tests: [string, State, boolean][] = [
   ['can_use_slingshot',    adultFull,    false],
   ['can_use_bow',          childStarter, false],
   ['can_use_bow',          adultFull,    true],
+  ['can_use_fire_arrows',  adultFull,    true],   // ARROW_FIRE (not ARROWS_FIRE)
+  ['can_use_din_raw',      adultFull,    true],   // SPELL_FIRE (not DINS_FIRE),
   // Items
   ['has_bombs',            childStarter, false],
   ['has_bombs',            adultFull,    true],

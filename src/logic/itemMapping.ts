@@ -55,17 +55,17 @@ export function trackerItemToLogic(id: string, level: number): ItemGrant[] {
     case 'bean':      return [['MAGIC_BEAN', 1]];
     case 'agony':     return [['STONE_OF_AGONY', 1]];
     case 'gerudo_card': return [['GERUDO_CARD', 1]];
-    case 'din':       return [['DINS_FIRE', 1]];
-    case 'farore':    return [['FARORES_WIND', 1]];
-    case 'nayru':     return [['NAYRUS_LOVE', 1]];
+    case 'din':       return [['SPELL_FIRE', 1]];
+    case 'farore':    return [['SPELL_WIND', 1]];
+    case 'nayru':     return [['SPELL_LOVE', 1]];
     case 'magic_oot': return [['MAGIC_UPGRADE', level]];
     case 'sticks_oot': return [['STICKS', 1], ['STICK', 1]];
     case 'nuts_oot':   return [['NUTS', 1],  ['NUTS_5', 1]];
 
     // Arrows (OoT)
-    case 'arrow_fire_oot':  return [['ARROWS_FIRE', 1]];
-    case 'arrow_ice_oot':   return [['ARROWS_ICE', 1]];
-    case 'arrow_light_oot': return [['ARROWS_LIGHT', 1]];
+    case 'arrow_fire_oot':  return [['ARROW_FIRE', 1]];
+    case 'arrow_ice_oot':   return [['ARROW_ICE', 1]];
+    case 'arrow_light_oot': return [['ARROW_LIGHT', 1]];
 
     // Wallet: level 1 = 99, 2 = 200, 3 = 500
     case 'wallet':    return [['WALLET', level]];
@@ -95,9 +95,9 @@ export function trackerItemToLogic(id: string, level: number): ItemGrant[] {
     case 'trade_a_frog':      return [['FROG', 1]];
 
     // OoT rewards
-    case 'stone_emerald':     return [['KOKIRI_EMERALD', 1], ['SPIRITUAL_STONE', 1]];
-    case 'stone_ruby':        return [['GORONS_RUBY', 1],    ['SPIRITUAL_STONE', 1]];
-    case 'stone_sapphire':    return [['ZORAS_SAPPHIRE', 1], ['SPIRITUAL_STONE', 1]];
+    case 'stone_emerald':     return [['STONE_EMERALD', 1]];
+    case 'stone_ruby':        return [['STONE_RUBY', 1]];
+    case 'stone_sapphire':    return [['STONE_SAPPHIRE', 1]];
     case 'medal_forest':      return [['MEDALLION_FOREST', 1], ['MEDALLION', 1]];
     case 'medal_fire':        return [['MEDALLION_FIRE', 1],   ['MEDALLION', 1]];
     case 'medal_water':       return [['MEDALLION_WATER', 1],  ['MEDALLION', 1]];
@@ -106,26 +106,26 @@ export function trackerItemToLogic(id: string, level: number): ItemGrant[] {
     case 'medal_light':       return [['MEDALLION_LIGHT', 1],  ['MEDALLION', 1]];
 
     // OoT songs
-    case 'oot_song_zelda':    return [['SONG_LULLABY', 1]];
+    case 'oot_song_zelda':    return [['SONG_ZELDA', 1]];
     case 'oot_song_epona':    return [['SONG_EPONA', 1]];
     case 'oot_song_saria':    return [['SONG_SARIA', 1]];
     case 'oot_song_sun':      return [['SONG_SUN', 1]];
     case 'oot_song_time':     return [['SONG_TIME', 1]];
     case 'oot_song_storms':   return [['SONG_STORMS', 1]];
-    case 'oot_song_minuet':   return [['SONG_MINUET', 1]];
-    case 'oot_song_bolero':   return [['SONG_BOLERO', 1]];
-    case 'oot_song_serenade': return [['SONG_SERENADE', 1]];
-    case 'oot_song_requiem':  return [['SONG_REQUIEM', 1]];
-    case 'oot_song_nocturne': return [['SONG_NOCTURNE', 1]];
-    case 'oot_song_prelude':  return [['SONG_PRELUDE', 1]];
-    case 'oot_elegy':         return [['SONG_ELEGY', 1]];
+    case 'oot_song_minuet':   return [['SONG_TP_FOREST', 1]];
+    case 'oot_song_bolero':   return [['SONG_TP_FIRE', 1]];
+    case 'oot_song_serenade': return [['SONG_TP_WATER', 1]];
+    case 'oot_song_requiem':  return [['SONG_TP_SPIRIT', 1]];
+    case 'oot_song_nocturne': return [['SONG_TP_SHADOW', 1]];
+    case 'oot_song_prelude':  return [['SONG_TP_LIGHT', 1]];
+    case 'oot_elegy':         return [['SONG_EMPTINESS', 1]];
     // Cross-game songs in OoT pool
     case 'oot_song_healing':  return [['SONG_HEALING', 1]];
     case 'oot_song_soaring':  return [['SONG_SOARING', 1]];
-    case 'oot_song_sonata':   return [['SONG_SONATA', 1]];
-    case 'oot_song_lullaby':  return level === 2 ? [['SONG_LULLABY_INTRO', 1], ['SONG_LULLABY_MM', 1]] : [['SONG_LULLABY_INTRO', 1]];
-    case 'oot_song_nova':     return [['SONG_BOSSANOVA', 1]];
-    case 'oot_song_oath':     return [['SONG_OATH', 1]];
+    case 'oot_song_sonata':   return [['SONG_AWAKENING', 1]];
+    case 'oot_song_lullaby':  return level === 2 ? [['SONG_GORON_HALF', 1], ['SONG_GORON', 1]] : [['SONG_GORON_HALF', 1]];
+    case 'oot_song_nova':     return [['SONG_ZORA', 1]];
+    case 'oot_song_oath':     return [['SONG_ORDER', 1]];
 
     // Skulltula
     case 'skulltula_token':   return [['GS_TOKEN', level]];
@@ -135,14 +135,22 @@ export function trackerItemToLogic(id: string, level: number): ItemGrant[] {
     case 'mm_song_healing':   return [['SONG_HEALING', 1]];
     case 'mm_song_soaring':   return [['SONG_SOARING', 1]];
     case 'mm_song_storms':    return [['SONG_STORMS', 1]];
-    case 'mm_song_sonata':    return [['SONG_SONATA', 1]];
-    case 'mm_song_lullaby':   return level === 2 ? [['SONG_LULLABY_INTRO', 1], ['SONG_LULLABY_MM', 1]] : [['SONG_LULLABY_INTRO', 1]];
-    case 'mm_song_nova':      return [['SONG_BOSSANOVA', 1]];
-    case 'mm_song_oath':      return [['SONG_OATH', 1]];
-    case 'mm_song_elegy':     return [['SONG_ELEGY', 1]];
+    case 'mm_song_sonata':    return [['SONG_AWAKENING', 1]];
+    case 'mm_song_lullaby':   return level === 2 ? [['SONG_GORON_HALF', 1], ['SONG_GORON', 1]] : [['SONG_GORON_HALF', 1]];
+    case 'mm_song_nova':      return [['SONG_ZORA', 1]];
+    case 'mm_song_oath':      return [['SONG_ORDER', 1]];
+    case 'mm_song_elegy':     return [['SONG_EMPTINESS', 1]];
     case 'mm_song_time':      return [['SONG_TIME', 1]];
     case 'mm_song_epona':     return [['SONG_EPONA', 1]];
     case 'mm_song_saria':     return [['SONG_SARIA', 1]];
+    case 'mm_song_zelda':     return [['SONG_ZELDA', 1]];
+    case 'mm_song_minuet':   return [['SONG_TP_FOREST', 1]];
+    case 'mm_song_bolero':   return [['SONG_TP_FIRE', 1]];
+    case 'mm_song_serenade': return [['SONG_TP_WATER', 1]];
+    case 'mm_song_requiem':  return [['SONG_TP_SPIRIT', 1]];
+    case 'mm_song_nocturne': return [['SONG_TP_SHADOW', 1]];
+    case 'mm_song_prelude':  return [['SONG_TP_LIGHT', 1]];
+    case 'mm_song_sun':      return [['SONG_SUN', 1]];
 
     case 'mm_bow':            return [['BOW', 1]];
     case 'mm_bomb':           return [['BOMB_BAG', 1]];
@@ -151,9 +159,9 @@ export function trackerItemToLogic(id: string, level: number): ItemGrant[] {
     case 'mm_lens':           return [['LENS', 1]];
     case 'mm_magic':          return [['MAGIC_UPGRADE', level]];
 
-    case 'mm_arrow_fire':     return [['ARROWS_FIRE', 1]];
-    case 'mm_arrow_ice':      return [['ARROWS_ICE', 1]];
-    case 'mm_arrow_light':    return [['ARROWS_LIGHT', 1]];
+    case 'mm_arrow_fire':     return [['ARROW_FIRE', 1]];
+    case 'mm_arrow_ice':      return [['ARROW_ICE', 1]];
+    case 'mm_arrow_light':    return [['ARROW_LIGHT', 1]];
 
     case 'mm_sword':
       if (level === 1) return [['SWORD_KOKIRI', 1], ['SWORD', 1]];
@@ -214,9 +222,9 @@ export function trackerItemToLogic(id: string, level: number): ItemGrant[] {
     // Shared items (cross-game)
     case 'shared_bow':        return [['BOW', 1]];
     case 'shared_bomb':       return [['BOMB_BAG', 1]];
-    case 'shared_arrow_fire': return [['ARROWS_FIRE', 1]];
-    case 'shared_arrow_ice':  return [['ARROWS_ICE', 1]];
-    case 'shared_arrow_light':return [['ARROWS_LIGHT', 1]];
+    case 'shared_arrow_fire': return [['ARROW_FIRE', 1], ['SHARED_ARROW_FIRE', 1]];
+    case 'shared_arrow_ice':  return [['ARROW_ICE', 1], ['SHARED_ARROW_ICE', 1]];
+    case 'shared_arrow_light':return [['ARROW_LIGHT', 1], ['SHARED_ARROW_LIGHT', 1]];
     case 'shared_magic':      return [['MAGIC_UPGRADE', level]];
     case 'shared_hookshot':   return level === 2 ? [['HOOKSHOT', 1], ['LONGSHOT', 1]] : [['HOOKSHOT', 1]];
     case 'shared_lens':       return [['LENS', 1]];
