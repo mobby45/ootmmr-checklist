@@ -4499,17 +4499,17 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
               class="pure-button logic-btn"
               type="button"
               class:pure-button-active={$logicEnabled}
-              title="Enable logic engine (highlights reachable checks)"
+              title={$logicEnabled ? 'Disable logic engine' : 'Enable logic engine'}
               on:click={() => logicEnabled.update(v => !v)}
-            >{$logicEnabled ? '🔓 Logic ON' : '🔒 Logic OFF'}</button>
+            >Logic {$logicEnabled ? 'ON' : 'OFF'}</button>
             {#if $logicEnabled}
               <button
                 class="pure-button"
                 type="button"
                 class:pure-button-active={!$showOutOfLogic}
-                title="Hide checks that are out of logic"
+                title={$showOutOfLogic ? 'Hide out-of-logic checks' : 'Show out-of-logic checks'}
                 on:click={() => showOutOfLogic.update(v => !v)}
-              >{$showOutOfLogic ? 'Hide OOL' : 'Show OOL'}</button>
+              >Hide OOL</button>
               <select class="logic-age-sel" bind:value={$logicAgeFilter} title="Filter checks by age">
                 <option value="child">🧒 Child</option>
                 <option value="adult">🧑 Adult</option>

@@ -49,11 +49,19 @@
     return LOGIC_SETTINGS_DEFS.filter(d => d.group === group);
   }
 
+  function onCheckboxChange(key: string, e: Event) {
+    setBool(key, (e.target as HTMLInputElement).checked);
+  }
+
+  function onSelectChange(key: string, e: Event) {
+    setVal(key, (e.target as HTMLSelectElement).value);
+  }
+
   $: fromSpoiler = (key: string) => spoilerKeys.has(key);
 </script>
 
 <div class="logic-settings-wrap">
-  <button class="logic-settings-toggle" on:click={() => open = !open} title="Logic settings">
+  <button type="button" class="logic-settings-toggle" on:click={() => open = !open} title="Logic settings">
     ⚙ {open ? '▲' : '▼'}
   </button>
 
@@ -61,7 +69,7 @@
     <div class="logic-settings-panel">
       <div class="ls-header">
         <span class="ls-title">Logic Settings</span>
-        <button class="ls-reset" on:click={resetAll} title="Reset all to defaults">Reset</button>
+        <button type="button" class="ls-reset" on:click={resetAll} title="Reset all to defaults">Reset</button>
       </div>
 
       {#each SETTING_GROUPS as group}
@@ -76,7 +84,7 @@
                     <input type="checkbox"
                       checked={spoiler ? spoilerKeys.has(def.key) : !!get(def.key)}
                       disabled={spoiler}
-                      on:change={e => setBool(def.key, (e.target as HTMLInputElement).checked)}
+                      on:change={e => onCheckboxChange(def.key, e)}
                     />
                     {def.label}
                     {#if spoiler}<span class="ls-spoiler-badge">spoiler</span>{/if}
@@ -87,7 +95,7 @@
                   </label>
                   <select class="ls-select" disabled={spoiler}
                     value={get(def.key)}
-                    on:change={e => setVal(def.key, (e.target as HTMLSelectElement).value)}
+                    on:change={e => onSelectChange(def.key, e)}
                   >
                     {#each def.options ?? [] as opt}
                       <option value={opt.value}>{opt.label}</option>

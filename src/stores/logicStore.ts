@@ -77,9 +77,13 @@ export function initLogicStore(
       if (!settingsSnap.has(k)) settingsSnap.set(k, v);
     }
 
-    const state  = buildLogicState(itemsSnap, settingsSnap, erSnap);
-    const result = computeReachability(_graph!, state, _macros!);
-    logicResult.set(result);
+    const state = buildLogicState(itemsSnap, settingsSnap, erSnap);
+    try {
+      const result = computeReachability(_graph!, state, _macros!);
+      logicResult.set(result);
+    } catch (e) {
+      console.error('[logic] reachability error:', e);
+    }
   }
 
   function scheduleRecompute() {

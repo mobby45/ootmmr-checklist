@@ -34,14 +34,33 @@ function buildMacroTable(rawMacros: Record<string, string>): MacroTable {
           const val = args[i] ? argToString(args[i]) : '0';
           body = body.replace(new RegExp(`\\b${paramNames[i]}\\b`, 'g'), val);
         }
-        return parseExpr(body);
+        try {
+          return parseExpr(body);
+        } catch (e) {
+          console.error('[logic] macro expand error:', macroName, '| body:', body, '->', e);
+          return { kind: 'true' };
+        }
       });
     } else {
-      table.set(key, parseExpr(expr));
+      try {
+        table.set(key, parseExpr(expr));
+      } catch (e) {
+        console.error('[logic] macro parse error:', key, '->', e);
+        table.set(key, { kind: 'true' });
+      }
     }
   }
 
   return table;
+}
+
+function safeParseExpr(rule: string, label: string): ReturnType<typeof parseExpr> {
+  try {
+    return parseExpr(rule);
+  } catch (e) {
+    console.error('[logic] parse error in', label, ':', rule, '->', e);
+    return { kind: 'true' };
+  }
 }
 
 function buildWorldGraph(rawRegions: RawWorld): WorldGraph {
@@ -54,16 +73,16 @@ function buildWorldGraph(rawRegions: RawWorld): WorldGraph {
       dungeon: raw.dungeon,
       exits: raw.exits.map(e => ({
         target: e.target,
-        rule: parseExpr(e.rule),
+        rule: safeParseExpr(e.rule, `${raw.name} → ${e.target}`),
         entranceId: e.entranceId,
       })),
       locations: raw.locations.map(l => ({
         name: l.name,
-        rule: parseExpr(l.rule),
+        rule: safeParseExpr(l.rule, `${raw.name} / ${l.name}`),
       })),
       events: raw.events.map(ev => ({
         name: ev.name,
-        rule: parseExpr(ev.rule),
+        rule: safeParseExpr(ev.rule, `${raw.name} event:${ev.name}`),
       })),
     };
 

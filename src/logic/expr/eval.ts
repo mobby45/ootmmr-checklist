@@ -29,7 +29,10 @@ export function evalExpr(node: ExprNode, state: LogicState, macros: MacroTable):
     case 'setting': {
       const val = state.settings.get(node.key);
       if (typeof node.value === 'boolean') return !!val === node.value;
-      return String(val) === String(node.value);
+      const expected = String(node.value);
+      const stored = String(val ?? '');
+      // Support space-separated flag lists (multicheck settings: "DC JJ Shadow")
+      return stored === expected || stored.split(' ').includes(expected);
     }
 
     case 'age':

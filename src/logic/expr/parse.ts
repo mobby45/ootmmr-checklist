@@ -6,7 +6,7 @@ type Token =
   | { type: 'ident'; value: string }
   | { type: 'number'; value: number }
   | { type: 'string'; value: string }
-  | { type: 'op'; value: '&&' | '||' | '!' | '(' | ')' | ',' };
+  | { type: 'op'; value: '&&' | '||' | '!' | '(' | ')' | ',' | '-' | '+' | '*' };
 
 function tokenize(src: string): Token[] {
   const tokens: Token[] = [];
@@ -20,6 +20,9 @@ function tokenize(src: string): Token[] {
     if (ch === '(') { tokens.push({ type: 'op', value: '(' }); i++; continue; }
     if (ch === ')') { tokens.push({ type: 'op', value: ')' }); i++; continue; }
     if (ch === ',') { tokens.push({ type: 'op', value: ',' }); i++; continue; }
+    if (ch === '-') { tokens.push({ type: 'op', value: '-' }); i++; continue; }
+    if (ch === '+') { tokens.push({ type: 'op', value: '+' }); i++; continue; }
+    if (ch === '*') { tokens.push({ type: 'op', value: '*' }); i++; continue; }
     if (ch === '"' || ch === "'") {
       const q = ch; i++;
       let s = '';
@@ -29,9 +32,15 @@ function tokenize(src: string): Token[] {
       continue;
     }
     if (/[0-9]/.test(ch)) {
-      let n = '';
-      while (i < src.length && /[0-9]/.test(src[i])) n += src[i++];
-      tokens.push({ type: 'number', value: parseInt(n, 10) });
+      if (src[i] === '0' && src[i + 1] === 'x') {
+        let n = '0x'; i += 2;
+        while (i < src.length && /[0-9a-fA-F]/.test(src[i])) n += src[i++];
+        tokens.push({ type: 'number', value: parseInt(n, 16) });
+      } else {
+        let n = '';
+        while (i < src.length && /[0-9]/.test(src[i])) n += src[i++];
+        tokens.push({ type: 'number', value: parseInt(n, 10) });
+      }
       continue;
     }
     if (/[a-zA-Z_]/.test(ch)) {
@@ -164,7 +173,18 @@ class Parser {
     }
     if (t.type === 'number') {
       this.consume();
-      return { kind: 'macro', name: '__num__' + t.value, args: [] };
+      let val = t.value;
+      // Evaluate simple arithmetic (e.g. n - 1 after text substitution)
+      while (this.peek()?.type === 'op' && (this.peek()?.value === '-' || this.peek()?.value === '+' || this.peek()?.value === '*')) {
+        const op = (this.consume() as { type: 'op'; value: string }).value;
+        const rhs = this.peek();
+        if (rhs?.type !== 'number') break;
+        this.consume();
+        if (op === '-') val -= rhs.value;
+        else if (op === '+') val += rhs.value;
+        else if (op === '*') val *= rhs.value;
+      }
+      return { kind: 'macro', name: '__num__' + val, args: [] };
     }
     return this.parseOr();
   }
