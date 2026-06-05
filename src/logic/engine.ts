@@ -101,6 +101,10 @@ export function computeReachability(
 function resolveExitTarget(exit: WorldExit, state: LogicState, graph: WorldGraph): string | null {
   if (!exit.entranceId) return exit.target;
   const override = state.erOverrides.get(exit.entranceId);
-  if (!override) return exit.target;
+  if (!override) {
+    // ER mode: unmapped shuffled entrances are unknown — block BFS traversal
+    if (state.erMode) return null;
+    return exit.target;
+  }
   return resolveEntranceName(graph, override) ?? exit.target;
 }

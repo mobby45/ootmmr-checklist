@@ -69,6 +69,8 @@ export interface LogicState {
   tricks: Set<string>;
   /** Active world flags */
   flags: Set<string>;
+  /** When true, unmapped shuffled entrances block BFS instead of falling back to vanilla */
+  erMode: boolean;
 }
 
 // ─── BFS Result ──────────────────────────────────────────────────────────────

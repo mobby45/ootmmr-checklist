@@ -62,7 +62,7 @@
   import * as T from './data/types';
 
   import CheckGroup from './components/CheckGroup.svelte';
-  import { initLogicStore, logicEnabled, showOutOfLogic, logicAgeFilter, logicResult, logicLoading } from './stores/logicStore';
+  import { initLogicStore, logicEnabled, showOutOfLogic, logicAgeFilter, logicResult, logicLoading, logicErMode } from './stores/logicStore';
   import LogicSettings from './components/LogicSettings.svelte';
   import CheckItem from './components/CheckItem.svelte';
   import MapModal from './components/MapModal.svelte';
@@ -2450,7 +2450,11 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
       : true;
     const matchesHide = (!ignoreHide && hideChecked) ? $sChecks.get(check.name) !== T.CheckState.checked : true;
     const matchesLogic = (!ignoreHide && $logicEnabled && !$showOutOfLogic && $logicResult)
-      ? ($logicAgeFilter === 'adult' ? $logicResult.adultChecks : $logicResult.childChecks).has(check.name.replace(/^(OOT|MM) /, ''))
+      ? (() => {
+          const name = check.name.replace(/^(OOT|MM) /, '');
+          if ($logicAgeFilter === 'both') return $logicResult.childChecks.has(name) || $logicResult.adultChecks.has(name);
+          return ($logicAgeFilter === 'adult' ? $logicResult.adultChecks : $logicResult.childChecks).has(name);
+        })()
       : true;
 
     const passesCategories =
@@ -4507,13 +4511,21 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
                 class="pure-button"
                 type="button"
                 class:pure-button-active={!$showOutOfLogic}
-                title={$showOutOfLogic ? 'Hide out-of-logic checks' : 'Show out-of-logic checks'}
+                title={$showOutOfLogic ? 'Click to hide out-of-logic checks' : 'Click to show out-of-logic checks'}
                 on:click={() => showOutOfLogic.update(v => !v)}
-              >Hide OOL</button>
+              >{$showOutOfLogic ? 'Hide OOL' : 'OOL hidden'}</button>
               <select class="logic-age-sel" bind:value={$logicAgeFilter} title="Filter checks by age">
+                <option value="both">👶🧑 Both</option>
                 <option value="child">🧒 Child</option>
                 <option value="adult">🧑 Adult</option>
               </select>
+              <button
+                class="pure-button"
+                type="button"
+                class:pure-button-active={$logicErMode}
+                title={$logicErMode ? 'ER mode ON — unmapped entrances block logic (click to disable)' : 'ER mode OFF — unmapped entrances use vanilla connections (click to enable for ER seeds)'}
+                on:click={() => logicErMode.update(v => !v)}
+              >ER {$logicErMode ? 'ON' : 'OFF'}</button>
               <LogicSettings spoilerKeys={spoilerSettingKeys} />
               {#if $logicLoading}<span class="logic-spinner">⏳</span>{/if}
             {/if}
@@ -4702,7 +4714,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
                         zone={group.groupName}
                         age={check.age}
                         {filter}
-                        inLogic={$logicEnabled && $logicResult ? ($logicAgeFilter === 'adult' ? $logicResult.adultChecks : $logicResult.childChecks).has(check.name.replace(/^(OOT|MM) /, '')) : null}
+                        inLogic={$logicEnabled && $logicResult ? (() => { const n = check.name.replace(/^(OOT|MM) /, ''); return $logicAgeFilter === 'both' ? $logicResult.childChecks.has(n) || $logicResult.adultChecks.has(n) : ($logicAgeFilter === 'adult' ? $logicResult.adultChecks : $logicResult.childChecks).has(n); })() : null}
                         on:editNote={() => { if (!isWatchMode) handleEditNote(check.name); }}
                         on:toggle={e => {
                           if (isWatchMode) return;
@@ -4771,7 +4783,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
                     checkName={check.name}
                     zone={group.groupName}
                     {filter}
-                    inLogic={$logicEnabled && $logicResult ? ($logicAgeFilter === 'adult' ? $logicResult.adultChecks : $logicResult.childChecks).has(check.name.replace(/^(OOT|MM) /, '')) : null}
+                    inLogic={$logicEnabled && $logicResult ? (() => { const n = check.name.replace(/^(OOT|MM) /, ''); return $logicAgeFilter === 'both' ? $logicResult.childChecks.has(n) || $logicResult.adultChecks.has(n) : ($logicAgeFilter === 'adult' ? $logicResult.adultChecks : $logicResult.childChecks).has(n); })() : null}
                     on:editNote={() => { if (!isWatchMode) handleEditNote(check.name); }}
                     on:toggle={e => {
                       if (isWatchMode) return;

@@ -18,9 +18,9 @@ let _macros: MacroTable | null = null;
 
 export const logicEnabled   = writable<boolean>(localStorage.getItem('logicEnabled') === 'true');
 export const showOutOfLogic = writable<boolean>(localStorage.getItem('showOutOfLogic') !== 'false');
-/** Age filter for the logic view — child or adult */
-export const logicAgeFilter = writable<'child' | 'adult'>(
-  (localStorage.getItem('logicAgeFilter') as 'child' | 'adult') ?? 'child'
+/** Age filter for the logic view — child, adult, or both */
+export const logicAgeFilter = writable<'child' | 'adult' | 'both'>(
+  (localStorage.getItem('logicAgeFilter') as 'child' | 'adult' | 'both') ?? 'both'
 );
 
 /** Manual logic settings — merged with spoiler settings (spoiler takes priority) */
@@ -28,10 +28,14 @@ export const logicManualSettings = writable<Record<string, any>>(
   JSON.parse(localStorage.getItem('logicManualSettings') ?? 'null') ?? defaultLogicSettings()
 );
 
+/** ER mode: when enabled, unmapped shuffled entrances block BFS (no vanilla fallback) */
+export const logicErMode = writable<boolean>(localStorage.getItem('logicErMode') === 'true');
+
 logicEnabled.subscribe(v => localStorage.setItem('logicEnabled', String(v)));
 showOutOfLogic.subscribe(v => localStorage.setItem('showOutOfLogic', String(v)));
 logicAgeFilter.subscribe(v => localStorage.setItem('logicAgeFilter', v));
 logicManualSettings.subscribe(v => localStorage.setItem('logicManualSettings', JSON.stringify(v)));
+logicErMode.subscribe(v => localStorage.setItem('logicErMode', String(v)));
 
 // ─── Result store ─────────────────────────────────────────────────────────────
 
@@ -77,7 +81,7 @@ export function initLogicStore(
       if (!settingsSnap.has(k)) settingsSnap.set(k, v);
     }
 
-    const state = buildLogicState(itemsSnap, settingsSnap, erSnap);
+    const state = buildLogicState(itemsSnap, settingsSnap, erSnap, new Set(), get(logicErMode));
     try {
       const result = computeReachability(_graph!, state, _macros!);
       logicResult.set(result);
@@ -96,5 +100,6 @@ export function initLogicStore(
   entrancesStore.subscribe(() => scheduleRecompute());
   logicEnabled.subscribe(() => scheduleRecompute());
   logicManualSettings.subscribe(() => scheduleRecompute());
+  logicErMode.subscribe(() => scheduleRecompute());
   // age filter change does not require recompute — just re-reads the result
 }

@@ -9,6 +9,7 @@ export function buildLogicState(
   ySettingsSnapshot: Map<string, any>,
   yEntrancesSnapshot: Map<string, string>,
   enabledTricks: Set<string> = new Set(),
+  erMode = false,
 ): LogicState {
   const items = buildItemsMap(yItemsSnapshot);
 
@@ -55,5 +56,6 @@ export function buildLogicState(
     erOverrides,
     tricks: enabledTricks,
     flags: new Set(),
+    erMode,
   };
 }
