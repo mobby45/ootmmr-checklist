@@ -60,13 +60,20 @@ export const LOGIC_SETTINGS_DEFS: LogicSettingDef[] = [
     ]},
 
   // ─── Ageless items ───────────────────────────────────────────────────────────
-  { group: 'Ageless', key: 'agelessSwords',    label: 'Swords',    type: 'bool', default: false },
-  { group: 'Ageless', key: 'agelessHookshot',  label: 'Hookshot',  type: 'bool', default: false },
-  { group: 'Ageless', key: 'agelessBoots',     label: 'Boots',     type: 'bool', default: false },
-  { group: 'Ageless', key: 'agelessBow',       label: 'Bow',       type: 'bool', default: false },
-  { group: 'Ageless', key: 'agelessBoomerang', label: 'Boomerang', type: 'bool', default: false },
-  { group: 'Ageless', key: 'agelessStrength',  label: 'Strength',  type: 'bool', default: false },
-  { group: 'Ageless', key: 'agelessShields',   label: 'Shields',   type: 'bool', default: false },
+  { group: 'Ageless', key: 'agelessSwords',      label: 'Swords',       type: 'bool', default: false },
+  { group: 'Ageless', key: 'agelessHookshot',    label: 'Hookshot',     type: 'bool', default: false },
+  { group: 'Ageless', key: 'agelessBoots',       label: 'Boots',        type: 'bool', default: false },
+  { group: 'Ageless', key: 'agelessBow',         label: 'Bow',          type: 'bool', default: false },
+  { group: 'Ageless', key: 'agelessBoomerang',   label: 'Boomerang',    type: 'bool', default: false },
+  { group: 'Ageless', key: 'agelessStrength',    label: 'Strength',     type: 'bool', default: false },
+  { group: 'Ageless', key: 'agelessShields',     label: 'Shields',      type: 'bool', default: false },
+  { group: 'Ageless', key: 'agelessHammer',      label: 'Hammer',       type: 'bool', default: false },
+  { group: 'Ageless', key: 'agelessTunics',      label: 'Tunics',       type: 'bool', default: false },
+  { group: 'Ageless', key: 'agelessSlingshot',   label: 'Slingshot',    type: 'bool', default: false },
+  { group: 'Ageless', key: 'agelessSticks',      label: 'Sticks',       type: 'bool', default: false },
+  { group: 'Ageless', key: 'agelessSoaring',     label: 'Soaring',      type: 'bool', default: false },
+  { group: 'Ageless', key: 'agelessGFS',         label: 'Great Fairy Sword', type: 'bool', default: false },
+  { group: 'Ageless', key: 'agelessChildTrade',  label: 'Child Trade',  type: 'bool', default: false },
 
   // ─── Shared items (cross-game) ───────────────────────────────────────────────
   { group: 'Shared', key: 'sharedBows',        label: 'Bows',          type: 'bool', default: false },
@@ -94,6 +101,27 @@ export const LOGIC_SETTINGS_DEFS: LogicSettingDef[] = [
   { group: 'Shared', key: 'sharedHammer',      label: 'Hammer',        type: 'bool', default: false },
   { group: 'Shared', key: 'sharedWallets',     label: 'Wallets',       type: 'bool', default: false },
 
+  // ─── Item pool ───────────────────────────────────────────────────────────────
+  // These gate whether certain items exist in the pool at all
+  { group: 'Item Pool', key: 'boomerangMm',         label: 'Boomerang (MM)',           type: 'bool', default: true },
+  { group: 'Item Pool', key: 'gfsOot',              label: 'Great Fairy Sword (OoT)',  type: 'bool', default: false },
+  { group: 'Item Pool', key: 'stoneMaskOot',        label: 'Stone Mask (OoT)',         type: 'bool', default: false },
+  { group: 'Item Pool', key: 'blastMaskOot',        label: 'Blast Mask (OoT)',         type: 'bool', default: false },
+  { group: 'Item Pool', key: 'spinUpgradeOot',      label: 'Spin Upgrade (OoT)',       type: 'bool', default: false },
+  { group: 'Item Pool', key: 'extraChildSwordsOot', label: 'Extra Child Swords (OoT)', type: 'bool', default: false },
+  { group: 'Item Pool', key: 'shuffleMasterSword',  label: 'Shuffle Master Sword',     type: 'bool', default: true },
+  { group: 'Item Pool', key: 'scalesMm',            label: 'Scales (MM)',              type: 'bool', default: false },
+  { group: 'Item Pool', key: 'strengthMm',          label: 'Strength (MM)',            type: 'bool', default: false },
+  { group: 'Item Pool', key: 'childWallets',        label: 'Child Wallets',            type: 'bool', default: false },
+  { group: 'Item Pool', key: 'rustyKeysOot',        label: 'Rusty Keys (OoT)',         type: 'bool', default: false },
+
+  // ─── Souls mode ──────────────────────────────────────────────────────────────
+  { group: 'Souls', key: 'soulsEnemyOot',  label: 'Enemy Souls (OoT)',  type: 'bool', default: false },
+  { group: 'Souls', key: 'soulsBossOot',   label: 'Boss Souls (OoT)',   type: 'bool', default: false },
+  { group: 'Souls', key: 'soulsNpcOot',    label: 'NPC Souls (OoT)',    type: 'bool', default: false },
+  { group: 'Souls', key: 'soulsAnimalOot', label: 'Animal Souls (OoT)', type: 'bool', default: false },
+  { group: 'Souls', key: 'soulsMiscOot',   label: 'Misc Souls (OoT)',   type: 'bool', default: false },
+
   // ─── Special logic ───────────────────────────────────────────────────────────
   { group: 'Special', key: 'bronzeScale',         label: 'Bronze Scale (always swim)', type: 'bool', default: false },
   { group: 'Special', key: 'blueFireArrows',      label: 'Blue Fire Arrows',           type: 'bool', default: false },
@@ -111,7 +139,6 @@ export const LOGIC_SETTINGS_DEFS: LogicSettingDef[] = [
     options: [{ value: 'vanilla', label: 'Vanilla' }, { value: 'open', label: 'Open' }, { value: 'medallions', label: 'Medallions' }] },
   { group: 'Special', key: 'ganonTrials',         label: 'Ganon Trials',              type: 'select', default: 'all',
     options: [{ value: 'all', label: 'All 6' }, { value: 'none', label: 'None (open)' }] },
-  { group: 'Special', key: 'rustyKeysOot',        label: 'Rusty Keys (OoT)',          type: 'bool', default: false },
 ];
 
 export const SETTING_GROUPS = [...new Set(LOGIC_SETTINGS_DEFS.map(s => s.group))];
