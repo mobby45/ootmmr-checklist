@@ -20,19 +20,11 @@ export function computeReachability(
   state: LogicState,
   macros: MacroTable,
 ): ReachabilityResult {
-  // Determine starting ages from settings
-  const startingAge = (state.settings.get('startingAge') as Age | undefined) ?? 'child';
-
-  // reachedByAge[age] = set of region names reachable as that age
-  const reachedByAge: Record<Age, Set<string>> = {
-    child: new Set(),
-    adult: new Set(),
-  };
-  const reachedChecks = new Set<string>();
+  const reachedByAge: Record<Age, Set<string>> = { child: new Set(), adult: new Set() };
+  const checksByAge: Record<Age, Set<string>> = { child: new Set(), adult: new Set() };
   // Shared event pool — events are world-state, not age-specific
   const events = new Set<string>(state.events);
 
-  // BFS queue entries: which age is exploring which region
   const queue: { regionName: string; age: Age }[] = [];
 
   function enqueue(regionName: string, age: Age) {
@@ -42,14 +34,13 @@ export function computeReachability(
     queue.push({ regionName, age });
   }
 
-  // Seed spawns
-  enqueue(OOT_SPAWN, startingAge);
-  enqueue(MM_SPAWN,  startingAge);
+  // Seed both ages from both games — the logic rules themselves gate age-specific access
+  enqueue(OOT_SPAWN, 'child');
+  enqueue(OOT_SPAWN, 'adult');
+  enqueue(MM_SPAWN,  'child');
+  enqueue(MM_SPAWN,  'adult');
   enqueue(GLOBAL,    'child');
   enqueue(GLOBAL,    'adult');
-  // If starting as adult, seed other-age via age-swap potential
-  if (startingAge === 'adult') enqueue(OOT_SPAWN, 'child');
-  if (startingAge === 'child') enqueue(OOT_SPAWN, 'adult'); // adult unlocked after ToT
 
   // BFS — repeat until stable (new events can unlock new exits for either age)
   let changed = true;
@@ -74,11 +65,11 @@ export function computeReachability(
         }
       }
 
-      // Collect checks — accessible if reachable by any age
+      // Collect checks per age
       for (const loc of region.locations) {
-        if (reachedChecks.has(loc.name)) continue;
+        if (checksByAge[age].has(loc.name)) continue;
         if (evalExpr(loc.rule, s, macros)) {
-          reachedChecks.add(loc.name);
+          checksByAge[age].add(loc.name);
           changed = true;
         }
       }
@@ -104,7 +95,7 @@ export function computeReachability(
   }
 
   const reachedRegions = new Set([...reachedByAge.child, ...reachedByAge.adult]);
-  return { regions: reachedRegions, checks: reachedChecks, events };
+  return { regions: reachedRegions, childChecks: checksByAge.child, adultChecks: checksByAge.adult, events };
 }
 
 function resolveExitTarget(exit: WorldExit, state: LogicState, graph: WorldGraph): string | null {

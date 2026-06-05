@@ -62,7 +62,7 @@
   import * as T from './data/types';
 
   import CheckGroup from './components/CheckGroup.svelte';
-  import { initLogicStore, logicEnabled, showOutOfLogic, logicStartingAge, logicResult, logicLoading } from './stores/logicStore';
+  import { initLogicStore, logicEnabled, showOutOfLogic, logicAgeFilter, logicResult, logicLoading } from './stores/logicStore';
   import CheckItem from './components/CheckItem.svelte';
   import MapModal from './components/MapModal.svelte';
   import ERTracker from './components/ERTracker.svelte';
@@ -2448,7 +2448,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
       : true;
     const matchesHide = (!ignoreHide && hideChecked) ? $sChecks.get(check.name) !== T.CheckState.checked : true;
     const matchesLogic = (!ignoreHide && $logicEnabled && !$showOutOfLogic && $logicResult)
-      ? $logicResult.checks.has(check.name.replace(/^(OOT|MM) /, ''))
+      ? ($logicAgeFilter === 'adult' ? $logicResult.adultChecks : $logicResult.childChecks).has(check.name.replace(/^(OOT|MM) /, ''))
       : true;
 
     const passesCategories =
@@ -4508,18 +4508,10 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
                 title="Hide checks that are out of logic"
                 on:click={() => showOutOfLogic.update(v => !v)}
               >{$showOutOfLogic ? 'Hide OOL' : 'Show OOL'}</button>
-              {@const spoilerAge = $sSettings.get('startingAge')}
-              {#if spoilerAge && spoilerAge !== 'random'}
-                <span class="logic-age-badge" title="Starting age from spoiler log">
-                  {spoilerAge === 'adult' ? '🧑 Adult' : '🧒 Child'}
-                </span>
-              {:else}
-                <select class="logic-age-sel" bind:value={$logicStartingAge}
-                  title="Starting age (no spoiler imported — set manually)">
-                  <option value="child">🧒 Child</option>
-                  <option value="adult">🧑 Adult</option>
-                </select>
-              {/if}
+              <select class="logic-age-sel" bind:value={$logicAgeFilter} title="Filter checks by age">
+                <option value="child">🧒 Child</option>
+                <option value="adult">🧑 Adult</option>
+              </select>
               {#if $logicLoading}<span class="logic-spinner">⏳</span>{/if}
             {/if}
             <div class="filter-wrap">
@@ -4707,7 +4699,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
                         zone={group.groupName}
                         age={check.age}
                         {filter}
-                        inLogic={$logicEnabled && $logicResult ? $logicResult.checks.has(check.name.replace(/^(OOT|MM) /, '')) : null}
+                        inLogic={$logicEnabled && $logicResult ? ($logicAgeFilter === 'adult' ? $logicResult.adultChecks : $logicResult.childChecks).has(check.name.replace(/^(OOT|MM) /, '')) : null}
                         on:editNote={() => { if (!isWatchMode) handleEditNote(check.name); }}
                         on:toggle={e => {
                           if (isWatchMode) return;
@@ -4776,7 +4768,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
                     checkName={check.name}
                     zone={group.groupName}
                     {filter}
-                    inLogic={$logicEnabled && $logicResult ? $logicResult.checks.has(check.name.replace(/^(OOT|MM) /, '')) : null}
+                    inLogic={$logicEnabled && $logicResult ? ($logicAgeFilter === 'adult' ? $logicResult.adultChecks : $logicResult.childChecks).has(check.name.replace(/^(OOT|MM) /, '')) : null}
                     on:editNote={() => { if (!isWatchMode) handleEditNote(check.name); }}
                     on:toggle={e => {
                       if (isWatchMode) return;

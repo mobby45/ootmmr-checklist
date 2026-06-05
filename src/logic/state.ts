@@ -8,8 +8,6 @@ export function buildLogicState(
   yItemsSnapshot: Map<string, number>,
   ySettingsSnapshot: Map<string, any>,
   yEntrancesSnapshot: Map<string, string>,
-  /** Fallback starting age if not present in ySettings (manual override) */
-  startingAgeFallback: 'child' | 'adult' = 'child',
   enabledTricks: Set<string> = new Set(),
 ): LogicState {
   const items = buildItemsMap(yItemsSnapshot);
@@ -18,10 +16,6 @@ export function buildLogicState(
   const settings = new Map<string, string | boolean | number>();
   for (const [k, v] of ySettingsSnapshot) {
     settings.set(k, v);
-  }
-  // Inject fallback startingAge if not provided by spoiler log
-  if (!settings.has('startingAge')) {
-    settings.set('startingAge', startingAgeFallback);
   }
 
   // ER overrides: map entrance ID → destination region name
@@ -53,15 +47,10 @@ export function buildLogicState(
     events.add('MAGIC'); events.add('MM_MAGIC');
   }
 
-  const resolvedAge = (settings.get('startingAge') as 'child' | 'adult' | 'random' | undefined);
-  const age: 'child' | 'adult' = (!resolvedAge || resolvedAge === 'random')
-    ? startingAgeFallback
-    : resolvedAge;
-
   return {
     items,
-    age,
-    events, // seeded from items, extended during BFS
+    age: 'child', // placeholder — engine overrides this via stateForAge()
+    events,
     settings,
     erOverrides,
     tricks: enabledTricks,

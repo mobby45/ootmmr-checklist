@@ -74,10 +74,12 @@ export interface LogicState {
 // ─── BFS Result ──────────────────────────────────────────────────────────────
 
 export interface ReachabilityResult {
-  /** Set of reachable region names */
+  /** Set of reachable region names (union of both ages) */
   regions: Set<string>;
-  /** Set of reachable check names (location.name) */
-  checks: Set<string>;
+  /** Checks reachable as child */
+  childChecks: Set<string>;
+  /** Checks reachable as adult */
+  adultChecks: Set<string>;
   /** Set of achieved event names */
   events: Set<string>;
 }

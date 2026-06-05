@@ -17,14 +17,14 @@ let _macros: MacroTable | null = null;
 
 export const logicEnabled   = writable<boolean>(localStorage.getItem('logicEnabled') === 'true');
 export const showOutOfLogic = writable<boolean>(localStorage.getItem('showOutOfLogic') !== 'false');
-/** Manual starting-age override — used when no spoiler log is imported */
-export const logicStartingAge = writable<'child' | 'adult'>(
-  (localStorage.getItem('logicStartingAge') as 'child' | 'adult') ?? 'child'
+/** Age filter for the logic view — child or adult */
+export const logicAgeFilter = writable<'child' | 'adult'>(
+  (localStorage.getItem('logicAgeFilter') as 'child' | 'adult') ?? 'child'
 );
 
 logicEnabled.subscribe(v => localStorage.setItem('logicEnabled', String(v)));
 showOutOfLogic.subscribe(v => localStorage.setItem('showOutOfLogic', String(v)));
-logicStartingAge.subscribe(v => localStorage.setItem('logicStartingAge', v));
+logicAgeFilter.subscribe(v => localStorage.setItem('logicAgeFilter', v));
 
 // ─── Result store ─────────────────────────────────────────────────────────────
 
@@ -62,9 +62,8 @@ export function initLogicStore(
     const itemsSnap    = new Map(yItems.entries()) as Map<string, number>;
     const settingsSnap = new Map(get(settingsStore)) as Map<string, any>;
     const erSnap       = new Map(get(entrancesStore)) as Map<string, string>;
-    const ageFallback  = get(logicStartingAge);
 
-    const state  = buildLogicState(itemsSnap, settingsSnap, erSnap, ageFallback);
+    const state  = buildLogicState(itemsSnap, settingsSnap, erSnap);
     const result = computeReachability(_graph!, state, _macros!);
     logicResult.set(result);
   }
@@ -78,5 +77,5 @@ export function initLogicStore(
   settingsStore.subscribe(() => scheduleRecompute());
   entrancesStore.subscribe(() => scheduleRecompute());
   logicEnabled.subscribe(() => scheduleRecompute());
-  logicStartingAge.subscribe(() => scheduleRecompute());
+  // age filter change does not require recompute — just re-reads the result
 }
