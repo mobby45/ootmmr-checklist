@@ -12,7 +12,7 @@ import { parse as parseYaml } from 'yaml';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
-const OUT_DIR = path.join(ROOT, 'src', 'data', 'logic');
+const OUT_DIR = path.join(ROOT, 'public', 'logic');
 
 const OOTMM_RAW = 'https://raw.githubusercontent.com/OoTMM/OoTMM/master';
 const OOTMM_API = 'https://api.github.com/repos/OoTMM/OoTMM/git/trees/master?recursive=1';
@@ -55,6 +55,24 @@ interface RawRegion {
 
 interface RawWorldFile { [regionName: string]: RawRegion }
 
+// Name corrections: our CSV tracker name → OoTMM world location name
+// Tracker CSV name → OoTMM world YAML name (our names are the source of truth)
+const LOCATION_CORRECTIONS: Record<string, string> = {
+  'MQ Shadow Temple SR Spikes Left Corner':        'MQ Shadow Temple SR Spikes Northwest Corner',
+  'MQ Shadow Temple SR Spikes Left Wall':          'MQ Shadow Temple SR Spikes Southwest Wall',
+  'MQ Shadow Temple SR Spikes Left Midair':        'MQ Shadow Temple SR Spikes West Midair',
+  'MQ Shadow Temple SR Spikes Center Platforms':   'MQ Shadow Temple SR Spikes Ceiling',
+  'MQ Shadow Temple SR Spikes Front Midair':       'MQ Shadow Temple SR Spikes South Midair',
+  'MQ Shadow Temple SR Spikes Right Ground':       'MQ Shadow Temple SR Spikes East Ground',
+  'MQ Shadow Temple SR Spikes Right Back Wall':    'MQ Shadow Temple SR Spikes Northeast Wall',
+  'MQ Shadow Temple SR Spikes Right Lateral Wall': 'MQ Shadow Temple SR Spikes East Wall',
+  'Secret Shrine Dinalfos Chest':                  'Secret Shrine Dinolfos Chest',
+};
+// Reverse: OoTMM YAML name → our tracker name (applied when parsing world files)
+const OOTMM_TO_TRACKER: Record<string, string> = Object.fromEntries(
+  Object.entries(LOCATION_CORRECTIONS).map(([ours, theirs]) => [theirs, ours])
+);
+
 function parseWorldFile(yaml: string, game: 'oot' | 'mm'): any[] {
   const data: RawWorldFile = parseYaml(yaml);
   const regions = [];
@@ -67,7 +85,7 @@ function parseWorldFile(yaml: string, game: 'oot' | 'mm'): any[] {
     }));
 
     const locations = Object.entries(regionData.locations ?? {}).map(([name, rule]) => ({
-      name,
+      name: OOTMM_TO_TRACKER[name] ?? name,
       rule: String(rule),
     }));
 

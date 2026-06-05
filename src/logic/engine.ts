@@ -1,6 +1,7 @@
-import type { WorldGraph, WorldRegion, WorldExit, LogicState, ReachabilityResult } from './types';
+import type { WorldGraph, WorldExit, LogicState, ReachabilityResult } from './types';
 import type { MacroTable } from './expr/eval';
 import { evalExpr } from './expr/eval';
+import { resolveEntranceName } from './world';
 
 // Starting regions — BFS begins here (from _system.yml analysis)
 const SPAWN_REGIONS = ["Link's House", 'Clock Town South', 'GLOBAL'];
@@ -81,8 +82,8 @@ export function computeReachability(
 }
 
 // Resolve an exit's actual target, applying ER overrides when present.
-// The ER tracker stores: entranceId → destination entrance name (full OoTMM name like "OOT X to OOT Y").
-// We need to find which region that destination entrance leads FROM (= destination entrance's source region).
+// The ER tracker stores: entranceId → destination entrance name (e.g. "OOT X to OOT Y").
+// We resolve the name to a world region via name-based fuzzy matching.
 function resolveExitTarget(
   exit: WorldExit,
   state: LogicState,
@@ -93,13 +94,6 @@ function resolveExitTarget(
   const override = state.erOverrides.get(exit.entranceId);
   if (!override) return exit.target; // vanilla
 
-  // override is a destination entrance NAME — find the region it leads to
-  // by looking for an exit with a matching name in the graph
-  // The convention: destination entrance name → we want the target of its REVERSE exit
-  // i.e., if "OOT Kokiri Forest to OOT Deku Tree" is the destination,
-  // the player ends up in "OOT Deku Tree Lobby" (the target of that entrance's exit).
-  //
-  // For now we store the region name directly if the world graph uses entrance IDs as keys.
-  // This will be refined when the build script generates the world.json with proper cross-references.
-  return override; // placeholder — will be resolved against world graph in fetch-logic.ts
+  // Resolve entrance name → destination region
+  return resolveEntranceName(graph, override) ?? exit.target;
 }
