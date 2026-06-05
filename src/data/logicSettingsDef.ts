@@ -111,6 +111,7 @@ export const LOGIC_SETTINGS_DEFS: LogicSettingDef[] = [
     options: [{ value: 'vanilla', label: 'Vanilla' }, { value: 'open', label: 'Open' }, { value: 'medallions', label: 'Medallions' }] },
   { group: 'Special', key: 'ganonTrials',         label: 'Ganon Trials',              type: 'select', default: 'all',
     options: [{ value: 'all', label: 'All 6' }, { value: 'none', label: 'None (open)' }] },
+  { group: 'Special', key: 'rustyKeysOot',        label: 'Rusty Keys (OoT)',          type: 'bool', default: false },
 ];
 
 export const SETTING_GROUPS = [...new Set(LOGIC_SETTINGS_DEFS.map(s => s.group))];

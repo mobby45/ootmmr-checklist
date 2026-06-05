@@ -1,6 +1,6 @@
 <script lang="ts">
   import { logicManualSettings } from '../stores/logicStore';
-  import { LOGIC_SETTINGS_DEFS, SETTING_GROUPS, defaultLogicSettings } from '../data/logicSettingsDef';
+  import { LOGIC_SETTINGS_DEFS, SETTING_GROUPS } from '../data/logicSettingsDef';
   import type { LogicSettingDef } from '../data/logicSettingsDef';
 
   /** Keys present in the spoiler log — shown read-only */
@@ -44,12 +44,6 @@
 
   $: fromSpoiler = (key: string) => spoilerKeys.has(key);
 </script>
-
-<div class="ls-toolbar">
-  <button type="button" class="ls-reset-btn" on:click={() => logicManualSettings.set(defaultLogicSettings())}>
-    Reset to defaults
-  </button>
-</div>
 
 {#each SETTING_GROUPS as group}
   <p class="ls-group-header">{group}</p>
@@ -108,24 +102,6 @@
 {/each}
 
 <style>
-  .ls-toolbar {
-    display: flex;
-    justify-content: flex-end;
-    margin-bottom: 0.6em;
-  }
-
-  .ls-reset-btn {
-    font-size: 0.8em;
-    padding: 0.25em 0.7em;
-    background: none;
-    border: 1px solid var(--color-border);
-    border-radius: 4px;
-    color: var(--color-text);
-    cursor: pointer;
-    opacity: 0.7;
-  }
-  .ls-reset-btn:hover { opacity: 1; }
-
   .ls-group-header {
     font-size: 0.75em;
     font-weight: 700;

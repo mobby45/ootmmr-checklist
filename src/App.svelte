@@ -388,7 +388,8 @@ yKeepalive.observe((event: any) => {
   initLogicStore(yItems, ySettings, yEntrances, _itemsRevStore, sSettings, sEntrances);
 
   $: checkStatesMap = new Map($sChecks) as Map<string, T.CheckState>;
-  $: spoilerSettingKeys = new Set(($sSettings as Map<string, any>).keys());
+  // Only consider settings as "from spoiler" when a real spoiler is loaded
+  $: spoilerSettingKeys = spoilerSeedInfo ? new Set(($sSettings as Map<string, any>).keys()) : new Set<string>();
   $: shopItemsMap = new Map($sShopItems) as Map<string, string>;
   $: shopPricesMap = new Map($sShopPrices) as Map<string, number>;
   $: entranceValuesMap = (spoilerFillEntrances && spoilerEntrances)
