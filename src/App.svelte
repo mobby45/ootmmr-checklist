@@ -62,7 +62,7 @@
   import * as T from './data/types';
 
   import CheckGroup from './components/CheckGroup.svelte';
-  import { initLogicStore, logicEnabled, showOutOfLogic, logicResult, logicLoading } from './stores/logicStore';
+  import { initLogicStore, logicEnabled, showOutOfLogic, logicAgeFilter, logicResult, logicLoading } from './stores/logicStore';
 
   function ageLogic(checkName: string, result: typeof $logicResult): 'child' | 'adult' | 'both' | 'none' {
     const n = checkName.replace(/^(OOT|MM) /, '');
@@ -2460,7 +2460,12 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
       : true;
     const matchesHide = (!ignoreHide && hideChecked) ? $sChecks.get(check.name) !== T.CheckState.checked : true;
     const matchesLogic = (!ignoreHide && $logicEnabled && !$showOutOfLogic && $logicResult)
-      ? ageLogic(check.name, $logicResult) !== 'none'
+      ? (() => {
+          const n = check.name.replace(/^(OOT|MM) /, '');
+          if ($logicAgeFilter === 'child') return $logicResult.childChecks.has(n);
+          if ($logicAgeFilter === 'adult') return $logicResult.adultChecks.has(n);
+          return $logicResult.childChecks.has(n) || $logicResult.adultChecks.has(n);
+        })()
       : true;
 
     const passesCategories =
@@ -3249,7 +3254,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     localStorage.setItem('theme', theme);
   }
 
-  let activeTab: 'oot' | 'mm' | 'other' = 'oot';
+  let activeTab: 'oot' | 'mm' | 'other' | 'logic' = 'oot';
   let compact = false;
   let showLegend = false;
   let showShortcuts = false;
@@ -4402,6 +4407,9 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
             <button class="tab-button" class:active={activeTab === 'other'} on:click={() => (activeTab = 'other')}
               >Other Settings</button
             >
+            <button class="tab-button" class:active={activeTab === 'logic'} on:click={() => (activeTab = 'logic')}
+              >Logic Settings</button
+            >
           </div>
             {#if isWatchMode}
               <p class="readonly-notice">Settings are read-only in watch mode</p>
@@ -4480,6 +4488,10 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
                       {/if}
                     {/each}
                   </div>
+                {:else if activeTab === 'logic'}
+                  <div style="padding: 4px 0;">
+                    <LogicSettings spoilerKeys={spoilerSettingKeys} />
+                  </div>
                 {/if}
               </fieldset>
             </form>
@@ -4520,7 +4532,11 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
                 title={$showOutOfLogic ? 'Click to hide out-of-logic checks' : 'Click to show out-of-logic checks'}
                 on:click={() => showOutOfLogic.update(v => !v)}
               >{$showOutOfLogic ? 'Hide OOL' : 'OOL hidden'}</button>
-              <LogicSettings spoilerKeys={spoilerSettingKeys} />
+              <select class="logic-age-sel" bind:value={$logicAgeFilter} title="Filter checks by age">
+                <option value="both">👶🧑 Both</option>
+                <option value="child">🧒 Child</option>
+                <option value="adult">🧑 Adult</option>
+              </select>
               {#if $logicLoading}<span class="logic-spinner">⏳</span>{/if}
             {/if}
             <div class="filter-wrap">
@@ -4706,7 +4722,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
                         spiderHouse={!!check.scene?.startsWith('MM_SPIDER_HOUSE')}
                         checkName={check.name}
                         zone={group.groupName}
-                        age={check.age}
+
                         {filter}
                         inLogic={$logicEnabled && $logicResult ? ageLogic(check.name, $logicResult) : null}
                         on:editNote={() => { if (!isWatchMode) handleEditNote(check.name); }}

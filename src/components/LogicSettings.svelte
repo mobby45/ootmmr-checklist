@@ -1,12 +1,10 @@
 <script lang="ts">
   import { logicManualSettings } from '../stores/logicStore';
-  import { LOGIC_SETTINGS_DEFS, SETTING_GROUPS } from '../data/logicSettingsDef';
+  import { LOGIC_SETTINGS_DEFS, SETTING_GROUPS, defaultLogicSettings } from '../data/logicSettingsDef';
   import type { LogicSettingDef } from '../data/logicSettingsDef';
 
   /** Keys present in the spoiler log — shown read-only */
   export let spoilerKeys: Set<string> = new Set();
-
-  let open = false;
 
   function get(key: string): any {
     return $logicManualSettings[key];
@@ -34,14 +32,6 @@
   }
 
   function resetAll() {
-    const { defaultLogicSettings } = (() => {
-      const defs = LOGIC_SETTINGS_DEFS;
-      return { defaultLogicSettings: () => {
-        const out: Record<string, any> = {};
-        for (const d of defs) out[d.key] = d.default;
-        return out;
-      }};
-    })();
     logicManualSettings.set(defaultLogicSettings());
   }
 
@@ -60,108 +50,64 @@
   $: fromSpoiler = (key: string) => spoilerKeys.has(key);
 </script>
 
-<div class="logic-settings-wrap">
-  <button type="button" class="logic-settings-toggle" on:click={() => open = !open} title="Logic settings">
-    ⚙ {open ? '▲' : '▼'}
-  </button>
+<div class="ls-header">
+  <span class="ls-title">Logic Settings</span>
+  <button type="button" class="ls-reset" on:click={resetAll} title="Reset all to defaults">Reset</button>
+</div>
 
-  {#if open}
-    <div class="logic-settings-panel">
-      <div class="ls-header">
-        <span class="ls-title">Logic Settings</span>
-        <button type="button" class="ls-reset" on:click={resetAll} title="Reset all to defaults">Reset</button>
-      </div>
-
-      {#each SETTING_GROUPS as group}
-        <div class="ls-group">
-          <div class="ls-group-label">{group}</div>
-          <div class="ls-group-body">
-            {#each groupDefs(group) as def}
-              {@const spoiler = fromSpoiler(def.key)}
-              <div class="ls-row" class:from-spoiler={spoiler}>
-                {#if def.type === 'bool'}
-                  <label class="ls-bool">
-                    <input type="checkbox"
-                      checked={spoiler ? spoilerKeys.has(def.key) : !!get(def.key)}
-                      disabled={spoiler}
-                      on:change={e => onCheckboxChange(def.key, e)}
-                    />
-                    {def.label}
-                    {#if spoiler}<span class="ls-spoiler-badge">spoiler</span>{/if}
-                  </label>
-                {:else if def.type === 'select'}
-                  <label class="ls-select-label">{def.label}
-                    {#if spoiler}<span class="ls-spoiler-badge">spoiler</span>{/if}
-                  </label>
-                  <select class="ls-select" disabled={spoiler}
-                    value={get(def.key)}
-                    on:change={e => onSelectChange(def.key, e)}
-                  >
-                    {#each def.options ?? [] as opt}
-                      <option value={opt.value}>{opt.label}</option>
-                    {/each}
-                  </select>
-                {:else if def.type === 'multicheck'}
-                  <div class="ls-multicheck-label">{def.label}
-                    {#if spoiler}<span class="ls-spoiler-badge">spoiler</span>{/if}
-                  </div>
-                  <div class="ls-flags">
-                    {#each def.flags ?? [] as flag}
-                      <label class="ls-flag">
-                        <input type="checkbox"
-                          checked={hasFlag(def.key, flag.value)}
-                          disabled={spoiler}
-                          on:change={() => toggleFlag(def.key, flag.value)}
-                        />
-                        {flag.label}
-                      </label>
-                    {/each}
-                  </div>
-                {/if}
-              </div>
-            {/each}
-          </div>
+{#each SETTING_GROUPS as group}
+  <div class="ls-group">
+    <div class="ls-group-label">{group}</div>
+    <div class="ls-group-body">
+      {#each groupDefs(group) as def}
+        {@const spoiler = fromSpoiler(def.key)}
+        <div class="ls-row" class:from-spoiler={spoiler}>
+          {#if def.type === 'bool'}
+            <label class="ls-bool">
+              <input type="checkbox"
+                checked={spoiler ? spoilerKeys.has(def.key) : !!get(def.key)}
+                disabled={spoiler}
+                on:change={e => onCheckboxChange(def.key, e)}
+              />
+              {def.label}
+              {#if spoiler}<span class="ls-spoiler-badge">spoiler</span>{/if}
+            </label>
+          {:else if def.type === 'select'}
+            <label class="ls-select-label">{def.label}
+              {#if spoiler}<span class="ls-spoiler-badge">spoiler</span>{/if}
+            </label>
+            <select class="ls-select" disabled={spoiler}
+              value={get(def.key)}
+              on:change={e => onSelectChange(def.key, e)}
+            >
+              {#each def.options ?? [] as opt}
+                <option value={opt.value}>{opt.label}</option>
+              {/each}
+            </select>
+          {:else if def.type === 'multicheck'}
+            <div class="ls-multicheck-label">{def.label}
+              {#if spoiler}<span class="ls-spoiler-badge">spoiler</span>{/if}
+            </div>
+            <div class="ls-flags">
+              {#each def.flags ?? [] as flag}
+                <label class="ls-flag">
+                  <input type="checkbox"
+                    checked={hasFlag(def.key, flag.value)}
+                    disabled={spoiler}
+                    on:change={() => toggleFlag(def.key, flag.value)}
+                  />
+                  {flag.label}
+                </label>
+              {/each}
+            </div>
+          {/if}
         </div>
       {/each}
     </div>
-  {/if}
-</div>
+  </div>
+{/each}
 
 <style>
-  .logic-settings-wrap {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-  }
-
-  .logic-settings-toggle {
-    background: #2a2a2a;
-    border: 1px solid #444;
-    color: #ccc;
-    border-radius: 4px;
-    padding: 2px 7px;
-    font-size: 0.8em;
-    cursor: pointer;
-    white-space: nowrap;
-  }
-  .logic-settings-toggle:hover { background: #333; color: #fff; }
-
-  .logic-settings-panel {
-    position: absolute;
-    top: calc(100% + 4px);
-    left: 0;
-    z-index: 200;
-    background: #1e1e1e;
-    border: 1px solid #444;
-    border-radius: 6px;
-    padding: 10px;
-    min-width: 320px;
-    max-width: 480px;
-    max-height: 70vh;
-    overflow-y: auto;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.5);
-  }
-
   .ls-header {
     display: flex;
     align-items: center;
