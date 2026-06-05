@@ -2448,7 +2448,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
       : true;
     const matchesHide = (!ignoreHide && hideChecked) ? $sChecks.get(check.name) !== T.CheckState.checked : true;
     const matchesLogic = (!ignoreHide && $logicEnabled && !$showOutOfLogic && $logicResult)
-      ? $logicResult.checks.has(check.name) || $logicResult.checks.has(check.shortName)
+      ? $logicResult.checks.has(check.name.replace(/^(OOT|MM) /, ''))
       : true;
 
     const passesCategories =
@@ -4707,7 +4707,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
                         zone={group.groupName}
                         age={check.age}
                         {filter}
-                        inLogic={$logicEnabled && $logicResult ? ($logicResult.checks.has(check.name) || $logicResult.checks.has(check.shortName)) : null}
+                        inLogic={$logicEnabled && $logicResult ? $logicResult.checks.has(check.name.replace(/^(OOT|MM) /, '')) : null}
                         on:editNote={() => { if (!isWatchMode) handleEditNote(check.name); }}
                         on:toggle={e => {
                           if (isWatchMode) return;
@@ -4776,7 +4776,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
                     checkName={check.name}
                     zone={group.groupName}
                     {filter}
-                    inLogic={$logicEnabled && $logicResult ? ($logicResult.checks.has(check.name) || $logicResult.checks.has(check.shortName)) : null}
+                    inLogic={$logicEnabled && $logicResult ? $logicResult.checks.has(check.name.replace(/^(OOT|MM) /, '')) : null}
                     on:editNote={() => { if (!isWatchMode) handleEditNote(check.name); }}
                     on:toggle={e => {
                       if (isWatchMode) return;
