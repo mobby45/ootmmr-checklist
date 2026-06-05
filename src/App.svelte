@@ -62,7 +62,7 @@
   import * as T from './data/types';
 
   import CheckGroup from './components/CheckGroup.svelte';
-  import { initLogicStore, logicEnabled, showOutOfLogic, logicAgeFilter, logicResult, logicLoading, logicErMode } from './stores/logicStore';
+  import { initLogicStore, logicEnabled, showOutOfLogic, logicAgeFilter, logicResult, logicLoading } from './stores/logicStore';
   import LogicSettings from './components/LogicSettings.svelte';
   import CheckItem from './components/CheckItem.svelte';
   import MapModal from './components/MapModal.svelte';
@@ -4519,13 +4519,6 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
                 <option value="child">🧒 Child</option>
                 <option value="adult">🧑 Adult</option>
               </select>
-              <button
-                class="pure-button"
-                type="button"
-                class:pure-button-active={$logicErMode}
-                title={$logicErMode ? 'ER mode ON — unmapped entrances block logic (click to disable)' : 'ER mode OFF — unmapped entrances use vanilla connections (click to enable for ER seeds)'}
-                on:click={() => logicErMode.update(v => !v)}
-              >ER {$logicErMode ? 'ON' : 'OFF'}</button>
               <LogicSettings spoilerKeys={spoilerSettingKeys} />
               {#if $logicLoading}<span class="logic-spinner">⏳</span>{/if}
             {/if}

@@ -28,19 +28,26 @@ export const logicManualSettings = writable<Record<string, any>>(
   JSON.parse(localStorage.getItem('logicManualSettings') ?? 'null') ?? defaultLogicSettings()
 );
 
-/** ER mode: when enabled, unmapped shuffled entrances block BFS (no vanilla fallback) */
-export const logicErMode = writable<boolean>(localStorage.getItem('logicErMode') === 'true');
-
 logicEnabled.subscribe(v => localStorage.setItem('logicEnabled', String(v)));
 showOutOfLogic.subscribe(v => localStorage.setItem('showOutOfLogic', String(v)));
 logicAgeFilter.subscribe(v => localStorage.setItem('logicAgeFilter', v));
 logicManualSettings.subscribe(v => localStorage.setItem('logicManualSettings', JSON.stringify(v)));
-logicErMode.subscribe(v => localStorage.setItem('logicErMode', String(v)));
 
 // ─── Result store ─────────────────────────────────────────────────────────────
 
 export const logicResult  = writable<ReachabilityResult | null>(null);
 export const logicLoading = writable<boolean>(false);
+
+// ─── ER mode detection ────────────────────────────────────────────────────────
+
+const ER_SETTING_KEYS = [
+  'erBoss', 'erDungeons', 'erGrottos', 'erIndoors', 'erOneWays',
+  'erOwls', 'erOverworld', 'erWallmasters', 'erAlterLw', 'erSpawns',
+] as const;
+
+function detectErMode(settings: Map<string, any>): boolean {
+  return ER_SETTING_KEYS.some(k => !!settings.get(k));
+}
 
 // ─── Factory — called once from App.svelte ────────────────────────────────────
 
@@ -81,7 +88,8 @@ export function initLogicStore(
       if (!settingsSnap.has(k)) settingsSnap.set(k, v);
     }
 
-    const state = buildLogicState(itemsSnap, settingsSnap, erSnap, new Set(), get(logicErMode));
+    const erMode = detectErMode(settingsSnap);
+    const state = buildLogicState(itemsSnap, settingsSnap, erSnap, new Set(), erMode);
     try {
       const result = computeReachability(_graph!, state, _macros!);
       logicResult.set(result);
@@ -100,6 +108,5 @@ export function initLogicStore(
   entrancesStore.subscribe(() => scheduleRecompute());
   logicEnabled.subscribe(() => scheduleRecompute());
   logicManualSettings.subscribe(() => scheduleRecompute());
-  logicErMode.subscribe(() => scheduleRecompute());
   // age filter change does not require recompute — just re-reads the result
 }
