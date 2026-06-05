@@ -1926,22 +1926,36 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
 
   async function openMapForEntrance(entranceId: string) {
     if (!mapData) return;
-    // If a destination is assigned, navigate to the spawn point (reverse entrance interior) if available
-    let targetId = entranceId;
+    const normalize = (s: string) =>
+      s.toLowerCase().replace(/[''']/g, '').replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
+
     const destName = entranceValuesMap.get(entranceId);
     if (destName) {
       const destEntrance = allEntrances.find(e => e.name === destName);
       if (destEntrance) {
-        // Prefer destination's own position (the scene you arrive in)
-        if (entrancePositions.some(p => p.entranceId === destEntrance.id)) {
-          targetId = destEntrance.id;
-        } else {
-          const rev = findReverseEntrance(destEntrance);
-          if (rev && entrancePositions.some(p => p.entranceId === rev.id)) targetId = rev.id;
+        // The destination entrance name is "Interior to Exterior" — first part is the interior area
+        const interiorArea = destEntrance.name.split(' to ')[0]; // e.g. "OOT Deku Tree"
+        const ni = normalize(interiorArea);
+        const sceneKey = Object.keys(mapData).find(s => {
+          const ns = normalize(s);
+          return ns === ni || ns.replace(/^(oot|mm) /, '') === ni.replace(/^(oot|mm) /, '');
+        });
+        if (sceneKey) {
+          scrollPosition = window.scrollY;
+          currentGroupName = '';
+          filteredCheckNames = new Set();
+          currentMapScene = sceneKey;
+          currentSceneData = mapData[sceneKey];
+          mapInitialSubscene = '';
+          if (showMapModal) { showMapModal = false; await tick(); }
+          showMapModal = true;
+          return;
         }
       }
     }
-    const pos = entrancePositions.find(p => p.entranceId === targetId);
+
+    // Fallback: show the source entrance position on the overworld map
+    const pos = entrancePositions.find(p => p.entranceId === entranceId);
     if (!pos) return;
     const renderscene = pos.renderscene;
     for (const [sceneKey, sd] of Object.entries(mapData)) {
