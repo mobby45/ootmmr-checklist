@@ -3,97 +3,113 @@ import type { MacroTable } from './expr/eval';
 import { evalExpr } from './expr/eval';
 import { resolveEntranceName } from './world';
 
-// Starting regions — BFS begins here (from _system.yml analysis)
-const SPAWN_REGIONS = ["Link's House", 'Clock Town South', 'GLOBAL'];
+type Age = 'child' | 'adult';
+
+// Spawn regions by age (from _system.yml)
+const OOT_SPAWN = "Link's House";
+const MM_SPAWN  = 'Clock Town South';
+const GLOBAL    = 'GLOBAL';
+
+// Build an age-specific state copy
+function stateForAge(base: LogicState, age: Age, events: Set<string>): LogicState {
+  return { ...base, age, events };
+}
 
 export function computeReachability(
   graph: WorldGraph,
   state: LogicState,
   macros: MacroTable,
 ): ReachabilityResult {
-  const reachedRegions = new Set<string>();
-  const reachedChecks  = new Set<string>();
-  const reachedEvents  = new Set<string>(state.events);
+  // Determine starting ages from settings
+  const startingAge = (state.settings.get('startingAge') as Age | undefined) ?? 'child';
 
-  // BFS queue of region names
-  const queue: string[] = [];
+  // reachedByAge[age] = set of region names reachable as that age
+  const reachedByAge: Record<Age, Set<string>> = {
+    child: new Set(),
+    adult: new Set(),
+  };
+  const reachedChecks = new Set<string>();
+  // Shared event pool — events are world-state, not age-specific
+  const events = new Set<string>(state.events);
 
-  function enqueue(regionName: string) {
-    if (reachedRegions.has(regionName)) return;
-    reachedRegions.add(regionName);
-    queue.push(regionName);
+  // BFS queue entries: which age is exploring which region
+  const queue: { regionName: string; age: Age }[] = [];
+
+  function enqueue(regionName: string, age: Age) {
+    if (!graph.has(regionName)) return;
+    if (reachedByAge[age].has(regionName)) return;
+    reachedByAge[age].add(regionName);
+    queue.push({ regionName, age });
   }
 
-  // Seed from spawn points
-  for (const spawn of SPAWN_REGIONS) {
-    if (graph.has(spawn)) enqueue(spawn);
-  }
+  // Seed spawns
+  enqueue(OOT_SPAWN, startingAge);
+  enqueue(MM_SPAWN,  startingAge);
+  enqueue(GLOBAL,    'child');
+  enqueue(GLOBAL,    'adult');
+  // If starting as adult, seed other-age via age-swap potential
+  if (startingAge === 'adult') enqueue(OOT_SPAWN, 'child');
+  if (startingAge === 'child') enqueue(OOT_SPAWN, 'adult'); // adult unlocked after ToT
 
-  // BFS — repeat until stable (events can unlock new exits)
+  // BFS — repeat until stable (new events can unlock new exits for either age)
   let changed = true;
   while (changed) {
     changed = false;
 
     while (queue.length > 0) {
-      const regionName = queue.shift()!;
+      const { regionName, age } = queue.shift()!;
       const region = graph.get(regionName);
       if (!region) continue;
+
+      const s = stateForAge(state, age, events);
 
       // Evaluate exits
       for (const exit of region.exits) {
         const target = resolveExitTarget(exit, state, graph);
         if (!target) continue;
-        if (reachedRegions.has(target)) continue;
-        if (evalExpr(exit.rule, state, macros)) {
-          enqueue(target);
+        if (reachedByAge[age].has(target)) continue;
+        if (evalExpr(exit.rule, s, macros)) {
+          enqueue(target, age);
           changed = true;
         }
       }
 
-      // Collect checks
+      // Collect checks — accessible if reachable by any age
       for (const loc of region.locations) {
         if (reachedChecks.has(loc.name)) continue;
-        if (evalExpr(loc.rule, state, macros)) {
+        if (evalExpr(loc.rule, s, macros)) {
           reachedChecks.add(loc.name);
           changed = true;
         }
       }
 
-      // Collect events — these can unlock further exits on the next BFS pass
+      // Collect events (shared across ages)
       for (const ev of region.events) {
-        if (reachedEvents.has(ev.name)) continue;
-        if (evalExpr(ev.rule, state, macros)) {
-          reachedEvents.add(ev.name);
-          state = { ...state, events: reachedEvents }; // update state for subsequent evals
+        if (events.has(ev.name)) continue;
+        if (evalExpr(ev.rule, s, macros)) {
+          events.add(ev.name);
           changed = true;
         }
       }
     }
 
-    // Re-scan all reached regions for newly unlocked exits/events
+    // Re-scan all reached regions when new events fire
     if (changed) {
-      for (const regionName of reachedRegions) {
-        queue.push(regionName);
+      for (const age of ['child', 'adult'] as Age[]) {
+        for (const regionName of reachedByAge[age]) {
+          queue.push({ regionName, age });
+        }
       }
     }
   }
 
-  return { regions: reachedRegions, checks: reachedChecks, events: reachedEvents };
+  const reachedRegions = new Set([...reachedByAge.child, ...reachedByAge.adult]);
+  return { regions: reachedRegions, checks: reachedChecks, events };
 }
 
-// Resolve an exit's actual target, applying ER overrides when present.
-// The ER tracker stores: entranceId → destination entrance name (e.g. "OOT X to OOT Y").
-// We resolve the name to a world region via name-based fuzzy matching.
-function resolveExitTarget(
-  exit: WorldExit,
-  state: LogicState,
-  graph: WorldGraph,
-): string | null {
+function resolveExitTarget(exit: WorldExit, state: LogicState, graph: WorldGraph): string | null {
   if (!exit.entranceId) return exit.target;
-
   const override = state.erOverrides.get(exit.entranceId);
-  if (!override) return exit.target; // vanilla
-
-  // Resolve entrance name → destination region
+  if (!override) return exit.target;
   return resolveEntranceName(graph, override) ?? exit.target;
 }

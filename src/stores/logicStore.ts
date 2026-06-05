@@ -1,4 +1,4 @@
-import { writable, derived, get, type Readable } from 'svelte/store';
+import { writable, get, type Readable } from 'svelte/store';
 import type { Map as YMap } from 'yjs';
 import { loadWorld } from '../logic/world';
 import { buildLogicState } from '../logic/state';
@@ -15,19 +15,20 @@ let _macros: MacroTable | null = null;
 
 // ─── Public state ─────────────────────────────────────────────────────────────
 
-export const logicEnabled     = writable<boolean>(localStorage.getItem('logicEnabled') === 'true');
-export const showOutOfLogic   = writable<boolean>(localStorage.getItem('showOutOfLogic') !== 'false'); // default ON
-export const logicAge         = writable<'child' | 'adult'>(
-  (localStorage.getItem('logicAge') as 'child' | 'adult') ?? 'child'
+export const logicEnabled   = writable<boolean>(localStorage.getItem('logicEnabled') === 'true');
+export const showOutOfLogic = writable<boolean>(localStorage.getItem('showOutOfLogic') !== 'false');
+/** Manual starting-age override — used when no spoiler log is imported */
+export const logicStartingAge = writable<'child' | 'adult'>(
+  (localStorage.getItem('logicStartingAge') as 'child' | 'adult') ?? 'child'
 );
 
 logicEnabled.subscribe(v => localStorage.setItem('logicEnabled', String(v)));
 showOutOfLogic.subscribe(v => localStorage.setItem('showOutOfLogic', String(v)));
-logicAge.subscribe(v => localStorage.setItem('logicAge', v));
+logicStartingAge.subscribe(v => localStorage.setItem('logicStartingAge', v));
 
 // ─── Result store ─────────────────────────────────────────────────────────────
 
-export const logicResult = writable<ReachabilityResult | null>(null);
+export const logicResult  = writable<ReachabilityResult | null>(null);
 export const logicLoading = writable<boolean>(false);
 
 // ─── Factory — called once from App.svelte ────────────────────────────────────
@@ -36,14 +37,13 @@ export function initLogicStore(
   yItems: YMap<number>,
   ySettings: YMap<any>,
   yEntrances: YMap<string>,
-  /** A readable store that increments when any yItems change (use _itemsRevStore) */
   itemsRev: Readable<number>,
   settingsStore: Readable<Map<string, any>>,
   entrancesStore: Readable<Map<string, string>>,
 ) {
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
-  async function recompute(enabled: boolean, age: 'child' | 'adult') {
+  async function recompute(enabled: boolean) {
     if (!enabled) { logicResult.set(null); return; }
 
     if (!_worldReady) {
@@ -62,25 +62,21 @@ export function initLogicStore(
     const itemsSnap    = new Map(yItems.entries()) as Map<string, number>;
     const settingsSnap = new Map(get(settingsStore)) as Map<string, any>;
     const erSnap       = new Map(get(entrancesStore)) as Map<string, string>;
+    const ageFallback  = get(logicStartingAge);
 
-    const state = buildLogicState(itemsSnap, settingsSnap, erSnap, age);
+    const state  = buildLogicState(itemsSnap, settingsSnap, erSnap, ageFallback);
     const result = computeReachability(_graph!, state, _macros!);
     logicResult.set(result);
   }
 
   function scheduleRecompute() {
     if (debounceTimer) clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(() => {
-      const enabled = get(logicEnabled);
-      const age     = get(logicAge);
-      recompute(enabled, age);
-    }, 150);
+    debounceTimer = setTimeout(() => recompute(get(logicEnabled)), 150);
   }
 
-  // Subscribe to all change sources
   itemsRev.subscribe(() => scheduleRecompute());
   settingsStore.subscribe(() => scheduleRecompute());
   entrancesStore.subscribe(() => scheduleRecompute());
   logicEnabled.subscribe(() => scheduleRecompute());
-  logicAge.subscribe(() => scheduleRecompute());
+  logicStartingAge.subscribe(() => scheduleRecompute());
 }

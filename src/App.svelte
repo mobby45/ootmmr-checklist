@@ -62,7 +62,7 @@
   import * as T from './data/types';
 
   import CheckGroup from './components/CheckGroup.svelte';
-  import { initLogicStore, logicEnabled, showOutOfLogic, logicAge, logicResult, logicLoading } from './stores/logicStore';
+  import { initLogicStore, logicEnabled, showOutOfLogic, logicStartingAge, logicResult, logicLoading } from './stores/logicStore';
   import CheckItem from './components/CheckItem.svelte';
   import MapModal from './components/MapModal.svelte';
   import ERTracker from './components/ERTracker.svelte';
@@ -4508,10 +4508,18 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
                 title="Hide checks that are out of logic"
                 on:click={() => showOutOfLogic.update(v => !v)}
               >{$showOutOfLogic ? 'Hide OOL' : 'Show OOL'}</button>
-              <select class="logic-age-sel" bind:value={$logicAge} title="Current age for logic">
-                <option value="child">Child</option>
-                <option value="adult">Adult</option>
-              </select>
+              {@const spoilerAge = $sSettings.get('startingAge')}
+              {#if spoilerAge && spoilerAge !== 'random'}
+                <span class="logic-age-badge" title="Starting age from spoiler log">
+                  {spoilerAge === 'adult' ? '🧑 Adult' : '🧒 Child'}
+                </span>
+              {:else}
+                <select class="logic-age-sel" bind:value={$logicStartingAge}
+                  title="Starting age (no spoiler imported — set manually)">
+                  <option value="child">🧒 Child</option>
+                  <option value="adult">🧑 Adult</option>
+                </select>
+              {/if}
               {#if $logicLoading}<span class="logic-spinner">⏳</span>{/if}
             {/if}
             <div class="filter-wrap">
@@ -4996,6 +5004,10 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
   .logic-age-sel {
     padding: 2px 4px; border: 1px solid #444; border-radius: 3px;
     background: #252525; color: #e0e0e0; font-size: 0.82em;
+  }
+  .logic-age-badge {
+    font-size: 0.82em; padding: 2px 6px; border-radius: 3px;
+    background: rgba(255,255,255,0.07); color: #bbb; border: 1px solid #444;
   }
   .logic-spinner { font-size: 0.85em; opacity: 0.7; }
 
