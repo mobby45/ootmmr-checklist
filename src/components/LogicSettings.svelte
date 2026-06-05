@@ -27,16 +27,7 @@
   }
 
   function hasFlag(key: string, flag: string): boolean {
-    const cur: string = $logicManualSettings[key] ?? '';
-    return cur.split(' ').includes(flag);
-  }
-
-  function resetAll() {
-    logicManualSettings.set(defaultLogicSettings());
-  }
-
-  function groupDefs(group: string): LogicSettingDef[] {
-    return LOGIC_SETTINGS_DEFS.filter(d => d.group === group);
+    return ($logicManualSettings[key] ?? '').split(' ').includes(flag);
   }
 
   function onCheckboxChange(key: string, e: Event) {
@@ -47,146 +38,175 @@
     setVal(key, (e.target as HTMLSelectElement).value);
   }
 
+  function groupDefs(group: string): LogicSettingDef[] {
+    return LOGIC_SETTINGS_DEFS.filter(d => d.group === group);
+  }
+
   $: fromSpoiler = (key: string) => spoilerKeys.has(key);
 </script>
 
-<div class="ls-header">
-  <span class="ls-title">Logic Settings</span>
-  <button type="button" class="ls-reset" on:click={resetAll} title="Reset all to defaults">Reset</button>
+<div class="ls-toolbar">
+  <button type="button" class="ls-reset-btn" on:click={() => logicManualSettings.set(defaultLogicSettings())}>
+    Reset to defaults
+  </button>
 </div>
 
 {#each SETTING_GROUPS as group}
-  <div class="ls-group">
-    <div class="ls-group-label">{group}</div>
-    <div class="ls-group-body">
-      {#each groupDefs(group) as def}
-        {@const spoiler = fromSpoiler(def.key)}
-        <div class="ls-row" class:from-spoiler={spoiler}>
-          {#if def.type === 'bool'}
-            <label class="ls-bool">
-              <input type="checkbox"
-                checked={spoiler ? spoilerKeys.has(def.key) : !!get(def.key)}
-                disabled={spoiler}
-                on:change={e => onCheckboxChange(def.key, e)}
-              />
-              {def.label}
-              {#if spoiler}<span class="ls-spoiler-badge">spoiler</span>{/if}
-            </label>
-          {:else if def.type === 'select'}
-            <label class="ls-select-label">{def.label}
-              {#if spoiler}<span class="ls-spoiler-badge">spoiler</span>{/if}
-            </label>
-            <select class="ls-select" disabled={spoiler}
-              value={get(def.key)}
-              on:change={e => onSelectChange(def.key, e)}
-            >
-              {#each def.options ?? [] as opt}
-                <option value={opt.value}>{opt.label}</option>
-              {/each}
-            </select>
-          {:else if def.type === 'multicheck'}
-            <div class="ls-multicheck-label">{def.label}
-              {#if spoiler}<span class="ls-spoiler-badge">spoiler</span>{/if}
-            </div>
-            <div class="ls-flags">
-              {#each def.flags ?? [] as flag}
-                <label class="ls-flag">
-                  <input type="checkbox"
-                    checked={hasFlag(def.key, flag.value)}
-                    disabled={spoiler}
-                    on:change={() => toggleFlag(def.key, flag.value)}
-                  />
-                  {flag.label}
-                </label>
-              {/each}
-            </div>
-          {/if}
+  <p class="ls-group-header">{group}</p>
+  <div class="dropdown-grid">
+    {#each groupDefs(group) as def}
+      {@const spoiler = fromSpoiler(def.key)}
+      {#if def.type === 'bool'}
+        <label class="checkbox-option" class:spoiler-row={spoiler} title={spoiler ? 'Set by spoiler log' : ''}>
+          <input
+            type="checkbox"
+            checked={!!get(def.key)}
+            disabled={spoiler}
+            on:change={e => onCheckboxChange(def.key, e)}
+          />
+          {def.label}
+          {#if spoiler}<span class="spoiler-badge">spoiler</span>{/if}
+        </label>
+      {:else if def.type === 'select'}
+        <label class:spoiler-row={spoiler} title={spoiler ? 'Set by spoiler log' : ''}>
+          {def.label}
+          {#if spoiler}<span class="spoiler-badge">spoiler</span>{/if}
+          <select
+            class="dropdown-select"
+            value={get(def.key)}
+            disabled={spoiler}
+            on:change={e => onSelectChange(def.key, e)}
+          >
+            {#each def.options ?? [] as opt}
+              <option value={opt.value}>{opt.label}</option>
+            {/each}
+          </select>
+        </label>
+      {:else if def.type === 'multicheck'}
+        <div class="multicheck-block">
+          <div class="multicheck-title">
+            {def.label}
+            {#if spoiler}<span class="spoiler-badge">spoiler</span>{/if}
+          </div>
+          <div class="multicheck-flags">
+            {#each def.flags ?? [] as flag}
+              <label class="checkbox-option" title={spoiler ? 'Set by spoiler log' : ''}>
+                <input
+                  type="checkbox"
+                  checked={hasFlag(def.key, flag.value)}
+                  disabled={spoiler}
+                  on:change={() => toggleFlag(def.key, flag.value)}
+                />
+                {flag.label}
+              </label>
+            {/each}
+          </div>
         </div>
-      {/each}
-    </div>
+      {/if}
+    {/each}
   </div>
 {/each}
 
 <style>
-  .ls-header {
+  .ls-toolbar {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 8px;
-    padding-bottom: 6px;
-    border-bottom: 1px solid #333;
+    justify-content: flex-end;
+    margin-bottom: 0.6em;
   }
-  .ls-title { font-weight: bold; font-size: 0.9em; color: #ddd; }
-  .ls-reset {
+
+  .ls-reset-btn {
+    font-size: 0.8em;
+    padding: 0.25em 0.7em;
+    background: none;
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    color: var(--color-text);
+    cursor: pointer;
+    opacity: 0.7;
+  }
+  .ls-reset-btn:hover { opacity: 1; }
+
+  .ls-group-header {
     font-size: 0.75em;
-    padding: 2px 6px;
-    background: #2a2a2a;
-    border: 1px solid #555;
-    color: #aaa;
-    border-radius: 3px;
-    cursor: pointer;
-  }
-  .ls-reset:hover { color: #fff; background: #333; }
-
-  .ls-group { margin-bottom: 10px; }
-  .ls-group-label {
-    font-size: 0.7em;
-    font-weight: bold;
+    font-weight: 700;
     text-transform: uppercase;
-    color: #888;
     letter-spacing: 0.06em;
-    margin-bottom: 4px;
+    color: #888;
+    margin: 0.8em 0 0.3em;
+    padding-bottom: 0.2em;
+    border-bottom: 1px solid var(--color-border);
   }
-  .ls-group-body { display: flex; flex-direction: column; gap: 3px; }
 
-  .ls-row {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    flex-wrap: wrap;
-    font-size: 0.82em;
+  /* Mirror the App.svelte dropdown-grid / dropdown-select / checkbox-option styles */
+  .dropdown-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1em;
+    margin-bottom: 0.5em;
   }
-  .ls-row.from-spoiler { opacity: 0.65; }
+  @media screen and (max-width: 1024px) {
+    .dropdown-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media screen and (max-width: 768px) {
+    .dropdown-grid { grid-template-columns: 1fr; }
+  }
 
-  .ls-bool {
-    display: flex;
-    align-items: center;
-    gap: 5px;
+  :global(.dropdown-grid) .dropdown-select,
+  .dropdown-select {
+    width: 100%;
+    padding: 0.5em;
+    margin-top: 0.4em;
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    background-color: var(--color-bg);
+    color: var(--color-text);
     cursor: pointer;
-    color: #ccc;
-    user-select: none;
-  }
-  .ls-bool input { cursor: pointer; }
-
-  .ls-select-label { color: #ccc; }
-  .ls-select {
-    background: #2a2a2a;
-    border: 1px solid #444;
-    color: #ccc;
-    border-radius: 3px;
-    padding: 1px 4px;
     font-size: 0.9em;
   }
+  .dropdown-select:hover { border-color: #999; }
+  .dropdown-select:focus { outline: none; border-color: #0078e7; }
+  .dropdown-select:disabled { opacity: 0.55; cursor: default; }
 
-  .ls-multicheck-label { color: #ccc; width: 100%; }
-  .ls-flags { display: flex; flex-wrap: wrap; gap: 4px; padding-left: 8px; }
-  .ls-flag {
+  .checkbox-option {
     display: flex;
     align-items: center;
-    gap: 3px;
-    color: #bbb;
+    padding: 0.5em 0;
     cursor: pointer;
-    white-space: nowrap;
-    font-size: 0.9em;
+    gap: 0.5em;
   }
-  .ls-flag input { cursor: pointer; }
+  .checkbox-option input[type='checkbox'] { cursor: pointer; flex-shrink: 0; }
+  .checkbox-option:has(input:disabled) { opacity: 0.55; cursor: default; }
 
-  .ls-spoiler-badge {
-    font-size: 0.7em;
+  /* Multicheck block spans full row */
+  .multicheck-block {
+    grid-column: 1 / -1;
+  }
+  .multicheck-title {
+    font-size: 0.88em;
+    font-weight: 600;
+    margin-bottom: 0.3em;
+    color: var(--color-text);
+    display: flex;
+    align-items: center;
+    gap: 0.4em;
+  }
+  .multicheck-flags {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0 1em;
+    padding-left: 0.5em;
+  }
+  @media screen and (max-width: 768px) {
+    .multicheck-flags { grid-template-columns: 1fr; }
+  }
+
+  .spoiler-row { opacity: 0.6; }
+  .spoiler-badge {
+    font-size: 0.68em;
     background: #3a5a3a;
     color: #8f8;
     border-radius: 3px;
     padding: 0 4px;
-    margin-left: 3px;
+    font-weight: normal;
   }
 </style>
