@@ -26,6 +26,7 @@ export let checkName: string = '';
 export let zone: string = '';
 export let filter: string = '';
 export let age: 'child' | 'adult' | 'both' | undefined = undefined;
+export let inLogic: boolean | null = null; // null = logic disabled; true/false = in/out of logic
 
 $: isShopOrScrub = shopTypes.includes(type) || isShop;
 const shopTypes = [T.CheckType.shop, T.CheckType.deku_scrub];
@@ -140,6 +141,7 @@ $: tooltip = [
   class:pinged={!!pingColor}
   class:highlighted
   class:spider-house={spiderHouse}
+  class:out-of-logic={inLogic === false}
   class:compact
   data-check={checkName}
   style="{pingColor ? `--ping-color: ${pingColor};` : ''}{typeBg ? `--type-bg: ${typeBg};` : ''}{typeBorder ? `--type-border: ${typeBorder};` : ''}"
@@ -201,6 +203,10 @@ $: tooltip = [
     }
     &.barren:not(.checked) {
       background-image: linear-gradient(rgba(200,50,50,0.11), rgba(200,50,50,0.11));
+    }
+    &.out-of-logic:not(.checked) {
+      opacity: 0.38;
+      filter: grayscale(0.4);
     }
 
     &:focus {

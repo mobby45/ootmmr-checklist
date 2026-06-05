@@ -2,8 +2,8 @@ import type { WorldGraph, WorldRegion, WorldExit, LogicState, ReachabilityResult
 import type { MacroTable } from './expr/eval';
 import { evalExpr } from './expr/eval';
 
-// Starting regions — BFS begins here
-const SPAWN_REGIONS = ['OOT Spawn', 'MM Spawn', 'OOT GLOBAL', 'MM GLOBAL'];
+// Starting regions — BFS begins here (from _system.yml analysis)
+const SPAWN_REGIONS = ["Link's House", 'Clock Town South', 'GLOBAL'];
 
 export function computeReachability(
   graph: WorldGraph,

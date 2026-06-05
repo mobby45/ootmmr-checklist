@@ -62,6 +62,7 @@
   import * as T from './data/types';
 
   import CheckGroup from './components/CheckGroup.svelte';
+  import { initLogicStore, logicEnabled, showOutOfLogic, logicAge, logicResult, logicLoading } from './stores/logicStore';
   import CheckItem from './components/CheckItem.svelte';
   import MapModal from './components/MapModal.svelte';
   import ERTracker from './components/ERTracker.svelte';
@@ -372,6 +373,8 @@ yKeepalive.observe((event: any) => {
   const sShopPrices = readableMap(yShopPrices);
   const sEntrances = readableMap(yEntrances);
   const sNotes = readableMap(yNotes);
+
+  initLogicStore(yItems, ySettings, yEntrances, _itemsRevStore, sSettings, sEntrances);
 
   $: checkStatesMap = new Map($sChecks) as Map<string, T.CheckState>;
   $: shopItemsMap = new Map($sShopItems) as Map<string, string>;
@@ -2444,6 +2447,9 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
       ? ($sVariantSettings.get(group.groupName) ?? 0) === check.variantNumber
       : true;
     const matchesHide = (!ignoreHide && hideChecked) ? $sChecks.get(check.name) !== T.CheckState.checked : true;
+    const matchesLogic = (!ignoreHide && $logicEnabled && !$showOutOfLogic && $logicResult)
+      ? $logicResult.checks.has(check.name) || $logicResult.checks.has(check.shortName)
+      : true;
 
     const passesCategories =
       matchesOverworld &&
@@ -2514,7 +2520,8 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
       passesCategories &&
       matchesMq &&
       matchesVariant &&
-      matchesHide
+      matchesHide &&
+      matchesLogic
     );
   };
 
@@ -4486,6 +4493,27 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
             <button class="pure-button" type="button" on:click={toggleAllGroups}>
               {shouldShowCollapse ? 'Collapse All' : 'Expand All'}
             </button>
+            <button
+              class="pure-button logic-btn"
+              type="button"
+              class:pure-button-active={$logicEnabled}
+              title="Enable logic engine (highlights reachable checks)"
+              on:click={() => logicEnabled.update(v => !v)}
+            >{$logicEnabled ? '🔓 Logic ON' : '🔒 Logic OFF'}</button>
+            {#if $logicEnabled}
+              <button
+                class="pure-button"
+                type="button"
+                class:pure-button-active={!$showOutOfLogic}
+                title="Hide checks that are out of logic"
+                on:click={() => showOutOfLogic.update(v => !v)}
+              >{$showOutOfLogic ? 'Hide OOL' : 'Show OOL'}</button>
+              <select class="logic-age-sel" bind:value={$logicAge} title="Current age for logic">
+                <option value="child">Child</option>
+                <option value="adult">Adult</option>
+              </select>
+              {#if $logicLoading}<span class="logic-spinner">⏳</span>{/if}
+            {/if}
             <div class="filter-wrap">
               <input type="text" style="width: 16em" placeholder="Filter… (Ctrl+F)" bind:value={filter} bind:this={filterInputEl} />
               {#if filter}
@@ -4671,6 +4699,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
                         zone={group.groupName}
                         age={check.age}
                         {filter}
+                        inLogic={$logicEnabled && $logicResult ? ($logicResult.checks.has(check.name) || $logicResult.checks.has(check.shortName)) : null}
                         on:editNote={() => { if (!isWatchMode) handleEditNote(check.name); }}
                         on:toggle={e => {
                           if (isWatchMode) return;
@@ -4739,6 +4768,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
                     checkName={check.name}
                     zone={group.groupName}
                     {filter}
+                    inLogic={$logicEnabled && $logicResult ? ($logicResult.checks.has(check.name) || $logicResult.checks.has(check.shortName)) : null}
                     on:editNote={() => { if (!isWatchMode) handleEditNote(check.name); }}
                     on:toggle={e => {
                       if (isWatchMode) return;
@@ -4962,6 +4992,12 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     font-size: 0.85em;
     padding: 0.2em 0.6em;
   }
+
+  .logic-age-sel {
+    padding: 2px 4px; border: 1px solid #444; border-radius: 3px;
+    background: #252525; color: #e0e0e0; font-size: 0.82em;
+  }
+  .logic-spinner { font-size: 0.85em; opacity: 0.7; }
 
   main {
     margin: 0.8em;
