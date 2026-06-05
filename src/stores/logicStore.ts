@@ -18,11 +18,6 @@ let _macros: MacroTable | null = null;
 
 export const logicEnabled   = writable<boolean>(localStorage.getItem('logicEnabled') === 'true');
 export const showOutOfLogic = writable<boolean>(localStorage.getItem('showOutOfLogic') !== 'false');
-/** Age filter for the logic view — child, adult, or both */
-export const logicAgeFilter = writable<'child' | 'adult' | 'both'>(
-  (localStorage.getItem('logicAgeFilter') as 'child' | 'adult' | 'both') ?? 'both'
-);
-
 /** Manual logic settings — merged with spoiler settings (spoiler takes priority) */
 export const logicManualSettings = writable<Record<string, any>>(
   JSON.parse(localStorage.getItem('logicManualSettings') ?? 'null') ?? defaultLogicSettings()
@@ -30,7 +25,6 @@ export const logicManualSettings = writable<Record<string, any>>(
 
 logicEnabled.subscribe(v => localStorage.setItem('logicEnabled', String(v)));
 showOutOfLogic.subscribe(v => localStorage.setItem('showOutOfLogic', String(v)));
-logicAgeFilter.subscribe(v => localStorage.setItem('logicAgeFilter', v));
 logicManualSettings.subscribe(v => localStorage.setItem('logicManualSettings', JSON.stringify(v)));
 
 // ─── Result store ─────────────────────────────────────────────────────────────
