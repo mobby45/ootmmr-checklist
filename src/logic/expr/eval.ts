@@ -13,8 +13,19 @@ export function evalExpr(node: ExprNode, state: LogicState, macros: MacroTable):
     case 'or':  return evalExpr(node.left, state, macros) || evalExpr(node.right, state, macros);
     case 'not': return !evalExpr(node.expr, state, macros);
 
-    case 'has':
-      return (state.items.get(node.item) ?? 0) >= node.count;
+    case 'has': {
+      // When in a game-specific region, use the game-prefixed key (OOT_X or MM_X)
+      // so that OoT items don't satisfy MM checks and vice versa.
+      // SHARED_ items are always looked up without prefix.
+      // Takes the max of the plain key (cross-game/shared fallback) and the prefixed key,
+      // so that e.g. shared_magic + oot_magic both contribute without cross-game contamination.
+      let count = state.items.get(node.item) ?? 0;
+      if (state.currentGame && !node.item.startsWith('SHARED_')) {
+        const prefixed = state.currentGame.toUpperCase() + '_' + node.item;
+        count = Math.max(count, state.items.get(prefixed) ?? 0);
+      }
+      return count >= node.count;
+    }
 
     case 'renewable':
       // Renewable items always available if player has the item at all
@@ -50,6 +61,8 @@ export function evalExpr(node: ExprNode, state: LogicState, macros: MacroTable):
 
     case 'flag_on':  return state.flags.has(node.flag);
     case 'flag_off': return !state.flags.has(node.flag);
+
+    case 'special': return state.resolvedSpecial.get(node.name) ?? false;
 
     case 'price':
       // Assume player can afford prices (wallet check) — simplification for phase 1

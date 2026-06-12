@@ -10,9 +10,9 @@ const OOT_SPAWN = "Link's House";
 const MM_SPAWN  = 'Clock Town South';
 const GLOBAL    = 'GLOBAL';
 
-// Build an age-specific state copy
-function stateForAge(base: LogicState, age: Age, events: Set<string>): LogicState {
-  return { ...base, age, events };
+// Build an age- and game-specific state copy
+function stateForAge(base: LogicState, age: Age, events: Set<string>, game?: 'oot' | 'mm'): LogicState {
+  return { ...base, age, events, currentGame: game };
 }
 
 export function computeReachability(
@@ -52,7 +52,7 @@ export function computeReachability(
       const region = graph.get(regionName);
       if (!region) continue;
 
-      const s = stateForAge(state, age, events);
+      const s = stateForAge(state, age, events, region.game);
 
       // Evaluate exits
       for (const exit of region.exits) {

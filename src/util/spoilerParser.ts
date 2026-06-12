@@ -11,7 +11,6 @@ export interface ErSettings {
   erIndoors: boolean;
   erOverworld: boolean;
   erOneWays: boolean;
-  erOwls: boolean;
   erWallmasters: boolean;
   erMixed: boolean;
   erAlterLw: boolean;
@@ -48,7 +47,6 @@ export const defaultErSettings: ErSettings = {
   erIndoors: false,
   erOverworld: false,
   erOneWays: false,
-  erOwls: false,
   erWallmasters: false,
   erMixed: false,
   erAlterLw: false,
@@ -130,6 +128,7 @@ export interface SpoilerSphere {
 
 export interface SpoilerData {
   settings: Record<string, any>;
+  startingItems: Record<string, number>;
   locations: Record<string, string>;
   entrances: Record<string, string>;
   spheres: SpoilerSphere[];
@@ -158,6 +157,7 @@ export function parseSpoilerLog(text: string): SpoilerData {
   const isMultiworld = players > 1;
 
   const settings: Record<string, any> = {};
+  const rawStartingItems: Record<string, number> = {};
   const locations: Record<string, string> = {};
   const entrances: Record<string, string> = {};
   const spheres: SpoilerSphere[] = [];
@@ -196,7 +196,10 @@ export function parseSpoilerLog(text: string): SpoilerData {
       if (match) {
         const [, key, rawValue] = match;
         const trackerKey = settingsMap[key];
-        if (trackerKey) settings[trackerKey] = parseValue(key, rawValue.trim());
+        if (key === 'startingItems') {
+          for (const id of rawValue.trim().split(/\s+/).filter(Boolean))
+            rawStartingItems[id] = (rawStartingItems[id] ?? 0) + 1;
+        } else if (trackerKey) settings[trackerKey] = parseValue(key, rawValue.trim());
         else if (key.startsWith('shared') || directBoolKeys.has(key)) settings[key] = rawValue.trim() === 'true';
         if (key.startsWith('er')) rawEr[key] = rawValue.trim();
         if (key === 'owlShuffle') settings['owlShuffleEnabled'] = rawValue.trim() !== 'none';
@@ -303,8 +306,7 @@ export function parseSpoilerLog(text: string): SpoilerData {
     erGrottos:    isErActive(rawEr['erGrottos']),
     erIndoors:    isErActive(rawEr['erIndoors']),
     erOverworld:  isErActive(rawEr['erOverworld']) || isErActive(rawEr['erRegions']),
-    erOneWays:    isErActive(rawEr['erOneWays']),
-    erOwls:       rawEr['erOneWaysOwls'] === 'true',
+    erOneWays:    isErActive(rawEr['erOneWays']) || rawEr['erOneWaysOwls'] === 'true',
     erWallmasters: isErActive(rawEr['erWallmasters']),
     erMixed:      isErActive(rawEr['erMixed']) || rawEr['erMixed'] === 'dungeon',
     erAlterLw:    rawEr['alterLostWoodsExits'] === 'true',
@@ -374,5 +376,5 @@ export function parseSpoilerLog(text: string): SpoilerData {
     Object.assign(entrances, worldEntrances[1]);
   }
 
-  return { settings, locations, entrances, spheres, erSettings, OOTMM, OOTMMDungeons, seedInfo, specialConditions: specialConditions as SpecialConditionsMap, players, worldLocations, worldEntrances };
+  return { settings, startingItems: rawStartingItems, locations, entrances, spheres, erSettings, OOTMM, OOTMMDungeons, seedInfo, specialConditions: specialConditions as SpecialConditionsMap, players, worldLocations, worldEntrances };
 }

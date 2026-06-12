@@ -3,7 +3,7 @@
 // ==========================================
 
 export type EntranceType = 'boss' | 'dungeon' | 'grotto' | 'owl' | 'interior' | 'overworld';
-export type ErSettingKey = 'erBoss' | 'erDungeons' | 'erGrottos' | 'erIndoors' | 'erOneWays' | 'erOwls' | 'erOverworld' | 'erWallmasters' | 'erAlterLw' | 'erSpawns';
+export type ErSettingKey = 'erBoss' | 'erDungeons' | 'erGrottos' | 'erIndoors' | 'erOneWays' | 'erOverworld' | 'erWallmasters' | 'erAlterLw' | 'erSpawns';
 
 export interface EntranceInfo {
   id: string;
@@ -195,6 +195,12 @@ export const allEntrances: EntranceInfo[] = [
   { id: 'OOT_OUTSIDE_GANON_FROM_FAIRY', name: "OOT Fairy Fountain Defense to OOT Near Fairy Fountain Defense", type: 'interior', erType: 'erIndoors', game: 'oot' },
   { id: 'OOT_VILLAGE_OWL', name: "OOT Death Mountain Summit to OOT Kakariko Rooftop", type: 'overworld', erType: 'erOneWays', game: 'oot' },
   { id: 'OOT_FIELD_OWL', name: "OOT Lake Hylia to OOT Hyrule Field Drawbridge", type: 'overworld', erType: 'erOneWays', game: 'oot' },
+  { id: 'OOT_WARP_SONG_MEADOW', name: "OOT Warp Song Forest to OOT Sacred Meadow", type: 'overworld', erType: 'erOneWays', game: 'oot' },
+  { id: 'OOT_WARP_SONG_CRATER', name: "OOT Warp Song Fire to OOT Death Mountain Crater Warp", type: 'overworld', erType: 'erOneWays', game: 'oot' },
+  { id: 'OOT_WARP_SONG_LAKE', name: "OOT Warp Song Water to OOT Lake Hylia", type: 'overworld', erType: 'erOneWays', game: 'oot' },
+  { id: 'OOT_WARP_SONG_GRAVE', name: "OOT Warp Song Shadow to OOT Graveyard Upper", type: 'overworld', erType: 'erOneWays', game: 'oot' },
+  { id: 'OOT_WARP_SONG_DESERT', name: "OOT Warp Song Spirit to OOT Desert Colossus", type: 'overworld', erType: 'erOneWays', game: 'oot' },
+  { id: 'OOT_WARP_SONG_TEMPLE', name: "OOT Warp Song Light to OOT Temple of Time", type: 'overworld', erType: 'erOneWays', game: 'oot' },
   { id: 'OOT_WALLMASTER_FOREST_CORRIDOR_WEST', name: "OOT Forest Temple Wallmaster West to OOT Void", type: 'overworld', erType: 'erWallmasters', game: 'oot' },
   { id: 'OOT_WALLMASTER_FOREST_CORRIDOR_EAST', name: "OOT Forest Temple Wallmaster East to OOT Void", type: 'overworld', erType: 'erWallmasters', game: 'oot' },
   { id: 'OOT_WALLMASTER_SHADOW', name: "OOT Shadow Temple Wallmaster to OOT Void", type: 'overworld', erType: 'erWallmasters', game: 'oot' },
@@ -623,10 +629,10 @@ export const allEntrances: EntranceInfo[] = [
   { id: 'MM_GRAVE_EXIT_NIGHT1', name: "MM Beneath The Graveyard Night 1 to MM Ikana Graveyard", type: 'overworld', erType: 'erOverworld', game: 'mm' },
   { id: 'MM_GRAVE_EXIT_NIGHT2', name: "MM Beneath The Graveyard Night 2 to MM Ikana Graveyard", type: 'overworld', erType: 'erOverworld', game: 'mm' },
   { id: 'MM_GRAVE_EXIT_NIGHT3', name: "MM Beneath The Graveyard Night 3 Fake Exit to MM Ikana Graveyard", type: 'overworld', erType: 'erOverworld', game: 'mm' },
-  { id: 'MM_VOID_GREAT_BAY', name: "MM Great Bay Coast Water Void to MM Void", type: 'overworld', erType: 'erWallmasters', game: 'mm' },
-  { id: 'MM_VOID_GREAT_BAY_BY_PINNACLE_ROCK', name: "MM Great Bay Coast Near Pinnacle Water Void to MM Void", type: 'overworld', erType: 'erWallmasters', game: 'mm' },
-  { id: 'MM_VOID_ZORA_CAPE', name: "MM Zora Cape Water Void to MM Void", type: 'overworld', erType: 'erWallmasters', game: 'mm' },
-  { id: 'MM_VOID_PINNACLE_ROCK', name: "MM Pinnacle Rock Water Void to MM Void", type: 'overworld', erType: 'erWallmasters', game: 'mm' },
+  { id: 'MM_VOID_GREAT_BAY', name: "MM Great Bay Coast Water Void to MM Void", type: 'overworld', erType: 'erOneWays', game: 'mm' },
+  { id: 'MM_VOID_GREAT_BAY_BY_PINNACLE_ROCK', name: "MM Great Bay Coast Near Pinnacle Water Void to MM Void", type: 'overworld', erType: 'erOneWays', game: 'mm' },
+  { id: 'MM_VOID_ZORA_CAPE', name: "MM Zora Cape Water Void to MM Void", type: 'overworld', erType: 'erOneWays', game: 'mm' },
+  { id: 'MM_VOID_PINNACLE_ROCK', name: "MM Pinnacle Rock Water Void to MM Void", type: 'overworld', erType: 'erOneWays', game: 'mm' },
   { id: 'MM_CLOCK_TOWN_FROM_CLOCK_TOWER', name: "MM Clock Town South to OOT Market (Game Link)", type: 'interior', erType: 'erIndoors', game: 'mm' },
 
   // ========== CSV-ONLY (non-YAML, shown as unshuffled) ==========
@@ -637,7 +643,7 @@ export const allEntrances: EntranceInfo[] = [
   { id: 'OOT_END', name: "OOT End Credits to OOT Sages Chamber -> End Credits", type: 'overworld', erType: 'erOverworld', game: 'oot' },
   { id: 'OOT_SAGES_CHANBER_END_FROM_GANON2', name: "OOT Ganon Beaten to OOT Sages Chamber - Ganon Beaten", type: 'overworld', erType: 'erOverworld', game: 'oot' },
   { id: 'OOT_HYRULE_END', name: "OOT Hyrule Field to OOT End Credits -> Hyrule Field", type: 'overworld', erType: 'erOverworld', game: 'oot' },
-  { id: 'OOT_DMT_OWL', name: "OOT Owl Pick to OOT Death Mountain Trail -> Owl Pick", type: 'owl', erType: 'erOwls', game: 'oot' },
+  { id: 'OOT_DMT_OWL', name: "OOT Owl Pick to OOT Death Mountain Trail -> Owl Pick", type: 'owl', erType: 'erOneWays', game: 'oot' },
   { id: 'OOT_DESERT_FROM_MIROR', name: "OOT Miror Shield to OOT Desert Colossus", type: 'overworld', erType: 'erOverworld', game: 'oot' },
   { id: 'OOT_DESERT_FROM_GAUNTLET', name: "OOT Silver Gauntlet to OOT Desert Colossus", type: 'overworld', erType: 'erOverworld', game: 'oot' },
   { id: 'OOT_BOSS_GANON2_FROM_GANONDORF', name: "OOT Ganondorf Beaten to OOT Ganon Battle Arena - Ganondorf Beaten", type: 'boss', erType: 'erBoss', game: 'oot' },
@@ -672,7 +678,7 @@ export const allEntrances: EntranceInfo[] = [
   { id: 'OOT_BOSS_FOREST_TEMPLE_WARP_OUT', name: "OOT Warp Boss to OOT Phantom Ganon's Lair -> Warp Boss", type: 'boss', erType: 'erBoss', game: 'oot' },
   { id: 'OOT_BOSS_SPIRIT_TEMPLE_WARP_OUT', name: "OOT Warp Boss to OOT Twinrova's Lair -> Warp Boss", type: 'boss', erType: 'erBoss', game: 'oot' },
   { id: 'OOT_BOSS_FIRE_TEMPLE_WARP_OUT', name: "OOT Warp Boss to OOT Volvagia's Lair -> Warp Boss", type: 'boss', erType: 'erBoss', game: 'oot' },
-  { id: 'OOT_LAKE_OWL', name: "OOT Owl Pick to OOT Lake Hylia -> Owl Pick", type: 'owl', erType: 'erOwls', game: 'oot' },
+  { id: 'OOT_LAKE_OWL', name: "OOT Owl Pick to OOT Lake Hylia -> Owl Pick", type: 'owl', erType: 'erOneWays', game: 'oot' },
   { id: 'OOT_LON_LON_EPONA_JUMP_MIDDLE', name: "OOT Jump Middle Fence to OOT Lon Lon's Ranch -> Jump Middle Fence", type: 'overworld', erType: 'erOverworld', game: 'oot' },
   { id: 'OOT_LON_LON_EPONA_JUMP_RIGHT', name: "OOT Jump Right Fence to OOT Lon Lon's Ranch -> Jump Right Fence", type: 'overworld', erType: 'erOverworld', game: 'oot' },
   { id: 'OOT_LON_LON_EPONA_JUMP_LEFT', name: "OOT Jump Left Fence to OOT Lon Lon's Ranch -> Jump Left Fence", type: 'overworld', erType: 'erOverworld', game: 'oot' },
@@ -743,7 +749,7 @@ export const allEntrances: EntranceInfo[] = [
   { id: 'MM_MOUNTAIN_VILLAGE_SPRING_FROM_GORON_GRAVEYARD', name: "MM Goron Graveyard to MM Mountain Village", type: 'overworld', erType: 'erOverworld', game: 'mm' },
   { id: 'MM_MOUNTAIN_VILLAGE_SPRING_FROM_SNOWHEAD_PATH', name: "MM Path to Snowhead to MM Mountain Village", type: 'dungeon', erType: 'erDungeons', game: 'mm' },
   { id: 'MM_WARP_BOSS_MOUNTAIN_VILLAGE_SPRING', name: "MM Warp Goht to MM Mountain Village - Warp Goht", type: 'boss', erType: 'erBoss', game: 'mm' },
-  { id: 'MM_WARP_OWL_MOUNTAIN_VILLAGE_SPRING', name: "MM Warp Owl to MM Mountain Village", type: 'owl', erType: 'erOwls', game: 'mm' },
+  { id: 'MM_WARP_OWL_MOUNTAIN_VILLAGE_SPRING', name: "MM Warp Owl to MM Mountain Village", type: 'owl', erType: 'erOneWays', game: 'mm' },
   { id: 'MM_TWIN_ISLANDS_SPRING_FROM_MOUNTAIN_VILLAGE', name: "MM Mountain Village to MM Twin Islands", type: 'overworld', erType: 'erOverworld', game: 'mm' },
   { id: 'MM_VOID_PINNACLE_ROCK_MAIN', name: "MM Void to MM Pinnacle Rock -> Void", type: 'interior', erType: 'erIndoors', game: 'mm' },
   { id: 'MM_PIRATE_ENTRANCE_CAUGHT', name: "MM Caught to MM Pirate Fortress Entrance -> Caught", type: 'overworld', erType: 'erOverworld', game: 'mm' },
@@ -777,7 +783,17 @@ export const allEntrances: EntranceInfo[] = [
   { id: 'MM_SWAMP_CLEARED_FROM_MYSTERY_WOODS', name: "MM Mystery Woods to MM Southern Swamp", type: 'overworld', erType: 'erOverworld', game: 'mm' },
   { id: 'MM_SWAMP_CLEARED_FROM_SPIDER_HOUSE', name: "MM Swamp Spider House to MM Southern Swamp", type: 'dungeon', erType: 'erDungeons', game: 'mm' },
   { id: 'MM_SWAMP_CLEARED_FROM_IKANA_CANYON', name: "MM Waterfalls to MM Southern Swamp", type: 'overworld', erType: 'erOverworld', game: 'mm' },
-  { id: 'MM_WARP_OWL_SOUTHERN_SWAMP_CLEARED', name: "MM Warp Owl to MM Southern Swamp", type: 'owl', erType: 'erOwls', game: 'mm' },
+  { id: 'MM_WARP_OWL_SOUTHERN_SWAMP_CLEARED', name: "MM Warp Owl to MM Southern Swamp", type: 'owl', erType: 'erOneWays', game: 'mm' },
+  { id: 'MM_OWL_SOUTHERN_SWAMP_CHOICE', name: "MM Southern Swamp Owl Choice to MM Song of Soaring -> Southern Swamp", type: 'owl', erType: 'erOneWays', game: 'mm' },
+  { id: 'MM_OWL_IKANA_CANYON_CHOICE', name: "MM Ikana Canyon Owl Choice to MM Song of Soaring -> Ikana Canyon", type: 'owl', erType: 'erOneWays', game: 'mm' },
+  { id: 'MM_OWL_STONE_TOWER_CHOICE', name: "MM Stone Tower Owl Choice to MM Song of Soaring -> Stone Tower", type: 'owl', erType: 'erOneWays', game: 'mm' },
+  { id: 'MM_OWL_GREAT_BAY_CHOICE', name: "MM Great Bay Coast Owl Choice to MM Song of Soaring -> Great Bay Coast", type: 'owl', erType: 'erOneWays', game: 'mm' },
+  { id: 'MM_OWL_ZORA_CAPE_CHOICE', name: "MM Zora Cape Owl Choice to MM Song of Soaring -> Zora Cape", type: 'owl', erType: 'erOneWays', game: 'mm' },
+  { id: 'MM_OWL_SNOWHEAD_CHOICE', name: "MM Snowhead Owl Choice to MM Song of Soaring -> Snowhead", type: 'owl', erType: 'erOneWays', game: 'mm' },
+  { id: 'MM_OWL_MOUNTAIN_VILLAGE_CHOICE', name: "MM Mountain Village Owl Choice to MM Song of Soaring -> Mountain Village", type: 'owl', erType: 'erOneWays', game: 'mm' },
+  { id: 'MM_OWL_CLOCK_TOWN_CHOICE', name: "MM Clock Town Owl Choice to MM Song of Soaring -> Clock Town", type: 'owl', erType: 'erOneWays', game: 'mm' },
+  { id: 'MM_OWL_MILK_ROAD_CHOICE', name: "MM Milk Road Owl Choice to MM Song of Soaring -> Milk Road", type: 'owl', erType: 'erOneWays', game: 'mm' },
+  { id: 'MM_OWL_WOODFALL_CHOICE', name: "MM Woodfall Owl Choice to MM Song of Soaring -> Woodfall", type: 'owl', erType: 'erOneWays', game: 'mm' },
   { id: 'MM_STONE_TOWER_FROM_STONE_TOWER_INVERTED', name: "MM Stone Tower Inverted to MM Stone Tower", type: 'dungeon', erType: 'erDungeons', game: 'mm' },
   { id: 'MM_STONE_TOWER_INVERTED_FROM_STONE_TOWER', name: "MM Stone Tower to MM Stone Tower Inverted", type: 'dungeon', erType: 'erDungeons', game: 'mm' },
   { id: 'MM_WARP_BOSS_DEKU_PRINCESS', name: "MM Warp Odolwa to MM Woodfall Temple - Warp Odolwa", type: 'boss', erType: 'erBoss', game: 'mm' },

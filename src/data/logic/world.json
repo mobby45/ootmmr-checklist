@@ -40626,27 +40626,27 @@
       },
       {
         "target": "Bomb Shop",
-        "rule": "rusty_key(RUSTY_KEY_BOMB_SHOP)"
+        "rule": "rusty_key_mm(RUSTY_KEY_BOMB_SHOP)"
       },
       {
         "target": "Trading Post",
-        "rule": "rusty_key(RUSTY_KEY_TRADING_POST)"
+        "rule": "rusty_key_mm(RUSTY_KEY_TRADING_POST)"
       },
       {
         "target": "Curiosity Shop",
-        "rule": "(between(NIGHT1_PM_10_00, DAY2_AM_06_00) || between(NIGHT2_PM_10_00, DAY3_AM_06_00) || after(NIGHT3_PM_10_00)) && rusty_key(RUSTY_KEY_CURIOSITY_SHOP)"
+        "rule": "(between(NIGHT1_PM_10_00, DAY2_AM_06_00) || between(NIGHT2_PM_10_00, DAY3_AM_06_00) || after(NIGHT3_PM_10_00)) && rusty_key_mm(RUSTY_KEY_CURIOSITY_SHOP)"
       },
       {
         "target": "Post Office",
-        "rule": "(between(DAY1_PM_03_00, NIGHT1_AM_12_00) || (event(MAIL_LETTER) && between(NIGHT2_PM_06_00, NIGHT2_AM_12_00)) || is_night3) && rusty_key(RUSTY_KEY_POST_OFFICE)"
+        "rule": "(between(DAY1_PM_03_00, NIGHT1_AM_12_00) || (event(MAIL_LETTER) && between(NIGHT2_PM_06_00, NIGHT2_AM_12_00)) || is_night3) && rusty_key_mm(RUSTY_KEY_POST_OFFICE)"
       },
       {
         "target": "Swordsman School",
-        "rule": "(first_day || second_day || between(DAY3_AM_06_00, NIGHT3_PM_11_00) || after(NIGHT3_AM_12_00)) && rusty_key(RUSTY_KEY_SWORDSMAN_SCHOOL)"
+        "rule": "(first_day || second_day || between(DAY3_AM_06_00, NIGHT3_PM_11_00) || after(NIGHT3_AM_12_00)) && rusty_key_mm(RUSTY_KEY_SWORDSMAN_SCHOOL)"
       },
       {
         "target": "Lottery",
-        "rule": "(is_day || (event(PLAY_LOTTERY) && (before(NIGHT1_PM_11_00) || between(NIGHT2_PM_06_00, NIGHT2_PM_11_00) || between(NIGHT3_PM_06_00, NIGHT3_PM_11_00)))) && rusty_key(RUSTY_KEY_LOTTERY)"
+        "rule": "(is_day || (event(PLAY_LOTTERY) && (before(NIGHT1_PM_11_00) || between(NIGHT2_PM_06_00, NIGHT2_PM_11_00) || between(NIGHT3_PM_06_00, NIGHT3_PM_11_00)))) && rusty_key_mm(RUSTY_KEY_LOTTERY)"
       }
     ],
     "locations": [
@@ -40708,23 +40708,23 @@
       },
       {
         "target": "Mayor's Residence",
-        "rule": "(between(DAY1_AM_10_00, NIGHT1_PM_08_00) || between(DAY2_AM_10_00, NIGHT2_PM_08_00) || after(DAY3_AM_10_00)) && rusty_key(RUSTY_KEY_MAYOR_RESIDENCE)"
+        "rule": "(between(DAY1_AM_10_00, NIGHT1_PM_08_00) || between(DAY2_AM_10_00, NIGHT2_PM_08_00) || after(DAY3_AM_10_00)) && rusty_key_mm(RUSTY_KEY_MAYOR_RESIDENCE)"
       },
       {
         "target": "Town Archery",
-        "rule": "(before(NIGHT1_PM_10_00) || between(DAY2_AM_06_00, NIGHT2_PM_10_00) || between(DAY3_AM_06_00, NIGHT3_PM_10_00)) && rusty_key(RUSTY_KEY_TOWN_ARCHERY)"
+        "rule": "(before(NIGHT1_PM_10_00) || between(DAY2_AM_06_00, NIGHT2_PM_10_00) || between(DAY3_AM_06_00, NIGHT3_PM_10_00)) && rusty_key_mm(RUSTY_KEY_TOWN_ARCHERY)"
       },
       {
         "target": "Chest Game",
-        "rule": "(before(NIGHT1_PM_10_00) || between(DAY2_AM_06_00, NIGHT2_PM_10_00) || between(DAY3_AM_06_00, NIGHT3_PM_10_00)) && rusty_key(RUSTY_KEY_TREASURE_CHEST_GAME)"
+        "rule": "(before(NIGHT1_PM_10_00) || between(DAY2_AM_06_00, NIGHT2_PM_10_00) || between(DAY3_AM_06_00, NIGHT3_PM_10_00)) && rusty_key_mm(RUSTY_KEY_TREASURE_CHEST_GAME)"
       },
       {
         "target": "Honey & Darling Game",
-        "rule": "(before(NIGHT1_PM_10_00) || between(DAY2_AM_06_00, NIGHT2_PM_10_00) || between(DAY3_AM_06_00, NIGHT3_PM_10_00)) && rusty_key(RUSTY_KEY_HONEY_DARLING)"
+        "rule": "(before(NIGHT1_PM_10_00) || between(DAY2_AM_06_00, NIGHT2_PM_10_00) || between(DAY3_AM_06_00, NIGHT3_PM_10_00)) && rusty_key_mm(RUSTY_KEY_HONEY_DARLING)"
       },
       {
         "target": "Stock Pot Inn",
-        "rule": "(has(ROOM_KEY) || between(DAY1_AM_08_00, NIGHT1_PM_08_00) || between(DAY2_AM_08_00, NIGHT2_PM_08_00) || after(DAY3_AM_08_00)) && rusty_key(RUSTY_KEY_STOCK_POT_INN)"
+        "rule": "(has(ROOM_KEY) || between(DAY1_AM_08_00, NIGHT1_PM_08_00) || between(DAY2_AM_08_00, NIGHT2_PM_08_00) || after(DAY3_AM_08_00)) && rusty_key_mm(RUSTY_KEY_STOCK_POT_INN)"
       },
       {
         "target": "Clock Town East SPI Roof",
@@ -40732,7 +40732,7 @@
       },
       {
         "target": "Milk Bar",
-        "rule": "(between(DAY1_AM_10_00, NIGHT1_PM_09_00) || between(DAY2_AM_10_00, NIGHT2_PM_09_00) || between(DAY3_AM_10_00, NIGHT3_PM_09_00) || (has(MASK_ROMANI) && (between(NIGHT1_PM_10_00, NIGHT1_AM_05_00) || between(NIGHT2_PM_10_00, NIGHT2_AM_05_00) || after(NIGHT3_PM_10_00)))) && rusty_key(RUSTY_KEY_MILK_BAR)"
+        "rule": "(between(DAY1_AM_10_00, NIGHT1_PM_09_00) || between(DAY2_AM_10_00, NIGHT2_PM_09_00) || between(DAY3_AM_10_00, NIGHT3_PM_09_00) || (has(MASK_ROMANI) && (between(NIGHT1_PM_10_00, NIGHT1_AM_05_00) || between(NIGHT2_PM_10_00, NIGHT2_AM_05_00) || after(NIGHT3_PM_10_00)))) && rusty_key_mm(RUSTY_KEY_MILK_BAR)"
       },
       {
         "target": "Astral Observatory Passage",
@@ -40971,7 +40971,7 @@
       },
       {
         "target": "Kafei Hideout",
-        "rule": "((event(MAIL_LETTER) && between(DAY2_PM_02_00, NIGHT2_PM_10_00)) || (event(MEET_KAFEI) && between(DAY3_PM_01_00, NIGHT3_PM_10_00))) && rusty_key(RUSTY_KEY_KAFEI_HIDEOUT)"
+        "rule": "((event(MAIL_LETTER) && between(DAY2_PM_02_00, NIGHT2_PM_10_00)) || (event(MEET_KAFEI) && between(DAY3_PM_01_00, NIGHT3_PM_10_00))) && rusty_key_mm(RUSTY_KEY_KAFEI_HIDEOUT)"
       }
     ],
     "locations": [
@@ -41058,7 +41058,7 @@
       },
       {
         "target": "Clock Town West",
-        "rule": "rusty_key(RUSTY_KEY_BOMB_SHOP)"
+        "rule": "rusty_key_mm(RUSTY_KEY_BOMB_SHOP)"
       }
     ],
     "locations": [
@@ -41096,7 +41096,7 @@
       },
       {
         "target": "Clock Town West",
-        "rule": "rusty_key(RUSTY_KEY_TRADING_POST)"
+        "rule": "rusty_key_mm(RUSTY_KEY_TRADING_POST)"
       },
       {
         "target": "Trading Post Items",
@@ -41186,7 +41186,7 @@
       },
       {
         "target": "Clock Town West",
-        "rule": "rusty_key(RUSTY_KEY_CURIOSITY_SHOP)"
+        "rule": "rusty_key_mm(RUSTY_KEY_CURIOSITY_SHOP)"
       },
       {
         "target": "Curiosity Shop 2",
@@ -41223,7 +41223,7 @@
       },
       {
         "target": "Laundry Pool",
-        "rule": "rusty_key(RUSTY_KEY_KAFEI_HIDEOUT)"
+        "rule": "rusty_key_mm(RUSTY_KEY_KAFEI_HIDEOUT)"
       }
     ],
     "locations": [
@@ -41257,7 +41257,7 @@
       },
       {
         "target": "Clock Town West",
-        "rule": "rusty_key(RUSTY_KEY_POST_OFFICE)"
+        "rule": "rusty_key_mm(RUSTY_KEY_POST_OFFICE)"
       }
     ],
     "locations": [
@@ -41283,7 +41283,7 @@
       },
       {
         "target": "Clock Town West",
-        "rule": "rusty_key(RUSTY_KEY_SWORDSMAN_SCHOOL)"
+        "rule": "rusty_key_mm(RUSTY_KEY_SWORDSMAN_SCHOOL)"
       }
     ],
     "locations": [
@@ -41324,7 +41324,7 @@
       },
       {
         "target": "Clock Town West",
-        "rule": "rusty_key(RUSTY_KEY_LOTTERY)"
+        "rule": "rusty_key_mm(RUSTY_KEY_LOTTERY)"
       }
     ],
     "locations": [
@@ -41370,15 +41370,15 @@
       },
       {
         "target": "Mayor's Residence Office",
-        "rule": "rusty_key(RUSTY_KEY_MAYOR_RESIDENCE_OFFICE)"
+        "rule": "rusty_key_mm(RUSTY_KEY_MAYOR_RESIDENCE_OFFICE)"
       },
       {
         "target": "Mayor's Residence Salon",
-        "rule": "rusty_key(RUSTY_KEY_MAYOR_RESIDENCE_SALON)"
+        "rule": "rusty_key_mm(RUSTY_KEY_MAYOR_RESIDENCE_SALON)"
       },
       {
         "target": "Clock Town East",
-        "rule": "rusty_key(RUSTY_KEY_MAYOR_RESIDENCE)"
+        "rule": "rusty_key_mm(RUSTY_KEY_MAYOR_RESIDENCE)"
       }
     ],
     "locations": [],
@@ -41394,7 +41394,7 @@
       },
       {
         "target": "Mayor's Residence",
-        "rule": "rusty_key(RUSTY_KEY_MAYOR_RESIDENCE_OFFICE)"
+        "rule": "rusty_key_mm(RUSTY_KEY_MAYOR_RESIDENCE_OFFICE)"
       }
     ],
     "locations": [
@@ -41415,11 +41415,11 @@
       },
       {
         "target": "Mayor's Residence",
-        "rule": "rusty_key(RUSTY_KEY_MAYOR_RESIDENCE_SALON)"
+        "rule": "rusty_key_mm(RUSTY_KEY_MAYOR_RESIDENCE_SALON)"
       },
       {
         "target": "Mayor's Residence Kafei Room",
-        "rule": "rusty_key(RUSTY_KEY_MAYOR_RESIDENCE_KAFEI)"
+        "rule": "rusty_key_mm(RUSTY_KEY_MAYOR_RESIDENCE_KAFEI)"
       }
     ],
     "locations": [
@@ -41440,7 +41440,7 @@
       },
       {
         "target": "Mayor's Residence Salon",
-        "rule": "rusty_key(RUSTY_KEY_MAYOR_RESIDENCE_KAFEI)"
+        "rule": "rusty_key_mm(RUSTY_KEY_MAYOR_RESIDENCE_KAFEI)"
       }
     ],
     "locations": [],
@@ -41456,7 +41456,7 @@
       },
       {
         "target": "Clock Town East",
-        "rule": "rusty_key(RUSTY_KEY_MILK_BAR)"
+        "rule": "rusty_key_mm(RUSTY_KEY_MILK_BAR)"
       }
     ],
     "locations": [
@@ -41489,7 +41489,7 @@
       },
       {
         "target": "Clock Town East",
-        "rule": "rusty_key(RUSTY_KEY_TOWN_ARCHERY)"
+        "rule": "rusty_key_mm(RUSTY_KEY_TOWN_ARCHERY)"
       }
     ],
     "locations": [
@@ -41514,7 +41514,7 @@
       },
       {
         "target": "Clock Town East",
-        "rule": "rusty_key(RUSTY_KEY_TREASURE_CHEST_GAME)"
+        "rule": "rusty_key_mm(RUSTY_KEY_TREASURE_CHEST_GAME)"
       }
     ],
     "locations": [
@@ -41535,7 +41535,7 @@
       },
       {
         "target": "Clock Town East",
-        "rule": "rusty_key(RUSTY_KEY_HONEY_DARLING)"
+        "rule": "rusty_key_mm(RUSTY_KEY_HONEY_DARLING)"
       }
     ],
     "locations": [
@@ -41573,15 +41573,15 @@
       },
       {
         "target": "Clock Town East",
-        "rule": "rusty_key(RUSTY_KEY_STOCK_POT_INN)"
+        "rule": "rusty_key_mm(RUSTY_KEY_STOCK_POT_INN)"
       },
       {
         "target": "Stock Pot Inn Roof",
-        "rule": "rusty_key(RUSTY_KEY_STOCK_POT_INN_ROOF)"
+        "rule": "rusty_key_mm(RUSTY_KEY_STOCK_POT_INN_ROOF)"
       },
       {
         "target": "Stock Pot Inn Grandma Room",
-        "rule": "rusty_key(RUSTY_KEY_GRANDMA_ROOM)"
+        "rule": "rusty_key_mm(RUSTY_KEY_GRANDMA_ROOM)"
       },
       {
         "target": "Stock Pot Inn Knife Room",
@@ -41589,11 +41589,11 @@
       },
       {
         "target": "Stock Pot Inn Staff Room",
-        "rule": "is_night3 && rusty_key(RUSTY_KEY_STOCK_POT_INN_STAFF_ROOM)"
+        "rule": "is_night3 && rusty_key_mm(RUSTY_KEY_STOCK_POT_INN_STAFF_ROOM)"
       },
       {
         "target": "Stock Pot Inn Dormitory",
-        "rule": "rusty_key(RUSTY_KEY_STOCK_POT_INN_DORMITORY)"
+        "rule": "rusty_key_mm(RUSTY_KEY_STOCK_POT_INN_DORMITORY)"
       }
     ],
     "locations": [
@@ -41667,7 +41667,7 @@
       },
       {
         "target": "Stock Pot Inn",
-        "rule": "rusty_key(RUSTY_KEY_GRANDMA_ROOM)"
+        "rule": "rusty_key_mm(RUSTY_KEY_GRANDMA_ROOM)"
       }
     ],
     "locations": [
@@ -41713,7 +41713,7 @@
       },
       {
         "target": "Stock Pot Inn",
-        "rule": "rusty_key(RUSTY_KEY_STOCK_POT_INN_STAFF_ROOM)"
+        "rule": "rusty_key_mm(RUSTY_KEY_STOCK_POT_INN_STAFF_ROOM)"
       }
     ],
     "locations": [
@@ -41738,7 +41738,7 @@
       },
       {
         "target": "Stock Pot Inn",
-        "rule": "rusty_key(RUSTY_KEY_STOCK_POT_INN_DORMITORY)"
+        "rule": "rusty_key_mm(RUSTY_KEY_STOCK_POT_INN_DORMITORY)"
       }
     ],
     "locations": [],
@@ -41758,7 +41758,7 @@
       },
       {
         "target": "Stock Pot Inn",
-        "rule": "rusty_key(RUSTY_KEY_STOCK_POT_INN_ROOF)"
+        "rule": "rusty_key_mm(RUSTY_KEY_STOCK_POT_INN_ROOF)"
       }
     ],
     "locations": [],
@@ -41837,7 +41837,7 @@
       },
       {
         "target": "Astral Observatory Balcony",
-        "rule": "rusty_key(RUSTY_KEY_OBSERVATORY)"
+        "rule": "rusty_key_mm(RUSTY_KEY_OBSERVATORY)"
       }
     ],
     "locations": [],
@@ -43508,7 +43508,7 @@
       },
       {
         "target": "Laboratory",
-        "rule": "rusty_key(RUSTY_KEY_LABORATORY)"
+        "rule": "rusty_key_mm(RUSTY_KEY_LABORATORY)"
       },
       {
         "target": "Owl Great Bay",
@@ -44118,7 +44118,7 @@
       },
       {
         "target": "Great Bay Coast Platform",
-        "rule": "rusty_key(RUSTY_KEY_LABORATORY)"
+        "rule": "rusty_key_mm(RUSTY_KEY_LABORATORY)"
       }
     ],
     "locations": [
@@ -44587,7 +44587,7 @@
       },
       {
         "target": "Beneath The Graveyard Night 2 After Door",
-        "rule": "can_use_lens && rusty_key(RUSTY_KEY_BENEATH_GRAVEYARD)"
+        "rule": "can_use_lens && rusty_key_mm(RUSTY_KEY_BENEATH_GRAVEYARD)"
       }
     ],
     "locations": [
@@ -44636,7 +44636,7 @@
       },
       {
         "target": "Beneath The Graveyard Night 2",
-        "rule": "can_use_lens && rusty_key(RUSTY_KEY_BENEATH_GRAVEYARD)"
+        "rule": "can_use_lens && rusty_key_mm(RUSTY_KEY_BENEATH_GRAVEYARD)"
       }
     ],
     "locations": [
@@ -44702,7 +44702,7 @@
       },
       {
         "target": "Ikana Graveyard",
-        "rule": "rusty_key(RUSTY_KEY_DAMPE_HOUSE)"
+        "rule": "rusty_key_mm(RUSTY_KEY_DAMPE_HOUSE)"
       },
       {
         "target": "Beneath The Graveyard Night 3 Wallmaster",
@@ -45030,7 +45030,7 @@
       },
       {
         "target": "Music Box House",
-        "rule": "((event(IKANA_CURSE_LIFTED) && (has_explosives || has_mask_stone)) || is_valley_cleared) && rusty_key(RUSTY_KEY_MUSIC_HOUSE)"
+        "rule": "((event(IKANA_CURSE_LIFTED) && (has_explosives || has_mask_stone)) || is_valley_cleared) && rusty_key_mm(RUSTY_KEY_MUSIC_HOUSE)"
       },
       {
         "target": "Ghost Hut",
@@ -45141,7 +45141,7 @@
       },
       {
         "target": "Ikana Canyon",
-        "rule": "rusty_key(RUSTY_KEY_MUSIC_HOUSE)"
+        "rule": "rusty_key_mm(RUSTY_KEY_MUSIC_HOUSE)"
       }
     ],
     "locations": [
@@ -45875,7 +45875,7 @@
       },
       {
         "target": "Blacksmith",
-        "rule": "rusty_key(RUSTY_KEY_BLACKSMITH)"
+        "rule": "rusty_key_mm(RUSTY_KEY_BLACKSMITH)"
       },
       {
         "target": "Near Village Grotto",
@@ -46437,7 +46437,7 @@
       },
       {
         "target": "Mountain Village",
-        "rule": "rusty_key(RUSTY_KEY_BLACKSMITH)"
+        "rule": "rusty_key_mm(RUSTY_KEY_BLACKSMITH)"
       }
     ],
     "locations": [
@@ -47460,7 +47460,7 @@
       },
       {
         "target": "Swamp Archery",
-        "rule": "(before(NIGHT1_PM_10_00) || between(DAY2_AM_06_00, NIGHT2_PM_10_00) || between(DAY3_AM_06_00, NIGHT3_PM_10_00)) && rusty_key(RUSTY_KEY_SWAMP_ARCHERY)"
+        "rule": "(before(NIGHT1_PM_10_00) || between(DAY2_AM_06_00, NIGHT2_PM_10_00) || between(DAY3_AM_06_00, NIGHT3_PM_10_00)) && rusty_key_mm(RUSTY_KEY_SWAMP_ARCHERY)"
       },
       {
         "target": "Road to Southern Swamp Grotto",
@@ -47654,7 +47654,7 @@
       },
       {
         "target": "Road to Southern Swamp",
-        "rule": "rusty_key(RUSTY_KEY_SWAMP_ARCHERY)"
+        "rule": "rusty_key_mm(RUSTY_KEY_SWAMP_ARCHERY)"
       }
     ],
     "locations": [
@@ -47809,19 +47809,19 @@
       },
       {
         "target": "Cucco Shack",
-        "rule": "(between(DAY1_AM_06_00, NIGHT1_PM_08_00) || between(DAY2_AM_06_00, NIGHT2_PM_08_00) || between(DAY3_AM_06_00, NIGHT3_PM_08_00)) && rusty_key(RUSTY_KEY_CUCCO_SHACK)"
+        "rule": "(between(DAY1_AM_06_00, NIGHT1_PM_08_00) || between(DAY2_AM_06_00, NIGHT2_PM_08_00) || between(DAY3_AM_06_00, NIGHT3_PM_08_00)) && rusty_key_mm(RUSTY_KEY_CUCCO_SHACK)"
       },
       {
         "target": "Doggy Racetrack",
-        "rule": "(between(DAY1_AM_06_00, NIGHT1_PM_08_00) || between(DAY2_AM_06_00, NIGHT2_PM_08_00) || between(DAY3_AM_06_00, NIGHT3_PM_08_00)) && rusty_key(RUSTY_KEY_DOG_RACETRACK)"
+        "rule": "(between(DAY1_AM_06_00, NIGHT1_PM_08_00) || between(DAY2_AM_06_00, NIGHT2_PM_08_00) || between(DAY3_AM_06_00, NIGHT3_PM_08_00)) && rusty_key_mm(RUSTY_KEY_DOG_RACETRACK)"
       },
       {
         "target": "Stables",
-        "rule": "(between(DAY1_AM_06_00, NIGHT1_AM_02_30) || second_day || between(DAY3_AM_06_00, NIGHT3_PM_08_00)) && rusty_key(RUSTY_KEY_RANCH_BARN)"
+        "rule": "(between(DAY1_AM_06_00, NIGHT1_AM_02_30) || second_day || between(DAY3_AM_06_00, NIGHT3_PM_08_00)) && rusty_key_mm(RUSTY_KEY_RANCH_BARN)"
       },
       {
         "target": "Ranch House",
-        "rule": "(between(DAY1_AM_06_00, NIGHT1_PM_08_00) || between(DAY2_AM_06_00, NIGHT2_PM_08_00) || between(DAY3_AM_06_00, NIGHT3_PM_08_00)) && rusty_key(RUSTY_KEY_RANCH_HOUSE)"
+        "rule": "(between(DAY1_AM_06_00, NIGHT1_PM_08_00) || between(DAY2_AM_06_00, NIGHT2_PM_08_00) || between(DAY3_AM_06_00, NIGHT3_PM_08_00)) && rusty_key_mm(RUSTY_KEY_RANCH_HOUSE)"
       }
     ],
     "locations": [
@@ -48183,7 +48183,7 @@
       },
       {
         "target": "Romani Ranch",
-        "rule": "rusty_key(RUSTY_KEY_CUCCO_SHACK)"
+        "rule": "rusty_key_mm(RUSTY_KEY_CUCCO_SHACK)"
       }
     ],
     "locations": [
@@ -48297,7 +48297,7 @@
       },
       {
         "target": "Romani Ranch",
-        "rule": "rusty_key(RUSTY_KEY_DOG_RACETRACK)"
+        "rule": "rusty_key_mm(RUSTY_KEY_DOG_RACETRACK)"
       }
     ],
     "locations": [
@@ -48347,7 +48347,7 @@
       },
       {
         "target": "Romani Ranch",
-        "rule": "rusty_key(RUSTY_KEY_RANCH_BARN)"
+        "rule": "rusty_key_mm(RUSTY_KEY_RANCH_BARN)"
       }
     ],
     "locations": [
@@ -48384,11 +48384,11 @@
       },
       {
         "target": "Romani Ranch",
-        "rule": "rusty_key(RUSTY_KEY_RANCH_HOUSE)"
+        "rule": "rusty_key_mm(RUSTY_KEY_RANCH_HOUSE)"
       },
       {
         "target": "Ranch House Room",
-        "rule": "rusty_key(RUSTY_KEY_RANCH_HOUSE_ROOM)"
+        "rule": "rusty_key_mm(RUSTY_KEY_RANCH_HOUSE_ROOM)"
       }
     ],
     "locations": [],
@@ -48404,7 +48404,7 @@
       },
       {
         "target": "Ranch House",
-        "rule": "rusty_key(RUSTY_KEY_RANCH_HOUSE_ROOM)"
+        "rule": "rusty_key_mm(RUSTY_KEY_RANCH_HOUSE_ROOM)"
       }
     ],
     "locations": [],
@@ -48666,7 +48666,7 @@
       },
       {
         "target": "Tourist Information",
-        "rule": "rusty_key(RUSTY_KEY_TOURIST_INFORMATION)"
+        "rule": "rusty_key_mm(RUSTY_KEY_TOURIST_INFORMATION)"
       },
       {
         "target": "Swamp Water Near Tourist",
@@ -49024,7 +49024,7 @@
       },
       {
         "target": "Swamp Potion Shop",
-        "rule": "rusty_key(RUSTY_KEY_POTION_SHOP)"
+        "rule": "rusty_key_mm(RUSTY_KEY_POTION_SHOP)"
       },
       {
         "target": "Woods of Mystery",
@@ -49387,7 +49387,7 @@
       },
       {
         "target": "Swamp Front",
-        "rule": "rusty_key(RUSTY_KEY_TOURIST_INFORMATION)"
+        "rule": "rusty_key_mm(RUSTY_KEY_TOURIST_INFORMATION)"
       },
       {
         "target": "Boat Ride",
@@ -49441,7 +49441,7 @@
       },
       {
         "target": "Swamp Near Potion Shop",
-        "rule": "rusty_key(RUSTY_KEY_POTION_SHOP)"
+        "rule": "rusty_key_mm(RUSTY_KEY_POTION_SHOP)"
       },
       {
         "target": "Kotake Reward",
@@ -50032,7 +50032,7 @@
       },
       {
         "target": "Astral Observatory",
-        "rule": "rusty_key(RUSTY_KEY_OBSERVATORY)"
+        "rule": "rusty_key_mm(RUSTY_KEY_OBSERVATORY)"
       }
     ],
     "locations": [
@@ -54039,23 +54039,23 @@
       },
       {
         "target": "Zora Shop",
-        "rule": "rusty_key(RUSTY_KEY_ZORA_SHOP)"
+        "rule": "rusty_key_mm(RUSTY_KEY_ZORA_SHOP)"
       },
       {
         "target": "Tijo's Room",
-        "rule": "can_enter_zora_door && rusty_key(RUSTY_KEY_ZORA_TIJO_ROOM)"
+        "rule": "can_enter_zora_door && rusty_key_mm(RUSTY_KEY_ZORA_TIJO_ROOM)"
       },
       {
         "target": "Japas' Room",
-        "rule": "can_enter_zora_door && rusty_key(RUSTY_KEY_ZORA_JAPAS_ROOM)"
+        "rule": "can_enter_zora_door && rusty_key_mm(RUSTY_KEY_ZORA_JAPAS_ROOM)"
       },
       {
         "target": "Evan's Room",
-        "rule": "can_enter_zora_door && rusty_key(RUSTY_KEY_ZORA_EVAN_ROOM)"
+        "rule": "can_enter_zora_door && rusty_key_mm(RUSTY_KEY_ZORA_EVAN_ROOM)"
       },
       {
         "target": "Lulu's Room",
-        "rule": "can_enter_zora_door && rusty_key(RUSTY_KEY_ZORA_LULU_ROOM)"
+        "rule": "can_enter_zora_door && rusty_key_mm(RUSTY_KEY_ZORA_LULU_ROOM)"
       }
     ],
     "locations": [
@@ -54076,7 +54076,7 @@
       },
       {
         "target": "Zora Hall",
-        "rule": "rusty_key(RUSTY_KEY_ZORA_SHOP)"
+        "rule": "rusty_key_mm(RUSTY_KEY_ZORA_SHOP)"
       }
     ],
     "locations": [
@@ -54105,7 +54105,7 @@
       },
       {
         "target": "Zora Hall",
-        "rule": "rusty_key(RUSTY_KEY_ZORA_TIJO_ROOM)"
+        "rule": "rusty_key_mm(RUSTY_KEY_ZORA_TIJO_ROOM)"
       }
     ],
     "locations": [],
@@ -54121,7 +54121,7 @@
       },
       {
         "target": "Zora Hall",
-        "rule": "rusty_key(RUSTY_KEY_ZORA_JAPAS_ROOM)"
+        "rule": "rusty_key_mm(RUSTY_KEY_ZORA_JAPAS_ROOM)"
       }
     ],
     "locations": [],
@@ -54137,7 +54137,7 @@
       },
       {
         "target": "Zora Hall",
-        "rule": "rusty_key(RUSTY_KEY_ZORA_EVAN_ROOM)"
+        "rule": "rusty_key_mm(RUSTY_KEY_ZORA_EVAN_ROOM)"
       }
     ],
     "locations": [
@@ -54158,7 +54158,7 @@
       },
       {
         "target": "Zora Hall",
-        "rule": "rusty_key(RUSTY_KEY_ZORA_LULU_ROOM)"
+        "rule": "rusty_key_mm(RUSTY_KEY_ZORA_LULU_ROOM)"
       }
     ],
     "locations": [

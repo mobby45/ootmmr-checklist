@@ -443,7 +443,7 @@ import type { EntranceInfo } from '../data/entranceData';
   }
 
   function getCheckKey(check: MapCheck): string {
-    return checkNameMappingReverse[check.name] ?? check.name.replace(/^(OOT|MM) /, '');
+    return checkNameMappingReverse[check.name] ?? check.name;
   }
 
   function handleMarkerContextMenu(e: MouseEvent, check: MapCheck) {

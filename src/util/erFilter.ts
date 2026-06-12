@@ -1,4 +1,5 @@
 import { bossExitIds, entranceSubTypes, type EntranceInfo, type ErSettingKey } from '../data/entranceData';
+import { YAML_ENTRANCE_IDS } from '../data/yamlEntranceIds';
 import type { ErSettings } from './spoilerParser';
 
 export const erSubTypeGroups = [
@@ -36,6 +37,7 @@ export function filterEntrances(entrances: EntranceInfo[], settings: ErSettings)
   const active = erActiveTypes(settings);
   return entrances.filter(e => {
     if (bossExitIds.has(e.id)) return false;
+    if (!YAML_ENTRANCE_IDS.has(e.id)) return false;
     if (!active.has(e.erType)) return false;
     if (!erMatchesSubTypes(e.id, e.erType, settings)) return false;
     return true;

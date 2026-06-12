@@ -119,7 +119,10 @@ function createCheckEntry(
     shortName = shortName.trim();
 
     const checkType = poolEntry.type === 'none' ? T.CheckType.chest : T.CheckType[poolEntry.type as keyof typeof T.CheckType];
-    return { shortName, name: poolEntry.location, type: checkType, game, canBeMq, isMq, canHaveVariant, variantNumber, tags, scene: poolEntry.scene, item: poolEntry.item, id: poolEntry.id, age: poolEntry.age };
+    const gamePrefix = game === T.Game.oot ? 'OOT' : 'MM';
+    // Prefix name with game to guarantee uniqueness across OoT/MM (e.g. "Zora Shop Item 1" exists in both)
+    const name = `${gamePrefix} ${poolEntry.location}`;
+    return { shortName, name, type: checkType, game, canBeMq, isMq, canHaveVariant, variantNumber, tags, scene: poolEntry.scene, item: poolEntry.item, id: poolEntry.id, age: poolEntry.age };
 }
 
 for (let game in T.Game) {

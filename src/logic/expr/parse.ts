@@ -208,6 +208,7 @@ class Parser {
       case 'flag_off':  return { kind: 'flag_off', flag: strArg(0) };
       case 'price':     return { kind: 'price',    slot: numArg(0), max: numArg(1) };
       case 'cond':      return { kind: 'cond',     cond: exprArg(0), then: exprArg(1), else: exprArg(2) };
+      case 'special':   return { kind: 'special',  name: strArg(0) };
       default:          return { kind: 'macro',    name, args };
     }
   }

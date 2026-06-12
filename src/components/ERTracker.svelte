@@ -1,10 +1,10 @@
 <script lang="ts">
-  import { allEntrances, entranceSubTypes, subTypeLabels, findReverseEntrance, bossExitIds, type ErSettingKey } from '../data/entranceData';
+  import { allEntrances, entranceSubTypes, subTypeLabels, findReverseEntrance } from '../data/entranceData';
   import { defaultErSettings, type ErSettings } from '../util/spoilerParser';
-  import { filterEntrances, erActiveTypes, erMatchesSubTypes, erSubTypeGroups } from '../util/erFilter';
+  import { filterEntrances, erActiveTypes } from '../util/erFilter';
   import type { Map as YMap } from 'yjs';
   import EntranceSelect from './EntranceSelect.svelte';
-  import { createEventDispatcher, tick, onMount, onDestroy, beforeUpdate, afterUpdate } from 'svelte';
+  import { createEventDispatcher, tick, onMount, beforeUpdate, afterUpdate } from 'svelte';
   import { entrancePositions } from '../data/entrancePositions';
 
   const dispatch = createEventDispatcher();
@@ -23,7 +23,7 @@
   );
 
   // When spoilerExtraEr changes, merge sub-type values into manual settings (only once)
-  let lastExtraEr = '';
+  let lastExtraEr = JSON.stringify(spoilerExtraEr);
   $: {
     const serialized = JSON.stringify(spoilerExtraEr);
     if (serialized !== lastExtraEr && spoilerExtraEr) {
@@ -65,10 +65,6 @@
 
   const alwaysManualKeys = new Set(['erMixed', 'erDecoupled']);
 
-  function getManualBool(key: string): boolean {
-    return (manualErSettings as any)[key] ?? false;
-  }
-
   function toggleErSetting(key: string) {
     manualErSettings[key as keyof ErSettings] = !manualErSettings[key as keyof ErSettings];
     saveManualErSettings();
@@ -76,6 +72,9 @@
 
   function isErActive(key: string): boolean {
     return activeErSettings[key as keyof ErSettings];
+  }
+  function getManualSetting(key: string): boolean {
+    return (manualErSettings as any)[key] ?? false;
   }
 
   const erLabels: Record<string, string> = {
@@ -126,11 +125,6 @@
     (activeErSettings as any)[g.parent] && g.keys.some(k => hasPopulatedSub(k))
   );
 
-  // Build a set of entrance IDs per sub-type for quick lookup
-  $: subTypeIdSets = Object.fromEntries(
-    Object.entries(entranceSubTypes).map(([k, ids]) => [k, new Set(ids)])
-  ) as Record<string, Set<string>>;
-
   // Active/total sub-type count per parent key
   // Reference manualErSettings directly so Svelte tracks it as a dependency
   $: subTypeCounts = Object.fromEntries(
@@ -142,13 +136,6 @@
       }])
   ) as Record<string, { active: number; total: number }>;
 
-  // Determine which sub-type groups have at least one active toggle
-  $: hasActiveSubTypes = new Set(
-    subTypeGroups
-      .filter(g => g.keys.some(k => manualErSettings[k as keyof ErSettings]))
-      .map(g => g.parent)
-  );
-
   function getSub(key: string): boolean {
     return (manualErSettings as any)[key] ?? false;
   }
@@ -156,25 +143,8 @@
     return populatedSubTypes.has(key);
   }
 
-  function hasSubTypeGroup(erType: ErSettingKey): boolean {
-    return subTypeGroups.some(g => g.parent === erType);
-  }
   function hasPopulatedSubGroup(g: { keys: string[] }): boolean {
     return g.keys.some(k => hasPopulatedSub(k));
-  }
-
-  function entranceMatchesSubTypes(id: string, erType: ErSettingKey): boolean {
-    if (!hasSubTypeGroup(erType)) return true;
-    if (!hasActiveSubTypes.has(erType)) return false;
-    for (const group of subTypeGroups) {
-      if (group.parent !== erType) continue;
-      for (const key of group.keys) {
-        if (getSub(key) && subTypeIdSets[key]?.has(id)) {
-          return true;
-        }
-      }
-    }
-    return false;
   }
 
   $: activeErTypes = erActiveTypes(activeErSettings);
@@ -187,7 +157,7 @@
     return true;
   });
 
-  const sectionOrder = ['erOverworld', 'erDungeons', 'erBoss', 'erIndoors', 'erGrottos', 'erOneWays', 'erOwls', 'erAlterLw', 'erWallmasters', 'erSpawns'];
+  const sectionOrder = ['erOverworld', 'erDungeons', 'erBoss', 'erIndoors', 'erGrottos', 'erOneWays', 'erAlterLw', 'erWallmasters', 'erSpawns'];
 
   const sectionLabels: Record<string, string> = {
     erOverworld: '🌍 Overworld',
@@ -196,7 +166,6 @@
     erIndoors: '🏠 Interiors',
     erGrottos: '🕳️ Grottos',
     erOneWays: '➡️ One-Ways',
-    erOwls: '🦉 Owls',
     erAlterLw: '🌲 Alter Lost Woods',
     erWallmasters: '👁️ Wallmasters',
     erSpawns: '📍 Spawns',
@@ -213,8 +182,9 @@
       .map(t => ({ erType: t, label: sectionLabels[t] ?? t, entrances: byType.get(t)! }));
   })();
 
+  const ALL_ER_TYPES = ['erOverworld','erIndoors','erGrottos','erDungeons','erBoss','erOneWays','erWallmasters','erSpawns','erAlterLw'];
   let collapsedSections: Set<string> = new Set(
-    JSON.parse(localStorage.getItem('er-collapsed') ?? '[]')
+    JSON.parse(localStorage.getItem('er-collapsed') ?? JSON.stringify(ALL_ER_TYPES))
   );
   function toggleSection(erType: string) {
     if (collapsedSections.has(erType)) collapsedSections.delete(erType);
@@ -268,7 +238,7 @@
     Array.from(entranceValues.entries())
       .filter(([id]) => {
         const e = allEntrances.find(e => e.id === id);
-        return e && e.erType !== 'erOneWays' && e.erType !== 'erOwls';
+        return e && e.erType !== 'erOneWays';
       })
       .map(([, v]) => v)
   );
@@ -289,7 +259,7 @@
       {#each Object.entries(erLabels) as [key, label]}
         <button
           class="er-toggle-btn"
-          class:active={alwaysManualKeys.has(key) ? manualErSettings[key] ?? false : isErActive(key)}
+          class:active={alwaysManualKeys.has(key) ? getManualSetting(key) : isErActive(key)}
           class:from-spoiler={spoilerErSettings !== null && !alwaysManualKeys.has(key)}
           class:always-manual={alwaysManualKeys.has(key)}
           disabled={isWatchMode || (spoilerErSettings !== null && !alwaysManualKeys.has(key))}
@@ -536,7 +506,7 @@
     color: var(--color-text);
     cursor: pointer;
     font-size: 1.1em;
-    opacity: 0.5;
+    opacity: 0.75;
     padding: 0 4px;
     line-height: 1;
   }

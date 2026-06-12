@@ -19,6 +19,7 @@ export type ExprNode =
   | { kind: 'price';     slot: number; max: number }
   | { kind: 'flag_on';   flag: string }
   | { kind: 'flag_off';  flag: string }
+  | { kind: 'special';   name: string }
   | { kind: 'macro';     name: string; args: ExprNode[] };
 
 // ─── World Graph ─────────────────────────────────────────────────────────────
@@ -58,6 +59,8 @@ export type WorldGraph = Map<string, WorldRegion>;
 export interface LogicState {
   /** OoTMM item ID → count */
   items: Map<string, number>;
+  /** Game context for the region being evaluated — used for game-prefixed item lookups */
+  currentGame?: 'oot' | 'mm';
   age: 'child' | 'adult';
   /** Achieved events (accumulated during BFS) */
   events: Set<string>;
@@ -71,6 +74,8 @@ export interface LogicState {
   flags: Set<string>;
   /** When true, unmapped shuffled entrances block BFS instead of falling back to vanilla */
   erMode: boolean;
+  /** Pre-resolved special condition results (BRIDGE, MOON, LACS, GANON_BK, MAJORA) */
+  resolvedSpecial: Map<string, boolean>;
 }
 
 // ─── BFS Result ──────────────────────────────────────────────────────────────

@@ -46,10 +46,10 @@
   const typeLabels: Record<string, string> = {
     overworld: 'OW', interior: 'Int', dungeon: 'Dgn', grotto: 'Grotto', boss: 'Boss', owl: 'Owl',
   };
-  const erTypeOrder = ['erOverworld','erDungeons','erIndoors','erGrottos','erOwls','erOneWays','erWallmasters','erSpawns','erAlterLw'];
+  const erTypeOrder = ['erOverworld','erDungeons','erIndoors','erGrottos','erOneWays','erWallmasters','erSpawns','erAlterLw'];
   const erTypeLabels: Record<string, string> = {
     erOverworld: 'Overworld', erDungeons: 'Dungeons', erIndoors: 'Indoors',
-    erGrottos: 'Grottos', erOwls: 'Owls', erOneWays: 'One-ways',
+    erGrottos: 'Grottos', erOneWays: 'One-ways',
     erWallmasters: 'Wallmasters', erSpawns: 'Spawns', erAlterLw: 'Lost Woods Alt',
   };
 
