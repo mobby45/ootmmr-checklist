@@ -10,223 +10,327 @@ export function trackerItemToLogic(id: string, level: number): ItemGrant[] {
   if (level <= 0) return [];
   switch (id) {
     // ─── OoT swords ──────────────────────────────────────────────────────────
-    case 'sword_kokiri':    return [['SWORD_KOKIRI', 1], ['SWORD', 1]];
-    case 'sword_master':    return [['SWORD_MASTER', 1], ['SWORD', 2]];
-    case 'sword_biggoron':  return [['SWORD_BIGGORON', 1], ['GREAT_FAIRY_SWORD', 1]];
-    case 'giant_knife':     return [['SWORD_BIGGORON', 1]];
+    case 'sword_kokiri':    return [['OOT_SWORD_KOKIRI', 1], ['OOT_SWORD', 1]];
+    case 'sword_master':    return [['OOT_SWORD_MASTER', 1], ['OOT_SWORD', 2]];
+    case 'sword_biggoron':  return [['OOT_SWORD_BIGGORON', 1], ['OOT_GREAT_FAIRY_SWORD', 1]];
+    case 'giant_knife':     return [['OOT_SWORD_BIGGORON', 1]];
 
     // ─── OoT equipment ───────────────────────────────────────────────────────
-    case 'shield_mirror':   return [['SHIELD_MIRROR', 1], ['SHIELD', 3]];
-    case 'deku_shield':     return [['SHIELD_DEKU', 1],   ['SHIELD', 1]];
-    case 'hyrule_shield':   return [['SHIELD_HYRULE', 1], ['SHIELD', 2]];
-    case 'boots_iron':      return [['BOOTS_IRON', 1]];
-    case 'boots_hover':     return [['BOOTS_HOVER', 1]];
-    case 'tunic_goron':     return [['TUNIC_GORON', 1]];
-    case 'tunic_zora':      return [['TUNIC_ZORA', 1]];
+    case 'shield_mirror':   return [['OOT_SHIELD_MIRROR', 1], ['OOT_SHIELD', 3]];
+    case 'deku_shield':     return [['OOT_SHIELD_DEKU', 1],   ['OOT_SHIELD', 1]];
+    case 'hyrule_shield':   return [['OOT_SHIELD_HYRULE', 1], ['OOT_SHIELD', 2]];
+    case 'boots_iron':      return [['OOT_BOOTS_IRON', 1]];
+    case 'boots_hover':     return [['OOT_BOOTS_HOVER', 1]];
+    case 'tunic_goron':     return [['OOT_TUNIC_GORON', 1]];
+    case 'tunic_zora':      return [['OOT_TUNIC_ZORA', 1]];
+
+    // OoT progressive swords — macros use has(SWORD, N) when progressiveSwordsOot=progressive
+    case 'oot_sword_progressive':
+      return [['OOT_SWORD', level]];
+
+    // Progressive Giant's Knife → Biggoron (used alongside separate kokiri/master)
+    case 'oot_sword_progressive_giantbiggoron':
+      if (level === 1) return [['OOT_SWORD_BIGGORON', 1]];
+      return              [['OOT_SWORD_BIGGORON', 1], ['OOT_GREAT_FAIRY_SWORD', 1]];
+
+    // OoT progressive shields — macros use has(SHIELD, N) when progressiveShieldsOot=progressive
+    case 'oot_shield_progressive':
+      return [['OOT_SHIELD', level]];
 
     // Strength: level 1 = Silver Gauntlets, 2 = Gold Gauntlets, 3 = progressive max
     case 'strength':
-      if (level === 1) return [['STRENGTH', 1]];
-      if (level === 2) return [['STRENGTH', 2], ['STRENGTH_SILVER', 1]];
-      return              [['STRENGTH', 3], ['STRENGTH_SILVER', 1], ['STRENGTH_GOLD', 1]];
+      if (level === 1) return [['OOT_STRENGTH', 1]];
+      if (level === 2) return [['OOT_STRENGTH', 2], ['OOT_STRENGTH_SILVER', 1]];
+      return              [['OOT_STRENGTH', 3], ['OOT_STRENGTH_SILVER', 1], ['OOT_STRENGTH_GOLD', 1]];
 
     // Scale: level 1 = silver, level 2 = gold, level 3 = bronze (no scale / swim check)
     case 'scale':
-      if (level === 1) return [['SCALE', 1]];
-      if (level === 2) return [['SCALE', 2], ['SCALE_SILVER', 1]];
-      return              [['SCALE', 3], ['SCALE_SILVER', 1], ['SCALE_GOLDEN', 1]];
+      if (level === 1) return [['OOT_SCALE', 1]];
+      if (level === 2) return [['OOT_SCALE', 2], ['OOT_SCALE_SILVER', 1]];
+      return              [['OOT_SCALE', 3], ['OOT_SCALE_SILVER', 1], ['OOT_SCALE_GOLDEN', 1]];
 
     // ─── OoT items ───────────────────────────────────────────────────────────
     case 'hookshot':
-      if (level === 1) return [['HOOKSHOT', 1]];
-      return              [['HOOKSHOT', 1], ['LONGSHOT', 1]];
+      if (level === 1) return [['OOT_HOOKSHOT', 1]];
+      return              [['OOT_HOOKSHOT', 1], ['OOT_LONGSHOT', 1]];
 
     case 'ocarina':
-      if (level === 1) return [['OCARINA', 1], ['OCARINA_FAIRY', 1]];
-      return              [['OCARINA', 2], ['OCARINA_FAIRY', 1], ['OCARINA_OF_TIME', 1]];
+      if (level === 1) return [['OOT_OCARINA', 1], ['OOT_OCARINA_FAIRY', 1]];
+      return              [['OOT_OCARINA', 2], ['OOT_OCARINA_FAIRY', 1], ['OOT_OCARINA_OF_TIME', 1]];
 
-    case 'bow':       return [['BOW', 1], ['BOW_AMMO', level * 10]];
-    case 'slingshot': return [['SLINGSHOT', 1], ['SLINGSHOT_AMMO', level * 10]];
-    case 'bomb':      return [['BOMB_BAG', 1]];
-    case 'bombchu':   return [['BOMBCHU', 1]];
-    case 'boomerang': return [['BOOMERANG', 1]];
-    case 'hammer':    return [['HAMMER', 1]];
-    case 'lens':      return [['LENS', 1]];
-    case 'bean':      return [['MAGIC_BEAN', 1]];
-    case 'agony':     return [['STONE_OF_AGONY', 1]];
-    case 'gerudo_card': return [['GERUDO_CARD', 1]];
-    case 'din':       return [['SPELL_FIRE', 1]];
-    case 'farore':    return [['SPELL_WIND', 1]];
-    case 'nayru':     return [['SPELL_LOVE', 1]];
-    case 'magic_oot': return [['MAGIC_UPGRADE', level]];
-    case 'sticks_oot': return [['STICKS', 1], ['STICK', 1]];
-    case 'nuts_oot':   return [['NUTS', 1],  ['NUTS_5', 1]];
+    case 'bow':       return [['OOT_BOW', 1], ['OOT_BOW_AMMO', level * 10]];
+    case 'slingshot': return [['OOT_SLINGSHOT', 1], ['OOT_SLINGSHOT_AMMO', level * 10]];
+    case 'bomb':      return [['OOT_BOMB_BAG', 1]];
+    case 'bombchu':   return [['OOT_BOMBCHU', 1]];
+    case 'boomerang': return [['OOT_BOOMERANG', 1]];
+    case 'hammer':    return [['OOT_HAMMER', 1]];
+    case 'lens':      return [['OOT_LENS', 1]];
+    case 'bean':      return [['OOT_MAGIC_BEAN', 1]];
+    case 'agony':     return [['OOT_STONE_OF_AGONY', 1]];
+    case 'gerudo_card': return [['OOT_GERUDO_CARD', 1]];
+    case 'din':       return [['OOT_SPELL_FIRE', 1]];
+    case 'farore':    return [['OOT_SPELL_WIND', 1]];
+    case 'nayru':     return [['OOT_SPELL_LOVE', 1]];
+    case 'magic_oot': return [['OOT_MAGIC_UPGRADE', level]];
+    case 'sticks_oot': return [['OOT_STICKS', 1], ['OOT_STICK', 1]];
+    case 'nuts_oot':   return [['OOT_NUTS', 1],  ['OOT_NUTS_5', 1]];
 
     // Arrows (OoT)
-    case 'arrow_fire_oot':  return [['ARROW_FIRE', 1]];
-    case 'arrow_ice_oot':   return [['ARROW_ICE', 1]];
-    case 'arrow_light_oot': return [['ARROW_LIGHT', 1]];
+    case 'arrow_fire_oot':  return [['OOT_ARROW_FIRE', 1]];
+    case 'arrow_ice_oot':   return [['OOT_ARROW_ICE', 1]];
+    case 'arrow_light_oot': return [['OOT_ARROW_LIGHT', 1]];
 
     // Wallet: level 1 = 99, 2 = 200, 3 = 500
-    case 'wallet':    return [['WALLET', level]];
+    case 'wallet':    return [['OOT_WALLET', level]];
 
     // Bottles (OoT)
     case 'bottle_1':
     case 'bottle_2':
-    case 'bottle_3':  return [['BOTTLE', 1]];
+    case 'bottle_3':  return [['OOT_BOTTLE', 1]];
 
-    case 'bottle_letter': return [['BOTTLE', 1], ['RUTOS_LETTER', 1]];
-    case 'scarecrow_oot': return [['SCARECROW', 1]];
-    case 'key_skeleton':  return [['SKELETON_KEY', 1]];
+    case 'bottle_letter': return [['OOT_BOTTLE', 1], ['OOT_RUTOS_LETTER', 1]];
+    case 'scarecrow_oot': return [['OOT_SCARECROW', 1]];
+    case 'key_skeleton':  return [['OOT_SKELETON_KEY', 1]];
 
     // OoT trade items
-    case 'trade_c_egg':       return [['WEIRD_EGG', 1]];
-    case 'trade_c_cucco':     return [['CUCCO', 1]];
-    case 'trade_c_letter':    return [['ZELDAS_LETTER', 1]];
-    case 'trade_a_cojiro':    return [['COJIRO', 1]];
-    case 'trade_a_cucco':     return [['ODD_POULTICE', 1]]; // alt name
-    case 'trade_a_mushroom':  return [['ODD_MUSHROOM', 1]];
-    case 'trade_a_potion':    return [['ODD_POTION', 1]];
-    case 'trade_a_saw':       return [['POACHERS_SAW', 1]];
-    case 'trade_a_broken':    return [['BROKEN_GORONS_SWORD', 1]];
-    case 'trade_a_rx':        return [['PRESCRIPTION', 1]];
-    case 'trade_a_drops':     return [['EYEDROPS', 1]];
-    case 'trade_a_claim':     return [['CLAIM_CHECK', 1]];
-    case 'trade_a_frog':      return [['FROG', 1]];
+    case 'trade_c_egg':       return [['OOT_WEIRD_EGG', 1]];
+    case 'trade_c_cucco':     return [['OOT_CUCCO', 1]];
+    case 'trade_c_letter':    return [['OOT_ZELDAS_LETTER', 1]];
+    case 'trade_a_cojiro':    return [['OOT_COJIRO', 1]];
+    case 'trade_a_cucco':     return [['OOT_POCKET_CUCCO', 1]];
+    case 'trade_a_mushroom':  return [['OOT_ODD_MUSHROOM', 1]];
+    case 'trade_a_potion':    return [['OOT_ODD_POTION', 1]];
+    case 'trade_a_saw':       return [['OOT_POACHER_SAW', 1]];
+    case 'trade_a_broken':    return [['OOT_BROKEN_GORON_SWORD', 1]];
+    case 'trade_a_rx':        return [['OOT_PRESCRIPTION', 1]];
+    case 'trade_a_drops':     return [['OOT_EYE_DROPS', 1]];
+    case 'trade_a_claim':     return [['OOT_CLAIM_CHECK', 1]];
+    case 'trade_a_frog':      return [['OOT_EYEBALL_FROG', 1]];
 
     // OoT rewards
-    case 'stone_emerald':     return [['STONE_EMERALD', 1]];
-    case 'stone_ruby':        return [['STONE_RUBY', 1]];
-    case 'stone_sapphire':    return [['STONE_SAPPHIRE', 1]];
-    case 'medal_forest':      return [['MEDALLION_FOREST', 1], ['MEDALLION', 1]];
-    case 'medal_fire':        return [['MEDALLION_FIRE', 1],   ['MEDALLION', 1]];
-    case 'medal_water':       return [['MEDALLION_WATER', 1],  ['MEDALLION', 1]];
-    case 'medal_shadow':      return [['MEDALLION_SHADOW', 1], ['MEDALLION', 1]];
-    case 'medal_spirit':      return [['MEDALLION_SPIRIT', 1], ['MEDALLION', 1]];
-    case 'medal_light':       return [['MEDALLION_LIGHT', 1],  ['MEDALLION', 1]];
+    case 'stone_emerald':     return [['OOT_STONE_EMERALD', 1]];
+    case 'stone_ruby':        return [['OOT_STONE_RUBY', 1]];
+    case 'stone_sapphire':    return [['OOT_STONE_SAPPHIRE', 1]];
+    case 'medal_forest':      return [['OOT_MEDALLION_FOREST', 1], ['OOT_MEDALLION', 1]];
+    case 'medal_fire':        return [['OOT_MEDALLION_FIRE', 1],   ['OOT_MEDALLION', 1]];
+    case 'medal_water':       return [['OOT_MEDALLION_WATER', 1],  ['OOT_MEDALLION', 1]];
+    case 'medal_shadow':      return [['OOT_MEDALLION_SHADOW', 1], ['OOT_MEDALLION', 1]];
+    case 'medal_spirit':      return [['OOT_MEDALLION_SPIRIT', 1], ['OOT_MEDALLION', 1]];
+    case 'medal_light':       return [['OOT_MEDALLION_LIGHT', 1],  ['OOT_MEDALLION', 1]];
 
-    // OoT songs
-    case 'oot_song_zelda':    return [['SONG_ZELDA', 1]];
-    case 'oot_song_epona':    return [['SONG_EPONA', 1]];
-    case 'oot_song_saria':    return [['SONG_SARIA', 1]];
-    case 'oot_song_sun':      return [['SONG_SUN', 1]];
-    case 'oot_song_time':     return [['SONG_TIME', 1]];
-    case 'oot_song_storms':   return [['SONG_STORMS', 1]];
-    case 'oot_song_minuet':   return [['SONG_TP_FOREST', 1]];
-    case 'oot_song_bolero':   return [['SONG_TP_FIRE', 1]];
-    case 'oot_song_serenade': return [['SONG_TP_WATER', 1]];
-    case 'oot_song_requiem':  return [['SONG_TP_SPIRIT', 1]];
-    case 'oot_song_nocturne': return [['SONG_TP_SHADOW', 1]];
-    case 'oot_song_prelude':  return [['SONG_TP_LIGHT', 1]];
-    case 'oot_elegy':         return [['SONG_EMPTINESS', 1]];
-    // Cross-game songs in OoT pool
-    case 'oot_song_healing':  return [['SONG_HEALING', 1]];
-    case 'oot_song_soaring':  return [['SONG_SOARING', 1]];
-    case 'oot_song_sonata':   return [['SONG_AWAKENING', 1]];
-    case 'oot_song_lullaby':  return level === 2 ? [['SONG_GORON_HALF', 1], ['SONG_GORON', 1]] : [['SONG_GORON_HALF', 1]];
-    case 'oot_song_nova':     return [['SONG_ZORA', 1]];
-    case 'oot_song_oath':     return [['SONG_ORDER', 1]];
+    // OoT songs — OOT_SONG_* so only OoT songs satisfy OoT checks
+    case 'oot_song_zelda':    return [['OOT_SONG_ZELDA', 1]];
+    case 'oot_song_epona':    return [['OOT_SONG_EPONA', 1]];
+    case 'oot_song_saria':    return [['OOT_SONG_SARIA', 1]];
+    case 'oot_song_sun':      return [['OOT_SONG_SUN', 1]];
+    case 'oot_song_time':     return [['OOT_SONG_TIME', 1]];
+    case 'oot_song_storms':   return [['OOT_SONG_STORMS', 1]];
+    case 'oot_song_minuet':   return [['OOT_SONG_TP_FOREST', 1]];
+    case 'oot_song_bolero':   return [['OOT_SONG_TP_FIRE', 1]];
+    case 'oot_song_serenade': return [['OOT_SONG_TP_WATER', 1]];
+    case 'oot_song_requiem':  return [['OOT_SONG_TP_SPIRIT', 1]];
+    case 'oot_song_nocturne': return [['OOT_SONG_TP_SHADOW', 1]];
+    case 'oot_song_prelude':  return [['OOT_SONG_TP_LIGHT', 1]];
+    case 'oot_elegy':         return [['OOT_SONG_EMPTINESS', 1]];
+    // MM songs placed in OoT pool via extension
+    case 'oot_song_healing':  return [['OOT_SONG_HEALING', 1]];
+    case 'oot_song_soaring':  return [['OOT_SONG_SOARING', 1]];
+    case 'oot_song_sonata':   return [['OOT_SONG_AWAKENING', 1]];
+    case 'oot_song_lullaby':  return level === 2 ? [['OOT_SONG_GORON_HALF', 1], ['OOT_SONG_GORON', 1]] : [['OOT_SONG_GORON_HALF', 1]];
+    case 'oot_song_nova':     return [['OOT_SONG_ZORA', 1]];
+    case 'oot_song_oath':     return [['OOT_SONG_ORDER', 1]];
 
     // Skulltula
-    case 'skulltula_token':   return [['GS_TOKEN', level]];
+    case 'skulltula_token':   return [['OOT_GS_TOKEN', level]];
 
     // ─── MM items ────────────────────────────────────────────────────────────
-    case 'mm_ocarina':        return [['OCARINA', 1]]; // shared with OoT in cross-game
-    case 'mm_song_healing':   return [['SONG_HEALING', 1]];
-    case 'mm_song_soaring':   return [['SONG_SOARING', 1]];
-    case 'mm_song_storms':    return [['SONG_STORMS', 1]];
-    case 'mm_song_sonata':    return [['SONG_AWAKENING', 1]];
-    case 'mm_song_lullaby':   return level === 2 ? [['SONG_GORON_HALF', 1], ['SONG_GORON', 1]] : [['SONG_GORON_HALF', 1]];
-    case 'mm_song_nova':      return [['SONG_ZORA', 1]];
-    case 'mm_song_oath':      return [['SONG_ORDER', 1]];
-    case 'mm_song_elegy':     return [['SONG_EMPTINESS', 1]];
-    case 'mm_song_time':      return [['SONG_TIME', 1]];
-    case 'mm_song_epona':     return [['SONG_EPONA', 1]];
-    case 'mm_song_saria':     return [['SONG_SARIA', 1]];
-    case 'mm_song_zelda':     return [['SONG_ZELDA', 1]];
-    case 'mm_song_minuet':   return [['SONG_TP_FOREST', 1]];
-    case 'mm_song_bolero':   return [['SONG_TP_FIRE', 1]];
-    case 'mm_song_serenade': return [['SONG_TP_WATER', 1]];
-    case 'mm_song_requiem':  return [['SONG_TP_SPIRIT', 1]];
-    case 'mm_song_nocturne': return [['SONG_TP_SHADOW', 1]];
-    case 'mm_song_prelude':  return [['SONG_TP_LIGHT', 1]];
-    case 'mm_song_sun':      return [['SONG_SUN', 1]];
+    case 'mm_ocarina':        return [['MM_OCARINA', 1]];
+    // MM songs — MM_SONG_* so only MM songs satisfy MM checks
+    case 'mm_song_healing':   return [['MM_SONG_HEALING', 1]];
+    case 'mm_song_soaring':   return [['MM_SONG_SOARING', 1]];
+    case 'mm_song_storms':    return [['MM_SONG_STORMS', 1]];
+    case 'mm_song_sonata':    return [['MM_SONG_AWAKENING', 1]];
+    case 'mm_song_lullaby':   return level === 2 ? [['MM_SONG_GORON_HALF', 1], ['MM_SONG_GORON', 1]] : [['MM_SONG_GORON_HALF', 1]];
+    case 'mm_song_nova':      return [['MM_SONG_ZORA', 1]];
+    case 'mm_song_oath':      return [['MM_SONG_ORDER', 1]];
+    case 'mm_song_elegy':     return [['MM_SONG_EMPTINESS', 1]];
+    case 'mm_song_time':      return [['MM_SONG_TIME', 1]];
+    case 'mm_song_epona':     return [['MM_SONG_EPONA', 1]];
+    case 'mm_song_saria':     return [['MM_SONG_SARIA', 1]];
+    case 'mm_song_zelda':     return [['MM_SONG_ZELDA', 1]];
+    case 'mm_song_minuet':    return [['MM_SONG_TP_FOREST', 1]];
+    case 'mm_song_bolero':    return [['MM_SONG_TP_FIRE', 1]];
+    case 'mm_song_serenade':  return [['MM_SONG_TP_WATER', 1]];
+    case 'mm_song_requiem':   return [['MM_SONG_TP_SPIRIT', 1]];
+    case 'mm_song_nocturne':  return [['MM_SONG_TP_SHADOW', 1]];
+    case 'mm_song_prelude':   return [['MM_SONG_TP_LIGHT', 1]];
+    case 'mm_song_sun':       return [['MM_SONG_SUN', 1]];
 
-    case 'mm_bow':            return [['BOW', 1]];
-    case 'mm_bomb':           return [['BOMB_BAG', 1]];
-    case 'mm_bombchu':        return [['BOMBCHU', 1]];
-    case 'mm_hookshot':       return [['HOOKSHOT', 1]];
-    case 'mm_lens':           return [['LENS', 1]];
-    case 'mm_magic':          return [['MAGIC_UPGRADE', level]];
+    case 'mm_bow':            return [['MM_BOW', 1]];
+    case 'mm_bomb':           return [['MM_BOMB_BAG', 1]];
+    case 'mm_bombchu':        return [['MM_BOMBCHU', 1]];
+    case 'mm_hookshot':       return [['MM_HOOKSHOT', 1]];
+    case 'mm_lens':           return [['MM_LENS', 1]];
+    case 'mm_magic':          return [['MM_MAGIC_UPGRADE', level]];
 
-    case 'mm_arrow_fire':     return [['ARROW_FIRE', 1]];
-    case 'mm_arrow_ice':      return [['ARROW_ICE', 1]];
-    case 'mm_arrow_light':    return [['ARROW_LIGHT', 1]];
+    case 'mm_arrow_fire':     return [['MM_ARROW_FIRE', 1]];
+    case 'mm_arrow_ice':      return [['MM_ARROW_ICE', 1]];
+    case 'mm_arrow_light':    return [['MM_ARROW_LIGHT', 1]];
 
     case 'mm_sword':
-      if (level === 1) return [['SWORD_KOKIRI', 1], ['SWORD', 1]];
-      if (level === 2) return [['SWORD_RAZOR', 1],  ['SWORD', 2]];
-      return              [['SWORD_GILDED', 1],  ['SWORD', 3]];
+      if (level === 1) return [['MM_SWORD_KOKIRI', 1], ['MM_SWORD', 1]];
+      if (level === 2) return [['MM_SWORD_RAZOR', 1],  ['MM_SWORD', 2]];
+      return              [['MM_SWORD_GILDED', 1],  ['MM_SWORD', 3]];
 
-    case 'mm_shield_hero':    return [['SHIELD_MIRROR', 1]];
-    case 'mm_shield_zora':    return [['SHIELD_ZORA', 1]];
+    // MM shields (individual, non-progressive mode)
+    case 'mm_shield':         return [['MM_SHIELD_HERO', 1]];
+    case 'mm_mirror':         return [['MM_SHIELD_MIRROR', 1]];
+    // MM progressive shield: level 1 = Hero's Shield, level 2 = Mirror Shield
+    case 'mm_shield_progressive':
+      if (level === 1) return [['MM_SHIELD_HERO', 1]];
+      return              [['MM_SHIELD_HERO', 1], ['MM_SHIELD_MIRROR', 1]];
+    // Starting-item variants (from spoiler import)
+    case 'mm_shield_hero':    return [['MM_SHIELD_HERO', 1]];
+    case 'mm_shield_zora':    return [['MM_SHIELD_ZORA', 1]];
 
-    case 'mm_boots_iron':     return [['BOOTS_IRON', 1]];
-    case 'mm_boots_hover':    return [['BOOTS_HOVER', 1]];
+    case 'mm_boots_iron':     return [['MM_BOOTS_IRON', 1]];
+    case 'mm_boots_hover':    return [['MM_BOOTS_HOVER', 1]];
+    case 'mm_tunic_goron':    return [['MM_TUNIC_GORON', 1]];
+    case 'mm_tunic_zora':     return [['MM_TUNIC_ZORA', 1]];
+    case 'mm_shield_deku':    return [['MM_SHIELD_DEKU', 1], ['MM_SHIELD', 1]];
+    case 'mm_hammer':         return [['MM_HAMMER', 1]];
+    case 'mm_spell_fire':     return [['MM_SPELL_FIRE', 1]];
+    case 'mm_spell_wind':     return [['MM_SPELL_WIND', 1]];
+    case 'mm_spell_love':     return [['MM_SPELL_LOVE', 1]];
+    case 'mm_stone_of_agony': return [['MM_STONE_OF_AGONY', 1]];
 
-    case 'mm_strength':       return [['STRENGTH', level]];
-    case 'mm_scale':          return [['SCALE', level]];
+    case 'mm_strength':       return [['MM_STRENGTH', level]];
+    case 'mm_scale':          return [['MM_SCALE', level]];
 
-    case 'mm_wallet':         return [['WALLET', level]];
+    case 'mm_wallet':         return [['MM_WALLET', level]];
 
     case 'mm_bottle_1':
     case 'mm_bottle_2':
     case 'mm_bottle_3':
-    case 'mm_bottle_4':       return [['BOTTLE', 1]];
+    case 'mm_bottle_4':       return [['MM_BOTTLE', 1]];
 
-    case 'mm_powder_keg':     return [['POWDER_KEG', 1]];
-    case 'mm_pictograph':     return [['PICTOGRAPH_BOX', 1]];
-    case 'mm_logic_access':   return [['LOGIC_ACCESS', 1]];
+    case 'mm_powder_keg':     return [['MM_POWDER_KEG', 1]];
+    case 'mm_pictograph':     return [['MM_PICTOGRAPH_BOX', 1]];
+    case 'mm_logic_access':   return [['MM_LOGIC_ACCESS', 1]];
+    case 'mm_fairysword':     return [['MM_GREAT_FAIRY_SWORD', 1]];
+    case 'mm_clocktown_stray_fairy':  return [['MM_STRAY_FAIRY_TOWN', 1]];
+    case 'mm_woodfall_stray_fairy':   return [['MM_STRAY_FAIRY_WF', level]];
+    case 'mm_snowhead_stray_fairy':   return [['MM_STRAY_FAIRY_SH', level]];
+    case 'mm_greatbay_stray_fairy':   return [['MM_STRAY_FAIRY_GB', level]];
+    case 'mm_stonetower_stray_fairy': return [['MM_STRAY_FAIRY_ST', level]];
 
-    // MM masks
-    case 'mm_mask_deku':      return [['MASK_DEKU', 1]];
-    case 'mm_mask_goron':     return [['MASK_GORON', 1]];
-    case 'mm_mask_zora':      return [['MASK_ZORA', 1]];
-    case 'mm_mask_fierce_deity': return [['MASK_FIERCE_DEITY', 1]];
-    case 'mm_mask_truth':     return [['MASK_TRUTH', 1]];
-    case 'mm_mask_kafei':     return [['MASK_KAFEI', 1]];
-    case 'mm_mask_all_night': return [['MASK_ALL_NIGHT', 1]];
-    case 'mm_mask_bunny':     return [['MASK_BUNNY', 1]];
-    case 'mm_mask_keaton':    return [['MASK_KEATON', 1]];
-    case 'mm_mask_romani':    return [['MASK_ROMANI', 1]];
-    case 'mm_mask_circus':    return [['MASK_CIRCUS_LEADER', 1]];
-    case 'mm_mask_postman':   return [['MASK_POSTMAN', 1]];
-    case 'mm_mask_couple':    return [["MASK_COUPLE'S", 1]];
-    case 'mm_mask_great_fairy': return [['MASK_GREAT_FAIRY', 1]];
-    case 'mm_mask_gibdo':     return [['MASK_GIBDO', 1]];
-    case 'mm_mask_don_gero':  return [['MASK_DON_GERO', 1]];
-    case 'mm_mask_kamaro':    return [['MASK_KAMARO', 1]];
-    case 'mm_mask_captain':   return [['MASK_CAPTAIN', 1]];
-    case 'mm_mask_stone':     return [['MASK_STONE', 1]];
-    case 'mm_mask_bremen':    return [['MASK_BREMEN', 1]];
-    case 'mm_mask_blast':     return [['MASK_BLAST', 1]];
-    case 'mm_mask_scents':    return [['MASK_SCENTS', 1]];
-    case 'mm_mask_giant':     return [['MASK_GIANT', 1]];
+    // OoT masks (tracker IDs use _oot suffix)
+    case 'mask_bunny_oot':       return [['OOT_MASK_BUNNY', 1]];
+    case 'mask_keaton_oot':      return [['OOT_MASK_KEATON', 1]];
+    case 'mask_skull_oot':       return [['OOT_MASK_SKULL', 1]];
+    case 'mask_spooky_oot':      return [['OOT_MASK_SPOOKY', 1]];
+    case 'mask_truth_oot':       return [['OOT_MASK_TRUTH', 1]];
+    case 'mask_goron_oot':       return [['OOT_MASK_GORON', 1]];
+    case 'mask_zora_oot':        return [['OOT_MASK_ZORA', 1]];
+    case 'mask_gerudo_oot':      return [['OOT_MASK_GERUDO', 1]];
+    // OoT child trade masks
+    case 'trade_c_skull':        return [['OOT_MASK_SKULL', 1]];
+    case 'trade_c_spooky':       return [['OOT_MASK_SPOOKY', 1]];
+    case 'trade_c_bunny':        return [['OOT_MASK_BUNNY', 1]];
+    case 'trade_c_truth':        return [['OOT_MASK_TRUTH', 1]];
+
+    // MM masks — spoiler-import path (importSettings writes mm_mask_* into yItems)
+    case 'mm_mask_deku':         return [['MM_MASK_DEKU', 1]];
+    case 'mm_mask_goron':        return [['MM_MASK_GORON', 1]];
+    case 'mm_mask_zora':         return [['MM_MASK_ZORA', 1]];
+    case 'mm_mask_fierce_deity': return [['MM_MASK_FIERCE_DEITY', 1]];
+    case 'mm_mask_truth':        return [['MM_MASK_TRUTH', 1]];
+    case 'mm_mask_kafei':        return [['MM_MASK_KAFEI', 1]];
+    case 'mm_mask_all_night':    return [['MM_MASK_ALL_NIGHT', 1]];
+    case 'mm_mask_bunny':        return [['MM_MASK_BUNNY', 1]];
+    case 'mm_mask_keaton':       return [['MM_MASK_KEATON', 1]];
+    case 'mm_mask_romani':       return [['MM_MASK_ROMANI', 1]];
+    case 'mm_mask_circus':       return [['MM_MASK_CIRCUS', 1]];
+    case 'mm_mask_postman':      return [['MM_MASK_POSTMAN', 1]];
+    case 'mm_mask_couple':       return [['MM_MASK_COUPLE', 1]];
+    case 'mm_mask_great_fairy':  return [['MM_MASK_GREAT_FAIRY', 1]];
+    case 'mm_mask_gibdo':        return [['MM_MASK_GIBDO', 1]];
+    case 'mm_mask_don_gero':     return [['MM_MASK_DON_GERO', 1]];
+    case 'mm_mask_kamaro':       return [['MM_MASK_KAMARO', 1]];
+    case 'mm_mask_captain':      return [['MM_MASK_CAPTAIN', 1]];
+    case 'mm_mask_stone':        return [['MM_MASK_STONE', 1]];
+    case 'mm_mask_bremen':       return [['MM_MASK_BREMEN', 1]];
+    case 'mm_mask_blast':        return [['MM_MASK_BLAST', 1]];
+    case 'mm_mask_scents':       return [['MM_MASK_SCENTS', 1]];
+    case 'mm_mask_giant':        return [['MM_MASK_GIANT', 1]];
+
+    // MM masks — manual-click path (itemData IDs have no mm_ prefix)
+    case 'mask_deku':            return [['MM_MASK_DEKU', 1]];
+    case 'mask_goron':           return [['MM_MASK_GORON', 1]];
+    case 'mask_zora':            return [['MM_MASK_ZORA', 1]];
+    case 'mask_fierce_deity':    return [['MM_MASK_FIERCE_DEITY', 1]];
+    case 'mask_truth_mm':        return [['MM_MASK_TRUTH', 1]];
+    case 'mask_kafei':           return [['MM_MASK_KAFEI', 1]];
+    case 'mask_all_night':       return [['MM_MASK_ALL_NIGHT', 1]];
+    case 'mask_bunny':           return [['MM_MASK_BUNNY', 1]];
+    case 'mask_keaton':          return [['MM_MASK_KEATON', 1]];
+    case 'mask_romani':          return [['MM_MASK_ROMANI', 1]];
+    case 'mask_circus_leader':   return [['MM_MASK_CIRCUS', 1]];
+    case 'mask_postman':         return [['MM_MASK_POSTMAN', 1]];
+    case 'mask_couple':          return [['MM_MASK_COUPLE', 1]];
+    case 'mask_great_fairy':     return [['MM_MASK_GREAT_FAIRY', 1]];
+    case 'mask_gibdo':           return [['MM_MASK_GIBDO', 1]];
+    case 'mask_don_gero':        return [['MM_MASK_DON_GERO', 1]];
+    case 'mask_kamaro':          return [['MM_MASK_KAMARO', 1]];
+    case 'mask_captain_hat':     return [['MM_MASK_CAPTAIN', 1]];
+    case 'mask_stone':           return [['MM_MASK_STONE', 1]];
+    case 'mask_bremen':          return [['MM_MASK_BREMEN', 1]];
+    case 'mask_blast':           return [['MM_MASK_BLAST', 1]];
+    case 'mask_scents':          return [['MM_MASK_SCENTS', 1]];
+    case 'mask_giant':           return [['MM_MASK_GIANT', 1]];
+    case 'mask_garo':            return [['MM_MASK_GARO', 1]];
+    case 'mask_spooky_mm':       return [['MM_MASK_SPOOKY', 1]];
 
     // MM rewards
-    case 'mm_remains_odolwa':   return [['REMAINS_ODOLWA', 1],   ['REMAINS', 1]];
-    case 'mm_remains_goht':     return [['REMAINS_GOHT', 1],     ['REMAINS', 1]];
-    case 'mm_remains_gyorg':    return [['REMAINS_GYORG', 1],    ['REMAINS', 1]];
-    case 'mm_remains_twinmold': return [['REMAINS_TWINMOLD', 1], ['REMAINS', 1]];
+    case 'remains_odolwa':
+    case 'mm_remains_odolwa':   return [['MM_REMAINS_ODOLWA', 1],   ['MM_REMAINS', 1]];
+    case 'remains_goht':
+    case 'mm_remains_goht':     return [['MM_REMAINS_GOHT', 1],     ['MM_REMAINS', 1]];
+    case 'remains_gyorg':
+    case 'mm_remains_gyorg':    return [['MM_REMAINS_GYORG', 1],    ['MM_REMAINS', 1]];
+    case 'remains_twinmold':
+    case 'mm_remains_twinmold': return [['MM_REMAINS_TWINMOLD', 1], ['MM_REMAINS', 1]];
 
-    // Shared items (cross-game)
-    case 'shared_bow':        return [['BOW', 1]];
-    case 'shared_bomb':       return [['BOMB_BAG', 1]];
+    // Shared songs — SHARED_SONG_* keys satisfy both OoT and MM checks
+    case 'sh_song_epona':    return [['SHARED_SONG_EPONA', 1]];
+    case 'sh_song_storms':   return [['SHARED_SONG_STORMS', 1]];
+    case 'sh_song_time':     return [['SHARED_SONG_TIME', 1]];
+    case 'sh_song_sun':      return [['SHARED_SONG_SUN', 1]];
+    case 'sh_song_elegy':    return [['SHARED_SONG_EMPTINESS', 1]];
+    case 'sh_song_healing':  return [['SHARED_SONG_HEALING', 1]];
+    case 'sh_song_soaring':  return [['SHARED_SONG_SOARING', 1]];
+    case 'sh_song_sonata':   return [['SHARED_SONG_AWAKENING', 1]];
+    case 'sh_song_lullaby':  return level === 2 ? [['SHARED_SONG_GORON_HALF', 1], ['SHARED_SONG_GORON', 1]] : [['SHARED_SONG_GORON_HALF', 1]];
+    case 'sh_song_nova':     return [['SHARED_SONG_ZORA', 1]];
+    case 'sh_song_oath':     return [['SHARED_SONG_ORDER', 1]];
+    case 'sh_song_zelda':    return [['SHARED_SONG_ZELDA', 1]];
+    case 'sh_song_saria':    return [['SHARED_SONG_SARIA', 1]];
+    case 'sh_song_minuet':   return [['SHARED_SONG_TP_FOREST', 1]];
+    case 'sh_song_bolero':   return [['SHARED_SONG_TP_FIRE', 1]];
+    case 'sh_song_serenade': return [['SHARED_SONG_TP_WATER', 1]];
+    case 'sh_song_requiem':  return [['SHARED_SONG_TP_SPIRIT', 1]];
+    case 'sh_song_nocturne': return [['SHARED_SONG_TP_SHADOW', 1]];
+    case 'sh_song_prelude':  return [['SHARED_SONG_TP_LIGHT', 1]];
+
+    // Shared items (cross-game) — use SHARED_ keys where macros check them explicitly;
+    // plain keys are used as fallback by the game-prefixed eval for truly shared items.
+    case 'shared_bow':        return [['SHARED_BOW', 1]];
+    case 'shared_bomb':       return [['SHARED_BOMB_BAG', 1]];
     case 'shared_arrow_fire': return [['ARROW_FIRE', 1], ['SHARED_ARROW_FIRE', 1]];
     case 'shared_arrow_ice':  return [['ARROW_ICE', 1], ['SHARED_ARROW_ICE', 1]];
     case 'shared_arrow_light':return [['ARROW_LIGHT', 1], ['SHARED_ARROW_LIGHT', 1]];
     case 'shared_magic':      return [['MAGIC_UPGRADE', level]];
-    case 'shared_hookshot':   return level === 2 ? [['HOOKSHOT', 1], ['LONGSHOT', 1]] : [['HOOKSHOT', 1]];
+    case 'shared_hookshot':   return level === 2 ? [['SHARED_HOOKSHOT', 1], ['LONGSHOT', 1]] : [['SHARED_HOOKSHOT', 1]];
     case 'shared_lens':       return [['LENS', 1]];
     case 'shared_ocarina':    return [['OCARINA', level]];
     case 'shared_wallet':     return [['WALLET', level]];
@@ -240,6 +344,75 @@ export function trackerItemToLogic(id: string, level: number): ItemGrant[] {
       if (level === 2) return [['SWORD_MASTER', 1], ['SWORD', 2]];
       return              [['SWORD_BIGGORON', 1], ['SWORD', 3]];
     case 'shared_shield_mirror': return [['SHIELD_MIRROR', 1], ['SHIELD', 3]];
+
+    // ─── OoT rusty keys ──────────────────────────────────────────────────────
+    case 'oot_rk_windmill':               return [['RUSTY_KEY_WINDMILL', 1]];
+    case 'oot_rk_impa_house':             return [['RUSTY_KEY_IMPA_HOUSE', 1]];
+    case 'oot_rk_graveyard':              return [['RUSTY_KEY_GRAVEYARD', 1]];
+    case 'oot_rk_skulltula_house':        return [['RUSTY_KEY_SKULLTULA_HOUSE', 1]];
+    case 'oot_rk_guard_house':            return [['RUSTY_KEY_GUARD_HOUSE', 1]];
+    case 'oot_rk_carpenter_house':        return [['RUSTY_KEY_CARPENTER_HOUSE', 1]];
+    case 'oot_rk_mask_shop':              return [['RUSTY_KEY_MASK_SHOP', 1]];
+    case 'oot_rk_child_bazaar':           return [['RUSTY_KEY_CHILD_BAZAAR', 1]];
+    case 'oot_rk_child_potion_shop':      return [['RUSTY_KEY_CHILD_POTION_SHOP', 1]];
+    case 'oot_rk_child_shooting_gallery': return [['RUSTY_KEY_CHILD_SHOOTING_GALLERY', 1]];
+    case 'oot_rk_bombchu_bowling':        return [['RUSTY_KEY_BOMBCHU_BOWLING', 1]];
+    case 'oot_rk_treasure_chest_game':    return [['RUSTY_KEY_TREASURE_CHEST_GAME', 1]];
+    case 'oot_rk_dog_lady_house':         return [['RUSTY_KEY_DOG_LADY_HOUSE', 1]];
+    case 'oot_rk_bombchu_shop':           return [['RUSTY_KEY_BOMBCHU_SHOP', 1]];
+    case 'oot_rk_back_alley_house':       return [['RUSTY_KEY_BACK_ALLEY_HOUSE', 1]];
+    case 'oot_rk_adult_bazaar':           return [['RUSTY_KEY_ADULT_BAZAAR', 1]];
+    case 'oot_rk_adult_potion_shop':      return [['RUSTY_KEY_ADULT_POTION_SHOP', 1]];
+    case 'oot_rk_adult_potion_shop_back': return [['RUSTY_KEY_ADULT_POTION_SHOP_BACK', 1]];
+    case 'oot_rk_adult_shooting_gallery': return [['RUSTY_KEY_ADULT_SHOOTING_GALLERY', 1]];
+    case 'oot_rk_granny_potion_shop':     return [['RUSTY_KEY_GRANNY_POTION_SHOP', 1]];
+    case 'oot_rk_laboratory':             return [['RUSTY_KEY_LABORATORY', 1]];
+    case 'oot_rk_fishing_pond':           return [['RUSTY_KEY_FISHING_POND', 1]];
+    case 'oot_rk_ranch_house':            return [['RUSTY_KEY_RANCH_HOUSE', 1]];
+    case 'oot_rk_ranch_house_room':       return [['RUSTY_KEY_RANCH_HOUSE_ROOM', 1]];
+    case 'oot_rk_ranch_stable':           return [['RUSTY_KEY_RANCH_STABLE', 1]];
+    case 'oot_rk_silo':                   return [['RUSTY_KEY_SILO', 1]];
+
+    // ─── MM rusty keys ───────────────────────────────────────────────────────
+    case 'mm_rk_bomb_shop':               return [['RUSTY_KEY_BOMB_SHOP', 1]];
+    case 'mm_rk_trading_post':            return [['RUSTY_KEY_TRADING_POST', 1]];
+    case 'mm_rk_curiosity_shop':          return [['RUSTY_KEY_CURIOSITY_SHOP', 1]];
+    case 'mm_rk_post_office':             return [['RUSTY_KEY_POST_OFFICE', 1]];
+    case 'mm_rk_swordsman_school':        return [['RUSTY_KEY_SWORDSMAN_SCHOOL', 1]];
+    case 'mm_rk_lottery':                 return [['RUSTY_KEY_LOTTERY', 1]];
+    case 'mm_rk_mayor_residence':         return [['RUSTY_KEY_MAYOR_RESIDENCE', 1]];
+    case 'mm_rk_mayor_residence_office':  return [['RUSTY_KEY_MAYOR_RESIDENCE_OFFICE', 1]];
+    case 'mm_rk_mayor_residence_salon':   return [['RUSTY_KEY_MAYOR_RESIDENCE_SALON', 1]];
+    case 'mm_rk_mayor_residence_kafei':   return [['RUSTY_KEY_MAYOR_RESIDENCE_KAFEI', 1]];
+    case 'mm_rk_town_archery':            return [['RUSTY_KEY_TOWN_ARCHERY', 1]];
+    case 'mm_rk_honey_darling':           return [['RUSTY_KEY_HONEY_DARLING', 1]];
+    case 'mm_rk_inn_guest_room':          return [['RUSTY_KEY_STOCK_POT_INN', 1]];
+    case 'mm_rk_stock_pot_inn_roof':      return [['RUSTY_KEY_STOCK_POT_INN_ROOF', 1]];
+    case 'mm_rk_stock_pot_inn_staff_room':return [['RUSTY_KEY_STOCK_POT_INN_STAFF_ROOM', 1]];
+    case 'mm_rk_stock_pot_inn_dormitory': return [['RUSTY_KEY_STOCK_POT_INN_DORMITORY', 1]];
+    case 'mm_rk_grandma_room':            return [['RUSTY_KEY_GRANDMA_ROOM', 1]];
+    case 'mm_rk_milk_bar':                return [['RUSTY_KEY_MILK_BAR', 1]];
+    case 'mm_rk_kafei_hideout':           return [['RUSTY_KEY_KAFEI_HIDEOUT', 1]];
+    case 'mm_rk_observatory':             return [['RUSTY_KEY_OBSERVATORY', 1]];
+    case 'mm_rk_beneath_graveyard':       return [['RUSTY_KEY_BENEATH_GRAVEYARD', 1]];
+    case 'mm_rk_dampe_house':             return [['RUSTY_KEY_DAMPE_HOUSE', 1]];
+    case 'mm_rk_music_house':             return [['RUSTY_KEY_MUSIC_HOUSE', 1]];
+    case 'mm_rk_blacksmith':              return [['RUSTY_KEY_BLACKSMITH', 1]];
+    case 'mm_rk_swamp_archery':           return [['RUSTY_KEY_SWAMP_ARCHERY', 1]];
+    case 'mm_rk_cucco_shack':             return [['RUSTY_KEY_CUCCO_SHACK', 1]];
+    case 'mm_rk_dog_racetrack':           return [['RUSTY_KEY_DOG_RACETRACK', 1]];
+    case 'mm_rk_ranch_barn':              return [['RUSTY_KEY_RANCH_BARN', 1]];
+    case 'mm_rk_tourist_information':     return [['RUSTY_KEY_TOURIST_INFORMATION', 1]];
+    case 'mm_rk_potion_shop':             return [['RUSTY_KEY_POTION_SHOP', 1]];
+    case 'mm_rk_zora_shop':               return [['RUSTY_KEY_ZORA_SHOP', 1]];
+    case 'mm_rk_zora_tijo_room':          return [['RUSTY_KEY_ZORA_TIJO_ROOM', 1]];
+    case 'mm_rk_zora_japas_room':         return [['RUSTY_KEY_ZORA_JAPAS_ROOM', 1]];
+    case 'mm_rk_zora_evan_room':          return [['RUSTY_KEY_ZORA_EVAN_ROOM', 1]];
+    case 'mm_rk_zora_lulu_room':          return [['RUSTY_KEY_ZORA_LULU_ROOM', 1]];
+    case 'mm_rk_laboratory':              return [['RUSTY_KEY_LABORATORY', 1]];
+    case 'mm_rk_ranch_house':             return [['RUSTY_KEY_RANCH_HOUSE', 1]];
+    case 'mm_rk_ranch_house_room':        return [['RUSTY_KEY_RANCH_HOUSE_ROOM', 1]];
+    case 'mm_rk_treasure_chest_game':     return [['RUSTY_KEY_TREASURE_CHEST_GAME', 1]];
 
     default: return [];
   }

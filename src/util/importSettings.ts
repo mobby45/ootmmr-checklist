@@ -72,6 +72,7 @@ const KEY_MAP: Record<string, string> = {
   spellLoveMm:          'spellLoveMm',
   stoneAgonyMm:         'stoneAgonyMm',
   hammerMm:             'hammerMm',
+  kegStrength3:         'kegStrength3',
   strengthMm:           'strengthMm',
   scalesMm:             'scalesMm',
   dekuShieldMm:         'dekuShieldMm',
@@ -96,6 +97,8 @@ const KEY_MAP: Record<string, string> = {
   skeletonKeyOot:       'skeletonKeyOot',
   platinumTokenOot:     'platinumTokenOot',
   magicalRupee:         'magicalRupee',
+  gfsOot:               'gfsOot',
+  powderKegOot:         'powderKegOot',
   // OoT behavior/pool extensions
   sunlightArrows:       'sunlightArrows',
   blueFireArrows:       'blueFireArrows',
@@ -105,6 +108,18 @@ const KEY_MAP: Record<string, string> = {
   bottomlessWallets:    'bottomlessWallets',
   bottleContentShuffle: 'bottleContentShuffle',
   sticksNutsUpgradesMm: 'sticksNutsUpgradesMm',
+  slingshotMm:          'slingshotMm',
+  menuNotebook:         'menuNotebook',
+  rustyKeysOot:         'rustyKeysOot',
+  rustyKeysMm:          'rustyKeysMm',
+  bombchuBehaviorOot:   'bombchuBehaviorOot',
+  bombchuBehaviorMm:    'bombchuBehaviorMm',
+  progressiveShieldsOot:     'progressiveShieldsOot',
+  progressiveSwordsOot:      'progressiveSwordsOot',
+  progressiveShieldsMm:      'progressiveShieldsMm',
+  progressiveGFS:            'progressiveGFS',
+  progressiveGoronLullabyMm: 'progressiveGoronLullaby',
+  progressiveClocks:         'progressiveClocks',
   sharedBottles:        'sharedBottles',
   // Shared items between OoT and MM (control item tracker visibility)
   sharedHookshot:       'sharedHookshot',
@@ -112,6 +127,7 @@ const KEY_MAP: Record<string, string> = {
   sharedHealth:         'sharedHealth',
   sharedNutsSticks:     'sharedNutsSticks',
   sharedBombchuBags:    'sharedBombchuBags',
+  sharedBombchu:        'sharedBombchuBags', // OoTMM uses sharedBombchu, tracker uses sharedBombchuBags
   sharedStrength:       'sharedStrength',
   sharedHammer:         'sharedHammer',
   sharedBows:           'sharedBows',
@@ -141,8 +157,20 @@ const KEY_MAP: Record<string, string> = {
   sharedMaskStone:      'sharedMaskStone',
   sharedMaskBunny:      'sharedMaskBunny',
   sharedMaskTruth:      'sharedMaskTruth',
+  sharedMaskKamaro:     'sharedMaskKamaro',
+  sharedBoomerang:      'sharedBoomerang',
+  sharedGFS:            'sharedGFS',
+  sharedSlingshot:      'sharedSlingshot',
+  sharedPowderKeg:      'sharedPowderKeg',
+  sharedSkeletonKey:    'sharedSkeletonKey',
+  sharedPlatinumToken:  'sharedPlatinumToken',
+  sharedSoulsEnemy:     'sharedSoulsEnemy',
+  sharedSoulsNpc:       'sharedSoulsNpc',
+  sharedSoulsAnimal:    'sharedSoulsAnimal',
+  sharedSoulsMisc:      'sharedSoulsMisc',
+  sharedOcarinaButtons: 'sharedOcarinaButtons',
   sharedSpinUpgrade:    'sharedSpinUpgrade',
-  sharedStoneAgony:     'sharedStoneOfAgony', // OoTMM key differs from tracker key
+  sharedStoneAgony:     'sharedStoneAgony',
   sharedSongElegy:      'sharedSongElegy',
   sharedTriforce:       'sharedTriforce',
   // Individual song pool extensions (MM songs in OoT)
@@ -176,15 +204,21 @@ const KEY_MAP: Record<string, string> = {
   soulsAnimalMm:        'animalSoulsMm',
   soulsMiscMm:          'miscSoulsMm',
   // Cross-game songs (MM songs in OoT pool)
+  // OoTMM uses different key names; both old and new keys map to the same tracker slot
   sharedSongHealing:            'sharedSongHealing',
   sharedSongSoaring:            'sharedSongSoaring',
   sharedSongSonata:             'sharedSongSonata',
+  sharedSongAwakening:          'sharedSongSonata',   // OoTMM name for Sonata of Awakening
   sharedSongLullaby:            'sharedSongLullaby',
+  sharedSongGoron:              'sharedSongLullaby',  // OoTMM name for Goron's Lullaby
   sharedSongNova:               'sharedSongNova',
+  sharedSongZora:               'sharedSongNova',     // OoTMM name for New Wave Bossa Nova
   sharedSongOath:               'sharedSongOath',
+  sharedSongOrder:              'sharedSongOath',     // OoTMM name for Oath to Order
   // Cross-game songs (OoT songs in MM pool)
   sharedSongZeldaLullaby:       'sharedSongZeldaLullaby',
   sharedSongSaria:              'sharedSongSaria',
+  sharedSongSarias:             'sharedSongSaria',    // OoTMM uses plural 's'
   sharedSongMinuet:             'sharedSongMinuet',
   sharedSongBolero:             'sharedSongBolero',
   sharedSongSerenade:           'sharedSongSerenade',
@@ -197,6 +231,209 @@ const KEY_MAP: Record<string, string> = {
   sharedSongTime:               'sharedSongTime',
   sharedSongSun:                'sharedSongSun',
 };
+
+// Maps OoTMM generator item IDs (used in startingItems) to tracker item IDs + levels.
+// level = -1 means "use the OoTMM count as the tracker level" (progressive items like MM_SWORD).
+const OOTMM_STARTING_ITEM_MAP: Record<string, { id: string; level: number }[]> = {
+  // ─── OoT weapons ───────────────────────────────────────────────────────────
+  OOT_BOW:              [{ id: 'bow',           level: 1 }],
+  OOT_BOMB_BAG:         [{ id: 'bomb',          level: 1 }],
+  OOT_BOMBCHU:          [{ id: 'bombchu',       level: 1 }],
+  OOT_HOOKSHOT:         [{ id: 'hookshot',      level: 1 }],
+  OOT_LONGSHOT:         [{ id: 'hookshot',      level: 2 }],
+  OOT_HAMMER:           [{ id: 'hammer',        level: 1 }],
+  OOT_LENS:             [{ id: 'lens',          level: 1 }],
+  OOT_SLINGSHOT:        [{ id: 'slingshot',     level: 1 }],
+  OOT_BOOMERANG:        [{ id: 'boomerang',     level: 1 }],
+  OOT_MAGIC_BEAN:       [{ id: 'bean',          level: 1 }],
+  OOT_STONE_OF_AGONY:   [{ id: 'agony',         level: 1 }],
+  OOT_GERUDO_CARD:      [{ id: 'gerudo_card',   level: 1 }],
+  OOT_SPELL_FIRE:       [{ id: 'din',           level: 1 }],
+  OOT_SPELL_WIND:       [{ id: 'farore',        level: 1 }],
+  OOT_SPELL_LOVE:       [{ id: 'nayru',         level: 1 }],
+  OOT_ARROW_FIRE:       [{ id: 'arrow_fire_oot',level: 1 }],
+  OOT_ARROW_ICE:        [{ id: 'arrow_ice_oot', level: 1 }],
+  OOT_ARROW_LIGHT:      [{ id: 'arrow_light_oot',level: 1}],
+  // OoT swords
+  OOT_SWORD_KOKIRI:     [{ id: 'sword_kokiri',  level: 1 }],
+  OOT_SWORD_MASTER:     [{ id: 'sword_master',  level: 1 }],
+  OOT_SWORD_BIGGORON:   [{ id: 'sword_biggoron',level: 1 }],
+  // OoT equipment
+  OOT_OCARINA:          [{ id: 'ocarina',       level: 1 }],
+  OOT_OCARINA_FAIRY:    [{ id: 'ocarina',       level: 1 }],
+  OOT_OCARINA_OF_TIME:  [{ id: 'ocarina',       level: 2 }],
+  OOT_SHIELD_DEKU:      [{ id: 'deku_shield',   level: 1 }],
+  OOT_SHIELD_HYRULE:    [{ id: 'hyrule_shield', level: 1 }],
+  OOT_SHIELD_MIRROR:    [{ id: 'shield_mirror', level: 1 }],
+  OOT_BOOTS_IRON:       [{ id: 'boots_iron',    level: 1 }],
+  OOT_BOOTS_HOVER:      [{ id: 'boots_hover',   level: 1 }],
+  OOT_TUNIC_GORON:      [{ id: 'tunic_goron',   level: 1 }],
+  OOT_TUNIC_ZORA:       [{ id: 'tunic_zora',    level: 1 }],
+  OOT_STRENGTH:         [{ id: 'strength',      level: 1 }],
+  OOT_STRENGTH_SILVER:  [{ id: 'strength',      level: 2 }],
+  OOT_STRENGTH_GOLD:    [{ id: 'strength',      level: 3 }],
+  OOT_SCALE:            [{ id: 'scale',         level: 1 }],
+  OOT_SCALE_GOLDEN:     [{ id: 'scale',         level: 2 }],
+  OOT_MAGIC_UPGRADE:    [{ id: 'magic_oot',     level: 1 }],
+  OOT_WALLET:           [{ id: 'wallet',        level: 1 }],
+  OOT_WALLET_BIG:       [{ id: 'wallet',        level: 2 }],
+  OOT_WALLET_GIANT:     [{ id: 'wallet',        level: 3 }],
+  // OoT sticks/nuts — count is quantity, tracker level is always 1
+  OOT_STICK:            [{ id: 'sticks_oot',    level: 1 }],
+  OOT_STICK_10:         [{ id: 'sticks_oot',    level: 1 }],
+  OOT_NUTS:             [{ id: 'nuts_oot',      level: 1 }],
+  OOT_NUTS_5:           [{ id: 'nuts_oot',      level: 1 }],
+  OOT_NUTS_10:          [{ id: 'nuts_oot',      level: 1 }],
+  // OoT masks
+  OOT_MASK_BUNNY:       [{ id: 'mask_bunny_oot',level: 1 }],
+  // OoT rewards
+  OOT_STONE_EMERALD:    [{ id: 'stone_emerald', level: 1 }],
+  OOT_STONE_RUBY:       [{ id: 'stone_ruby',    level: 1 }],
+  OOT_STONE_SAPPHIRE:   [{ id: 'stone_sapphire',level: 1 }],
+  OOT_MEDALLION_FOREST: [{ id: 'medal_forest',  level: 1 }],
+  OOT_MEDALLION_FIRE:   [{ id: 'medal_fire',    level: 1 }],
+  OOT_MEDALLION_WATER:  [{ id: 'medal_water',   level: 1 }],
+  OOT_MEDALLION_SHADOW: [{ id: 'medal_shadow',  level: 1 }],
+  OOT_MEDALLION_SPIRIT: [{ id: 'medal_spirit',  level: 1 }],
+  OOT_MEDALLION_LIGHT:  [{ id: 'medal_light',   level: 1 }],
+  // OoT songs
+  OOT_SONG_ZELDA:       [{ id: 'oot_song_zelda',   level: 1 }],
+  OOT_SONG_EPONA:       [{ id: 'oot_song_epona',   level: 1 }],
+  OOT_SONG_SARIA:       [{ id: 'oot_song_saria',   level: 1 }],
+  OOT_SONG_SUN:         [{ id: 'oot_song_sun',     level: 1 }],
+  OOT_SONG_TIME:        [{ id: 'oot_song_time',    level: 1 }],
+  OOT_SONG_STORMS:      [{ id: 'oot_song_storms',  level: 1 }],
+  OOT_SONG_MINUET:      [{ id: 'oot_song_minuet',  level: 1 }],
+  OOT_SONG_BOLERO:      [{ id: 'oot_song_bolero',  level: 1 }],
+  OOT_SONG_SERENADE:    [{ id: 'oot_song_serenade',level: 1 }],
+  OOT_SONG_REQUIEM:     [{ id: 'oot_song_requiem', level: 1 }],
+  OOT_SONG_NOCTURNE:    [{ id: 'oot_song_nocturne',level: 1 }],
+  OOT_SONG_PRELUDE:     [{ id: 'oot_song_prelude', level: 1 }],
+  OOT_SONG_SOARING:     [{ id: 'oot_song_soaring', level: 1 }],
+  OOT_SONG_HEALING:     [{ id: 'oot_song_healing', level: 1 }],
+
+  // ─── MM weapons ────────────────────────────────────────────────────────────
+  MM_BOW:               [{ id: 'mm_bow',        level: 1 }],
+  MM_BOMB_BAG:          [{ id: 'mm_bomb',       level: 1 }],
+  MM_BOMBCHU:           [{ id: 'mm_bombchu',    level: 1 }],
+  MM_HOOKSHOT:          [{ id: 'mm_hookshot',   level: 1 }],
+  MM_LENS:              [{ id: 'mm_lens',       level: 1 }],
+  MM_POWDER_KEG:        [{ id: 'mm_powder_keg', level: 1 }],
+  MM_PICTOGRAPH:        [{ id: 'mm_pictograph', level: 1 }],
+  MM_ARROW_FIRE:        [{ id: 'mm_arrow_fire', level: 1 }],
+  MM_ARROW_ICE:         [{ id: 'mm_arrow_ice',  level: 1 }],
+  MM_ARROW_LIGHT:       [{ id: 'mm_arrow_light',level: 1 }],
+  MM_MAGIC_UPGRADE:     [{ id: 'mm_magic',      level: 1 }],
+  // MM swords — level -1: use OoTMM count as tracker level (1=Kokiri, 2=Razor, 3=Gilded)
+  MM_SWORD:             [{ id: 'mm_sword',      level: -1 }],
+  MM_SWORD_KOKIRI:      [{ id: 'mm_sword',      level: 1 }],
+  MM_SWORD_RAZOR:       [{ id: 'mm_sword',      level: 2 }],
+  MM_SWORD_GILDED:      [{ id: 'mm_sword',      level: 3 }],
+  // MM equipment
+  MM_OCARINA:           [{ id: 'mm_ocarina',    level: 1 }],
+  MM_SHIELD_HERO:       [{ id: 'mm_shield_hero',level: 1 }],
+  MM_SHIELD_ZORA:       [{ id: 'mm_shield_zora',level: 1 }],
+  MM_BOOTS_IRON:        [{ id: 'mm_boots_iron', level: 1 }],
+  MM_BOOTS_HOVER:       [{ id: 'mm_boots_hover',level: 1 }],
+  MM_STRENGTH:          [{ id: 'mm_strength',   level: 1 }],
+  MM_SCALE:             [{ id: 'mm_scale',      level: 1 }],
+  MM_WALLET:            [{ id: 'mm_wallet',     level: 1 }],
+  MM_STICK:             [{ id: 'sticks_oot',    level: 1 }],
+  MM_STICK_10:          [{ id: 'sticks_oot',    level: 1 }],
+  MM_NUTS:              [{ id: 'nuts_oot',      level: 1 }],
+  MM_NUTS_5:            [{ id: 'nuts_oot',      level: 1 }],
+  MM_NUTS_10:           [{ id: 'nuts_oot',      level: 1 }],
+  // MM masks
+  MM_MASK_DEKU:         [{ id: 'mm_mask_deku',  level: 1 }],
+  MM_MASK_GORON:        [{ id: 'mm_mask_goron', level: 1 }],
+  MM_MASK_ZORA:         [{ id: 'mm_mask_zora',  level: 1 }],
+  MM_MASK_FIERCE_DEITY: [{ id: 'mm_mask_fierce_deity', level: 1 }],
+  MM_MASK_BUNNY:        [{ id: 'mm_mask_bunny', level: 1 }],
+  MM_MASK_TRUTH:        [{ id: 'mm_mask_truth', level: 1 }],
+  MM_MASK_KAFEI:        [{ id: 'mm_mask_kafei', level: 1 }],
+  MM_MASK_KEATON:       [{ id: 'mm_mask_keaton',level: 1 }],
+  MM_MASK_ROMANI:       [{ id: 'mm_mask_romani',level: 1 }],
+  MM_MASK_CAPTAIN:      [{ id: 'mm_mask_captain',level:1 }],
+  MM_MASK_GIANT:        [{ id: 'mm_mask_giant', level: 1 }],
+  MM_MASK_BLAST:        [{ id: 'mm_mask_blast', level: 1 }],
+  MM_MASK_STONE:        [{ id: 'mm_mask_stone', level: 1 }],
+  MM_MASK_GREAT_FAIRY:  [{ id: 'mm_mask_great_fairy', level: 1 }],
+  MM_MASK_DON_GERO:     [{ id: 'mm_mask_don_gero', level: 1 }],
+  MM_MASK_KAMARO:       [{ id: 'mm_mask_kamaro',level: 1 }],
+  MM_MASK_GIBDO:        [{ id: 'mm_mask_gibdo', level: 1 }],
+  MM_MASK_CIRCUS:       [{ id: 'mm_mask_circus',level: 1 }],
+  MM_MASK_POSTMAN:      [{ id: 'mm_mask_postman',level:1 }],
+  MM_MASK_COUPLE:       [{ id: 'mm_mask_couple',level: 1 }],
+  MM_MASK_ALL_NIGHT:    [{ id: 'mm_mask_all_night', level: 1 }],
+  MM_MASK_SCENTS:       [{ id: 'mm_mask_scents',level: 1 }],
+  MM_MASK_BREMEN:       [{ id: 'mm_mask_bremen',level: 1 }],
+  // MM rewards
+  MM_REMAINS_ODOLWA:    [{ id: 'mm_remains_odolwa',   level: 1 }],
+  MM_REMAINS_GOHT:      [{ id: 'mm_remains_goht',     level: 1 }],
+  MM_REMAINS_GYORG:     [{ id: 'mm_remains_gyorg',    level: 1 }],
+  MM_REMAINS_TWINMOLD:  [{ id: 'mm_remains_twinmold', level: 1 }],
+  // MM songs
+  MM_SONG_TIME:         [{ id: 'mm_song_time',   level: 1 }],
+  MM_SONG_EPONA:        [{ id: 'mm_song_epona',  level: 1 }],
+  MM_SONG_SOARING:      [{ id: 'mm_song_soaring',level: 1 }],
+  MM_SONG_HEALING:      [{ id: 'mm_song_healing',level: 1 }],
+  MM_SONG_STORMS:       [{ id: 'mm_song_storms', level: 1 }],
+  MM_SONG_SONATA:       [{ id: 'mm_song_sonata', level: 1 }],
+  MM_SONG_LULLABY:      [{ id: 'mm_song_lullaby',level: 1 }],
+  MM_SONG_NOVA:         [{ id: 'mm_song_nova',   level: 1 }],
+  MM_SONG_OATH:         [{ id: 'mm_song_oath',   level: 1 }],
+  MM_SONG_ELEGY:        [{ id: 'mm_song_elegy',  level: 1 }],
+  MM_SONG_ZELDA:        [{ id: 'mm_song_zelda',  level: 1 }],
+  MM_SONG_SARIA:        [{ id: 'mm_song_saria',  level: 1 }],
+  MM_SONG_SUN:          [{ id: 'mm_song_sun',    level: 1 }],
+  MM_SONG_MINUET:       [{ id: 'mm_song_minuet', level: 1 }],
+  MM_SONG_BOLERO:       [{ id: 'mm_song_bolero', level: 1 }],
+  MM_SONG_SERENADE:     [{ id: 'mm_song_serenade',level:1 }],
+  MM_SONG_REQUIEM:      [{ id: 'mm_song_requiem',level: 1 }],
+  MM_SONG_NOCTURNE:     [{ id: 'mm_song_nocturne',level:1 }],
+  MM_SONG_PRELUDE:      [{ id: 'mm_song_prelude',level: 1 }],
+
+  // ─── Shared items → apply to both OoT and MM tracker items ─────────────────
+  SHARED_BOW:           [{ id: 'bow',           level: 1 }, { id: 'mm_bow',       level: 1 }],
+  SHARED_BOMB_BAG:      [{ id: 'bomb',          level: 1 }, { id: 'mm_bomb',      level: 1 }],
+  SHARED_BOMBCHU:       [{ id: 'bombchu',       level: 1 }, { id: 'mm_bombchu',   level: 1 }],
+  SHARED_HOOKSHOT:      [{ id: 'hookshot',      level: 1 }, { id: 'mm_hookshot',  level: 1 }],
+  SHARED_LENS:          [{ id: 'lens',          level: 1 }, { id: 'mm_lens',      level: 1 }],
+  SHARED_OCARINA:       [{ id: 'ocarina',       level: 1 }, { id: 'mm_ocarina',   level: 1 }],
+  SHARED_MAGIC_UPGRADE: [{ id: 'magic_oot',     level: 1 }, { id: 'mm_magic',     level: 1 }],
+  SHARED_ARROW_FIRE:    [{ id: 'arrow_fire_oot',level: 1 }, { id: 'mm_arrow_fire',level: 1 }],
+  SHARED_ARROW_ICE:     [{ id: 'arrow_ice_oot', level: 1 }, { id: 'mm_arrow_ice', level: 1 }],
+  SHARED_ARROW_LIGHT:   [{ id: 'arrow_light_oot',level:1 }, { id: 'mm_arrow_light',level:1 }],
+  SHARED_STICK:         [{ id: 'sticks_oot',    level: 1 }],
+  SHARED_NUTS_10:       [{ id: 'nuts_oot',      level: 1 }],
+  SHARED_SHIELD_DEKU:   [{ id: 'deku_shield',   level: 1 }],
+  SHARED_SHIELD_HYLIAN: [{ id: 'hyrule_shield', level: 1 }],
+  SHARED_BOOTS_IRON:    [{ id: 'boots_iron',    level: 1 }, { id: 'mm_boots_iron',level: 1 }],
+  SHARED_BOOTS_HOVER:   [{ id: 'boots_hover',   level: 1 }, { id: 'mm_boots_hover',level:1 }],
+  SHARED_STRENGTH:      [{ id: 'strength',      level: 1 }, { id: 'mm_strength',  level: 1 }],
+  SHARED_SCALE:         [{ id: 'scale',         level: 1 }, { id: 'mm_scale',     level: 1 }],
+  SHARED_WALLET:        [{ id: 'wallet',        level: 1 }, { id: 'mm_wallet',    level: 1 }],
+  SHARED_SONG_SOARING:  [{ id: 'oot_song_soaring',level:1 },{ id: 'mm_song_soaring',level:1}],
+  SHARED_SONG_EPONA:    [{ id: 'oot_song_epona',level: 1 }, { id: 'mm_song_epona',level: 1 }],
+  SHARED_SONG_TIME:     [{ id: 'oot_song_time', level: 1 }, { id: 'mm_song_time', level: 1 }],
+  SHARED_SONG_STORMS:   [{ id: 'oot_song_storms',level:1 }, { id: 'mm_song_storms',level:1 }],
+  SHARED_SONG_SUN:      [{ id: 'oot_song_sun',  level: 1 }, { id: 'mm_song_sun',  level: 1 }],
+  SHARED_SWORD:         [{ id: 'sword_kokiri',  level: 1 }, { id: 'mm_sword',     level: 1 }],
+};
+
+/** Converts OoTMM startingItems (generator item IDs + counts) to tracker item levels. */
+export function mapOotmmStartingItems(startingItems: Record<string, number>): Record<string, number> {
+  const result: Record<string, number> = {};
+  for (const [ootmmId, count] of Object.entries(startingItems)) {
+    const grants = OOTMM_STARTING_ITEM_MAP[ootmmId];
+    if (!grants) continue;
+    for (const { id, level } of grants) {
+      const effectiveLevel = level === -1 ? Math.max(1, count) : level;
+      result[id] = Math.max(result[id] ?? 0, effectiveLevel);
+    }
+  }
+  return result;
+}
 
 // camelCase value → snake_case, plus special-case overrides
 function translateValue(ootmmKey: string, value: unknown): unknown {
@@ -247,15 +484,20 @@ const KNOWN_UNTRACKED = new Set([
   'csmcCow', 'openMaskShop', 'ocarinaButtonsShuffleOot', 'ocarinaButtonsShuffleMm',
 ]);
 
-// Returns {appSettings, unmapped} where unmapped lists OoTMM keys we couldn't translate
+// Returns {appSettings, startingItems, unmapped}
 export async function importRandomizerSettings(str: string): Promise<{
   appSettings: Record<string, unknown>;
+  startingItems: Record<string, number>;
   unmapped: string[];
 }> {
   const raw = await decodeRandomizerSettings(str);
   const appSettings: Record<string, unknown> = {};
   const unmapped: string[] = [];
+  // Extract and convert starting items before iterating settings
+  const rawStartingItems = raw['startingItems'] as Record<string, number> | undefined;
+  const startingItems = rawStartingItems ? mapOotmmStartingItems(rawStartingItems) : {};
   for (const [ootmmKey, value] of Object.entries(raw)) {
+    if (ootmmKey === 'startingItems') continue; // handled separately
     const appKey = KEY_MAP[ootmmKey];
     if (appKey) {
       appSettings[appKey] = translateValue(ootmmKey, value);
@@ -282,5 +524,5 @@ export async function importRandomizerSettings(str: string): Promise<{
     appSettings['songEventShuffle'] = true;
   }
 
-  return { appSettings, unmapped };
+  return { appSettings, startingItems, unmapped };
 }

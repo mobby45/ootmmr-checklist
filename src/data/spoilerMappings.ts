@@ -76,12 +76,6 @@ export const settingsMap: Record<string, string> = {
   soulsNpcMm:     'npcSoulsMm',
   soulsAnimalMm:  'animalSoulsMm',
   soulsMiscMm:    'miscSoulsMm',
-  // Shared keys — spoiler name differs from tracker name
-  sharedSoulsEnemy:  'sharedEnemySouls',
-  sharedSoulsNpc:    'sharedNpcSouls',
-  sharedSoulsAnimal: 'sharedAnimalSouls',
-  sharedSoulsMisc:   'sharedMiscSouls',
-  sharedStoneAgony:  'sharedStoneOfAgony',
   sharedBombchu:     'sharedBombchuBags',
   // Progressive settings
   progressiveShieldsOot:   'progressiveShieldsOot',

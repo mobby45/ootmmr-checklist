@@ -101,62 +101,6 @@ function buildWorldGraph(rawRegions: RawWorld): WorldGraph {
   return graph;
 }
 
-// ─── Entrance name → destination region lookup ────────────────────────────────
-// Maps OoTMM entrance names (e.g. "OOT Kokiri Forest to OOT Deku Tree")
-// to the world region the player ends up in when taking that entrance.
-// Built by scanning exits: find exit from region matching the source, toward a target.
-
-export type EntranceRegionMap = Map<string, string>;
-
-function buildEntranceRegionMap(graph: WorldGraph): EntranceRegionMap {
-  const result: EntranceRegionMap = new Map();
-
-  // Index all region names for fast fuzzy lookup
-  const regionNames = [...graph.keys()];
-
-  function findRegion(hint: string): string | null {
-    // Exact match first
-    if (graph.has(hint)) return hint;
-    const lower = hint.toLowerCase();
-    // Prefix match
-    const prefix = regionNames.find(r => r.toLowerCase().startsWith(lower));
-    if (prefix) return prefix;
-    // Substring match
-    return regionNames.find(r => r.toLowerCase().includes(lower)) ?? null;
-  }
-
-  // Parse entrance name format: "OOT {Source} to OOT {Dest}" or "MM ..."
-  const RE = /^(?:OOT|MM) (.+) to (?:OOT|MM) (.+)$/;
-
-  for (const [regionName, region] of graph) {
-    for (const exit of region.exits) {
-      // The exit.target IS the destination region — link it via the entrance name pattern
-      // We'll resolve the entrance name → target by scanning our entrance data at call time
-      void regionName; void region; void exit;
-    }
-  }
-
-  // Build index: for each region in the graph, record it under normalized keywords
-  // so we can resolve "OOT Deku Tree" → "Deku Tree Lobby" (first reachable room)
-  const entryPoints = new Map<string, string>(); // normalized source name → first target region
-
-  for (const [regionName, region] of graph) {
-    for (const exit of region.exits) {
-      const m = RE.exec(`OOT ${regionName} to OOT ${exit.target}`);
-      if (!m) continue;
-      // Store target of this exit (the destination region)
-      if (!entryPoints.has(exit.target)) entryPoints.set(exit.target, exit.target);
-    }
-  }
-
-  // The useful direction: given entrance name "OOT X to OOT Y",
-  // find what region Y maps to. We do this by finding exits whose target name
-  // matches the Y portion.
-  // This is built externally — engine.ts calls resolveEntranceName(graph, name).
-  void findRegion; void result; void RE;
-  return result;
-}
-
 // Resolve an OoTMM entrance name to the world region it leads into.
 // e.g. "OOT Kokiri Forest to OOT Deku Tree" → "Deku Tree Lobby" (or closest match)
 export function resolveEntranceName(graph: WorldGraph, entranceName: string): string | null {
