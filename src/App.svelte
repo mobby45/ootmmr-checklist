@@ -5045,9 +5045,6 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
               {/if}
             </div>
           {/each}
-          {#if $logicEnabled && $logicResult && ootSplitChecks.length === 0 && mmSplitChecks.length === 0}
-            <div class="checks-empty-logic checks-empty-logic-both">No reachable checks — assign entrances in the ER Tracker to progress.</div>
-          {/if}
 
         {:else}
           <!-- ── Single column view ── -->
@@ -5125,6 +5122,9 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
 
       {/if}
       </div>
+      {#if gameTab === 'both' && $logicEnabled && $logicResult && ootSplitChecks.length === 0 && mmSplitChecks.length === 0}
+        <div class="checks-empty-logic">No reachable checks — assign entrances in the ER Tracker to progress.</div>
+      {/if}
     </section>
 
     <!-- ===== MAP MODAL ===== -->
@@ -5547,10 +5547,6 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     font-size: 0.88em;
     opacity: 0.5;
     font-style: italic;
-  }
-  .checks-empty-logic-both {
-    flex: 0 0 100%;
-    width: 100%;
   }
   .entrance-only-note {
     display: block;
