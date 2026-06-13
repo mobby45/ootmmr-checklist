@@ -5537,7 +5537,9 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     max-height: calc(100vh - 12em);
   }
   .checks-empty-logic {
-    padding: 16px;
+    flex: 0 0 100%;
+    width: 100%;
+    padding: 24px;
     text-align: center;
     font-size: 0.88em;
     opacity: 0.5;
