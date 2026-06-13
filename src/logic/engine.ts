@@ -34,13 +34,20 @@ export function computeReachability(
     queue.push({ regionName, age });
   }
 
-  // Seed both ages from both games — the logic rules themselves gate age-specific access
-  enqueue(OOT_SPAWN, 'child');
-  enqueue(OOT_SPAWN, 'adult');
-  enqueue(MM_SPAWN,  'child');
-  enqueue(MM_SPAWN,  'adult');
-  enqueue(GLOBAL,    'child');
-  enqueue(GLOBAL,    'adult');
+  // OoT spawn: if erSpawns is active, resolve from assigned destinations instead of hardcoded region
+  if (state.erMode && state.settings.get('erSpawns')) {
+    const childDest = state.erOverrides.get('OOT_SPAWN_CHILD');
+    const adultDest = state.erOverrides.get('OOT_SPAWN_ADULT');
+    if (childDest) { const r = resolveEntranceName(graph, childDest); if (r) enqueue(r, 'child'); }
+    if (adultDest) { const r = resolveEntranceName(graph, adultDest); if (r) enqueue(r, 'adult'); }
+  } else {
+    enqueue(OOT_SPAWN, 'child');
+    enqueue(OOT_SPAWN, 'adult');
+  }
+  enqueue(MM_SPAWN, 'child');
+  enqueue(MM_SPAWN, 'adult');
+  enqueue(GLOBAL,   'child');
+  enqueue(GLOBAL,   'adult');
 
   // BFS — repeat until stable (new events can unlock new exits for either age)
   let changed = true;
