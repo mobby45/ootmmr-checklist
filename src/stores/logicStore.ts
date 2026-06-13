@@ -161,9 +161,22 @@ export function initLogicStore(
     // Merge priority: spoiler > erActive > manual
     const settingsSnap = new Map(spoilerSnap);
     const erActiveSnap = get(erActiveSettingsStore);
+    // Logic expects select-type string values ('none' / non-'none') for these ER keys,
+    // not booleans — map accordingly so setting(erBoss, none) evaluates correctly.
+    const ER_SELECT_KEYS = new Set(['erBoss', 'erOverworld', 'erGrottos', 'erWallmasters']);
     for (const [k, v] of Object.entries(erActiveSnap)) {
-      if (!settingsSnap.has(k)) settingsSnap.set(k, v);
+      if (!settingsSnap.has(k)) {
+        settingsSnap.set(k, ER_SELECT_KEYS.has(k) ? (v ? 'default' : 'none') : v);
+      }
     }
+    // Settings not in our tracker/UI but required by the logic engine
+    if (!settingsSnap.has('erRegions'))          settingsSnap.set('erRegions', 'none');
+    if (!settingsSnap.has('erWarps'))            settingsSnap.set('erWarps', 'none');
+    // Always OoT+MM combined mode — gates cross-game song warps in world.json
+    if (!settingsSnap.has('games'))              settingsSnap.set('games', 'ootmm');
+    // Standard defaults for settings not in the UI
+    if (!settingsSnap.has('shufflePotsMm'))      settingsSnap.set('shufflePotsMm', 'none');
+    if (!settingsSnap.has('bombchuBehaviorMm'))  settingsSnap.set('bombchuBehaviorMm', 'bagFirst');
     for (const [k, v] of Object.entries(manualSnap)) {
       if (!settingsSnap.has(k)) settingsSnap.set(k, v);
     }
