@@ -5114,6 +5114,10 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
           {/each}
         {/if}
 
+        {#if $logicEnabled && $logicResult && sortedChecks?.length === 0}
+          <div class="checks-empty-logic">No reachable checks — assign entrances in the ER Tracker to progress.</div>
+        {/if}
+
       {/if}
       </div>
     </section>
@@ -5531,6 +5535,13 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     min-width: 0;
     overflow-y: auto;
     max-height: calc(100vh - 12em);
+  }
+  .checks-empty-logic {
+    padding: 16px;
+    text-align: center;
+    font-size: 0.88em;
+    opacity: 0.5;
+    font-style: italic;
   }
   .entrance-only-note {
     display: block;
