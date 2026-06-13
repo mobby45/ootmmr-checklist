@@ -618,6 +618,7 @@ import type { EntranceInfo } from '../data/entranceData';
   function isEntranceVisible(ent: { erType: string; hideWhenErActive?: string } | undefined, id: string): boolean {
     if (!ent) return true;
     if (entranceValues.has(id)) return false;
+    if (!YAML_ENTRANCE_IDS.has(id)) return true;  // unshuffled: never gated by erSettings
     if (ent.hideWhenErActive) return !erSettings[ent.hideWhenErActive];
     const hasErSettings = Object.keys(erSettings).length > 0;
     if (!hasErSettings) return true;
@@ -671,6 +672,21 @@ import type { EntranceInfo } from '../data/entranceData';
 
   let destToSources = new Map<string, string[]>();
   let revToSources = new Map<string, string[]>();
+
+  // Non-randomizable entrance markers — in allEntrances but absent from the YAML randomizer (isEntranceUnshuffled = true)
+  // Rendered outside {#if showEntrances} so they always appear on the map
+  $: vanillaEntranceMarkers = ageFilteredPrecomputed
+    .filter(p => {
+      const ent = allEntrances.find(e => e.id === p.entranceId);
+      return !!ent && isEntranceUnshuffled(ent) && !deletedAutoIds.has(p.entranceId);
+    })
+    .map(p => ({
+      uid: 'vanilla_' + p.entranceId + '_' + p.renderscene + '_' + p.x + '_' + p.y,
+      id: p.entranceId,
+      x: p.x,
+      y: p.y,
+      ent: allEntrances.find(e => e.id === p.entranceId) as EntranceInfo,
+    }));
 
   // Auto markers: at each precomputed position, show displaced sources (primary) and/or own marker + extra sources (secondary)
   $: autoEntranceMarkers = ageFilteredPrecomputed
@@ -775,17 +791,17 @@ import type { EntranceInfo } from '../data/entranceData';
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <div class="modal-overlay" on:click={closeModal}>
   <div class="modal-content" on:click|stopPropagation={() => typeDropdownOpen = false}>
-    <button class="close-button" on:click={closeModal}>✕</button>
+    <button type="button" class="close-button" on:click={closeModal}>✕</button>
     <div class="map-title-row">
-      <button class="nav-btn" on:click={() => { const nav = navScenes.length > 1 ? navScenes : allScenes; const i = nav.indexOf(scene); changeMainScene(nav[(i - 1 + nav.length) % nav.length]); }} title="Previous zone" disabled={(navScenes.length > 1 ? navScenes : allScenes).length <= 1}>‹</button>
+      <button type="button" class="nav-btn" on:click={() => { const nav = navScenes.length > 1 ? navScenes : allScenes; let i = nav.indexOf(scene); if (i === -1) { const sib = allScenes.find(s => nav.indexOf(s) !== -1); i = sib ? nav.indexOf(sib) : 0; } changeMainScene(nav[(i - 1 + nav.length) % nav.length]); }} title="Previous zone" disabled={(navScenes.length > 1 ? navScenes : allScenes).length <= 1}>‹</button>
       <h2>{sceneData.displayName || rendersceneToDisplayName(scene)}</h2>
-      <button class="nav-btn" on:click={() => { const nav = navScenes.length > 1 ? navScenes : allScenes; const i = nav.indexOf(scene); changeMainScene(nav[(i + 1) % nav.length]); }} title="Next zone" disabled={(navScenes.length > 1 ? navScenes : allScenes).length <= 1}>›</button>
+      <button type="button" class="nav-btn" on:click={() => { const nav = navScenes.length > 1 ? navScenes : allScenes; let i = nav.indexOf(scene); if (i === -1) { const sib = allScenes.find(s => nav.indexOf(s) !== -1); i = sib ? nav.indexOf(sib) : 0; } changeMainScene(nav[(i + 1) % nav.length]); }} title="Next zone" disabled={(navScenes.length > 1 ? navScenes : allScenes).length <= 1}>›</button>
     </div>
 
     {#if allScenes.length > 1}
       <div class="filter-controls">
         {#each allScenes as s}
-          <button class="age-button" class:active={s === scene} on:click={() => changeMainScene(s)}>
+          <button type="button" class="age-button" class:active={s === scene} on:click={() => changeMainScene(s)}>
             {allScenesData?.[s]?.displayName ?? s}
           </button>
         {/each}
@@ -794,10 +810,10 @@ import type { EntranceInfo } from '../data/entranceData';
 
     <div class="filter-controls">
       {#if sceneData.game === 'oot' && showAgeFilter}
-        <button class="age-button" class:active={ageFilter === 'child'} on:click={() => (ageFilter = 'child')}>
+        <button type="button" class="age-button" class:active={ageFilter === 'child'} on:click={() => (ageFilter = 'child')}>
           👶 Child
         </button>
-        <button class="age-button" class:active={ageFilter === 'adult'} on:click={() => (ageFilter = 'adult')}>
+        <button type="button" class="age-button" class:active={ageFilter === 'adult'} on:click={() => (ageFilter = 'adult')}>
           👨 Adult
         </button>
         <span class="controls-sep"></span>
@@ -814,8 +830,8 @@ import type { EntranceInfo } from '../data/entranceData';
           {@const r = typeFilterWrapEl?.getBoundingClientRect()}
           <div class="type-dropdown" style="top:{(r?.bottom ?? 0) + 4}px;left:{r?.left ?? 0}px;" on:click|stopPropagation>
             <div class="type-actions">
-              <button class="type-action-btn" on:click={showAllTypes}>All</button>
-              <button class="type-action-btn" on:click={hideAllTypes}>None</button>
+              <button type="button" class="type-action-btn" on:click={showAllTypes}>All</button>
+              <button type="button" class="type-action-btn" on:click={hideAllTypes}>None</button>
             </div>
             {#each availableTypes as type}
               {@const color = getMarkerColorByType(type)}
@@ -829,27 +845,30 @@ import type { EntranceInfo } from '../data/entranceData';
           </div>
         {/if}
       </div>
+      <span class="controls-sep"></span>
       {#if showEntrances}
-        <span class="controls-sep"></span>
         <button
+          type="button"
           class="age-button"
           class:active={showEntranceLabels}
           on:click={() => { showEntranceLabels = !showEntranceLabels; }}
           title="Show entrance names"
         >🏷️</button>
-        <button
-          class="age-button"
-          class:active={showAllEntrances}
-          on:click={() => { showAllEntrances = !showAllEntrances; }}
-          title="Show all entrances regardless of ER settings"
-        >👁️</button>
-        <button
-          class="age-button"
-          class:active={placementMode}
-          on:click={() => { placementMode = !placementMode; if (!placementMode) selectedPlacementEntrances = []; }}
-          title="Mode placement (add/remove markers)"
-        >✏️</button>
       {/if}
+      <button
+        type="button"
+        class="age-button"
+        class:active={showAllEntrances}
+        on:click={() => { showAllEntrances = !showAllEntrances; }}
+        title="Show all entrances"
+      >👁️</button>
+      <button
+        type="button"
+        class="age-button"
+        class:active={placementMode}
+        on:click={() => { placementMode = !placementMode; if (!placementMode) selectedPlacementEntrances = []; }}
+        title="Mode placement (add/remove markers)"
+      >✏️</button>
     </div>
 
     {#if subsceneList.length > 1}
@@ -950,6 +969,25 @@ import type { EntranceInfo } from '../data/entranceData';
               <span class="marker-dot" style="background-color: {color};"></span>
             </button>
           {/each}
+            {#if showAllEntrances || placementMode}
+            {#each vanillaEntranceMarkers as marker (marker.uid)}
+              {@const vx = (marker.x / imageWidth) * 100}
+              {@const vy = (marker.y / imageHeight) * 100}
+              {@const vlbl = shortEntranceName(marker.ent)}
+              {@const vcol = getEntranceTypeColor(marker.ent.type)}
+              <!-- svelte-ignore a11y-no-static-element-interactions -->
+              <div
+                class="entrance-marker entrance-marker-unshuffled"
+                style="left:{vx}%;top:{vy}%;--ec:{vcol};--lbl-x:{vx > 70 ? '-80%' : vx < 30 ? '-20%' : '-50%'};"
+                on:mouseenter={e => startEntranceHoverTimer(vlbl, e)}
+                on:mouseleave={clearHoverTimer}
+                on:contextmenu|preventDefault|stopPropagation={e => handleEntranceContextMenu(e, marker.uid, marker.id, true)}
+              >
+                <span class="entrance-diamond"></span>
+                <span class="entrance-lbl">{vlbl}</span>
+              </div>
+            {/each}
+            {/if}
             {#if showEntrances}
             {#each autoEntranceMarkers as marker (marker.uid)}
               {@const ent = allEntrances.find(e => e.id === marker.id)}
@@ -980,6 +1018,7 @@ import type { EntranceInfo } from '../data/entranceData';
               </div>
               {/if}
             {/each}
+          {/if}
             {#each visibleEntranceMarkers as marker (marker.uid)}
               {@const ent = allEntrances.find(e => e.id === marker.id)}
               {@const col = getEntranceTypeColor(ent?.type ?? '')}
@@ -989,14 +1028,11 @@ import type { EntranceInfo } from '../data/entranceData';
               {@const ay = (_pos.y / imageHeight) * 100}
               {@const lbl = ent ? shortEntranceName(ent) : marker.id}
               {@const cursorStyle = placementMode ? 'grab' : 'default'}
-              {@const unshuffled = isEntranceUnshuffled(ent)}
-              {#if !unshuffled}
               <!-- svelte-ignore a11y-no-static-element-interactions -->
               <div
                 class="entrance-marker"
                 class:entrance-marker-sel={selectedPlacementEntrances.some(s => s.id === marker.id)}
                 class:entrance-marker-dragging={draggingEntranceUid === marker.uid}
-                class:entrance-marker-unshuffled={unshuffled}
                 style="left:{ax}%;top:{ay}%;--ec:{col};cursor:{cursorStyle};--lbl-x:{ax > 70 ? '-80%' : ax < 30 ? '-20%' : '-50%'};"
                 on:mouseenter={e => startEntranceHoverTimer(ent ? shortEntranceName(ent) : marker.id, e)}
                 on:mouseleave={clearHoverTimer}
@@ -1009,16 +1045,14 @@ import type { EntranceInfo } from '../data/entranceData';
                 <span class="entrance-diamond"></span>
                 {#if draggingEntranceUid !== marker.uid}<span class="entrance-lbl">{lbl}</span>{/if}
               </div>
-              {/if}
             {/each}
-          {/if}
         {/if}
         </div> <!-- /map-container -->
 
         <div class="zoom-controls">
-          <button class="zoom-btn" on:click={zoomIn} on:pointerdown|stopPropagation title="Zoom in" disabled={scale >= 8}>+</button>
-          <button class="zoom-btn" on:click={zoomOut} on:pointerdown|stopPropagation title="Zoom out" disabled={scale <= 1}>−</button>
-          <button class="zoom-btn" on:click={resetZoom} on:pointerdown|stopPropagation disabled={scale <= 1} title="Reset zoom">✕</button>
+          <button type="button" class="zoom-btn" on:click={zoomIn} on:pointerdown|stopPropagation title="Zoom in" disabled={scale >= 8}>+</button>
+          <button type="button" class="zoom-btn" on:click={zoomOut} on:pointerdown|stopPropagation title="Zoom out" disabled={scale <= 1}>−</button>
+          <button type="button" class="zoom-btn" on:click={resetZoom} on:pointerdown|stopPropagation disabled={scale <= 1} title="Reset zoom">✕</button>
         </div>
       </div> <!-- /map-outer -->
     {/key}
@@ -1043,12 +1077,12 @@ import type { EntranceInfo } from '../data/entranceData';
             {#if placementOverlapCount > 0}<span class="pc-overlap" title="{placementOverlapCount} manuel(s) superposé(s) à un auto">⚠{placementOverlapCount}</span>{/if}
           </span>
           <div class="placement-header-actions">
-            <button class="age-button" on:click={resetDeletedAutoMarkers} title="Restaurer les marqueurs auto supprimés">↺</button>
-            <button class="age-button" on:click={() => { placementMode = false; selectedPlacementEntrances = []; }}>✕</button>
+            <button type="button" class="age-button" on:click={resetDeletedAutoMarkers} title="Restaurer les marqueurs auto supprimés">↺</button>
+            <button type="button" class="age-button" on:click={() => { placementMode = false; selectedPlacementEntrances = []; }}>✕</button>
           </div>
         </div>
         <div class="placement-zone-row">
-          <button class="placement-zone-btn" class:active={zoneOnly} on:click={() => { zoneOnly = !zoneOnly; placementSearch = ''; }}>
+          <button type="button" class="placement-zone-btn" class:active={zoneOnly} on:click={() => { zoneOnly = !zoneOnly; placementSearch = ''; }}>
             Zone only
           </button>
           <input class="placement-search" type="text" placeholder="Filtrer…" bind:value={placementSearch} on:input={() => { if (placementSearch) zoneOnly = false; }} />
