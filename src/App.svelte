@@ -5040,6 +5040,9 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
                   </CheckGroup>
                 </section>
               {/each}
+              {#if $logicEnabled && $logicResult && col.groups.length === 0}
+                <div class="checks-empty-logic">No reachable checks — assign entrances in the ER Tracker to progress.</div>
+              {/if}
             </div>
           {/each}
 
@@ -5112,10 +5115,9 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
               </CheckGroup>
             </section>
           {/each}
-        {/if}
-
-        {#if $logicEnabled && $logicResult && sortedChecks?.length === 0}
-          <div class="checks-empty-logic">No reachable checks — assign entrances in the ER Tracker to progress.</div>
+          {#if $logicEnabled && $logicResult && singleColChecks.length === 0}
+            <div class="checks-empty-logic">No reachable checks — assign entrances in the ER Tracker to progress.</div>
+          {/if}
         {/if}
 
       {/if}
@@ -5537,9 +5539,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     max-height: calc(100vh - 12em);
   }
   .checks-empty-logic {
-    flex: 0 0 100%;
-    width: 100%;
-    padding: 24px;
+    padding: 24px 16px;
     text-align: center;
     font-size: 0.88em;
     opacity: 0.5;
