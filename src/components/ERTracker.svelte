@@ -6,6 +6,7 @@
   import EntranceSelect from './EntranceSelect.svelte';
   import { createEventDispatcher, tick, onMount, beforeUpdate, afterUpdate } from 'svelte';
   import { entrancePositions } from '../data/entrancePositions';
+  import { erActiveSettingsStore } from '../stores/logicStore';
 
   const dispatch = createEventDispatcher();
 
@@ -41,6 +42,7 @@
 
   export let activeErSettings: ErSettings = spoilerErSettings ?? manualErSettings;
   $: activeErSettings = spoilerErSettings ?? manualErSettings;
+  $: erActiveSettingsStore.set(activeErSettings as unknown as Record<string, boolean>);
 
   export let highlightedEntranceId: string | null = null;
 

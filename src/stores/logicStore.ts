@@ -110,6 +110,10 @@ enabledTricks.subscribe(v => localStorage.setItem('enabledTricks', JSON.stringif
 export const logicResult  = writable<ReachabilityResult | null>(null);
 export const logicLoading = writable<boolean>(false);
 
+// ─── ER active settings (written by ERTracker, read by logic engine) ──────────
+/** Active ER type flags — mirrors ERTracker's activeErSettings so the logic engine sees them. */
+export const erActiveSettingsStore = writable<Record<string, boolean>>({});
+
 // ─── ER mode detection ────────────────────────────────────────────────────────
 
 const ER_SETTING_KEYS = [
@@ -154,8 +158,12 @@ export function initLogicStore(
     const erSnap       = new Map(get(entrancesStore)) as Map<string, string>;
     const manualSnap   = get(logicManualSettings);
 
-    // Merge: spoiler settings take priority; manual fills in missing keys
+    // Merge priority: spoiler > erActive > manual
     const settingsSnap = new Map(spoilerSnap);
+    const erActiveSnap = get(erActiveSettingsStore);
+    for (const [k, v] of Object.entries(erActiveSnap)) {
+      if (!settingsSnap.has(k)) settingsSnap.set(k, v);
+    }
     for (const [k, v] of Object.entries(manualSnap)) {
       if (!settingsSnap.has(k)) settingsSnap.set(k, v);
     }
@@ -197,6 +205,7 @@ export function initLogicStore(
   entrancesStore.subscribe(() => scheduleRecompute());
   logicEnabled.subscribe(() => scheduleRecompute());
   logicManualSettings.subscribe(() => scheduleRecompute());
+  erActiveSettingsStore.subscribe(() => scheduleRecompute());
   enabledTricks.subscribe(() => scheduleRecompute());
   specialConditionsStore.subscribe(() => scheduleRecompute());
   // age filter change does not require recompute — just re-reads the result
