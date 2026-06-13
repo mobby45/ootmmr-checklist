@@ -84,6 +84,8 @@ export const settingsMap: Record<string, string> = {
   progressiveGFS:          'progressiveGFS',
   progressiveGoronLullaby: 'progressiveGoronLullaby',
   progressiveClocks:       'progressiveClocks',
+  // Select-type settings passed through unchanged
+  autoInvert:     'autoInvert',
   // Visibility toggles passed through unchanged
   shortHookshotMm: 'shortHookshotMm',
   fairyOcarinaMm:  'fairyOcarinaMm',
@@ -146,6 +148,15 @@ export const directBoolKeys = new Set([
   'sunlightArrows', 'blueFireArrows', 'bronzeScale',
   'childWallets', 'colossalWallets', 'bottleContentShuffle',
   'sticksNutsUpgradesMm', 'sharedBottles',
+  // Shared item settings — whether an item from one game satisfies requirements in the other
+  'sharedBombBags', 'sharedBoomerang', 'sharedBootsHover', 'sharedBootsIron', 'sharedBows',
+  'sharedGFS', 'sharedHammer', 'sharedMagic', 'sharedMagicArrowIce', 'sharedMagicArrowLight',
+  'sharedMaskBlast', 'sharedMaskStone', 'sharedNutsSticks', 'sharedOcarina', 'sharedOcarinaButtons',
+  'sharedPowderKeg', 'sharedScales', 'sharedShields', 'sharedSlingshot', 'sharedSongElegy',
+  'sharedSpellFire', 'sharedSpellLove', 'sharedSpellWind', 'sharedSpinUpgrade', 'sharedStoneAgony',
+  'sharedStrength', 'sharedSwords', 'sharedTunicGoron', 'sharedTunicZora', 'sharedWallets',
+  // Other logic-relevant boolean settings missing from the original list
+  'crossAge', 'gfsOot', 'powderKegOot', 'kegStrength3', 'ootPreplantedBeans', 'bottomlessWallets',
   'songSoaringOot', 'songHealingOot', 'songAwakeningOot', 'songGoronOot',
   'songZoraOot', 'songOrderOot', 'songOfDoubleTimeOot',
   'songZeldaLullabyMm', 'songSariasMm', 'sunSongMm',

@@ -13,10 +13,10 @@ export type ExprNode =
   | { kind: 'trick';   name: string }
   | { kind: 'cond';    cond: ExprNode; then: ExprNode; else: ExprNode }
   | { kind: 'oot_time'; time: string }
-  | { kind: 'mm_time';  value: number }
+  | { kind: 'mm_time';  type: string; start: string; end: string }
   | { kind: 'renewable'; item: string }
   | { kind: 'license';   item: string }
-  | { kind: 'price';     slot: number; max: number }
+  | { kind: 'price';     threshold: number }
   | { kind: 'flag_on';   flag: string }
   | { kind: 'flag_off';  flag: string }
   | { kind: 'special';   name: string }

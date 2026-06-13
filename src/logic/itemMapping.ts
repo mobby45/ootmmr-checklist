@@ -218,6 +218,18 @@ export function trackerItemToLogic(id: string, level: number): ItemGrant[] {
     case 'mm_pictograph':     return [['MM_PICTOGRAPH_BOX', 1]];
     case 'mm_logic_access':   return [['MM_LOGIC_ACCESS', 1]];
     case 'mm_fairysword':     return [['MM_GREAT_FAIRY_SWORD', 1]];
+    // Clock items for MM clock randomization (clocks setting).
+    // macros.json ordering: CLOCK1=Day1, CLOCK2=Night1, CLOCK3=Day2, CLOCK4=Night2, CLOCK5=Day3, CLOCK6=Night3
+    // Tracker ordering (itemData.ts):  mm_clock1=Day1, mm_clock2=Day2, mm_clock3=Day3,
+    //                                  mm_clock4=Night1, mm_clock5=Night2, mm_clock6=Night3
+    // The CLOCK progressive counter accumulates for ascending/descending mode (count = #clocks owned).
+    case 'mm_clock1': return [['CLOCK1', 1], ['CLOCK', 1]]; // Day 1
+    case 'mm_clock2': return [['CLOCK3', 1], ['CLOCK', 1]]; // Day 2 → CLOCK3
+    case 'mm_clock3': return [['CLOCK5', 1], ['CLOCK', 1]]; // Day 3 → CLOCK5
+    case 'mm_clock4': return [['CLOCK2', 1], ['CLOCK', 1]]; // Night 1 → CLOCK2
+    case 'mm_clock5': return [['CLOCK4', 1], ['CLOCK', 1]]; // Night 2 → CLOCK4
+    case 'mm_clock6': return [['CLOCK6', 1], ['CLOCK', 1]]; // Night 3
+
     case 'mm_clocktown_stray_fairy':  return [['MM_STRAY_FAIRY_TOWN', 1]];
     case 'mm_woodfall_stray_fairy':   return [['MM_STRAY_FAIRY_WF', level]];
     case 'mm_snowhead_stray_fairy':   return [['MM_STRAY_FAIRY_SH', level]];
