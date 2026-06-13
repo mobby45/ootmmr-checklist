@@ -192,17 +192,17 @@ const KEY_MAP: Record<string, string> = {
   songRequiemMm:        'songRequiemMm',
   songNocturneMm:       'songNocturneMm',
   songPreludeMm:        'songPreludeMm',
-  // Souls (OoTMM key → tracker key rename)
-  soulsEnemyOot:        'enemySoulsOot',
-  soulsBossOot:         'bossSoulsOot',
-  soulsNpcOot:          'npcSoulsOot',
-  soulsAnimalOot:       'animalSoulsOot',
-  soulsMiscOot:         'miscSoulsOot',
-  soulsEnemyMm:         'enemySoulsMm',
-  soulsBossMm:          'bossSoulsMm',
-  soulsNpcMm:           'npcSoulsMm',
-  soulsAnimalMm:        'animalSoulsMm',
-  soulsMiscMm:          'miscSoulsMm',
+  // Souls — store under the same key as logic engine and ItemTracker expect
+  soulsEnemyOot:        'soulsEnemyOot',
+  soulsBossOot:         'soulsBossOot',
+  soulsNpcOot:          'soulsNpcOot',
+  soulsAnimalOot:       'soulsAnimalOot',
+  soulsMiscOot:         'soulsMiscOot',
+  soulsEnemyMm:         'soulsEnemyMm',
+  soulsBossMm:          'soulsBossMm',
+  soulsNpcMm:           'soulsNpcMm',
+  soulsAnimalMm:        'soulsAnimalMm',
+  soulsMiscMm:          'soulsMiscMm',
   // Cross-game songs (MM songs in OoT pool)
   // OoTMM uses different key names; both old and new keys map to the same tracker slot
   sharedSongHealing:            'sharedSongHealing',

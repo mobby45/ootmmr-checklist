@@ -177,6 +177,12 @@ export function initLogicStore(
     // Standard defaults for settings not in the UI
     if (!settingsSnap.has('shufflePotsMm'))      settingsSnap.set('shufflePotsMm', 'none');
     if (!settingsSnap.has('bombchuBehaviorMm'))  settingsSnap.set('bombchuBehaviorMm', 'bagFirst');
+    // progressiveGoronLullaby is stored as a single key but logic expects per-game variants
+    const goronLullaby = settingsSnap.get('progressiveGoronLullaby');
+    if (goronLullaby !== undefined) {
+      if (!settingsSnap.has('progressiveGoronLullabyMm'))  settingsSnap.set('progressiveGoronLullabyMm', goronLullaby);
+      if (!settingsSnap.has('progressiveGoronLullabyOot')) settingsSnap.set('progressiveGoronLullabyOot', goronLullaby);
+    }
     for (const [k, v] of Object.entries(manualSnap)) {
       if (!settingsSnap.has(k)) settingsSnap.set(k, v);
     }
