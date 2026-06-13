@@ -829,7 +829,6 @@ export const entrancePositions: EntrancePosition[] = [
   { renderscene: 'MM_IKANA_GRAVEYARD', entranceId: 'MM_GRAVE_NIGHT2', x: 289, y: 355 },
   { renderscene: 'MM_IKANA_GRAVEYARD', entranceId: 'MM_GRAVE_NIGHT3', x: 275, y: 265 },
   { renderscene: 'MM_IKANA_GRAVEYARD', entranceId: 'MM_GROTTO_GENERIC_GRAVEYARD', x: 534, y: 298 },
-  { renderscene: 'MM_IKANA_GRAVEYARD', entranceId: 'OOT_HOUSE_DAMPE', x: 569, y: 216 },
   { renderscene: 'MM_BENEATH_THE_GRAVEYARD', entranceId: 'MM_GRAVE_EXIT_NIGHT1', x: 334, y: 479 },
   { renderscene: 'MM_BENEATH_THE_GRAVEYARD', entranceId: 'MM_GRAVE_EXIT_NIGHT2', x: 353, y: 382 },
   { renderscene: 'MM_DAMPE_HOUSE', entranceId: 'MM_GRAVE_EXIT_NIGHT3', x: 78, y: 313 },
