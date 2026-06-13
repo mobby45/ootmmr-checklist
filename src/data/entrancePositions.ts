@@ -33,7 +33,7 @@ export const entrancePositions: EntrancePosition[] = [
   { renderscene: 'OOT_DEATH_MOUNTAIN_TRAIL_ROOM_1', entranceId: 'OOT_GROTTO_GENERIC_DMT', x: 741, y: 279 },
   { renderscene: 'OOT_DEATH_MOUNTAIN_TRAIL_ROOM_1', entranceId: 'OOT_GROTTO_TRAIL_COW', x: 519, y: 167 },
   { renderscene: 'OOT_DEATH_MOUNTAIN_TRAIL_ROOM_1', entranceId: 'OOT_GORON_CITY', x: 802, y: 246 },
-  { renderscene: 'OOT_DEATH_MOUNTAIN_TRAIL_ROOM_2', entranceId: 'OOT_DEATH_MOUNTAIN_CRATER', x: 350, y: 50 },
+  { renderscene: 'OOT_DEATH_MOUNTAIN_TRAIL_ROOM_2', entranceId: 'OOT_DEATH_MOUNTAIN_CRATER', x: 476, y: 72 },
   { renderscene: 'OOT_DEATH_MOUNTAIN_TRAIL_ROOM_2', entranceId: 'OOT_FAIRY_MAGIC', x: 401, y: 73 },
   { renderscene: 'OOT_GREAT_FAIRY_MAGIC', entranceId: 'OOT_DEATH_MOUNTAIN_FROM_FAIRY', x: 499, y: 552 },
   { renderscene: 'OOT_GROTTO_DEATH_TRIAL_COW', entranceId: 'OOT_GROTTO_EXIT_TRAIL_COW', x: 696, y: 621 },
@@ -50,19 +50,18 @@ export const entrancePositions: EntrancePosition[] = [
 
   // ========== GERUDO FORTRESS ==========
   { renderscene: 'OOT_GERUDO_FORTRESS', entranceId: 'OOT_GERUDO_TRAINING_GROUNDS', x: 590, y: 519 },
-  { renderscene: 'OOT_GERUDO_FORTRESS', entranceId: 'OOT_VALLEY_FROM_GERUDO_FORTRESS', x: 716, y: 579 },
-  { renderscene: 'OOT_GERUDO_FORTRESS', entranceId: 'OOT_WASTELAND', x: 392, y: 611 },
+  { renderscene: 'OOT_GERUDO_FORTRESS', entranceId: 'OOT_VALLEY_FROM_GERUDO_FORTRESS', x: 722, y: 580 },
+  { renderscene: 'OOT_GERUDO_FORTRESS', entranceId: 'OOT_WASTELAND', x: 398, y: 602 },
   { renderscene: 'OOT_GERUDO_FORTRESS', entranceId: 'OOT_GROTTO_FAIRY_FORTRESS', x: 532, y: 482 },
   { renderscene: 'OOT_FAIRY_GERUDO_FORTRESS', entranceId: 'OOT_GROTTO_EXIT_FAIRY_FORTRESS', x: 485, y: 526 },
 
   // ========== GERUDO VALLEY ==========
   { renderscene: 'OOT_GERUDO_VALLEY', entranceId: 'OOT_FIELD_FROM_GERUDO_VALLEY', x: 927, y: 495 },
   { renderscene: 'OOT_GERUDO_VALLEY', entranceId: 'OOT_GERUDO_FORTRESS_FROM_VALLEY', x: 14, y: 279 },
-  { renderscene: 'OOT_GERUDO_VALLEY', entranceId: 'OOT_VALLEY_TENT', x: 329, y: 228 },
+  { renderscene: 'OOT_GERUDO_VALLEY', entranceId: 'OOT_VALLEY_TENT', x: 339, y: 232 },
   { renderscene: 'OOT_GERUDO_VALLEY', entranceId: 'OOT_GROTTO_SCRUBS2_VALLEY', x: 309, y: 168 },
   { renderscene: 'OOT_GERUDO_VALLEY', entranceId: 'OOT_GROTTO_OCTOROK', x: 517, y: 557 },
-  { renderscene: 'OOT_GERUDO_VALLEY', entranceId: 'OOT_LAKE_HYLIA_FROM_VALLEY', x: 489, y: 608, targetScene: 'OOT_LAKE_HYLIA' },
-  { renderscene: 'OOT_CARPENTER_TENT', entranceId: 'OOT_GERUDO_VALLEY_FROM_TENT', x: 555, y: 294 },
+  { renderscene: 'OOT_GERUDO_VALLEY', entranceId: 'OOT_LAKE_HYLIA_FROM_VALLEY', x: 473, y: 582, targetScene: 'OOT_LAKE_HYLIA' },
   { renderscene: 'OOT_GROTTO_VALLEY_STORMS', entranceId: 'OOT_GROTTO_EXIT_SCRUBS2_VALLEY', x: 675, y: 648 },
   { renderscene: 'OOT_GROTTO_VALLEY_OCTOROK', entranceId: 'OOT_GROTTO_EXIT_OCTOROK', x: 674, y: 606 },
 
@@ -97,8 +96,8 @@ export const entrancePositions: EntrancePosition[] = [
   { renderscene: "OOT_HYRULE_CASTLE", entranceId: "OOT_GROTTO_CASTLE", x: 619, y: 350 },
 
   // ========== GANON'S CASTLE EXTERIOR ==========
-  { renderscene: "OOT_GANON_CASTLE_EXTERIOR", entranceId: "OOT_FAIRY_DEFENSE", x: 40, y: 268 },
   { renderscene: "OOT_GANON_CASTLE_EXTERIOR", entranceId: "OOT_GANON_CASTLE", x: 554, y: 584 },
+  { renderscene: "OOT_GANON_CASTLE_EXTERIOR", entranceId: "OOT_MARKET_ADULT_FROM_GANON_CASTLE_EXTERIOR", x: 895, y: 49 },
 
   // ========== GREAT FAIRY CASTLE ==========
 
@@ -112,7 +111,7 @@ export const entrancePositions: EntrancePosition[] = [
   { renderscene: 'OOT_GANON_TOWER_ROOM_0', entranceId: 'OOT_GANON_CASTLE_FROM_TOWER', x: 472, y: 529 },
 
   // ========== HYRULE CASTLE GROTTO ==========
-  { renderscene: "OOT_GROTTO_CASTLE_STORMS", entranceId: "OOT_GROTTO_EXIT_CASTLE", x: 685, y: 608 },
+  { renderscene: "OOT_GROTTO_CASTLE_STORMS", entranceId: "OOT_GROTTO_EXIT_CASTLE", x: 689, y: 656 },
 
   // ========== DEKU TREE MEADOW ==========
   { renderscene: 'OOT_DEKU_TREE_MEADOW', entranceId: 'OOT_DEKU_TREE', x: 386, y: 447 },
@@ -152,7 +151,7 @@ export const entrancePositions: EntrancePosition[] = [
   { renderscene: "OOT_KOKIRI_SHOP", entranceId: "OOT_KOKIRI_FOREST_FROM_SHOP", x: 460, y: 588 },
 
   // ========== KOKIRI FOREST STORMS GROTTO ==========
-  { renderscene: "OOT_GROTTO_KOKIRI_FOREST_STORMS", entranceId: "OOT_GROTTO_EXIT_GENERIC_KOKIRI_FOREST", x: 672, y: 533 },
+  { renderscene: "OOT_GROTTO_KOKIRI_FOREST_STORMS", entranceId: "OOT_GROTTO_EXIT_GENERIC_KOKIRI_FOREST", x: 669, y: 591 },
 
   // ========== KAKARIKO VILLAGE ==========
   { renderscene: 'OOT_KAKARIKO_VILLAGE', entranceId: 'OOT_FIELD_FROM_KAKARIKO', x: 823, y: 195 },
@@ -208,38 +207,41 @@ export const entrancePositions: EntrancePosition[] = [
   { renderscene: "OOT_LOST_WOODS", entranceId: "OOT_FIELD_FROM_LOST_WOODS_BRIDGE", x: 102, y: 2791 },
   { renderscene: "OOT_LOST_WOODS", entranceId: "OOT_ZORA_RIVER_FROM_LOST_WOODS", x: 2597, y: 1487 },
   { renderscene: "OOT_LOST_WOODS", entranceId: "OOT_GORON_CITY_FROM_LOST_WOODS", x: 1652, y: 1242 },
-  { renderscene: "OOT_LOST_WOODS", entranceId: "OOT_SACRED_FOREST_MEADOW", x: 1457, y: 79 },
+  { renderscene: "OOT_LOST_WOODS", entranceId: "OOT_SACRED_FOREST_MEADOW", x: 1449, y: 90 },
   { renderscene: "OOT_LOST_WOODS", entranceId: "OOT_FOREST_FROM_LOST_WOODS_BRIDGE", x: 321, y: 2792 },
   { renderscene: "OOT_LOST_WOODS", entranceId: "OOT_GROTTO_GENERIC_LOST_WOODS", x: 1745, y: 1407 },
   { renderscene: "OOT_LOST_WOODS", entranceId: "OOT_GROTTO_SCRUB_UPGRADE", x: 1332, y: 206 },
   { renderscene: "OOT_LOST_WOODS", entranceId: "OOT_GROTTO_DEKU_THEATER", x: 1030, y: 960 },
-  { renderscene: "OOT_LOST_WOODS", entranceId: "OOT_LOST_WOODS_FROM_LOST_WOODS_SOUTH", x: 1044, y: 2215 },
-  { renderscene: "OOT_LOST_WOODS", entranceId: "OOT_LOST_WOODS_FROM_LOST_WOODS_SOUTH", x: 1653, y: 2194 },
-  { renderscene: "OOT_LOST_WOODS", entranceId: "OOT_LOST_WOODS_FROM_LOST_WOODS_SOUTH", x: 2160, y: 1695 },
-  { renderscene: "OOT_LOST_WOODS", entranceId: "OOT_LOST_WOODS_FROM_LOST_WOODS_SOUTH", x: 1455, y: 549 },
-  { renderscene: "OOT_LOST_WOODS", entranceId: "OOT_LOST_WOODS_FROM_LOST_WOODS_WEST", x: 1228, y: 325 },
-  { renderscene: "OOT_LOST_WOODS", entranceId: "OOT_LOST_WOODS_FROM_LOST_WOODS_WEST", x: 1426, y: 1474 },
-  { renderscene: "OOT_LOST_WOODS", entranceId: "OOT_LOST_WOODS_FROM_LOST_WOODS_NORTH", x: 1049, y: 1777 },
-  { renderscene: "OOT_LOST_WOODS", entranceId: "OOT_LOST_WOODS_FROM_LOST_WOODS_NORTH", x: 2161, y: 66 },
-  { renderscene: "OOT_LOST_WOODS", entranceId: "OOT_LOST_WOODS_FROM_LOST_WOODS_EAST", x: 2397, y: 323 },
-  { renderscene: "OOT_LOST_WOODS", entranceId: "OOT_LOST_WOODS_FROM_LOST_WOODS_EAST", x: 2359, y: 938 },
-  { renderscene: "OOT_LOST_WOODS", entranceId: "OOT_KOKIRI_FOREST_FROM_LOST_WOODS", x: 1045, y: 2207 },
-  { renderscene: "OOT_LOST_WOODS", entranceId: "OOT_KOKIRI_FOREST_FROM_LOST_WOODS", x: 2397, y: 326 },
-  { renderscene: "OOT_LOST_WOODS", entranceId: "OOT_KOKIRI_FOREST_FROM_LOST_WOODS", x: 2154, y: 69 },
-  { renderscene: "OOT_LOST_WOODS", entranceId: "OOT_KOKIRI_FOREST_FROM_LOST_WOODS", x: 2360, y: 944 },
-  { renderscene: "OOT_LOST_WOODS", entranceId: "OOT_KOKIRI_FOREST_FROM_LOST_WOODS", x: 2154, y: 1694 },
-  { renderscene: "OOT_LOST_WOODS", entranceId: "OOT_KOKIRI_FOREST_FROM_LOST_WOODS", x: 1651, y: 2193 },
-  { renderscene: "OOT_LOST_WOODS", entranceId: "OOT_KOKIRI_FOREST_FROM_LOST_WOODS", x: 1425, y: 1475 },
-  { renderscene: "OOT_LOST_WOODS", entranceId: "OOT_KOKIRI_FOREST_FROM_LOST_WOODS", x: 1044, y: 1779 },
+  // Each intersection: KOKIRI (visible when erAlterLw=off) + directional exit (visible when erAlterLw=on)
+  { renderscene: "OOT_LOST_WOODS", entranceId: "OOT_KOKIRI_FOREST_FROM_LOST_WOODS", x: 1044, y: 2232 },
+  { renderscene: "OOT_LOST_WOODS", entranceId: "OOT_LOST_WOODS_FROM_LOST_WOODS_SOUTH", x: 1044, y: 2232 },
+  { renderscene: "OOT_LOST_WOODS", entranceId: "OOT_KOKIRI_FOREST_FROM_LOST_WOODS", x: 1642, y: 2178 },
+  { renderscene: "OOT_LOST_WOODS", entranceId: "OOT_LOST_WOODS_FROM_LOST_WOODS_SOUTH", x: 1642, y: 2178 },
+  { renderscene: "OOT_LOST_WOODS", entranceId: "OOT_KOKIRI_FOREST_FROM_LOST_WOODS", x: 1449, y: 535 },
+  { renderscene: "OOT_LOST_WOODS", entranceId: "OOT_LOST_WOODS_FROM_LOST_WOODS_SOUTH", x: 1449, y: 535 },
+  { renderscene: "OOT_LOST_WOODS", entranceId: "OOT_KOKIRI_FOREST_FROM_LOST_WOODS", x: 2148, y: 1648 },
+  { renderscene: "OOT_LOST_WOODS", entranceId: "OOT_LOST_WOODS_FROM_LOST_WOODS_SOUTH", x: 2148, y: 1648 },
+  { renderscene: "OOT_LOST_WOODS", entranceId: "OOT_KOKIRI_FOREST_FROM_LOST_WOODS", x: 1463, y: 1480 },
+  { renderscene: "OOT_LOST_WOODS", entranceId: "OOT_LOST_WOODS_FROM_LOST_WOODS_EAST", x: 1463, y: 1480 },
+  { renderscene: "OOT_LOST_WOODS", entranceId: "OOT_KOKIRI_FOREST_FROM_LOST_WOODS", x: 1246, y: 308 },
+  { renderscene: "OOT_LOST_WOODS", entranceId: "OOT_LOST_WOODS_FROM_LOST_WOODS_EAST", x: 1246, y: 308 },
+  { renderscene: "OOT_LOST_WOODS", entranceId: "OOT_KOKIRI_FOREST_FROM_LOST_WOODS", x: 2167, y: 101 },
+  { renderscene: "OOT_LOST_WOODS", entranceId: "OOT_LOST_WOODS_FROM_LOST_WOODS_NORTH", x: 2167, y: 101 },
+  { renderscene: "OOT_LOST_WOODS", entranceId: "OOT_KOKIRI_FOREST_FROM_LOST_WOODS", x: 1044, y: 1798 },
+  { renderscene: "OOT_LOST_WOODS", entranceId: "OOT_LOST_WOODS_FROM_LOST_WOODS_NORTH", x: 1044, y: 1798 },
+  { renderscene: "OOT_LOST_WOODS", entranceId: "OOT_KOKIRI_FOREST_FROM_LOST_WOODS", x: 2379, y: 925 },
+  { renderscene: "OOT_LOST_WOODS", entranceId: "OOT_LOST_WOODS_FROM_LOST_WOODS_WEST", x: 2379, y: 925 },
+  { renderscene: "OOT_LOST_WOODS", entranceId: "OOT_KOKIRI_FOREST_FROM_LOST_WOODS", x: 2413, y: 323 },
+  { renderscene: "OOT_LOST_WOODS", entranceId: "OOT_LOST_WOODS_FROM_LOST_WOODS_WEST", x: 2413, y: 323 },
 
   // ========== LOST WOODS SCRUB UPGRADE GROTTO ==========
-  { renderscene: "OOT_GROTTO_LOST_WOODS_SCRUB_UPGRADE", entranceId: "OOT_GROTTO_EXIT_SCRUB_UPGRADE", x: 678, y: 597 },
+  { renderscene: "OOT_GROTTO_LOST_WOODS_SCRUB_UPGRADE", entranceId: "OOT_GROTTO_EXIT_SCRUB_UPGRADE", x: 676, y: 666 },
 
   // ========== LOST WOODS THEATER GROTTO ==========
-  { renderscene: "OOT_GROTTO_LOST_WOODS_THEATER", entranceId: "OOT_GROTTO_EXIT_DEKU_THEATER", x: 702, y: 651 },
+  { renderscene: "OOT_GROTTO_LOST_WOODS_THEATER", entranceId: "OOT_GROTTO_EXIT_DEKU_THEATER", x: 713, y: 705 },
 
   // ========== LOST WOODS GENERIC GROTTO ==========
-  { renderscene: "OOT_GROTTO_LOST_WOODS_GENERIC", entranceId: "OOT_GROTTO_EXIT_GENERIC_LOST_WOODS", x: 669, y: 549 },
+  { renderscene: "OOT_GROTTO_LOST_WOODS_GENERIC", entranceId: "OOT_GROTTO_EXIT_GENERIC_LOST_WOODS", x: 672, y: 592 },
 
   // ========== SACRED FOREST MEADOW ==========
   { renderscene: "OOT_SACRED_FOREST_MEADOW", entranceId: "OOT_LOST_WOODS_FROM_MEADOW", x: 1738, y: 384 },
@@ -250,13 +252,13 @@ export const entrancePositions: EntrancePosition[] = [
   { renderscene: "OOT_SACRED_FOREST_MEADOW", entranceId: "OOT_GROTTO_FAIRY_SFM", x: 1007, y: 292 },
 
   // ========== SACRED FOREST MEADOW STORMS GROTTO ==========
-  { renderscene: "OOT_GROTTO_SACRED_MEADOW_STORMS", entranceId: "OOT_GROTTO_EXIT_SCRUBS2_SFM", x: 678, y: 606 },
+  { renderscene: "OOT_GROTTO_SACRED_MEADOW_STORMS", entranceId: "OOT_GROTTO_EXIT_SCRUBS2_SFM", x: 676, y: 650 },
 
   // ========== SACRED FOREST MEADOW WOLFOS GROTTO ==========
-  { renderscene: "OOT_GROTTO_SACRED_MEADOW_WOLFOS", entranceId: "OOT_GROTTO_EXIT_WOLFOS", x: 692, y: 629 },
+  { renderscene: "OOT_GROTTO_SACRED_MEADOW_WOLFOS", entranceId: "OOT_GROTTO_EXIT_WOLFOS", x: 690, y: 661 },
 
   // ========== SACRED FOREST MEADOW FAIRY ==========
-  { renderscene: "OOT_FAIRY_SACRED_MEADOW", entranceId: "OOT_GROTTO_EXIT_FAIRY_SFM", x: 484, y: 492 },
+  { renderscene: "OOT_FAIRY_SACRED_MEADOW", entranceId: "OOT_GROTTO_EXIT_FAIRY_SFM", x: 485, y: 526 },
 
   // ========== HYRULE FIELD ==========
   { renderscene: "OOT_HYRULE_FIELD", entranceId: "OOT_LOST_WOODS_BRIDGE_FROM_FIELD", x: 1034, y: 554 },
@@ -276,28 +278,28 @@ export const entrancePositions: EntrancePosition[] = [
   { renderscene: "OOT_HYRULE_FIELD", entranceId: "OOT_GROTTO_FIELD_TREE", x: 865, y: 111 },
 
   // ========== HYRULE FIELD SCRUBS GROTTO ==========
-  { renderscene: "OOT_GROTTO_HYRULE_SCRUBS", entranceId: "OOT_GROTTO_EXIT_SCRUB_HEART_PIECE", x: 697, y: 560 },
+  { renderscene: "OOT_GROTTO_HYRULE_SCRUBS", entranceId: "OOT_GROTTO_EXIT_SCRUB_HEART_PIECE", x: 695, y: 619 },
 
   // ========== HYRULE FIELD OPEN GROTTO ==========
-  { renderscene: "OOT_GROTTO_HYRULE_OPEN", entranceId: "OOT_GROTTO_EXIT_GENERIC_HF_OPEN", x: 671, y: 545 },
+  { renderscene: "OOT_GROTTO_HYRULE_OPEN", entranceId: "OOT_GROTTO_EXIT_GENERIC_HF_OPEN", x: 670, y: 593 },
 
   // ========== HYRULE FIELD SE GROTTO ==========
-  { renderscene: "OOT_GROTTO_HYRULE_SE", entranceId: "OOT_GROTTO_EXIT_GENERIC_HF_SOUTHEAST", x: 670, y: 533 },
+  { renderscene: "OOT_GROTTO_HYRULE_SE", entranceId: "OOT_GROTTO_EXIT_GENERIC_HF_SOUTHEAST", x: 672, y: 593 },
 
   // ========== HYRULE FIELD MARKET GROTTO ==========
-  { renderscene: "OOT_GROTTO_HYRULE_MARKET", entranceId: "OOT_GROTTO_EXIT_GENERIC_HF_MARKET", x: 670, y: 534 },
+  { renderscene: "OOT_GROTTO_HYRULE_MARKET", entranceId: "OOT_GROTTO_EXIT_GENERIC_HF_MARKET", x: 672, y: 591 },
 
   // ========== HYRULE FIELD KAKARIKO GROTTO ==========
-  { renderscene: "OOT_GROTTO_HYRULE_KAKARIKO", entranceId: "OOT_GROTTO_EXIT_FIELD_TREE", x: 699, y: 606 },
+  { renderscene: "OOT_GROTTO_HYRULE_KAKARIKO", entranceId: "OOT_GROTTO_EXIT_FIELD_TREE", x: 697, y: 658 },
 
   // ========== HYRULE FIELD GERUDO GROTTO ==========
-  { renderscene: "OOT_GROTTO_HYRULE_GERUDO", entranceId: "OOT_GROTTO_EXIT_FIELD_COW", x: 733, y: 426 },
+  { renderscene: "OOT_GROTTO_HYRULE_GERUDO", entranceId: "OOT_GROTTO_EXIT_FIELD_COW", x: 727, y: 503 },
 
   // ========== HYRULE FIELD TEKTITE GROTTO ==========
-  { renderscene: "OOT_GROTTO_HYRULE_TEKTITE", entranceId: "OOT_GROTTO_EXIT_TEKTITE", x: 726, y: 562 },
+  { renderscene: "OOT_GROTTO_HYRULE_TEKTITE", entranceId: "OOT_GROTTO_EXIT_TEKTITE", x: 720, y: 626 },
 
   // ========== HYRULE FIELD FAIRY ==========
-  { renderscene: "OOT_FAIRY_HYRULE", entranceId: "OOT_GROTTO_EXIT_FAIRY_HF", x: 485, y: 495 },
+  { renderscene: "OOT_FAIRY_HYRULE", entranceId: "OOT_GROTTO_EXIT_FAIRY_HF", x: 484, y: 526 },
 
   // ========== LON LON RANCH ==========
   { renderscene: "OOT_LON_LON_RANCH", entranceId: "OOT_FIELD_FROM_LON_LON_RANCH", x: 859, y: 436 },
@@ -316,7 +318,7 @@ export const entrancePositions: EntrancePosition[] = [
   { renderscene: "OOT_SILO", entranceId: "OOT_LON_LON_RANCH_FROM_SILO", x: 357, y: 404 },
 
   // ========== LON LON SCRUBS GROTTO ==========
-  { renderscene: "OOT_GROTTO_LON_LON_SCRUBS", entranceId: "OOT_GROTTO_EXIT_SCRUBS3_RANCH", x: 695, y: 647 },
+  { renderscene: "OOT_GROTTO_LON_LON_SCRUBS", entranceId: "OOT_GROTTO_EXIT_SCRUBS3_RANCH", x: 696, y: 710 },
 
   // ========== LAKE HYLIA ==========
   { renderscene: 'OOT_LAKE_HYLIA', entranceId: 'OOT_TEMPLE_WATER', x: 687, y: 365 },
@@ -376,8 +378,8 @@ export const entrancePositions: EntrancePosition[] = [
 
   // ========== TEMPLE OF TIME ==========
   { renderscene: "OOT_TEMPLE_OF_TIME", entranceId: "OOT_TEMPLE_OF_TIME_ENTRYWAY_FROM_TEMPLE", x: 118, y: 330 },
-  { renderscene: "OOT_TEMPLE_OF_TIME", entranceId: "OOT_SPAWN_ADULT", x: 189, y: 331 },
-  { renderscene: 'OOT_TEMPLE_OF_TIME', entranceId: 'OOT_WARP_SONG_TEMPLE', x: 189, y: 342 },
+  { renderscene: "OOT_TEMPLE_OF_TIME", entranceId: "OOT_SPAWN_ADULT", x: 190, y: 321 },
+  { renderscene: 'OOT_TEMPLE_OF_TIME', entranceId: 'OOT_WARP_SONG_TEMPLE', x: 190, y: 341 },
 
   // ========== BOMBCHU SHOP ==========
   { renderscene: "OOT_BOMBCHU_SHOP", entranceId: "OOT_MARKET_FROM_BOMBCHU_SHOP", x: 500, y: 547 },
@@ -436,7 +438,7 @@ export const entrancePositions: EntrancePosition[] = [
   // ========== ZORA FOUNTAIN GREAT FAIRY ==========
   { renderscene: 'OOT_GREAT_FAIRY_FARORE', entranceId: 'OOT_ZORA_FOUNTAIN_FROM_FAIRY', x: 500, y: 554 },
 
-  { renderscene: 'OOT_DEATH_MOUNTAIN_TRAIL_ROOM_2', entranceId: 'OOT_VILLAGE_OWL', x: 449, y: 81, targetScene: 'OOT_KAKARIKO_VILLAGE' },
+  { renderscene: 'OOT_DEATH_MOUNTAIN_TRAIL_ROOM_2', entranceId: 'OOT_VILLAGE_OWL', x: 447, y: 95, targetScene: 'OOT_KAKARIKO_VILLAGE' },
   { renderscene: 'OOT_LAKE_HYLIA', entranceId: 'OOT_WARP_SONG_LAKE', x: 680, y: 242 },
   { renderscene: 'OOT_DEATH_MOUNTAIN_CRATER', entranceId: 'OOT_GORON_CITY_FROM_CRATER', x: 734, y: 433 },
   { renderscene: 'OOT_DEATH_MOUNTAIN_CRATER', entranceId: 'OOT_WARP_SONG_CRATER', x: 478, y: 380 },
@@ -569,7 +571,7 @@ export const entrancePositions: EntrancePosition[] = [
   { renderscene: 'MM_DEKU_PALACE', entranceId: 'MM_GROTTO_JP_CLIMB_RIGHT', x: 585, y: 169, jpOnly: 'Deku Palace' },
   { renderscene: 'MM_DEKU_PALACE', entranceId: 'MM_GROTTO_JP_LINE_START', x: 298, y: 30, jpOnly: 'Deku Palace' },
   { renderscene: 'MM_DEKU_PALACE', entranceId: 'MM_GROTTO_JP_LINE_END', x: 575, y: 18, jpOnly: 'Deku Palace' },
-  { renderscene: 'MM_GROTTO_DEKU_PALACE_BEANS', entranceId: 'MM_GROTTO_EXIT_BEAN', x: 869, y: 507 },
+  { renderscene: 'MM_GROTTO_DEKU_PALACE_BEANS', entranceId: 'MM_GROTTO_EXIT_BEAN', x: 836, y: 506 },
   { renderscene: 'MM_GROTTO_DEKU_PALACE_JP_CLIMB', entranceId: 'MM_GROTTO_EXIT_JP_CLIMB_LEFT', x: 203, y: 267 },
   { renderscene: 'MM_GROTTO_DEKU_PALACE_JP_CLIMB', entranceId: 'MM_GROTTO_EXIT_JP_CLIMB_RIGHT', x: 190, y: 695 },
   { renderscene: 'MM_GROTTO_DEKU_PALACE_JP_LINE', entranceId: 'MM_GROTTO_EXIT_JP_LINE_END', x: 156, y: 201 },
@@ -615,27 +617,27 @@ export const entrancePositions: EntrancePosition[] = [
   // ========== MAJORA'S MASK - ROAD TO SOUTHERN SWAMP ==========
   { renderscene: 'MM_ROAD_SOUTHERN_SWAMP', entranceId: 'MM_SWAMP_ARCHERY', x: 55, y: 328 },
   { renderscene: 'MM_ROAD_SOUTHERN_SWAMP', entranceId: 'MM_GROTTO_GENERIC_PATH_SWAMP', x: 620, y: 226 },
-  { renderscene: 'MM_ROAD_SOUTHERN_SWAMP', entranceId: 'MM_SWAMP_FROM_ROAD', x: 446, y: 10 },
+  { renderscene: 'MM_ROAD_SOUTHERN_SWAMP', entranceId: 'MM_SWAMP_FROM_ROAD', x: 443, y: 20 },
   { renderscene: 'MM_ROAD_SOUTHERN_SWAMP', entranceId: 'MM_TERMINA_FIELD_FROM_ROAD_TO_SWAMP', x: 800, y: 599 },
   { renderscene: 'MM_GROTTO_SOUTHERN_SWAMP_ROAD_OPEN', entranceId: 'MM_GROTTO_EXIT_GENERIC_PATH_SWAMP', x: 644, y: 501 },
   { renderscene: 'MM_SHOOTING_GALLERY_SWAMP', entranceId: 'MM_SWAMP_ROAD_FROM_ARCHERY', x: 487, y: 451 },
 
   // ========== MAJORA'S MASK - SOUTHERN SWAMP ==========
-  { renderscene: 'MM_SOUTHERN_SWAMP', entranceId: 'MM_SWAMP_ROAD_FROM_SWAMP', x: 424, y: 788 },
+  { renderscene: 'MM_SOUTHERN_SWAMP', entranceId: 'MM_SWAMP_ROAD_FROM_SWAMP', x: 454, y: 810 },
   { renderscene: 'MM_SOUTHERN_SWAMP', entranceId: 'MM_TOURIST_INFORMATION', x: 577, y: 680 },
   { renderscene: 'MM_SOUTHERN_SWAMP', entranceId: 'MM_MYSTERY_WOODS', x: 116, y: 509 },
   { renderscene: 'MM_SOUTHERN_SWAMP', entranceId: 'MM_POTION_SHOP', x: 205, y: 429 },
   { renderscene: 'MM_SOUTHERN_SWAMP', entranceId: 'MM_DEKU_PALACE_MAIN_ENTRANCE', x: 989, y: 424 },
   { renderscene: 'MM_SOUTHERN_SWAMP', entranceId: 'MM_DEKU_PALACE_LEDGE', x: 819, y: 721 },
-  { renderscene: 'MM_SOUTHERN_SWAMP', entranceId: 'MM_WOODFALL', x: 839, y: 396 },
+  { renderscene: 'MM_SOUTHERN_SWAMP', entranceId: 'MM_WOODFALL', x: 833, y: 395 },
   { renderscene: 'MM_SOUTHERN_SWAMP', entranceId: 'MM_SPIDER_HOUSE_SWAMP', x: 837, y: 607 },
   { renderscene: 'MM_SOUTHERN_SWAMP', entranceId: 'MM_GROTTO_GENERIC_SWAMP', x: 876, y: 667 },
-  { renderscene: 'MM_SOUTHERN_SWAMP', entranceId: 'MM_WARP_OWL_SOUTHERN_SWAMP', x: 637, y: 764 },
+  { renderscene: 'MM_SOUTHERN_SWAMP', entranceId: 'MM_WARP_OWL_SOUTHERN_SWAMP', x: 628, y: 787 },
   { renderscene: 'MM_TOURIST_INFORMATION', entranceId: 'MM_SWAMP_FROM_TOURIST_INFORMATION', x: 464, y: 525 },
   { renderscene: 'MM_POTION_SHOP', entranceId: 'MM_SWAMP_FROM_POTION_SHOP', x: 476, y: 585 },
   { renderscene: 'MM_GROTTO_SOUTHERN_SWAMP_OPEN', entranceId: 'MM_GROTTO_EXIT_GENERIC_SWAMP', x: 640, y: 501 },
-  { renderscene: 'MM_WOODS_MYSTERY', entranceId: 'MM_SWAMP_FROM_MYSTERY_WOODS', x: 466, y: 573 },
-  { renderscene: 'MM_WOODS_MYSTERY', entranceId: 'MM_GROTTO_GENERIC_WOODS', x: 654, y: 534 },
+  { renderscene: 'MM_WOODS_MYSTERY', entranceId: 'MM_SWAMP_FROM_MYSTERY_WOODS', x: 471, y: 427 },
+  { renderscene: 'MM_WOODS_MYSTERY', entranceId: 'MM_GROTTO_GENERIC_WOODS', x: 550, y: 531 },
   { renderscene: 'MM_GROTTO_WOODS_OF_MYSTERY_OPEN', entranceId: 'MM_GROTTO_EXIT_GENERIC_WOODS', x: 640, y: 502 },
 
   // ========== MAJORA'S MASK - WOODFALL ==========
@@ -737,12 +739,15 @@ export const entrancePositions: EntrancePosition[] = [
   { renderscene: 'MM_GREAT_BAY_COAST', entranceId: 'MM_GROTTO_COW_COAST', x: 713, y: 201 },
   { renderscene: 'MM_GREAT_BAY_COAST', entranceId: 'MM_TERMINA_FIELD_FROM_GREAT_BAY_COAST', x: 784, y: 430 },
   { renderscene: 'MM_GREAT_BAY_COAST', entranceId: 'MM_PINNACLE_ROCK', x: 187, y: 192 },
+  { renderscene: 'MM_GREAT_BAY_COAST', entranceId: 'MM_VOID_GREAT_BAY', x: 57, y: 527 },
+  { renderscene: 'MM_GREAT_BAY_COAST', entranceId: 'MM_WARP_OWL_GREAT_BAY', x: 320, y: 491 },
   { renderscene: 'MM_GROTTO_GREAT_BAY_COAST_COW', entranceId: 'MM_GROTTO_EXIT_COW_COAST', x: 241, y: 478 },
   { renderscene: 'MM_GROTTO_GREAT_BAY_COAST_FISHERMAN', entranceId: 'MM_GROTTO_EXIT_GENERIC_GREAT_BAY_COAST', x: 644, y: 500 },
   { renderscene: 'MM_FISHER_HUT', entranceId: 'MM_GREAT_BAY_COAST_FROM_FISHER_HUT', x: 219, y: 253 },
-  { renderscene: 'MM_PINNACLE_ROCK', entranceId: 'MM_GREAT_BAY_FROM_PINNACLE_ROCK', x: 347, y: 17 },
+  { renderscene: 'MM_PINNACLE_ROCK', entranceId: 'MM_GREAT_BAY_FROM_PINNACLE_ROCK', x: 295, y: 15 },
+  { renderscene: 'MM_PINNACLE_ROCK', entranceId: 'MM_VOID_PINNACLE_ROCK', x: 461, y: 15 },
   { renderscene: 'MM_PINNACLE_ROCK', entranceId: 'MM_VOID_PINNACLE_ROCK', x: 292, y: 17 },
-  { renderscene: 'MM_LABORATORY', entranceId: 'MM_GREAT_BAY_COAST_FROM_LABORATORY', x: 747, y: 299 },
+  { renderscene: 'MM_LABORATORY', entranceId: 'MM_GREAT_BAY_COAST_FROM_LABORATORY', x: 752, y: 359 },
 
   // ========== MAJORA'S MASK - PIRATE FORTRESS ==========
   { renderscene: 'MM_PIRATE_FORTRESS_ENTRANCE', entranceId: 'MM_SEWERS_FROM_EXTERIOR_GATE', x: 312, y: 369, targetScene: 'MM_PIRATE_FORTRESS_INTERIOR' },
@@ -773,6 +778,8 @@ export const entrancePositions: EntrancePosition[] = [
 
   // ========== MAJORA'S MASK - ZORA CAPE ==========
   { renderscene: 'MM_ZORA_CAPE', entranceId: 'MM_GROTTO_GENERIC_ZORA_CAPE', x: 461, y: 336 },
+  { renderscene: 'MM_ZORA_CAPE', entranceId: 'MM_VOID_ZORA_CAPE', x: 70, y: 555 },
+  { renderscene: 'MM_ZORA_CAPE', entranceId: 'MM_WARP_OWL_ZORA_CAPE', x: 79, y: 330 },
   { renderscene: 'MM_ZORA_CAPE', entranceId: 'MM_FAIRY_FOUNTAIN_GREAT_BAY', x: 389, y: 476 },
   { renderscene: 'MM_ZORA_CAPE', entranceId: 'MM_BEAVERS', x: 852, y: 442 },
   { renderscene: 'MM_ZORA_CAPE', entranceId: 'MM_TEMPLE_GREAT_BAY', x: 18, y: 323 },
@@ -860,16 +867,15 @@ export const entrancePositions: EntrancePosition[] = [
   { renderscene: 'MM_BENEATH_THE_WELL', entranceId: 'MM_WALLMASTER_BTW_EXIT', x: 892, y: 494 },
 
   // MM_CLOCK_TOWER_ROOFTOP
-  { renderscene: 'MM_CLOCK_TOWER_ROOFTOP', entranceId: 'MM_CLOCK_TOWN_FROM_CLOCK_TOWER_ROOF', x: 510, y: 428 },
 
   // MM_CLOCK_TOWN_EAST
-  { renderscene: 'MM_CLOCK_TOWN_EAST', entranceId: 'MM_CLOCK_TOWN_SOUTH_TOP_FROM_EAST', x: 558, y: 449 },
+  { renderscene: 'MM_CLOCK_TOWN_EAST', entranceId: 'MM_CLOCK_TOWN_SOUTH_TOP_FROM_EAST', x: 312, y: 450 },
 
   // MM_CLOCK_TOWN_SOUTH
 
   // MM_CLOCK_TOWN_WEST
-  { renderscene: 'MM_CLOCK_TOWN_WEST', entranceId: 'MM_CLOCK_TOWN_SOUTH_TOP_FROM_WEST', x: 436, y: 410 },
-  { renderscene: 'MM_CLOCK_TOWN_WEST', entranceId: 'MM_BOMB_SHOP', x: 367, y: 442 },
+  { renderscene: 'MM_CLOCK_TOWN_WEST', entranceId: 'MM_CLOCK_TOWN_SOUTH_TOP_FROM_WEST', x: 307, y: 164 },
+  { renderscene: 'MM_CLOCK_TOWN_WEST', entranceId: 'MM_BOMB_SHOP', x: 630, y: 457 },
 
   // MM_CASTLE_IKANA_ROOM_0
   { renderscene: 'MM_CASTLE_IKANA_ROOM_0', entranceId: 'MM_IKANA_CASTLE_ROOF_KEG', x: 481, y: 202 },
@@ -880,33 +886,27 @@ export const entrancePositions: EntrancePosition[] = [
   { renderscene: 'MM_CASTLE_IKANA_ROOM_0', entranceId: 'MM_IKANA_CANYON_FROM_CASTLE_GARDENS', x: 341, y: 574 },
 
   // MM_CASTLE_IKANA_ROOM_1
-  { renderscene: 'MM_CASTLE_IKANA_ROOM_1', entranceId: 'MM_BOSS_IKANA_CASTLE', x: 483, y: 182 },
 
   // MM_DAMPE_HOUSE
   { renderscene: 'MM_DAMPE_HOUSE', entranceId: 'MM_WALLMASTER_DAMPE', x: 812, y: 309 },
 
   // MM_DEKU_KING_CHAMBER
-  { renderscene: 'MM_DEKU_KING_CHAMBER', entranceId: 'MM_DEKU_PALACE_EXTERIOR_FROM_THRONE', x: 499, y: 439 },
-  { renderscene: 'MM_DEKU_KING_CHAMBER', entranceId: 'MM_DEKU_PALACE_EXTERIOR_FROM_THRONE_CAGE', x: 457, y: 403 },
+  { renderscene: 'MM_DEKU_KING_CHAMBER', entranceId: 'MM_DEKU_PALACE_EXTERIOR_FROM_THRONE', x: 503, y: 520 },
+  { renderscene: 'MM_DEKU_KING_CHAMBER', entranceId: 'MM_DEKU_PALACE_EXTERIOR_FROM_THRONE_CAGE', x: 68, y: 335 },
 
   // MM_DEKU_PALACE
-  { renderscene: 'MM_DEKU_PALACE', entranceId: 'MM_DEKU_PALACE_BRIDGE', x: 499, y: 547 },
-  { renderscene: 'MM_DEKU_PALACE', entranceId: 'MM_DEKU_PALACE_CAUGHT', x: 407, y: 499 },
 
   // MM_DEKU_SHRINE
-  { renderscene: 'MM_DEKU_SHRINE', entranceId: 'MM_DEKU_PALACE_EXTERIOR_FROM_SHRINE', x: 300, y: 362 },
+  { renderscene: 'MM_DEKU_SHRINE', entranceId: 'MM_DEKU_PALACE_EXTERIOR_FROM_SHRINE', x: 742, y: 601 },
 
   // MM_GREAT_BAY_COAST
-  { renderscene: 'MM_GREAT_BAY_COAST', entranceId: 'MM_VOID_GREAT_BAY', x: 499, y: 634 },
-  { renderscene: 'MM_GREAT_BAY_COAST', entranceId: 'MM_VOID_GREAT_BAY_BY_PINNACLE_ROCK', x: 582, y: 379 },
-  { renderscene: 'MM_GREAT_BAY_COAST', entranceId: 'MM_COAST_FROM_MIKAU_CS', x: 564, y: 616 },
+
   { renderscene: 'MM_GREAT_BAY_COAST', entranceId: 'MM_COAST_FROM_MIKAU_TOMB', x: 511, y: 663 },
   { renderscene: 'MM_GREAT_BAY_COAST', entranceId: 'MM_PIRATE_ENTRANCE_CAUGHT', x: 490, y: 661 },
   { renderscene: 'MM_GREAT_BAY_COAST', entranceId: 'MM_VOID_GREAT_BAY_BEACH', x: 274, y: 563 },
   { renderscene: 'MM_GREAT_BAY_COAST', entranceId: 'MM_VOID_GREAT_BAY_LEDGE_BY_PINNACLE_ROCK', x: 274, y: 342 },
 
   // MM_IKANA_CANYON
-  { renderscene: 'MM_IKANA_CANYON', entranceId: 'MM_BOSS_TEMPLE_STONE_TOWER_INVERTED_WARP_OUT', x: 291, y: 105 },
   { renderscene: 'MM_IKANA_CAVERN', entranceId: 'MM_IKANA_CANYON_FROM_CAVERN', x: 148, y: 514 },
 
   // MM_MILK_ROAD
@@ -934,11 +934,9 @@ export const entrancePositions: EntrancePosition[] = [
   { renderscene: 'MM_MOON_ZORA', entranceId: 'MM_MOON_ZORA_WRONG_PIPE', x: 105, y: 320 },
 
   // MM_MOUNTAIN_VILLAGE
-  { renderscene: 'MM_MOUNTAIN_VILLAGE', entranceId: 'MM_BOSS_TEMPLE_SNOWHEAD_WARP_OUT', x: 557, y: 611 },
   { renderscene: 'MM_MOUNTAIN_VILLAGE', entranceId: 'MM_GROTTO_EXIT_GENERIC_MOUNTAIN_VILLAGE_WINTER', x: 508, y: 490 },
 
   // MM_PINNACLE_ROCK
-  { renderscene: 'MM_PINNACLE_ROCK', entranceId: 'MM_VOID_PINNACLE_ROCK_MAIN', x: 632, y: 609 },
 
   // MM_PIRATE_FORTRESS_INTERIOR
   { renderscene: 'MM_PIRATE_FORTRESS_INTERIOR', entranceId: 'MM_EXTERIOR_GATE_FROM_SEWERS', x: 1084, y: 799, targetScene: 'MM_PIRATE_FORTRESS_ENTRANCE' },
@@ -968,7 +966,6 @@ export const entrancePositions: EntrancePosition[] = [
   { renderscene: 'MM_TEMPLE_GREAT_BAY_ROOM_12', entranceId: 'MM_BOSS_TEMPLE_GREAT_BAY', x: 492, y: 202 },
 
   // MM_TEMPLE_GREAT_BAY_ROOM_15
-  { renderscene: 'MM_TEMPLE_GREAT_BAY_ROOM_15', entranceId: 'MM_BOSS_TEMPLE_GREAT_BAY_WARP_OUT', x: 483, y: 315 },
 
   // MM_TEMPLE_SNOWHEAD_ROOM_0
   { renderscene: 'MM_TEMPLE_SNOWHEAD_ROOM_0', entranceId: 'MM_SNOWHEAD_FROM_TEMPLE', x: 808, y: 292 },
@@ -977,7 +974,6 @@ export const entrancePositions: EntrancePosition[] = [
   { renderscene: 'MM_TEMPLE_SNOWHEAD_ROOM_1', entranceId: 'MM_BOSS_TEMPLE_SNOWHEAD', x: 674, y: 12 },
 
   // MM_TEMPLE_SNOWHEAD_ROOM_13
-  { renderscene: 'MM_TEMPLE_SNOWHEAD_ROOM_13', entranceId: 'MM_BOSS_TEMPLE_SNOWHEAD_WARP_OUT', x: 500, y: 508 },
 
   // MM_TEMPLE_STONE_TOWER_INVERTED_ROOM_0
   { renderscene: 'MM_TEMPLE_STONE_TOWER_INVERTED_ROOM_0', entranceId: 'MM_STONE_TOWER_INVERTED_FROM_TEMPLE', x: 483, y: 605 },
@@ -995,42 +991,29 @@ export const entrancePositions: EntrancePosition[] = [
   { renderscene: 'MM_TEMPLE_WOODFALL_ROOM_1', entranceId: 'MM_BOSS_TEMPLE_WOODFALL', x: 471, y: 604 },
 
   // MM_TEMPLE_WOODFALL_ROOM_11
-  { renderscene: 'MM_TEMPLE_WOODFALL_ROOM_11', entranceId: 'MM_BOSS_TEMPLE_WOODFALL_WARP_OUT', x: 469, y: 337 },
 
   // MM_TOURIST_INFORMATION
-  { renderscene: 'MM_TOURIST_INFORMATION', entranceId: 'MM_KOUME_RIDE_FROM_TOURIST', x: 549, y: 572, targetScene: 'MM_SOUTHERN_SWAMP' },
 
   // MM_WATERFALL_RAPIDS
   { renderscene: 'MM_WATERFALL_RAPIDS', entranceId: 'MM_BEAVERS_RACE_FROM_END_RACE', x: 456, y: 831 },
   { renderscene: 'MM_WATERFALL_RAPIDS', entranceId: 'MM_BEAVERS_RACE_FROM_START_RACE', x: 491, y: 840 },
-  { renderscene: 'MM_WATERFALL_RAPIDS', entranceId: 'MM_END_RACE_BEAVERS', x: 491, y: 226 },
   { renderscene: 'MM_WATERFALL_RAPIDS', entranceId: 'MM_START_RACE_BEAVERS', x: 460, y: 778 },
 
   // MM_WOODFALL
 
   // MM_ZORA_CAPE
   { renderscene: 'MM_ZORA_CAPE', entranceId: 'MM_GREAT_BAY_COAST_FROM_ZORA_CAPE', x: 520, y: 712 },
-  { renderscene: 'MM_ZORA_CAPE', entranceId: 'MM_VOID_ZORA_CAPE', x: 435, y: 558 },
-  { renderscene: 'MM_ZORA_CAPE', entranceId: 'MM_BOSS_TEMPLE_GREAT_BAY_WARP_OUT', x: 500, y: 598 },
-  { renderscene: 'MM_ZORA_CAPE', entranceId: 'MM_VOID_ZORA_CAPE_BEACH', x: 685, y: 614 },
 
   // OOT_BACK_ALLEY
-  { renderscene: 'OOT_BACK_ALLEY', entranceId: 'OOT_DOG_LADY_FROM_BACK_ALLEY', x: 171, y: 539 },
-  { renderscene: 'OOT_BACK_ALLEY', entranceId: 'OOT_MARKET_FROM_BACK_ALLEY_TREASURE', x: 173, y: 733 },
-  { renderscene: 'OOT_BACK_ALLEY', entranceId: 'OOT_MARKET_FROM_BACK_ALLEY_SHOOTING', x: 1120, y: 737 },
 
   // OOT_BACK_ALLEY_HOUSE2
-  { renderscene: 'OOT_BACK_ALLEY_HOUSE2', entranceId: 'OOT_BACK_ALLEY_FROM_HOUSE', x: 535, y: 701 },
+  { renderscene: 'OOT_BACK_ALLEY_HOUSE2', entranceId: 'OOT_BACK_ALLEY_FROM_HOUSE', x: 710, y: 174 },
 
   // OOT_CASTLE_COURTYARD
 
   // OOT_DEATH_MOUNTAIN_CRATER
-  { renderscene: 'OOT_DEATH_MOUNTAIN_CRATER', entranceId: 'OOT_BOSS_FIRE_TEMPLE_WARP_OUT', x: 499, y: 486 },
 
   // OOT_DESERT_COLOSSUS
-
-  // OOT_GANON_CASTLE_EXTERIOR
-  { renderscene: 'OOT_GANON_CASTLE_EXTERIOR', entranceId: 'OOT_MARKET_ADULT_FROM_GANON_CASTLE_EXTERIOR', x: 895, y: 54 },
 
   // OOT_GERUDO_FORTRESS
   { renderscene: 'OOT_GERUDO_FORTRESS', entranceId: 'OOT_GERUDO_FORTRESS_JAIL', x: 500, y: 517 },
@@ -1049,22 +1032,16 @@ export const entrancePositions: EntrancePosition[] = [
   { renderscene: 'OOT_GERUDO_FORTRESS', entranceId: 'OOT_HIDEOUT_RIGHT_JAIL_1_FROM_FORTRESS', x: 509, y: 469 },
 
   // OOT_GERUDO_VALLEY
-  { renderscene: 'OOT_GERUDO_VALLEY', entranceId: 'OOT_GERUDO_FORTRESS_CAUGHT_NO_HOOK', x: 525, y: 657 },
 
   // OOT_GRAVEYARD
 
   // OOT_GREAT_FAIRY_CASTLE
-  { renderscene: "OOT_GREAT_FAIRY_CASTLE", entranceId: "OOT_HYRULE_CASTLE_FROM_FAIRY", x: 481, y: 538 },
-  { renderscene: "OOT_GREAT_FAIRY_CASTLE", entranceId: "OOT_OUTSIDE_GANON_FROM_FAIRY", x: 514, y: 498 , ageFilter: 'adult' },
 
   // OOT_HYRULE_CASTLE
-  { renderscene: 'OOT_HYRULE_CASTLE', entranceId: 'OOT_CASTLE_GATE', x: 216, y: 328 },
 
   // OOT_HYRULE_FIELD
-  { renderscene: 'OOT_HYRULE_FIELD', entranceId: 'OOT_LAKE_OWL', x: 365, y: 606 },
 
   // OOT_KAKARIKO_VILLAGE
-  { renderscene: 'OOT_KAKARIKO_VILLAGE', entranceId: 'OOT_DMT_OWL', x: 590, y: 229 },
 
   // OOT_LAKE_HYLIA
 
@@ -1090,20 +1067,16 @@ export const entrancePositions: EntrancePosition[] = [
   { renderscene: 'OOT_THIEVES_HIDEOUT', entranceId: 'OOT_FORTRESS_FROM_HIDEOUT_RIGHT_JAIL_1', x: 621, y: 323 },
 
   // OOT_ZORA_FOUNTAIN
-  { renderscene: 'OOT_ZORA_FOUNTAIN', entranceId: 'OOT_BOSS_JABU_JABU_WARP_OUT', x: 501, y: 438 },
 
   // OOT_ZORA_RIVER
 
   // OOT_DEKU_TREE_ROOM_4
 
   // OOT_DODONGO_CAVERN_ROOM_0
-  { renderscene: 'OOT_DODONGO_CAVERN_ROOM_0', entranceId: 'OOT_BOSS_DODONGO_CAVERN_WARP_OUT', x: 651, y: 462 },
 
   // OOT_INSIDE_JABU_JABU_ROOM_0
-  { renderscene: 'OOT_INSIDE_JABU_JABU_ROOM_0', entranceId: 'OOT_BOSS_JABU_JABU_WARP_OUT', x: 1282, y: 310 },
 
   // OOT_TEMPLE_FIRE_ROOM_0
-  { renderscene: 'OOT_TEMPLE_FIRE_ROOM_0', entranceId: 'OOT_BOSS_FIRE_TEMPLE_WARP_OUT', x: 316, y: 1152 },
 
   // OOT_TEMPLE_FOREST_ROOM_3
 
@@ -1113,43 +1086,31 @@ export const entrancePositions: EntrancePosition[] = [
 
   // OOT_TEMPLE_WATER_ROOM_2
 
-  // Positions from beta working tree (188 entries ported)
-  { renderscene: 'OOT_BACK_ALLEY', entranceId: 'OOT_ALLEY_HOUSE', x: 1199, y: 520 },
-  { renderscene: 'OOT_MARKET_CHILD_DAY', entranceId: 'OOT_BACK_ALLEY_FROM_MARKET', x: 95, y: 609 },
-  { renderscene: 'OOT_MARKET_CHILD_DAY', entranceId: 'OOT_BACK_ALLEY_FROM_MARKET', x: 175, y: 30 },
-  { renderscene: 'OOT_MARKET_CHILD_NIGHT', entranceId: 'OOT_BACK_ALLEY_FROM_MARKET', x: 174, y: 26 },
-  { renderscene: 'OOT_MARKET_CHILD_NIGHT', entranceId: 'OOT_BACK_ALLEY_FROM_MARKET', x: 124, y: 607 },
-  { renderscene: 'OOT_BACK_ALLEY', entranceId: 'OOT_BOMBCHU_SHOP', x: 69, y: 619 },
-  { renderscene: 'OOT_KOKIRI_FOREST', entranceId: 'OOT_BOSS_DEKU_TREE_WARP_OUT', x: 490, y: 435 },
-  { renderscene: 'OOT_DEKU_TREE_ROOM_4', entranceId: 'OOT_BOSS_DEKU_TREE_WARP_OUT', x: 509, y: 391 },
-  { renderscene: 'OOT_SACRED_FOREST_MEADOW', entranceId: 'OOT_BOSS_FOREST_TEMPLE_WARP_OUT', x: 508, y: 499 },
-  { renderscene: 'OOT_TEMPLE_FOREST_ROOM_3', entranceId: 'OOT_BOSS_FOREST_TEMPLE_WARP_OUT', x: 325, y: 310 },
-  { renderscene: 'OOT_GRAVEYARD', entranceId: 'OOT_BOSS_SHADOW_TEMPLE_WARP_OUT', x: 583, y: 490 },
-  { renderscene: 'OOT_TEMPLE_SHADOW_ROOM_4', entranceId: 'OOT_BOSS_SHADOW_TEMPLE_WARP_OUT', x: 237, y: 215 },
-  { renderscene: 'OOT_DESERT_COLOSSUS', entranceId: 'OOT_BOSS_SPIRIT_TEMPLE_WARP_OUT', x: 508, y: 499 },
-  { renderscene: 'OOT_TEMPLE_SPIRIT_ROOM_1', entranceId: 'OOT_BOSS_SPIRIT_TEMPLE_WARP_OUT', x: 891, y: 428 },
-  { renderscene: 'OOT_LAKE_HYLIA', entranceId: 'OOT_BOSS_WATER_TEMPLE_WARP_OUT', x: 499, y: 499 },
-  { renderscene: 'OOT_TEMPLE_WATER_ROOM_2', entranceId: 'OOT_BOSS_WATER_TEMPLE_WARP_OUT', x: 1123, y: 360 },
-  { renderscene: 'OOT_HYRULE_CASTLE', entranceId: 'OOT_CASTLE_GATE', x: 464, y: 439 },
+  { renderscene: 'OOT_BACK_ALLEY', entranceId: 'OOT_ALLEY_HOUSE', x: 1202, y: 524 },
+  { renderscene: 'OOT_BACK_ALLEY', entranceId: 'OOT_BOMBCHU_SHOP', x: 72, y: 623 },
   { renderscene: 'OOT_MARKET_CHILD_NIGHT', entranceId: 'OOT_CHILD_ARCHERY', x: 363, y: 15 },
-  { renderscene: 'OOT_BACK_ALLEY', entranceId: 'OOT_DOG_LADY_FROM_BACK_ALLEY', x: 570, y: 457 },
-  { renderscene: 'OOT_GREAT_FAIRY_CASTLE', entranceId: 'OOT_FAIRY_DEFENSE', x: 496, y: 541, ageFilter: 'adult' },
   { renderscene: 'OOT_HYRULE_CASTLE', entranceId: 'OOT_FAIRY_DIN', x: 209, y: 602 },
   { renderscene: 'OOT_GREAT_FAIRY_CASTLE', entranceId: 'OOT_FAIRY_DIN', x: 496, y: 541, ageFilter: 'child' },
-  { renderscene: 'OOT_GERUDO_VALLEY', entranceId: 'OOT_GERUDO_VALLEY_CAUGHT', x: 430, y: 483 },
-  { renderscene: 'OOT_GREAT_FAIRY_CASTLE', entranceId: 'OOT_HYRULE_CASTLE_FROM_FAIRY', x: 702, y: 557 },
-  { renderscene: 'OOT_HYRULE_FIELD', entranceId: 'OOT_LON_LON_EPONA_JUMP_LEFT', x: 661, y: 614 },
-  { renderscene: 'OOT_HYRULE_FIELD', entranceId: 'OOT_LON_LON_EPONA_JUMP_MIDDLE', x: 516, y: 712 },
-  { renderscene: 'OOT_HYRULE_FIELD', entranceId: 'OOT_LON_LON_EPONA_JUMP_RIGHT', x: 320, y: 552 },
-  { renderscene: 'OOT_GANON_CASTLE_EXTERIOR', entranceId: 'OOT_MARKET_ADULT_FROM_GANON_CASTLE_EXTERIOR', x: 444, y: 139 },
   { renderscene: 'OOT_MARKET_CHILD_NIGHT', entranceId: 'OOT_MARKET_BAZAAR', x: 737, y: 417 },
-  { renderscene: 'OOT_BACK_ALLEY', entranceId: 'OOT_MARKET_FROM_BACK_ALLEY', x: 142, y: 743 },
-  { renderscene: 'OOT_BACK_ALLEY', entranceId: 'OOT_MARKET_FROM_BACK_ALLEY', x: 1161, y: 747 },
-  { renderscene: 'OOT_BACK_ALLEY', entranceId: 'OOT_MARKET_FROM_BACK_ALLEY_SHOOTING', x: 194, y: 296 },
-  { renderscene: 'OOT_HYRULE_CASTLE', entranceId: 'OOT_MARKET_FROM_CASTLE', x: 20, y: 220 },
-  { renderscene: 'OOT_GANON_CASTLE_EXTERIOR', entranceId: 'OOT_MARKET_FROM_CASTLE', x: 894, y: 64 },
   { renderscene: 'OOT_MARKET_CHILD_NIGHT', entranceId: 'OOT_MARKET_POTION', x: 730, y: 250 },
-  { renderscene: 'OOT_DESERT_COLOSSUS', entranceId: 'OOT_SPIRIT_TEMPLE_DESERT_GAUNTLET', x: 335, y: 529 },
-  { renderscene: 'OOT_DESERT_COLOSSUS', entranceId: 'OOT_SPIRIT_TEMPLE_DESERT_MIROR', x: 693, y: 534 },
+  { renderscene: 'OOT_ZORA_FOUNTAIN', entranceId: 'OOT_BOSS_JABU_JABU_WARP_OUT', x: 674, y: 393 },
+  { renderscene: 'OOT_DEATH_MOUNTAIN_CRATER', entranceId: 'OOT_BOSS_FIRE_TEMPLE_WARP_OUT', x: 472, y: 443 },
+  { renderscene: 'OOT_LAKE_HYLIA', entranceId: 'OOT_BOSS_WATER_TEMPLE_WARP_OUT', x: 676, y: 270 },
+  { renderscene: 'OOT_TENT_GERUDO', entranceId: 'OOT_GERUDO_VALLEY_FROM_TENT', x: 262, y: 385 },
+  { renderscene: 'OOT_DESERT_COLOSSUS', entranceId: 'OOT_BOSS_SPIRIT_TEMPLE_WARP_OUT', x: 667, y: 234 },
+  { renderscene: 'OOT_DEATH_MOUNTAIN_TRAIL_ROOM_0', entranceId: 'OOT_BOSS_DODONGO_CAVERN_WARP_OUT', x: 156, y: 357 },
+  { renderscene: 'OOT_GRAVEYARD', entranceId: 'OOT_BOSS_SHADOW_TEMPLE_WARP_OUT', x: 104, y: 322 },
+  { renderscene: 'OOT_DESERT_COLOSSUS', entranceId: 'OOT_SPIRIT_TEMPLE_DESERT_MIROR', x: 807, y: 212 },
+  { renderscene: 'OOT_DESERT_COLOSSUS', entranceId: 'OOT_SPIRIT_TEMPLE_DESERT_GAUNTLET', x: 755, y: 118 },
+  { renderscene: 'OOT_TEMPLE_SPIRIT_ROOM_2', entranceId: 'OOT_DESERT_FROM_MIROR', x: 1500, y: 1338 },
+  { renderscene: 'OOT_TEMPLE_SPIRIT_ROOM_2', entranceId: 'OOT_DESERT_FROM_GAUNTLET', x: 529, y: 1197 },
+  { renderscene: 'MM_CLOCK_TOWER_ROOFTOP', entranceId: 'MM_ROOFTOP_TO_MOON', x: 475, y: 439 },
+  { renderscene: 'MM_DEKU_PALACE', entranceId: 'MM_DEKU_PALACE_CAUGHT', x: 485, y: 398 },
+  { renderscene: 'MM_CASTLE_IKANA_ROOM_1', entranceId: 'MM_BOSS_IKANA_CASTLE', x: 479, y: 293 },
+  { renderscene: 'MM_TEMPLE_WOODFALL_ROOM_0', entranceId: 'MM_BOSS_TEMPLE_WOODFALL_WARP_OUT', x: 470, y: 517 },
+  { renderscene: 'MM_TEMPLE_SNOWHEAD_ROOM_0', entranceId: 'MM_BOSS_TEMPLE_SNOWHEAD_WARP_OUT', x: 632, y: 296 },
+  { renderscene: 'MM_TEMPLE_GREAT_BAY_ROOM_0', entranceId: 'MM_BOSS_TEMPLE_GREAT_BAY_WARP_OUT', x: 373, y: 323 },
+  { renderscene: 'MM_TEMPLE_STONE_TOWER_ROOM_0', entranceId: 'OOT_BOSS_SPIRIT_TEMPLE_WARP_OUT', x: 478, y: 525 },
+  { renderscene: 'MM_TEMPLE_STONE_TOWER_INVERTED_ROOM_0', entranceId: 'MM_BOSS_TEMPLE_STONE_TOWER_INVERTED_WARP_OUT', x: 469, y: 413 },
 ];
 
