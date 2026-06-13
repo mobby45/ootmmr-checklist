@@ -2605,6 +2605,15 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
   // ==========================================
 
   $: erIsActive = Object.values(activeErSettings).some(Boolean);
+  $: spawnHint = (() => {
+    if (!activeErSettings.erSpawns) return null;
+    const hasChild = !!entranceValuesMap.get('OOT_SPAWN_CHILD');
+    const hasAdult = !!entranceValuesMap.get('OOT_SPAWN_ADULT');
+    if (!hasChild && !hasAdult) return 'Set your spawn entrances (Child & Adult) in the ER Tracker to get started.';
+    if (!hasChild) return 'Set your Child spawn entrance in the ER Tracker to get started.';
+    if (!hasAdult) return 'Set your Adult spawn entrance in the ER Tracker to get started.';
+    return null;
+  })();
 
   // Map groupName → entrances that originate from that zone (source area matches group name)
   $: groupEntranceMap = (() => {
@@ -5041,7 +5050,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
                 </section>
               {/each}
               {#if $logicEnabled && $logicResult && col.groups.length === 0 && !(ootSplitChecks.length === 0 && mmSplitChecks.length === 0)}
-                <div class="checks-empty-logic">No reachable checks — assign entrances in the ER Tracker to progress.</div>
+                <div class="checks-empty-logic">{spawnHint ?? 'No reachable checks — assign entrances in the ER Tracker to progress.'}</div>
               {/if}
             </div>
           {/each}
@@ -5116,14 +5125,14 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
             </section>
           {/each}
           {#if $logicEnabled && $logicResult && singleColChecks.length === 0}
-            <div class="checks-empty-logic">No reachable checks — assign entrances in the ER Tracker to progress.</div>
+            <div class="checks-empty-logic">{spawnHint ?? 'No reachable checks — assign entrances in the ER Tracker to progress.'}</div>
           {/if}
         {/if}
 
       {/if}
       </div>
       {#if gameTab === 'both' && $logicEnabled && $logicResult && ootSplitChecks.length === 0 && mmSplitChecks.length === 0}
-        <div class="checks-empty-logic">No reachable checks — assign entrances in the ER Tracker to progress.</div>
+        <div class="checks-empty-logic">{spawnHint ?? 'No reachable checks — assign entrances in the ER Tracker to progress.'}</div>
       {/if}
     </section>
 
