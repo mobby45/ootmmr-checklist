@@ -177,6 +177,10 @@ export function initLogicStore(
     // Standard defaults for settings not in the UI
     if (!settingsSnap.has('shufflePotsMm'))      settingsSnap.set('shufflePotsMm', 'none');
     if (!settingsSnap.has('bombchuBehaviorMm'))  settingsSnap.set('bombchuBehaviorMm', 'bagFirst');
+    // sharedBombchu in logic = sharedBombchuBags in tracker/spoilerMappings
+    if (!settingsSnap.has('sharedBombchu') && settingsSnap.has('sharedBombchuBags')) {
+      settingsSnap.set('sharedBombchu', settingsSnap.get('sharedBombchuBags'));
+    }
     // progressiveGoronLullaby is stored as a single key but logic expects per-game variants
     const goronLullaby = settingsSnap.get('progressiveGoronLullaby');
     if (goronLullaby !== undefined) {
