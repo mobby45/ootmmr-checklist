@@ -39,8 +39,8 @@
     { key: 'progressiveShieldsOot', name: 'Shields', options: [{ value: 'separate', label: 'Separate' }, { value: 'progressive', label: 'Progressive' }] },
     { header: 'Wallets' },
     { key: 'childWallets',      name: 'Child Wallet (shuffled)' },
-    { key: 'colossalWallets',   name: 'Colossal Wallet (999₹)' },
-    { key: 'bottomlessWallets', name: 'Bottomless Wallet (9999₹)' },
+    { key: 'colossalWallets',   name: 'Colossal Wallet (999◆)' },
+    { key: 'bottomlessWallets', name: 'Bottomless Wallet (9999◆)' },
   ];
 
   const mmVisibility: VItem[] = [
@@ -274,10 +274,10 @@
 
 <!-- Sub-tab bar -->
 <div class="subtab-bar">
-  <button class="subtab" class:subtab-active={activeSubTab === 'logic'}  on:click={() => activeSubTab = 'logic'}>Logic</button>
-  <button class="subtab" class:subtab-active={activeSubTab === 'oot'}    on:click={() => activeSubTab = 'oot'}>OoT Items</button>
-  <button class="subtab" class:subtab-active={activeSubTab === 'mm'}     on:click={() => activeSubTab = 'mm'}>MM Items</button>
-  <button class="subtab" class:subtab-active={activeSubTab === 'shared'} on:click={() => activeSubTab = 'shared'}>Shared Items</button>
+  <button type="button" class="subtab" class:subtab-active={activeSubTab === 'logic'}  on:click={() => activeSubTab = 'logic'}>Logic</button>
+  <button type="button" class="subtab" class:subtab-active={activeSubTab === 'oot'}    on:click={() => activeSubTab = 'oot'}>OoT Items</button>
+  <button type="button" class="subtab" class:subtab-active={activeSubTab === 'mm'}     on:click={() => activeSubTab = 'mm'}>MM Items</button>
+  <button type="button" class="subtab" class:subtab-active={activeSubTab === 'shared'} on:click={() => activeSubTab = 'shared'}>Shared Items</button>
 </div>
 
 {#if activeSubTab === 'logic'}
@@ -300,7 +300,7 @@
         {#each groupDefs(group) as def}
           {@const spoiler = fromSpoiler(def.key)}
           {#if def.type === 'bool'}
-            <label class="checkbox-option" class:spoiler-row={spoiler} title={spoiler ? 'Set by spoiler log' : ''}>
+            <label class="checkbox-option" class:spoiler-row={spoiler} title={[def.desc, spoiler ? 'Set by spoiler log' : ''].filter(Boolean).join('\n')}>
               <input
                 type="checkbox"
                 checked={!!get(def.key)}
@@ -311,7 +311,7 @@
               {#if spoiler}<span class="spoiler-badge">spoiler</span>{/if}
             </label>
           {:else if def.type === 'select'}
-            <label class:spoiler-row={spoiler} title={spoiler ? 'Set by spoiler log' : ''}>
+            <label class:spoiler-row={spoiler} title={[def.desc, spoiler ? 'Set by spoiler log' : ''].filter(Boolean).join('\n')}>
               {def.label}
               {#if spoiler}<span class="spoiler-badge">spoiler</span>{/if}
               <select
@@ -327,7 +327,7 @@
             </label>
           {:else if def.type === 'multicheck'}
             <div class="multicheck-block">
-              <div class="multicheck-title">
+              <div class="multicheck-title" title={[def.desc, spoiler ? 'Set by spoiler log' : ''].filter(Boolean).join('\n')}>
                 {def.label}
                 {#if spoiler}<span class="spoiler-badge">spoiler</span>{/if}
               </div>

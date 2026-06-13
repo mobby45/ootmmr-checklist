@@ -573,12 +573,12 @@
         {#if itGameMode !== 'oot' && itGameMode !== 'none'}<span class="game-badge mm">MM {mmObtained}/{mmTotal}</span>{/if}
       </div>
       <div class="tracker-actions">
-        <button class="tracker-btn" on:click={openObsPreview}>🪟 Overlay</button>
-        <button class="tracker-btn" class:tracker-btn-active={showObsPanel} on:click={() => showObsPanel = !showObsPanel}>📺 OBS</button>
-        <button class="tracker-btn" on:click={() => overlayStacked = !overlayStacked}>
+        <button type="button" class="tracker-btn" on:click={openObsPreview}>🪟 Overlay</button>
+        <button type="button" class="tracker-btn" class:tracker-btn-active={showObsPanel} on:click={() => showObsPanel = !showObsPanel}>📺 OBS</button>
+        <button type="button" class="tracker-btn" on:click={() => overlayStacked = !overlayStacked}>
           {overlayStacked ? '⬛ Side by side' : '☰ Stacked'}
         </button>
-        <button class="tracker-btn danger" on:click={clearAll} disabled={isWatchMode}>Clear</button>
+        <button type="button" class="tracker-btn danger" on:click={clearAll} disabled={isWatchMode}>Clear</button>
       </div>
     </div>
 
@@ -587,20 +587,20 @@
       <div class="obs-panel-title">📺 OBS Overlay</div>
 
       <div class="obs-subtab-row">
-        <button class="obs-subtab-btn" class:active={obsSubTab === 'setup'} on:click={() => obsSubTab = 'setup'}>Setup</button>
-        <button class="obs-subtab-btn" class:active={obsSubTab === 'vis'}   on:click={() => obsSubTab = 'vis'}>Visibility</button>
+        <button type="button" class="obs-subtab-btn" class:active={obsSubTab === 'setup'} on:click={() => obsSubTab = 'setup'}>Setup</button>
+        <button type="button" class="obs-subtab-btn" class:active={obsSubTab === 'vis'}   on:click={() => obsSubTab = 'vis'}>Visibility</button>
       </div>
 
       {#if obsSubTab === 'setup'}
         <div class="obs-game-row">
-          <button class="obs-game-btn" class:active={obsLayout === 'v'} on:click={() => obsLayout = 'v'}>↕ Vertical</button>
-          <button class="obs-game-btn" class:active={obsLayout === 'h'} on:click={() => obsLayout = 'h'}>↔ Horizontal</button>
+          <button type="button" class="obs-game-btn" class:active={obsLayout === 'v'} on:click={() => obsLayout = 'v'}>↕ Vertical</button>
+          <button type="button" class="obs-game-btn" class:active={obsLayout === 'h'} on:click={() => obsLayout = 'h'}>↔ Horizontal</button>
         </div>
 
         <div class="obs-game-row">
-          <button class="obs-game-btn" class:active={obsGame === 'both'} on:click={() => obsGame = 'both'}>OoT + MM</button>
-          <button class="obs-game-btn" class:active={obsGame === 'oot'}  on:click={() => obsGame = 'oot'}>OoT only</button>
-          <button class="obs-game-btn" class:active={obsGame === 'mm'}   on:click={() => obsGame = 'mm'}>MM only</button>
+          <button type="button" class="obs-game-btn" class:active={obsGame === 'both'} on:click={() => obsGame = 'both'}>OoT + MM</button>
+          <button type="button" class="obs-game-btn" class:active={obsGame === 'oot'}  on:click={() => obsGame = 'oot'}>OoT only</button>
+          <button type="button" class="obs-game-btn" class:active={obsGame === 'mm'}   on:click={() => obsGame = 'mm'}>MM only</button>
         </div>
 
         <div class="obs-field-row">
@@ -634,10 +634,10 @@
 
         <div class="obs-url-row">
           <code class="obs-url">{obsUrl}</code>
-          <button class="tracker-btn" on:click={copyObsUrl}>{obsCopied ? '✓ Copied!' : '📋 Copy'}</button>
+          <button type="button" class="tracker-btn" on:click={copyObsUrl}>{obsCopied ? '✓ Copied!' : '📋 Copy'}</button>
         </div>
         <p class="obs-instructions">OBS: <strong>+ → Browser</strong> → paste the URL → Width: <strong>{obsW}</strong> / Height: <strong>{obsH}</strong></p>
-        <button class="obs-preview-btn" on:click={openObsPreview}>Preview</button>
+        <button type="button" class="obs-preview-btn" on:click={openObsPreview}>Preview</button>
       {/if}
 
       {#if obsSubTab === 'vis'}
@@ -672,8 +672,8 @@
   {/if}
 
   <div class="tab-bar">
-    <button class="tab-btn" class:tab-active={activeTab === 'items'} on:click={() => activeTab = 'items'}>Items</button>
-    <button class="tab-btn" class:tab-active={activeTab === 'settings'} on:click={() => activeTab = 'settings'}>Settings</button>
+    <button type="button" class="tab-btn" class:tab-active={activeTab === 'items'} on:click={() => activeTab = 'items'}>Items</button>
+    <button type="button" class="tab-btn" class:tab-active={activeTab === 'settings'} on:click={() => activeTab = 'settings'}>Settings</button>
   </div>
 
   {#if activeTab === 'items'}

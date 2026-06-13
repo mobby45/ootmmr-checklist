@@ -11,6 +11,7 @@ export interface EntranceInfo {
   type: EntranceType;
   erType: ErSettingKey;
   game: 'oot' | 'mm';
+  hideWhenErActive?: ErSettingKey;
 }
 
 export const allEntrances: EntranceInfo[] = [
@@ -87,7 +88,7 @@ export const allEntrances: EntranceInfo[] = [
   { id: 'OOT_DEATH_MOUNTAIN_CRATER', name: "OOT Death Mountain Summit to OOT Death Mountain Crater Top", type: 'overworld', erType: 'erOverworld', game: 'oot' },
   { id: 'OOT_TRAIL_SUMMIT_FROM_CRATER', name: "OOT Death Mountain Crater Top to OOT Death Mountain Summit", type: 'overworld', erType: 'erOverworld', game: 'oot' },
   { id: 'OOT_LOST_WOODS_FROM_KOKIRI_FOREST', name: "OOT Kokiri Forest to OOT Lost Woods", type: 'overworld', erType: 'erOverworld', game: 'oot' },
-  { id: 'OOT_KOKIRI_FOREST_FROM_LOST_WOODS', name: "OOT Lost Woods Lost Forest to OOT Kokiri Forest", type: 'overworld', erType: 'erOverworld', game: 'oot' },
+  { id: 'OOT_KOKIRI_FOREST_FROM_LOST_WOODS', name: "OOT Lost Woods Lost Forest to OOT Kokiri Forest", type: 'overworld', erType: 'erOverworld', hideWhenErActive: 'erAlterLw', game: 'oot' },
   { id: 'OOT_FOREST_FROM_LOST_WOODS_BRIDGE', name: "OOT Lost Woods Bridge to OOT Kokiri Forest", type: 'overworld', erType: 'erOverworld', game: 'oot' },
   { id: 'OOT_LOST_WOODS_BRIDGE_FROM_FOREST', name: "OOT Kokiri Forest to OOT Lost Woods Bridge from Forest", type: 'overworld', erType: 'erOverworld', game: 'oot' },
   { id: 'OOT_GRAVEYARD', name: "OOT Kakariko to OOT Graveyard", type: 'overworld', erType: 'erOverworld', game: 'oot' },
@@ -644,7 +645,7 @@ export const allEntrances: EntranceInfo[] = [
   { id: 'OOT_SAGES_CHANBER_END_FROM_GANON2', name: "OOT Ganon Beaten to OOT Sages Chamber - Ganon Beaten", type: 'overworld', erType: 'erOverworld', game: 'oot' },
   { id: 'OOT_HYRULE_END', name: "OOT Hyrule Field to OOT End Credits -> Hyrule Field", type: 'overworld', erType: 'erOverworld', game: 'oot' },
   { id: 'OOT_DMT_OWL', name: "OOT Owl Pick to OOT Death Mountain Trail -> Owl Pick", type: 'owl', erType: 'erOneWays', game: 'oot' },
-  { id: 'OOT_DESERT_FROM_MIROR', name: "OOT Miror Shield to OOT Desert Colossus", type: 'overworld', erType: 'erOverworld', game: 'oot' },
+  { id: 'OOT_DESERT_FROM_MIROR', name: "OOT Mirror Shield to OOT Desert Colossus", type: 'overworld', erType: 'erOverworld', game: 'oot' },
   { id: 'OOT_DESERT_FROM_GAUNTLET', name: "OOT Silver Gauntlet to OOT Desert Colossus", type: 'overworld', erType: 'erOverworld', game: 'oot' },
   { id: 'OOT_BOSS_GANON2_FROM_GANONDORF', name: "OOT Ganondorf Beaten to OOT Ganon Battle Arena - Ganondorf Beaten", type: 'boss', erType: 'erBoss', game: 'oot' },
   { id: 'OOT_GANON_CASTLE_EXTERIOR', name: "OOT Market to OOT Ganon Castle Exterior", type: 'dungeon', erType: 'erDungeons', game: 'oot' },
@@ -685,14 +686,9 @@ export const allEntrances: EntranceInfo[] = [
   { id: 'OOT_MARKET_FROM_BACK_ALLEY_SHOOTING', name: "OOT Back Alley Shooting Side to OOT Market Shooting Side", type: 'overworld', erType: 'erOverworld', game: 'oot' },
   { id: 'OOT_MARKET_FROM_BACK_ALLEY_TREASURE', name: "OOT Back Alley Treasure Game Side to OOT Market Treasure Game Side", type: 'overworld', erType: 'erOverworld', game: 'oot' },
   { id: 'OOT_MARKET_ADULT_FROM_GANON_CASTLE_EXTERIOR', name: "OOT Ganon Castle Exterior to OOT Market", type: 'dungeon', erType: 'erDungeons', game: 'oot' },
-  { id: 'OOT_MINUET_OF_FOREST_SONG', name: "OOT OOT_MINUET_OF_FOREST_SONG", type: 'overworld', erType: 'erOverworld', game: 'oot' },
-  { id: 'OOT_BOLERO_OF_FIRE_SONG', name: "OOT OOT_BOLERO_OF_FIRE_SONG", type: 'overworld', erType: 'erOverworld', game: 'oot' },
-  { id: 'OOT_SERENADE_OF_WATER_SONG', name: "OOT OOT_SERENADE_OF_WATER_SONG", type: 'overworld', erType: 'erOverworld', game: 'oot' },
-  { id: 'OOT_REQUIEM_OF_SPIRIT_SONG', name: "OOT OOT_REQUIEM_OF_SPIRIT_SONG", type: 'overworld', erType: 'erOverworld', game: 'oot' },
-  { id: 'OOT_NOCTURNE_OF_SHADOW_SONG', name: "OOT OOT_NOCTURNE_OF_SHADOW_SONG", type: 'overworld', erType: 'erOverworld', game: 'oot' },
-  { id: 'OOT_PRELUDE_OF_LIGHT_SONG', name: "OOT OOT_PRELUDE_OF_LIGHT_SONG", type: 'overworld', erType: 'erOverworld', game: 'oot' },
+
   { id: 'WARP_LOADING', name: "OOT/MM Warp Loading Zone", type: 'overworld', erType: 'erOverworld', game: 'oot' },
-  { id: 'OOT_SPIRIT_TEMPLE_DESERT_MIROR', name: "OOT Miror Shield to OOT Spirit Temple", type: 'dungeon', erType: 'erDungeons', game: 'oot' },
+  { id: 'OOT_SPIRIT_TEMPLE_DESERT_MIROR', name: "OOT Mirror Shield to OOT Spirit Temple", type: 'dungeon', erType: 'erDungeons', game: 'oot' },
   { id: 'OOT_SPIRIT_TEMPLE_DESERT_GAUNTLET', name: "OOT Silver Gauntlet to OOT Spirit Temple", type: 'dungeon', erType: 'erDungeons', game: 'oot' },
   { id: 'OOT_HIDEOUT_LEFT_JAIL_1_FROM_FORTRESS', name: "OOT Gerudo's Fortress Jail 1 Left to OOT Thieves' Hideout Jail 1 Left", type: 'interior', erType: 'erIndoors', game: 'oot' },
   { id: 'OOT_HIDEOUT_RIGHT_JAIL_1_FROM_FORTRESS', name: "OOT Gerudo's Fortress Jail 1 Right to OOT Thieves' Hideout Jail 1 Right", type: 'interior', erType: 'erIndoors', game: 'oot' },
@@ -710,7 +706,7 @@ export const allEntrances: EntranceInfo[] = [
   { id: 'OOT_KOKIRI_END', name: "OOT Zora Domain to OOT End Credits -> Kokiri Forest", type: 'overworld', erType: 'erOverworld', game: 'oot' },
   { id: 'MM_IKANA_CASTLE_ROOF_KEG', name: "MM Powder Keg to MM Ikana Castle Exterior -> Powder Keg", type: 'dungeon', erType: 'erDungeons', game: 'mm' },
   { id: 'MM_IKANA_CASTLE_ROOF_BLOCK', name: "MM Block to MM Ikana Castle Exterior -> Block", type: 'dungeon', erType: 'erDungeons', game: 'mm' },
-  { id: 'MM_ROOFTOP_TO_MOON', name: "MM Moon to MM Roof Clock Tower -> Oath to Order", type: 'overworld', erType: 'erOverworld', game: 'mm' },
+  { id: 'MM_ROOFTOP_TO_MOON', name: "MM Clock Tower Roof to MM Moon", type: 'overworld', erType: 'erOverworld', game: 'mm' },
   { id: 'MM_DEKU_PALACE_CAUGHT', name: "MM Caught to MM Deku Palace -> Caught", type: 'overworld', erType: 'erOverworld', game: 'mm' },
   { id: 'MM_DEKU_PALACE_BRIDGE', name: "MM Bridge to MM Deku Palace - Bridge", type: 'overworld', erType: 'erOverworld', game: 'mm' },
   { id: 'MM_GORON_VILLAGE_SPRING_FROM_TWIN_ISLANDS', name: "MM Twin Islands to MM Goron Village", type: 'overworld', erType: 'erOverworld', game: 'mm' },

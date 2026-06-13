@@ -485,8 +485,10 @@ mm:
   Stone Tower Temple:
     scenes:
     - TEMPLE_STONE_TOWER
-    - TEMPLE_STONE_TOWER_INVERTED
     - LAIR_TWINMOLD
+  Stone Tower Temple Inverted:
+    scenes:
+    - TEMPLE_STONE_TOWER_INVERTED
   The Moon:
     replacements:
     - [ '^Moon', '' ]

@@ -177,12 +177,12 @@
         on:focus={() => fromFocused = true}
         on:blur={() => setTimeout(() => fromFocused = false, 150)} />
       {#if fromInput}
-        <button class="pf-input-clear" on:click={() => fromInput = ''} tabindex="-1">✕</button>
+        <button type="button" class="pf-input-clear" on:click={() => fromInput = ''} tabindex="-1">✕</button>
       {/if}
       {#if fromFocused && fromSuggestions.length > 0}
         <div class="pf-suggestions" role="listbox" tabindex="0" on:mousedown|preventDefault={() => {}}>
           {#each fromSuggestions as s}
-            <button class="pf-suggestion" on:click={() => pickFrom(s)}>{s}</button>
+            <button type="button" class="pf-suggestion" on:click={() => pickFrom(s)}>{s}</button>
           {/each}
         </div>
       {/if}
@@ -193,18 +193,18 @@
         on:focus={() => toFocused = true}
         on:blur={() => setTimeout(() => toFocused = false, 150)} />
       {#if toInput}
-        <button class="pf-input-clear" on:click={() => toInput = ''} tabindex="-1">✕</button>
+        <button type="button" class="pf-input-clear" on:click={() => toInput = ''} tabindex="-1">✕</button>
       {/if}
       {#if toFocused && toSuggestions.length > 0}
         <div class="pf-suggestions" role="listbox" tabindex="0" on:mousedown|preventDefault={() => {}}>
           {#each toSuggestions as s}
-            <button class="pf-suggestion" on:click={() => pickTo(s)}>{s}</button>
+            <button type="button" class="pf-suggestion" on:click={() => pickTo(s)}>{s}</button>
           {/each}
         </div>
       {/if}
     </div>
-    <button class="pf-btn pf-btn-primary" on:click={findPath}>Find Path</button>
-    <button class="pf-btn pf-btn-clear" on:click={clearAll}>Clear</button>
+    <button type="button" class="pf-btn pf-btn-primary" on:click={findPath}>Find Path</button>
+    <button type="button" class="pf-btn pf-btn-clear" on:click={clearAll}>Clear</button>
   </div>
 
   {#if pathResult !== null}

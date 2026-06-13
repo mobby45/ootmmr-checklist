@@ -241,13 +241,13 @@
 <div class="hint-tracker">
   <!-- Tab toggle -->
   <div class="tab-row">
-    <button class="tab-btn" class:active={view === 'hints'} on:click={() => view = 'hints'}>
+    <button type="button" class="tab-btn" class:active={view === 'hints'} on:click={() => view = 'hints'}>
       Hints {#if hints.length > 0}<span class="tab-count">{hints.length}</span>{/if}
     </button>
-    <button class="tab-btn" class:active={view === 'notes'} on:click={() => view = 'notes'}>
+    <button type="button" class="tab-btn" class:active={view === 'notes'} on:click={() => view = 'notes'}>
       Notes {#if annotationCount > 0}<span class="tab-count">{annotationCount}</span>{/if}
     </button>
-    <button class="tab-btn" class:active={view === 'songs'} on:click={() => view = 'songs'}>
+    <button type="button" class="tab-btn" class:active={view === 'songs'} on:click={() => view = 'songs'}>
       Song Events
     </button>
   </div>
@@ -275,14 +275,14 @@
           rows="2"
           disabled={isWatchMode}
         ></textarea>
-        <button class="add-btn" on:click={addHint} disabled={!newText.trim() || isWatchMode}>Add</button>
+        <button type="button" class="add-btn" on:click={addHint} disabled={!newText.trim() || isWatchMode}>Add</button>
       </div>
     </div>
 
     <!-- Filter + Clear -->
     <div class="filter-row">
       <span class="filter-label">Filter:</span>
-      <button class="filter-btn" class:active={filterType === 'all'} on:click={() => filterType = 'all'}>All ({hints.length})</button>
+      <button type="button" class="filter-btn" class:active={filterType === 'all'} on:click={() => filterType = 'all'}>All ({hints.length})</button>
       {#each hintTypes as t}
         {@const count = hints.filter(h => h.type === t.id).length}
         {#if count > 0}
@@ -295,7 +295,7 @@
         {/if}
       {/each}
       {#if hints.length > 0}
-        <button class="clear-all-btn" on:click={clearAll} disabled={isWatchMode}>Clear all</button>
+        <button type="button" class="clear-all-btn" on:click={clearAll} disabled={isWatchMode}>Clear all</button>
       {/if}
     </div>
 
@@ -306,7 +306,7 @@
       <ul class="hint-list">
         {#each filtered as hint (hint.id)}
           <li class="hint-item" class:hint-done={hint.done}>
-            <button class="hint-done-btn" class:is-done={hint.done} on:click={() => toggleHintDone(hint.id)} title="{hint.done ? 'Mark undone' : 'Mark done'}" disabled={isWatchMode}>
+            <button type="button" class="hint-done-btn" class:is-done={hint.done} on:click={() => toggleHintDone(hint.id)} title="{hint.done ? 'Mark undone' : 'Mark done'}" disabled={isWatchMode}>
               {hint.done ? '✓' : '○'}
             </button>
             <span class="hint-badge" style="background: {typeColor(hint.type)}">{typeLabel(hint.type)}</span>
@@ -318,7 +318,7 @@
                 {hint.text}
               {/if}
             </span>
-            <button class="del-btn" on:click={() => removeHint(hint.id)} title="Delete" disabled={isWatchMode}>✕</button>
+            <button type="button" class="del-btn" on:click={() => removeHint(hint.id)} title="Delete" disabled={isWatchMode}>✕</button>
           </li>
         {/each}
       </ul>
@@ -337,7 +337,7 @@
           bind:value={notesFilter}
         />
         {#if notesFilter}
-          <button class="notes-filter-clear" on:click={() => notesFilter = ''}>✕</button>
+          <button type="button" class="notes-filter-clear" on:click={() => notesFilter = ''}>✕</button>
         {/if}
       </div>
       {#if filteredAnnotations.length === 0}
@@ -354,16 +354,16 @@
                 </span>
                 <span class="annotation-name" title={entry.id}>{entry.id}</span>
                 {#if entry.kind === 'note' && onEditNote && !isWatchMode}
-                  <button class="annotation-edit" on:click={() => onEditNote?.(entry.id)} title="Edit">✎</button>
+                  <button type="button" class="annotation-edit" on:click={() => onEditNote?.(entry.id)} title="Edit">✎</button>
                 {/if}
                 {#if entry.kind === 'shop' && onEditShop && !isWatchMode}
-                  <button class="annotation-edit" on:click={() => onEditShop?.(entry.id)} title="Edit">✎</button>
+                  <button type="button" class="annotation-edit" on:click={() => onEditShop?.(entry.id)} title="Edit">✎</button>
                 {/if}
                 {#if entry.kind === 'note' && onDeleteNote && !isWatchMode}
-                  <button class="annotation-del" on:click={() => onDeleteNote?.(entry.id)} title="Delete">✕</button>
+                  <button type="button" class="annotation-del" on:click={() => onDeleteNote?.(entry.id)} title="Delete">✕</button>
                 {/if}
                 {#if entry.kind === 'shop' && onDeleteShop && !isWatchMode}
-                  <button class="annotation-del" on:click={() => onDeleteShop?.(entry.id)} title="Delete">✕</button>
+                  <button type="button" class="annotation-del" on:click={() => onDeleteShop?.(entry.id)} title="Delete">✕</button>
                 {/if}
               </div>
               <div class="annotation-body">
@@ -408,7 +408,7 @@
               </td>
               <td class="done-cell">
                 {#if evt.doneNA}<span class="na-text">N/A</span>
-                {:else}<button class="done-btn" class:done-yes={done} on:click={() => toggleDone(evt.id)} disabled={isWatchMode}>{done ? '✓' : '✗'}</button>
+                {:else}<button type="button" class="done-btn" class:done-yes={done} on:click={() => toggleDone(evt.id)} disabled={isWatchMode}>{done ? '✓' : '✗'}</button>
                 {/if}
               </td>
             </tr>
@@ -440,7 +440,7 @@
                 </select>
               </td>
               <td class="done-cell">
-                <button class="done-btn" class:done-yes={done} on:click={() => toggleDone(evt.id)} disabled={isWatchMode}>{done ? '✓' : '✗'}</button>
+                <button type="button" class="done-btn" class:done-yes={done} on:click={() => toggleDone(evt.id)} disabled={isWatchMode}>{done ? '✓' : '✗'}</button>
               </td>
             </tr>
           {/each}

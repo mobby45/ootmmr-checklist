@@ -70,11 +70,8 @@
     saveManualErSettings();
   }
 
-  function isErActive(key: string): boolean {
-    return activeErSettings[key as keyof ErSettings];
-  }
-  function getManualSetting(key: string): boolean {
-    return (manualErSettings as any)[key] ?? false;
+  function getErSetting(settings: ErSettings, key: string): boolean {
+    return (settings as unknown as Record<string, boolean>)[key] ?? false;
   }
 
   const erLabels: Record<string, string> = {
@@ -258,8 +255,9 @@
     <div class="er-toggles">
       {#each Object.entries(erLabels) as [key, label]}
         <button
+          type="button"
           class="er-toggle-btn"
-          class:active={alwaysManualKeys.has(key) ? getManualSetting(key) : isErActive(key)}
+          class:active={alwaysManualKeys.has(key) ? getErSetting(manualErSettings, key) : getErSetting(activeErSettings, key)}
           class:from-spoiler={spoilerErSettings !== null && !alwaysManualKeys.has(key)}
           class:always-manual={alwaysManualKeys.has(key)}
           disabled={isWatchMode || (spoilerErSettings !== null && !alwaysManualKeys.has(key))}
@@ -316,7 +314,7 @@
           class="er-search"
         />
         {#if searchFilter}
-          <button class="er-search-clear" on:click={() => searchFilter = ''} title="Clear search">×</button>
+          <button type="button" class="er-search-clear" on:click={() => searchFilter = ''} title="Clear search">×</button>
         {/if}
       </div>
       <select bind:value={gameFilter} class="er-select">
@@ -324,17 +322,17 @@
         <option value="oot">OoT only</option>
         <option value="mm">MM only</option>
       </select>
-      <button class="er-help-btn" on:click={() => showHelp = !showHelp} title="Help">?</button>
+      <button type="button" class="er-help-btn" on:click={() => showHelp = !showHelp} title="Help">?</button>
       <div class="er-mode-group">
-        <button class="er-mode-btn" class:active={showMode === 'all'} on:click={() => showMode = 'all'}>All</button>
-        <button class="er-mode-btn" class:active={showMode === 'filled'} on:click={() => showMode = 'filled'}>Filled</button>
-        <button class="er-mode-btn" class:active={showMode === 'unfilled'} on:click={() => showMode = 'unfilled'}>Unfilled</button>
+        <button type="button" class="er-mode-btn" class:active={showMode === 'all'} on:click={() => showMode = 'all'}>All</button>
+        <button type="button" class="er-mode-btn" class:active={showMode === 'filled'} on:click={() => showMode = 'filled'}>Filled</button>
+        <button type="button" class="er-mode-btn" class:active={showMode === 'unfilled'} on:click={() => showMode = 'unfilled'}>Unfilled</button>
       </div>
     </div>
     {#if showHelp}
       <div class="er-help-panel">
         <strong>How to use the ER Tracker</strong>
-        <button class="er-help-close" on:click={() => showHelp = false}>✕</button>
+        <button type="button" class="er-help-close" on:click={() => showHelp = false}>✕</button>
         <div class="er-help-body">
           Each row = one entrance. <strong>Left</strong> = where you enter. <strong>Right</strong> = where you appear.<br><br>
           <strong>Example:</strong> In-game you go through <em>Death Mountain Trail → Death Mountain Crater</em>. Find the row "OOT Death Mountain Trail → …", set the dropdown to "OOT Death Mountain Crater".<br><br>
@@ -348,7 +346,7 @@
     {/if}
     <div class="er-stats">
       <span>{knownCount}/{totalActive} known</span>
-      <button class="er-clear-btn" on:click={clearAll} disabled={isWatchMode}>Clear all</button>
+      <button type="button" class="er-clear-btn" on:click={clearAll} disabled={isWatchMode}>Clear all</button>
     </div>
   </div>
 
@@ -373,7 +371,7 @@
             </span>
             <span class="er-name" title={entrance.name}>{entrance.name}</span>
             {#if entranceHasMap.has(entrance.id)}
-              <button class="er-map-btn" title="Open map" on:click={() => dispatch('openMapForEntrance', { entranceId: entrance.id })}>🗺️</button>
+              <button type="button" class="er-map-btn" title="Open map" on:click={() => dispatch('openMapForEntrance', { entranceId: entrance.id })}>🗺️</button>
             {/if}
             <span class="er-arrow">→</span>
             <div class="er-select-wrap" style="width: {currentValue ? Math.max(160, currentValue.length * 7.2) : 160}px">

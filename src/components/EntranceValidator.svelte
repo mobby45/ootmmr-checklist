@@ -95,7 +95,7 @@
     <span class="stat">Entrances: <b>{entDone}/{entTotal}</b>{#if entBad > 0} <em>⚠{entBad}</em>{/if}</span>
     <span class="stat">Maps: <b>{mapDone}/{mapTotal}</b>{#if mapBad > 0} <em>⚠{mapBad}</em>{/if}</span>
     <div class="pbar"><div class="fill" style="width:{entTotal?(entDone/entTotal*100).toFixed(1):0}%"></div></div>
-    <button class="reset-btn" on:click={resetAll}>Reset all</button>
+    <button type="button" class="reset-btn" on:click={resetAll}>Reset all</button>
   </header>
 
   <div class="filters">
@@ -147,13 +147,13 @@
               {:else if !hasPos}
                 <span class="no-pos-txt">no map pos</span>
               {/if}
-              <button class="rb ok" class:active={s==='ok'}
+              <button type="button" class="rb ok" class:active={s==='ok'}
                 on:click={() => set('e_' + ent.id, s==='ok'?'':'ok')}>✓</button>
-              <button class="rb bad" class:active={s==='wrong'}
+              <button type="button" class="rb bad" class:active={s==='wrong'}
                 on:click={() => set('e_' + ent.id, s==='wrong'?'':'wrong')}>✗</button>
               {#if hasPos}
                 {@const ms = results['m_' + ent.id] ?? ''}
-                <button class="rb map-val" class:map-ok={ms==='ok'} class:map-bad={ms==='wrong'}
+                <button type="button" class="rb map-val" class:map-ok={ms==='ok'} class:map-bad={ms==='wrong'}
                   title="Map button: click to cycle none→✓→✗"
                   on:click={() => cycleMap(ent.id)}>🗺{ms === 'ok' ? '✓' : ms === 'wrong' ? '✗' : ''}</button>
               {/if}

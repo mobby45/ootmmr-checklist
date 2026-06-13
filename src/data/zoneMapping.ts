@@ -74,6 +74,7 @@ export const zoneMapping: Record<string, { game: 'oot' | 'mm'; subscenes: Subsce
     displayName: 'Gerudo Valley',
     subscenes: [
       { renderscene: 'OOT_GERUDO_VALLEY', displayName: 'Gerudo Valley' },
+      { renderscene: 'OOT_TENT_GERUDO', displayName: "Carpenter's Tent" },
       { renderscene: 'OOT_GROTTO_VALLEY_OCTOROK', displayName: 'Octorok Grotto' },
       { renderscene: 'OOT_GROTTO_VALLEY_STORMS', displayName: 'Song of Storms Grotto' },
     ]
@@ -510,6 +511,13 @@ MM_MOUNTAIN_VILLAGE: {
       { renderscene: 'MM_PATH_SNOWHEAD_WINTER', displayName: 'Path to Snowhead Winter' },
       { renderscene: 'MM_PATH_SNOWHEAD_SPRING', displayName: 'Path to Snowhead Spring' },
       { renderscene: 'MM_GROTTO_PATH_TO_SNOWHEAD_GENERIC', displayName: 'Generic Grotto' },
+    ]
+  },
+
+  MM_SNOWHEAD: {
+    game: 'mm',
+    displayName: 'Snowhead',
+    subscenes: [
       { renderscene: 'MM_SNOWHEAD', displayName: 'Snowhead' },
       { renderscene: 'MM_FAIRY_SNOWHEAD', displayName: 'Fairy Snowhead' },
     ]

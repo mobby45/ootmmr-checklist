@@ -1912,6 +1912,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     'Snowhead Temple': ['MM_TEMPLE_SNOWHEAD'],
     'Great Bay Temple': ['MM_TEMPLE_GREAT_BAY'],
     'Stone Tower Temple': ['MM_TEMPLE_STONE_TOWER', 'MM_TEMPLE_STONE_TOWER_INVERTED'],
+    'Stone Tower Temple Inverted': ['MM_TEMPLE_STONE_TOWER_INVERTED', 'MM_TEMPLE_STONE_TOWER'],
     'The Moon': ['MM_MOON'],
   };
 
@@ -1942,6 +1943,8 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
   }
 
   async function handleOpenErForEntrance(entranceId: string) {
+    erHighlightId = null;
+    await tick();
     erHighlightId = entranceId;
     showMapModal = false;
     secEr = true;
@@ -1990,7 +1993,6 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     }
 
     const sourceEntrance = allEntrances.find(e => e.id === entranceId);
-    const destName = entranceValuesMap.get(entranceId);
 
     // Priority 1: entrance position marker — most precise, opens the exact source subscene
     // e.g. "Kokiri Forest Near Deku Tree" → opens Kokiri Forest at the entrance marker spot
@@ -3984,11 +3986,10 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     specialConditionsStore.set(spoilerSpecialConditions ?? (hasManual ? (manualConditions as unknown as SpecialConditionsMap) : null));
   }
 
-  $: specialConditionEntries = spoilerSpecialConditions
-    ? Object.entries(spoilerSpecialConditions).filter(([, cond]) => cond.count > 0 || Object.values(cond).some(v => v === true))
-    : [];
+  $: _activeConditions = spoilerSpecialConditions ?? (manualConditions as unknown as SpecialConditionsMap);
+  $: specialConditionEntries = Object.entries(_activeConditions).filter(([, cond]) => cond.count > 0 || Object.values(cond).some(v => v === true));
 
-  $: conditionProgress = trackDep($_itemsRevStore, spoilerSpecialConditions ? computeConditionProgress(spoilerSpecialConditions, spoilerCoinCounts) : null);
+  $: conditionProgress = trackDep($_itemsRevStore, specialConditionEntries.length > 0 ? computeConditionProgress(_activeConditions, spoilerCoinCounts) : null);
 
   function computeConditionProgress(conditions: import('./util/spoilerParser').SpecialConditionsMap, coinCounts: Record<string, number>): Record<string, Record<string, { obtained: number; total: number }>> {
     const result: Record<string, Record<string, { obtained: number; total: number }>> = {};
@@ -4079,8 +4080,8 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
   {#if relocationCode}
     <div class="relocation-banner">
       🔒 Room password changed by host
-      <button class="pure-button" on:click={() => { const pw = window.prompt('Enter the new room password:'); if (pw != null) { const code = relocationCode; persistRelocationCode(null, 'dismiss'); if (code) joinCoopRoom(code, pw.trim() || undefined); } }}>Join new room</button>
-      <button class="pure-button" on:click={() => persistRelocationCode(null, 'dismiss')}>Dismiss</button>
+      <button type="button" class="pure-button" on:click={() => { const pw = window.prompt('Enter the new room password:'); if (pw != null) { const code = relocationCode; persistRelocationCode(null, 'dismiss'); if (code) joinCoopRoom(code, pw.trim() || undefined); } }}>Join new room</button>
+      <button type="button" class="pure-button" on:click={() => persistRelocationCode(null, 'dismiss')}>Dismiss</button>
     </div>
   {/if}
   <main class:modal-active={showMapModal}>
@@ -4093,8 +4094,8 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
           {#if connectionProvider != null}
             <span>&nbsp; (Connected to room: <code class="room-code-copy" title="Click to copy">{roomCodeCopied ? '✓' : roomBaseCode}</code> {roomHasPassword ? '🔒' : '🔓'})</span>
           {/if}
-          <button class="undo-btn" on:click|stopPropagation={undo} disabled={isWatchMode || !canUndo} title="Undo (Ctrl+Z)">↩ Undo</button>
-          <button class="undo-btn" on:click|stopPropagation={redo} disabled={isWatchMode || !canRedo} title="Redo (Ctrl+Y)">↪ Redo</button>
+          <button type="button" class="undo-btn" on:click|stopPropagation={undo} disabled={isWatchMode || !canUndo} title="Undo (Ctrl+Z)">↩ Undo</button>
+          <button type="button" class="undo-btn" on:click|stopPropagation={redo} disabled={isWatchMode || !canRedo} title="Redo (Ctrl+Y)">↪ Redo</button>
         </summary>
         <div id="general-container" class="flex flex-wrap" style="margin-top: 0.8em">
           <form class="pure-form pure-form-stacked">
@@ -4372,10 +4373,10 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
                         <option value={slot.id}>{slot.name} ({Object.values(slot.checks).filter(v => v === T.CheckState.checked).length}✓)</option>
                       {/each}
                     </select>
-                    <button class="pure-button bg-primary" title="Save current state to this slot" on:click={() => { if (isWatchMode) return; currentSlotId && saveToSlot(currentSlotId); }} disabled={isWatchMode}>💾</button>
-                    <button class="pure-button bg-primary" title="Load this slot" on:click={() => { if (isWatchMode) return; const s = saveSlots.find(x => x.id === currentSlotId); if (s) loadSlot(s); }} disabled={isWatchMode}>📂</button>
-                    <button class="pure-button" title="Rename slot" on:click={() => { if (isWatchMode) return; const s = saveSlots.find(x => x.id === currentSlotId); if (!s) return; const n = window.prompt('Rename slot:', s.name); if (n != null) renameSlot(s.id, n); }} disabled={isWatchMode}>✎</button>
-                    <button class="pure-button bg-danger" title="Delete slot" on:click={() => { if (isWatchMode) return; currentSlotId && deleteSlot(currentSlotId); }} disabled={isWatchMode}>✕</button>
+                    <button type="button" class="pure-button bg-primary" title="Save current state to this slot" on:click={() => { if (isWatchMode) return; currentSlotId && saveToSlot(currentSlotId); }} disabled={isWatchMode}>💾</button>
+                    <button type="button" class="pure-button bg-primary" title="Load this slot" on:click={() => { if (isWatchMode) return; const s = saveSlots.find(x => x.id === currentSlotId); if (s) loadSlot(s); }} disabled={isWatchMode}>📂</button>
+                    <button type="button" class="pure-button" title="Rename slot" on:click={() => { if (isWatchMode) return; const s = saveSlots.find(x => x.id === currentSlotId); if (!s) return; const n = window.prompt('Rename slot:', s.name); if (n != null) renameSlot(s.id, n); }} disabled={isWatchMode}>✎</button>
+                    <button type="button" class="pure-button bg-danger" title="Delete slot" on:click={() => { if (isWatchMode) return; currentSlotId && deleteSlot(currentSlotId); }} disabled={isWatchMode}>✕</button>
                   </div>
                   {#if currentSlot}
                     <p class="spoiler-no-log" style="margin:0 0 0.4em;">{formatSlotDate(currentSlot.updatedAt)}</p>
@@ -4383,7 +4384,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
                 {:else}
                   <p class="spoiler-no-log">No slots yet.</p>
                 {/if}
-                <button class="pure-button" style="font-size:0.82em;" on:click={() => { if (isWatchMode) return; newSlot(); }} disabled={isWatchMode}>+ New Slot</button>
+                <button type="button" class="pure-button" style="font-size:0.82em;" on:click={() => { if (isWatchMode) return; newSlot(); }} disabled={isWatchMode}>+ New Slot</button>
               </div>
             </details>
           </form>
@@ -4478,7 +4479,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
                     <span class="connected-dot" style="background:{u.color}" title={u.name}></span>
                     <span class="connected-name">{u.name}{#if u.isHost} 👑{/if}</span>
                     {#if !isWatchMode && connectedUsers.find(x => x.peerId === peerId)?.isHost && u.peerId !== peerId}
-                      <button class="give-host-btn" title="Give host to {u.name}" on:click={() => yHostOverride.set('peerId', u.peerId)}>👑</button>
+                      <button type="button" class="give-host-btn" title="Give host to {u.name}" on:click={() => yHostOverride.set('peerId', u.peerId)}>👑</button>
                     {/if}
                   {/each}
                 </div>
@@ -4506,12 +4507,12 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
                 >
                   {sortMode === 'alpha' ? '↩️ Default' : '🔤 A-Z'}
                 </button>
-                  <button class="bg-primary pure-button" on:click|preventDefault={exportData} disabled={isWatchMode}>Export Save</button>
-                  <button class="bg-primary pure-button" on:click|preventDefault={importData} disabled={isWatchMode}>Import Save</button>
-                  <button class="bg-primary pure-button" on:click|preventDefault={importSpoilerLog} disabled={isWatchMode}>Import Spoiler</button>
-                  <button class="pure-button" on:click|preventDefault={() => { if (isWatchMode) return; randoImportOpen = !randoImportOpen; randoImportError = ''; randoImportOk = false; }} disabled={isWatchMode}>🎲 Import Hash</button>
-                  <button class="bg-danger pure-button" on:click|preventDefault={reset} disabled={isWatchMode}>Clear Checks</button>
-                  <button class="bg-danger pure-button" on:click|preventDefault={resetSettings} disabled={isWatchMode}>Reset Settings</button>
+                  <button type="button" class="bg-primary pure-button" on:click|preventDefault={exportData} disabled={isWatchMode}>Export Save</button>
+                  <button type="button" class="bg-primary pure-button" on:click|preventDefault={importData} disabled={isWatchMode}>Import Save</button>
+                  <button type="button" class="bg-primary pure-button" on:click|preventDefault={importSpoilerLog} disabled={isWatchMode}>Import Spoiler</button>
+                  <button type="button" class="pure-button" on:click|preventDefault={() => { if (isWatchMode) return; randoImportOpen = !randoImportOpen; randoImportError = ''; randoImportOk = false; }} disabled={isWatchMode}>🎲 Import Hash</button>
+                  <button type="button" class="bg-danger pure-button" on:click|preventDefault={reset} disabled={isWatchMode}>Clear Checks</button>
+                  <button type="button" class="bg-danger pure-button" on:click|preventDefault={resetSettings} disabled={isWatchMode}>Reset Settings</button>
                 {#if spoilerSyncedFromPeer}<div class="spoiler-sync-toast">📥 Spoiler synced</div>{/if}
               </div>
               {#if randoImportOpen}
@@ -4540,8 +4541,8 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
             <fieldset style="margin-top: 1em;">
               <legend>Presets</legend>
               <div style="display: flex; gap: 0.4em; margin-bottom: 0.5em; flex-wrap: wrap;">
-                <button class="pure-button" style="font-size:0.8em; padding:0.2em 0.6em" on:click={exportPresets} disabled={isWatchMode}>↗ Export</button>
-                <button class="pure-button" style="font-size:0.8em; padding:0.2em 0.6em" on:click={importPresets} disabled={isWatchMode}>↙ Import</button>
+                <button type="button" class="pure-button" style="font-size:0.8em; padding:0.2em 0.6em" on:click={exportPresets} disabled={isWatchMode}>↗ Export</button>
+                <button type="button" class="pure-button" style="font-size:0.8em; padding:0.2em 0.6em" on:click={importPresets} disabled={isWatchMode}>↙ Import</button>
               </div>
               <div style="display: flex; gap: 0.5em; margin-bottom: 0.5em;">
                 <input
@@ -4552,7 +4553,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
                   style="flex: 1"
                   disabled={isWatchMode}
                 />
-                <button class="pure-button bg-primary" on:click={() => { if (isWatchMode) return; savePreset(); }} disabled={isWatchMode}>💾 Save</button>
+                <button type="button" class="pure-button bg-primary" on:click={() => { if (isWatchMode) return; savePreset(); }} disabled={isWatchMode}>💾 Save</button>
               </div>
               {#if Object.keys(allPresets).length > 0}
                 <div style="display: flex; gap: 0.5em; align-items: center;">
@@ -4561,7 +4562,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
                       <option value={name}>{defaultPresetNames.has(name) ? '⭐ ' : ''}{name}</option>
                     {/each}
                   </select>
-                  <button class="pure-button bg-primary" on:click={() => { if (isWatchMode) return; selectedPreset && loadPreset(selectedPreset); }}
+                  <button type="button" class="pure-button bg-primary" on:click={() => { if (isWatchMode) return; selectedPreset && loadPreset(selectedPreset); }}
                     disabled={isWatchMode}>Load</button
                   >
                   <button
@@ -4597,8 +4598,8 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
           {/if}
         </summary>
         <div class="er-tabs" role="tablist">
-          <button class="er-tab" class:active={erTab === 'tracker'} on:click={() => erTab = 'tracker'} role="tab">Tracker</button>
-          <button class="er-tab" class:active={erTab === 'pathfinder'} on:click={() => erTab = 'pathfinder'} role="tab">Pathfinder</button>
+          <button type="button" class="er-tab" class:active={erTab === 'tracker'} on:click={() => erTab = 'tracker'} role="tab">Tracker</button>
+          <button type="button" class="er-tab" class:active={erTab === 'pathfinder'} on:click={() => erTab = 'pathfinder'} role="tab">Pathfinder</button>
         </div>
         {#if erTab === 'tracker'}
           <ERTracker {yEntrances} entranceValues={entranceValuesMap} {spoilerErSettings} {spoilerExtraEr} isWatchMode={isWatchMode || spoilerFillEntrances} bind:activeErSettings={activeErSettings} highlightedEntranceId={erHighlightId}
@@ -4646,19 +4647,19 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
         <summary><strong class="interactable">Game / Logic Settings</strong></summary>
         <div style="margin-top: 0.8em">
           <div class="tabs">
-            <button class="tab-button" class:active={activeTab === 'oot'} on:click={() => (activeTab = 'oot')}
+            <button type="button" class="tab-button" class:active={activeTab === 'oot'} on:click={() => (activeTab = 'oot')}
               >OoT Shuffle Settings</button
             >
-            <button class="tab-button" class:active={activeTab === 'mm'} on:click={() => (activeTab = 'mm')}
+            <button type="button" class="tab-button" class:active={activeTab === 'mm'} on:click={() => (activeTab = 'mm')}
               >MM Shuffle Settings</button
             >
-            <button class="tab-button" class:active={activeTab === 'other'} on:click={() => (activeTab = 'other')}
+            <button type="button" class="tab-button" class:active={activeTab === 'other'} on:click={() => (activeTab = 'other')}
               >Other Settings</button
             >
-            <button class="tab-button" class:active={activeTab === 'logic'} on:click={() => (activeTab = 'logic')}
+            <button type="button" class="tab-button" class:active={activeTab === 'logic'} on:click={() => (activeTab = 'logic')}
               >Logic Settings</button
             >
-            <button class="tab-button" class:active={activeTab === 'conditions'} on:click={() => (activeTab = 'conditions')}
+            <button type="button" class="tab-button" class:active={activeTab === 'conditions'} on:click={() => (activeTab = 'conditions')}
               >Conditions</button
             >
           </div>
@@ -4745,11 +4746,11 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
                   </div>
                 {:else if activeTab === 'conditions'}
                   <div class="conditions-editor">
-                    {#if spoilerSpecialConditions}
-                      <p class="conditions-spoiler-note">Loaded from spoiler — read only.</p>
+                    {#if specialConditionEntries.length > 0 && spoilerSpecialConditions}
+                      <p class="conditions-spoiler-note">Conditions loaded from spoiler — pre-filled fields are read only.</p>
                     {/if}
                     {#each CONDITION_NAMES as condName}
-                      {@const fromSpoiler = !!spoilerSpecialConditions}
+                      {@const fromSpoiler = !!(spoilerSpecialConditions?.[condName]?.count > 0 || Object.values(spoilerSpecialConditions?.[condName] ?? {}).some(v => v === true))}
                       {@const cond = spoilerSpecialConditions?.[condName] ?? manualConditions[condName]}
                       {@const condMaxInfo = getCondMax(cond)}
                       <div class="cond-block" class:cond-active={cond?.count > 0}>
@@ -4765,7 +4766,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
                             {/if}
                           </label>
                           {#if !fromSpoiler}
-                            <button class="cond-reset-btn" on:click={() => resetCondition(condName)} title="Reset" disabled={isWatchMode}>✕</button>
+                            <button type="button" class="cond-reset-btn" on:click={() => resetCondition(condName)} title="Reset" disabled={isWatchMode}>✕</button>
                           {/if}
                         </div>
                         <div class="cond-flags">
@@ -4804,7 +4805,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
               {hideChecked ? 'Show Checked' : 'Hide Checked'}
             </button>
             {#if gameTab !== 'both'}
-            <button class="pure-button" type="button" on:click={toggleAllGroups}>
+            <button type="button" class="pure-button" on:click={toggleAllGroups}>
               {shouldShowCollapse ? 'Collapse All' : 'Expand All'}
             </button>
             {/if}
@@ -4833,7 +4834,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
             <div class="filter-wrap">
               <input type="text" class="filter-input" style="width: 16em" placeholder="Filter… (Ctrl+F)" bind:value={filter} bind:this={filterInputEl} />
               {#if filter}
-                <button class="filter-clear-btn" on:click={() => { filter = ''; filterInputEl?.focus(); }} title="Clear (Esc)">✕</button>
+                <button type="button" class="filter-clear-btn" on:click={() => { filter = ''; filterInputEl?.focus(); }} title="Clear (Esc)">✕</button>
               {/if}
             </div>
             <button
@@ -4914,14 +4915,14 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
         {@const pct = Math.round(ootCheckCount.checked / ootCheckCount.total * 100)}
         <div class="progress-wrap">
           <div class="progress-fill oot" style="width: {pct}%"></div>
-          <span class="progress-label">OoT — {ootCheckCount.checked}/{ootCheckCount.total} ({pct}%)</span>
+          <span class="progress-label">OoT — {ootCheckCount.checked}{ootCheckCount.accessible >= 0 ? `/${ootCheckCount.accessible}` : ''}/{ootCheckCount.total} ({pct}%)</span>
         </div>
       {/if}
       {#if mmCheckCount.total > 0}
         {@const pct = Math.round(mmCheckCount.checked / mmCheckCount.total * 100)}
         <div class="progress-wrap">
           <div class="progress-fill mm" style="width: {pct}%"></div>
-          <span class="progress-label">MM — {mmCheckCount.checked}/{mmCheckCount.total} ({pct}%)</span>
+          <span class="progress-label">MM — {mmCheckCount.checked}{mmCheckCount.accessible >= 0 ? `/${mmCheckCount.accessible}` : ''}/{mmCheckCount.total} ({pct}%)</span>
         </div>
       {/if}
 
@@ -4934,13 +4935,13 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
 
       <!-- Game tabs -->
       <div class="game-tab-row">
-        <button class="game-tab-btn" class:active={gameTab === 'oot'} on:click={() => { if (!isWatchMode) setGameTab('oot'); }}>
+        <button type="button" class="game-tab-btn" class:active={gameTab === 'oot'} on:click={() => { if (!isWatchMode) setGameTab('oot'); }}>
           Ocarina of Time
         </button>
-        <button class="game-tab-btn" class:active={gameTab === 'mm'} on:click={() => { if (!isWatchMode) setGameTab('mm'); }}>
+        <button type="button" class="game-tab-btn" class:active={gameTab === 'mm'} on:click={() => { if (!isWatchMode) setGameTab('mm'); }}>
           Majora's Mask
         </button>
-        <button class="game-tab-btn" class:active={gameTab === 'both'} on:click={() => { if (!isWatchMode) setGameTab('both'); }}>
+        <button type="button" class="game-tab-btn" class:active={gameTab === 'both'} on:click={() => { if (!isWatchMode) setGameTab('both'); }}>
           Both
         </button>
       </div>
@@ -4962,10 +4963,10 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
                 <div class="split-col-actions">
                   <div class="split-seg">
                     {#each [['ow','Overworld'],['dj','Dungeon'],['both','Both']] as [val, lbl]}
-                      <button class="split-seg-btn" class:active={col.mode === val} on:click={() => col.setMode(val)}>{lbl}</button>
+                      <button type="button" class="split-seg-btn" class:active={col.mode === val} on:click={() => col.setMode(val)}>{lbl}</button>
                     {/each}
                   </div>
-                  <button class="split-seg-btn split-expand-all-btn" on:click={() => forceOpenGame(i === 0)}>
+                  <button type="button" class="split-seg-btn split-expand-all-btn" on:click={() => forceOpenGame(i === 0)}>
                     {i === 0 ? (ootShouldCollapse ? 'Collapse' : 'Expand') : (mmShouldCollapse ? 'Collapse' : 'Expand')}
                   </button>
                   <span class="split-col-count">{col.count.checked}/{col.count.total}</span>
@@ -5142,6 +5143,10 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
           if (e.detail.subscene) mapInitialSubscene = e.detail.subscene;
           filteredCheckNames = new Set();
           currentGroupName = '';
+          if (!matchedScenes.includes(e.detail.scene)) {
+            const group = Object.values(groupToSceneMapping).find(scenes => scenes.includes(e.detail.scene));
+            matchedScenes = group ? [...new Set(group)] : [e.detail.scene];
+          }
         }}
         shopItems={shopItemsMap}
         shopPrices={shopPricesMap}
@@ -5164,11 +5169,11 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
             <div class="chat-header">
               <span>Chat</span>
               <div class="chat-header-actions">
-                <button class="chat-filter-btn" class:active={chatFilter==='all'} on:click={() => chatFilter='all'}>All</button>
-                <button class="chat-filter-btn" class:active={chatFilter==='chat'} on:click={() => chatFilter='chat'}>💬</button>
-                <button class="chat-filter-btn" class:active={chatFilter==='pings'} on:click={() => chatFilter='pings'}>📍</button>
-                <button class="chat-clear-btn" on:click={clearChat} title="Clear chat" disabled={isWatchMode}>🗑</button>
-                <button class="chat-close-btn" on:click={() => { chatOpen = false; }}>✕</button>
+                <button type="button" class="chat-filter-btn" class:active={chatFilter==='all'} on:click={() => chatFilter='all'}>All</button>
+                <button type="button" class="chat-filter-btn" class:active={chatFilter==='chat'} on:click={() => chatFilter='chat'}>💬</button>
+                <button type="button" class="chat-filter-btn" class:active={chatFilter==='pings'} on:click={() => chatFilter='pings'}>📍</button>
+                <button type="button" class="chat-clear-btn" on:click={clearChat} title="Clear chat" disabled={isWatchMode}>🗑</button>
+                <button type="button" class="chat-close-btn" on:click={() => { chatOpen = false; }}>✕</button>
               </div>
             </div>
             <div class="chat-messages" bind:this={chatScrollEl}>
@@ -5206,7 +5211,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
             </form>
           </div>
         {/if}
-        <button class="chat-toggle-btn" on:click={toggleChat}>
+        <button type="button" class="chat-toggle-btn" on:click={toggleChat}>
           💬 Chat
           {#if chatUnread > 0}
             <span class="chat-unread-badge">{chatUnread > 99 ? '99+' : chatUnread}</span>
@@ -5218,7 +5223,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
 {/if}
 
 {#if scrollY > 400}
-  <button class="scroll-top-btn" on:click={() => window.scrollTo({ top: 0, behavior: 'smooth' })} title="Back to top">↑</button>
+  <button type="button" class="scroll-top-btn" on:click={() => window.scrollTo({ top: 0, behavior: 'smooth' })} title="Back to top">↑</button>
 {/if}
 
 {#if noteEditOpen}
@@ -5237,8 +5242,8 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
         ></textarea>
       </label>
       <div class="shop-edit-actions">
-        <button class="shop-edit-confirm" on:click={confirmNoteEdit}>Save</button>
-        <button class="shop-edit-cancel" on:click={() => noteEditOpen = false}>Cancel</button>
+        <button type="button" class="shop-edit-confirm" on:click={confirmNoteEdit}>Save</button>
+        <button type="button" class="shop-edit-cancel" on:click={() => noteEditOpen = false}>Cancel</button>
       </div>
     </div>
   </div>
@@ -5261,8 +5266,8 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
         </label>
       {/if}
       <div class="shop-edit-actions">
-        <button class="shop-edit-confirm" on:click={confirmShopEdit}>Save</button>
-        <button class="shop-edit-cancel" on:click={() => shopEditOpen = false}>Cancel</button>
+        <button type="button" class="shop-edit-confirm" on:click={confirmShopEdit}>Save</button>
+        <button type="button" class="shop-edit-cancel" on:click={() => shopEditOpen = false}>Cancel</button>
       </div>
     </div>
   </div>
@@ -5712,8 +5717,8 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
 
   .conditions-editor { display: flex; flex-direction: column; gap: 0.5em; padding: 4px 0; }
   .conditions-spoiler-note { font-size: 0.8em; opacity: 0.6; margin: 0 0 0.3em; }
-  .cond-block { border: 1px solid var(--color-border); border-radius: 5px; padding: 6px 8px; opacity: 0.5; }
-  .cond-block.cond-active { opacity: 1; border-color: #3a7bd5; }
+  .cond-block { border: 1px solid var(--color-border); border-radius: 5px; padding: 6px 8px; }
+  .cond-block.cond-active { border-color: #3a7bd5; }
   .cond-header { display: flex; align-items: center; gap: 0.6em; margin-bottom: 4px; }
   .cond-name { font-weight: bold; font-size: 0.85em; min-width: 7em; }
   .cond-count-label { font-size: 0.8em; display: flex; align-items: center; gap: 0.3em; }
@@ -5722,8 +5727,8 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
   .cond-reset-btn { margin-left: auto; background: none; border: none; color: var(--color-danger, #c00); cursor: pointer; font-size: 0.8em; opacity: 0.5; padding: 0 3px; }
   .cond-reset-btn:hover { opacity: 1; }
   .cond-flags { display: flex; flex-wrap: wrap; gap: 3px 8px; }
-  .cond-flag { font-size: 0.75em; display: flex; align-items: center; gap: 3px; cursor: pointer; opacity: 0.55; }
-  .cond-flag.flag-on { opacity: 1; color: #7eb8ff; }
+  .cond-flag { font-size: 0.75em; display: flex; align-items: center; gap: 3px; cursor: pointer; }
+  .cond-flag.flag-on { color: #7eb8ff; font-weight: 600; }
 
   .unshuffled-grid {
     display: grid;
