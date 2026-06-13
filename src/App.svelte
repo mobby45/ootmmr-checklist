@@ -2605,8 +2605,8 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
   // ==========================================
 
   $: erIsActive = Object.values(activeErSettings).some(Boolean);
-  $: spawnHint = (activeErSettings.erSpawns && !entranceValuesMap.get('OOT_SPAWN_CHILD'))
-    ? 'Set your Child spawn entrance in the ER Tracker to get started.'
+  $: spawnHint = (activeErSettings.erSpawns && !entranceValuesMap.get('OOT_SPAWN_CHILD') && !entranceValuesMap.get('OOT_SPAWN_ADULT'))
+    ? 'Set your spawn entrances in the ER Tracker to get started.'
     : null;
 
   // Map groupName → entrances that originate from that zone (source area matches group name)
