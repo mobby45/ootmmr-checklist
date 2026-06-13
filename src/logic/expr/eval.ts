@@ -4,6 +4,20 @@ import type { LogicState } from '../types';
 // Macro table populated at world-load time (name → expanded ExprNode or parametrized factory)
 export type MacroTable = Map<string, ExprNode | ((...args: ExprNode[]) => ExprNode)>;
 
+// MM region flags are persistent save-data flags in-game, not trackable per-BFS-step.
+// We derive them from events: CLEARED = boss defeated; CURSED = always true (initial state).
+// flag_off for any MM region flag = always true (checklist shows checks achievable across cycles).
+const MM_CLEARED_EVENTS: Record<string, string[]> = {
+  MM_REGION_NORTH_CLEARED:  ['BOSS_GOHT',     'CLEAR_STATE_SNOWHEAD'],
+  MM_REGION_SWAMP_CLEARED:  ['BOSS_ODOLWA',   'CLEAR_STATE_WOODFALL'],
+  MM_REGION_OCEAN_CLEARED:  ['BOSS_GYORG',    'CLEAR_STATE_GREAT_BAY'],
+  MM_REGION_VALLEY_CLEARED: ['BOSS_TWINMOLD', 'CLEAR_STATE_IKANA'],
+};
+const MM_CURSED_FLAGS = new Set([
+  'MM_REGION_NORTH_CURSED', 'MM_REGION_SWAMP_CURSED',
+  'MM_REGION_OCEAN_CURSED', 'MM_REGION_VALLEY_CURSED',
+]);
+
 export function evalExpr(node: ExprNode, state: LogicState, macros: MacroTable): boolean {
   switch (node.kind) {
     case 'true':  return true;
@@ -59,8 +73,18 @@ export function evalExpr(node: ExprNode, state: LogicState, macros: MacroTable):
     case 'mm_time':
       return true;
 
-    case 'flag_on':  return state.flags.has(node.flag);
-    case 'flag_off': return !state.flags.has(node.flag);
+    case 'flag_on': {
+      const clearedEvents = MM_CLEARED_EVENTS[node.flag];
+      if (clearedEvents) return clearedEvents.some(e => state.events.has(e));
+      if (MM_CURSED_FLAGS.has(node.flag)) return true;
+      return state.flags.has(node.flag);
+    }
+    case 'flag_off': {
+      // Both cleared and cursed states are achievable in a checklist context (cycle reset),
+      // so flag_off for any MM region flag is always true.
+      if (node.flag in MM_CLEARED_EVENTS || MM_CURSED_FLAGS.has(node.flag)) return true;
+      return !state.flags.has(node.flag);
+    }
 
     case 'special': return state.resolvedSpecial.get(node.name) ?? false;
 
