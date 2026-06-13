@@ -2605,15 +2605,9 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
   // ==========================================
 
   $: erIsActive = Object.values(activeErSettings).some(Boolean);
-  $: spawnHint = (() => {
-    if (!activeErSettings.erSpawns) return null;
-    const hasChild = !!entranceValuesMap.get('OOT_SPAWN_CHILD');
-    const hasAdult = !!entranceValuesMap.get('OOT_SPAWN_ADULT');
-    if (!hasChild && !hasAdult) return 'Set your spawn entrances (Child & Adult) in the ER Tracker to get started.';
-    if (!hasChild) return 'Set your Child spawn entrance in the ER Tracker to get started.';
-    if (!hasAdult) return 'Set your Adult spawn entrance in the ER Tracker to get started.';
-    return null;
-  })();
+  $: spawnHint = (activeErSettings.erSpawns && !entranceValuesMap.get('OOT_SPAWN_CHILD'))
+    ? 'Set your Child spawn entrance in the ER Tracker to get started.'
+    : null;
 
   // Map groupName → entrances that originate from that zone (source area matches group name)
   $: groupEntranceMap = (() => {
