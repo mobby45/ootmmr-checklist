@@ -4765,7 +4765,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
                   </div>
                 {:else if activeTab === 'logic'}
                   <div style="padding: 4px 0;">
-                    <LogicSettings spoilerKeys={spoilerSettingKeys} {ySettings} {sSettings} {yItems} itemsRev={_itemsRevStore} />
+                    <LogicSettings spoilerKeys={spoilerSettingKeys} {ySettings} {sSettings} />
                   </div>
                 {:else if activeTab === 'conditions'}
                   <div class="conditions-editor">

@@ -15,14 +15,8 @@
   /** Readable store over ySettings */
   export let sSettings: Readable<Map<string, any>> | null = null;
 
-  /** Y.js items map — for writing starting items */
-  export let yItems: YMap<number> | null = null;
-
-  /** Revision counter for yItems reactivity */
-  export let itemsRev: Readable<number> | null = null;
-
   // ─── Sub-tab ──────────────────────────────────────────────────────────────────
-  let activeSubTab: 'logic' | 'oot' | 'mm' | 'shared' | 'start' = 'logic';
+  let activeSubTab: 'logic' | 'oot' | 'mm' | 'shared' = 'logic';
 
   // ─── Item visibility data ─────────────────────────────────────────────────────
   type VItem =
@@ -276,75 +270,6 @@
 
   function enableAllTricks() { enabledTricks.set(new Set(TRICKS_DEFS.map(t => t.id))); }
   function disableAllTricks() { enabledTricks.set(new Set()); }
-
-  // ─── Starting Items ───────────────────────────────────────────────────────────
-  interface StartingItemDef { id: string; label: string; level: number; game: 'oot' | 'mm' | 'shared' }
-
-  const STARTING_ITEM_GROUPS: Array<{ header: string; items: StartingItemDef[] }> = [
-    { header: 'OoT Equipment', items: [
-      { id: 'sword_kokiri',  label: 'Kokiri Sword',  level: 1, game: 'oot' },
-      { id: 'sword_master',  label: 'Master Sword',  level: 1, game: 'oot' },
-      { id: 'deku_shield',   label: 'Deku Shield',   level: 1, game: 'oot' },
-      { id: 'hyrule_shield', label: 'Hylian Shield', level: 1, game: 'oot' },
-      { id: 'ocarina',       label: 'Fairy Ocarina', level: 1, game: 'oot' },
-      { id: 'nuts_oot',      label: 'Deku Nuts',     level: 1, game: 'oot' },
-      { id: 'sticks_oot',    label: 'Deku Sticks',   level: 1, game: 'oot' },
-      { id: 'mask_bunny_oot',label: 'Bunny Hood',    level: 1, game: 'oot' },
-    ]},
-    { header: 'OoT Songs', items: [
-      { id: 'oot_song_zelda',    label: "Zelda's Lullaby",    level: 1, game: 'oot' },
-      { id: 'oot_song_epona',    label: "Epona's Song",       level: 1, game: 'oot' },
-      { id: 'oot_song_saria',    label: "Saria's Song",       level: 1, game: 'oot' },
-      { id: 'oot_song_sun',      label: "Sun's Song",         level: 1, game: 'oot' },
-      { id: 'oot_song_time',     label: 'Song of Time',       level: 1, game: 'oot' },
-      { id: 'oot_song_storms',   label: 'Song of Storms',     level: 1, game: 'oot' },
-      { id: 'oot_song_minuet',   label: 'Minuet of Forest',   level: 1, game: 'oot' },
-      { id: 'oot_song_bolero',   label: 'Bolero of Fire',     level: 1, game: 'oot' },
-      { id: 'oot_song_serenade', label: 'Serenade of Water',  level: 1, game: 'oot' },
-      { id: 'oot_song_requiem',  label: 'Requiem of Spirit',  level: 1, game: 'oot' },
-      { id: 'oot_song_nocturne', label: 'Nocturne of Shadow', level: 1, game: 'oot' },
-      { id: 'oot_song_prelude',  label: 'Prelude of Light',   level: 1, game: 'oot' },
-      { id: 'oot_song_soaring',  label: 'Song of Soaring (OoT)', level: 1, game: 'oot' },
-    ]},
-    { header: 'MM Equipment', items: [
-      { id: 'mm_sword',   label: 'Razor Sword',     level: 2, game: 'mm' },
-      { id: 'mm_ocarina', label: 'Ocarina of Time', level: 1, game: 'mm' },
-    ]},
-    { header: 'MM Songs', items: [
-      { id: 'mm_song_healing', label: 'Song of Healing',      level: 1, game: 'mm' },
-      { id: 'mm_song_soaring', label: 'Song of Soaring',      level: 1, game: 'mm' },
-      { id: 'mm_song_time',    label: 'Song of Time',         level: 1, game: 'mm' },
-      { id: 'mm_song_epona',   label: "Epona's Song",         level: 1, game: 'mm' },
-      { id: 'mm_song_storms',  label: 'Song of Storms',       level: 1, game: 'mm' },
-      { id: 'mm_song_zelda',   label: "Zelda's Lullaby",      level: 1, game: 'mm' },
-      { id: 'mm_song_saria',   label: "Saria's Song",         level: 1, game: 'mm' },
-      { id: 'mm_song_sonata',  label: 'Sonata of Awakening',  level: 1, game: 'mm' },
-      { id: 'mm_song_lullaby', label: "Goron's Lullaby",      level: 1, game: 'mm' },
-      { id: 'mm_song_nova',    label: 'New Wave Bossa Nova',  level: 1, game: 'mm' },
-      { id: 'mm_song_elegy',   label: 'Elegy of Emptiness',   level: 1, game: 'mm' },
-      { id: 'mm_song_oath',    label: 'Oath to Order',        level: 1, game: 'mm' },
-    ]},
-  ];
-
-  function getItemLevel(id: string): number {
-    if (!yItems || !itemsRev) return 0;
-    $itemsRev; // reactive dependency
-    return yItems.get(id) ?? 0;
-  }
-
-  function isStartingItem(id: string, level: number): boolean {
-    return getItemLevel(id) >= level;
-  }
-
-  function toggleStartingItem(id: string, level: number, checked: boolean) {
-    if (!yItems) return;
-    if (checked) {
-      const cur = yItems.get(id) ?? 0;
-      if (cur < level) yItems.set(id, level);
-    } else {
-      yItems.delete(id);
-    }
-  }
 </script>
 
 <!-- Sub-tab bar -->
@@ -353,7 +278,6 @@
   <button type="button" class="subtab" class:subtab-active={activeSubTab === 'oot'}    on:click={() => activeSubTab = 'oot'}>OoT Items</button>
   <button type="button" class="subtab" class:subtab-active={activeSubTab === 'mm'}     on:click={() => activeSubTab = 'mm'}>MM Items</button>
   <button type="button" class="subtab" class:subtab-active={activeSubTab === 'shared'} on:click={() => activeSubTab = 'shared'}>Shared Items</button>
-  <button type="button" class="subtab" class:subtab-active={activeSubTab === 'start'}  on:click={() => activeSubTab = 'start'}>Start</button>
 </div>
 
 {#if activeSubTab === 'logic'}
@@ -550,28 +474,6 @@
     {/each}
   </div>
 
-{:else if activeSubTab === 'start'}
-  <p class="settings-hint">Items the player starts with. Checking them marks the item as collected in the tracker. Can also be set via preset or spoiler import.</p>
-  {#if itemsRev}
-    {#each STARTING_ITEM_GROUPS as group}
-      <div class="settings-grid-header start-header">{group.header}</div>
-      <div class="dropdown-grid">
-        {#each group.items as item}
-          <label class="checkbox-option" title="{item.id} (level {item.level})">
-            <input
-              type="checkbox"
-              checked={isStartingItem(item.id, item.level)}
-              on:change={e => toggleStartingItem(item.id, item.level, (e.target as HTMLInputElement).checked)}
-            />
-            <span class="start-game-tag start-game-{item.game}">{item.game.toUpperCase()}</span>
-            {item.label}
-          </label>
-        {/each}
-      </div>
-    {/each}
-  {:else}
-    <p class="settings-hint">Item tracker not available.</p>
-  {/if}
 {/if}
 
 <style>
@@ -600,21 +502,6 @@
     border-color: #4a9eff;
     background: rgba(74, 158, 255, 0.08);
   }
-
-  .start-header { margin-top: 0.5em; }
-
-  .start-game-tag {
-    font-size: 0.62em;
-    font-weight: 700;
-    padding: 0.1em 0.3em;
-    border-radius: 3px;
-    margin-right: 0.3em;
-    letter-spacing: 0.04em;
-    vertical-align: middle;
-  }
-  .start-game-oot    { background: #2a5e3a; color: #aee8be; }
-  .start-game-mm     { background: #3a2a5e; color: #c0aee8; }
-  .start-game-shared { background: #5e4a2a; color: #e8d0ae; }
 
   .settings-hint {
     font-size: 0.78em;
