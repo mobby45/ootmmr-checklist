@@ -102,6 +102,58 @@ const MM_CURSED_FLAGS = new Set([
   'MM_REGION_OCEAN_CURSED', 'MM_REGION_VALLEY_CURSED',
 ]);
 
+// Vanilla price tables per range, indexed by slot id (matches OoTMM packages/logic/src/price.ts)
+// OOT_SCRUBS uses non-MQ defaults; MQ dungeons shift some scrub prices but we don't track that.
+const VANILLA_PRICES: Record<string, readonly number[]> = {
+  OOT_SHOPS: [
+    // Kokiri Shop
+    10, 20, 60, 30, 15, 30, 10, 40,
+    // Bombchu Shop
+    180, 180, 180, 180, 100, 100, 100, 100,
+    // Zora Shop
+    50, 90, 200, 15, 20, 60, 300, 10,
+    // Goron Shop
+    10, 10, 40, 200, 25, 50, 80, 120,
+    // Bazaar
+    20, 60, 90, 10, 35, 10, 15, 80,
+    // Potion Shop
+    200, 50, 30, 15, 300, 50, 30, 30,
+    // Castle Town Bazaar (duplicate)
+    20, 60, 90, 10, 35, 10, 15, 80,
+    // Castle Town Potion (duplicate)
+    200, 50, 30, 15, 300, 50, 30, 30,
+  ],
+  OOT_SCRUBS: [
+    // Overworld (27)
+    40, 15, 20, 40, 40, 40, 40, 10, 20, 40, 40, 20, 40, 40, 40, 20, 40, 40, 40, 40, 20, 40, 40, 40, 40, 40, 40,
+    // Deku Tree (non-MQ, free)
+    0,
+    // Dodongo's Cavern (non-MQ)
+    40, 15, 20, 50,
+    // Jabu-Jabu (non-MQ)
+    20,
+    // Ganon's Castle (non-MQ, last slot free)
+    40, 40, 70, 40, 0,
+  ],
+  OOT_MERCHANTS: [200, 200, 100, 30],
+  MM_SHOPS: [
+    // Bomb Shop
+    30, 40, 50, 90,
+    // Curiosity Shop
+    500,
+    // Trading Post
+    30, 80, 80, 50, 10, 30, 30, 30,
+    // Potion Shop
+    60, 10, 20,
+    // Goron Shop
+    40, 40, 80,
+    // Zora Shop
+    90, 20, 60,
+  ],
+  MM_SHOPS_EX: [100],
+  MM_TINGLE: [5, 40, 20, 40, 20, 40, 20, 40, 20, 40, 20, 40],
+};
+
 export function evalExpr(node: ExprNode, state: LogicState, macros: MacroTable): boolean {
   switch (node.kind) {
     case 'true':  return true;
@@ -210,13 +262,45 @@ export function evalExpr(node: ExprNode, state: LogicState, macros: MacroTable):
 
     case 'special': return state.resolvedSpecial.get(node.name) ?? false;
 
-    case 'price':
-      // threshold=0 means "item is free" — nothing in OoT/MM shops costs 0 rupees,
-      // so this branch never fires and wallet_price correctly falls through to
-      // the has_rupees && has_wallet(n) checks.
-      // For threshold>0, we cannot validate exact prices without shop data, so we
-      // assume the item's price falls within the wallet tier's range.
-      return node.threshold > 0;
+    case 'price': {
+      if (state.settings.get('bottomlessWallets')) return true;
+      const RANGE_SETTING: Record<string, string> = {
+        OOT_SHOPS:     'priceOotShops',
+        OOT_SCRUBS:    'priceOotScrubs',
+        OOT_MERCHANTS: 'priceOotMerchants',
+        MM_SHOPS:      'priceMmShops',
+        MM_SHOPS_EX:   'priceMmShops',
+        MM_TINGLE:     'priceMmTingle',
+      };
+      const settingKey = RANGE_SETTING[node.range];
+      const mode = settingKey ? String(state.settings.get(settingKey) ?? 'vanilla') : 'vanilla';
+
+      if (mode === 'affordable') {
+        // All items cost exactly 10r → always fits within any non-zero tier
+        return node.threshold >= 10;
+      }
+
+      if (mode === 'vanilla') {
+        // Exact vanilla price lookup: price(range, id, threshold) = actualPrice ≤ threshold
+        const prices = VANILLA_PRICES[node.range];
+        const itemPrice = prices ? (prices[node.id] ?? 0) : 0;
+        return itemPrice <= node.threshold;
+      }
+
+      // 'random' / 'weighted': exact prices unknown — use wallet capacity as optimistic gate.
+      // threshold=0 = free item check; assume nothing is free in random mode.
+      if (node.threshold === 0) return false;
+      const childWallets = Boolean(state.settings.get('childWallets'));
+      const walletLevel = Math.max(
+        state.items.get('OOT_WALLET') ?? 0,
+        state.items.get('MM_WALLET') ?? 0,
+        state.items.get('WALLET') ?? 0,
+        state.items.get('SHARED_WALLET') ?? 0,
+      );
+      const CAPS = childWallets ? [0, 99, 200, 500, 999] : [99, 200, 500, 999];
+      const capacity = CAPS[Math.min(walletLevel, CAPS.length - 1)];
+      return capacity >= node.threshold;
+    }
 
     case 'cond': {
       const branch = evalExpr(node.cond, state, macros);

@@ -104,6 +104,21 @@ export function buildLogicState(
     strayFairyChestShuffle: 'own_dungeon',
     strayFairyOtherShuffle: 'vanilla',
 
+    // Shop/scrub/merchant price modes — default vanilla (wallet capacity gates access)
+    priceOotShops:          'vanilla',
+    priceOotScrubs:         'vanilla',
+    priceOotMerchants:      'vanilla',
+    priceMmShops:           'vanilla',
+    priceMmTingle:          'vanilla',
+
+    // Boolean settings used directly in eval — explicit false avoids relying on undefined → falsy
+    bottomlessWallets:      false,
+    childWallets:           false,
+    colossalWallets:        false,
+    sharedWallets:          false,
+    clocks:                 false,
+    songEventShuffle:       false,
+
     // Special features — off by default
     shortHookshotMm:        false,
     songOfDoubleTimeOot:    false,
@@ -155,6 +170,8 @@ export function buildLogicState(
   if ((items.get('OOT_MAGIC_UPGRADE') ?? 0) + (items.get('MM_MAGIC_UPGRADE') ?? 0) + (items.get('MAGIC_UPGRADE') ?? 0) > 0) {
     events.add('MAGIC'); events.add('MM_MAGIC');
   }
+  // Rupees are always farmable — seed RUPEES/MM_RUPEES so can_use_wallet/wallet_price resolve correctly.
+  events.add('RUPEES'); events.add('MM_RUPEES');
 
   return {
     items,

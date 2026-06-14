@@ -544,7 +544,7 @@ export async function decodeRandomizerSettings(str: string): Promise<Record<stri
 // Settings that don't affect check visibility — silenced from unmapped report
 const KNOWN_UNTRACKED = new Set([
   'mapCompassShuffle', 'smallKeyShuffleHideout',
-  'dungeonRewardShuffle', 'priceOotShops', 'priceOotScrubs', 'priceOotMerchants', 'priceMmShops',
+  'dungeonRewardShuffle',
   'csmcCow', 'openMaskShop', 'ocarinaButtonsShuffleOot', 'ocarinaButtonsShuffleMm',
 ]);
 

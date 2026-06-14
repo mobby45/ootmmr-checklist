@@ -214,8 +214,8 @@ class Parser {
       case 'mm_time':   return { kind: 'mm_time',  type: strArg(0), start: strArg(1), end: strArg(2) };
       case 'flag_on':   return { kind: 'flag_on',  flag: strArg(0) };
       case 'flag_off':  return { kind: 'flag_off', flag: strArg(0) };
-      // threshold is the 3rd arg (positional index 2) — first two are range name and item id strings
-      case 'price':     return { kind: 'price',    threshold: numArg(2) };
+      // range=arg0 (OOT_SHOPS/OOT_SCRUBS/…), id=arg1 (slot index), threshold=arg2 (price tier)
+      case 'price':     return { kind: 'price', range: strArg(0), id: numArg(1), threshold: numArg(2) };
       case 'cond':      return { kind: 'cond',     cond: exprArg(0), then: exprArg(1), else: exprArg(2) };
       case 'special':   return { kind: 'special',  name: strArg(0) };
       default:          return { kind: 'macro',    name, args };

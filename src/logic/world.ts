@@ -28,17 +28,25 @@ function buildMacroTable(rawMacros: Record<string, string>): MacroTable {
       // Use TEXT substitution: replace param names in the macro body string,
       // then parse. This avoids the bug where numeric params get lost when
       // pre-parsing turns `has(ITEM, x)` into `has(ITEM, 0)` because parseInt('x')=NaN.
+      const expandCache = new Map<string, ExprNode>();
       table.set(macroName, (...args: ExprNode[]) => {
+        const cacheKey = args.map(a => argToString(a)).join('\x00');
+        const cached = expandCache.get(cacheKey);
+        if (cached) return cached;
         let body = expr;
         for (let i = 0; i < paramNames.length; i++) {
           const val = args[i] ? argToString(args[i]) : '0';
           body = body.replace(new RegExp(`\\b${paramNames[i]}\\b`, 'g'), val);
         }
         try {
-          return parseExpr(body);
+          const result = parseExpr(body);
+          expandCache.set(cacheKey, result);
+          return result;
         } catch (e) {
           console.error('[logic] macro expand error:', macroName, '| body:', body, '->', e);
-          return { kind: 'true' };
+          const fallback: ExprNode = { kind: 'false' };
+          expandCache.set(cacheKey, fallback);
+          return fallback;
         }
       });
     } else {
@@ -46,7 +54,7 @@ function buildMacroTable(rawMacros: Record<string, string>): MacroTable {
         table.set(key, parseExpr(expr));
       } catch (e) {
         console.error('[logic] macro parse error:', key, '->', e);
-        table.set(key, { kind: 'true' });
+        table.set(key, { kind: 'false' });
       }
     }
   }
@@ -59,7 +67,7 @@ function safeParseExpr(rule: string, label: string): ReturnType<typeof parseExpr
     return parseExpr(rule);
   } catch (e) {
     console.error('[logic] parse error in', label, ':', rule, '->', e);
-    return { kind: 'true' };
+    return { kind: 'false' };
   }
 }
 

@@ -16,7 +16,7 @@ export type ExprNode =
   | { kind: 'mm_time';  type: string; start: string; end: string }
   | { kind: 'renewable'; item: string }
   | { kind: 'license';   item: string }
-  | { kind: 'price';     threshold: number }
+  | { kind: 'price';     range: string; id: number; threshold: number }
   | { kind: 'flag_on';   flag: string }
   | { kind: 'flag_off';  flag: string }
   | { kind: 'special';   name: string }
