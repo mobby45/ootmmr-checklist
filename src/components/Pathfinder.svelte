@@ -33,17 +33,24 @@
   // - For each entrance, use the mapped destination if available, else vanilla default
   // - Add edges in BOTH directions so the graph stays connected
   // - Add virtual cross-game edges (mask shop ↔ clock town)
+  // One-way erTypes: wallmasters, song warps, owl statues, water voids, boss warps.
+  // These must not get a reverse edge — traversing backwards through them is not physically possible.
+  const ONE_WAY_TYPES = new Set(['erWallmasters', 'erOneWays', 'erBoss', 'erSpawns']);
+
   // - Auto-link same-game locations sharing 2+ leading words (e.g. "MM Mountain Village"
   //   and "MM Mountain Village Cliff") to bridge naming inconsistencies in the entrance data
   function buildGraph(): Map<string, { entranceId: string; dest: string }[]> {
     const g = new Map<string, { entranceId: string; dest: string }[]>();
     for (const e of allEntrances) {
       const { src, dest: defaultDest } = parseName(e.name);
-      const dest = entranceValues.get(e.id) || defaultDest;
+      const rawDest = entranceValues.get(e.id);
+      const dest = rawDest ? parseName(rawDest).dest : defaultDest;
       if (!g.has(src)) g.set(src, []);
       g.get(src)!.push({ entranceId: e.id, dest });
-      if (!g.has(dest)) g.set(dest, []);
-      g.get(dest)!.push({ entranceId: e.id + '_rev', dest: src });
+      if (!ONE_WAY_TYPES.has(e.erType)) {
+        if (!g.has(dest)) g.set(dest, []);
+        g.get(dest)!.push({ entranceId: e.id + '_rev', dest: src });
+      }
     }
     for (const [a, b] of gameLinks) {
       if (!g.has(a)) g.set(a, []);
@@ -170,12 +177,12 @@
         on:focus={() => fromFocused = true}
         on:blur={() => setTimeout(() => fromFocused = false, 150)} />
       {#if fromInput}
-        <button class="pf-input-clear" on:click={() => fromInput = ''} tabindex="-1">✕</button>
+        <button type="button" class="pf-input-clear" on:click={() => fromInput = ''} tabindex="-1">✕</button>
       {/if}
       {#if fromFocused && fromSuggestions.length > 0}
-        <div class="pf-suggestions" on:mousedown|preventDefault={() => {}}>
+        <div class="pf-suggestions" role="listbox" tabindex="0" on:mousedown|preventDefault={() => {}}>
           {#each fromSuggestions as s}
-            <button class="pf-suggestion" on:click={() => pickFrom(s)}>{s}</button>
+            <button type="button" class="pf-suggestion" on:click={() => pickFrom(s)}>{s}</button>
           {/each}
         </div>
       {/if}
@@ -186,18 +193,18 @@
         on:focus={() => toFocused = true}
         on:blur={() => setTimeout(() => toFocused = false, 150)} />
       {#if toInput}
-        <button class="pf-input-clear" on:click={() => toInput = ''} tabindex="-1">✕</button>
+        <button type="button" class="pf-input-clear" on:click={() => toInput = ''} tabindex="-1">✕</button>
       {/if}
       {#if toFocused && toSuggestions.length > 0}
-        <div class="pf-suggestions" on:mousedown|preventDefault={() => {}}>
+        <div class="pf-suggestions" role="listbox" tabindex="0" on:mousedown|preventDefault={() => {}}>
           {#each toSuggestions as s}
-            <button class="pf-suggestion" on:click={() => pickTo(s)}>{s}</button>
+            <button type="button" class="pf-suggestion" on:click={() => pickTo(s)}>{s}</button>
           {/each}
         </div>
       {/if}
     </div>
-    <button class="pf-btn pf-btn-primary" on:click={findPath}>Find Path</button>
-    <button class="pf-btn pf-btn-clear" on:click={clearAll}>Clear</button>
+    <button type="button" class="pf-btn pf-btn-primary" on:click={findPath}>Find Path</button>
+    <button type="button" class="pf-btn pf-btn-clear" on:click={clearAll}>Clear</button>
   </div>
 
   {#if pathResult !== null}

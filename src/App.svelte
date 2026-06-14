@@ -54,14 +54,27 @@
 
   import { initializeStructuredChecks } from './util/util';
   import { parseSpoilerLog } from './util/spoilerParser';
-  import { importRandomizerSettings } from './util/importSettings';
-  import type { ErSettings, SeedInfo, SpoilerSphere, SpecialConditionsMap } from './util/spoilerParser';
+  import { importRandomizerSettings, mapOotmmStartingItems } from './util/importSettings';
+  import type { ErSettings, SeedInfo, SpoilerSphere, SpecialConditionsMap, SpecialCondition } from './util/spoilerParser';
   import { defaultErSettings } from './util/spoilerParser';
   import { defaultPresets, defaultPresetNames, presetBaseSettings } from './data/presets';
-  import { allEntrances } from './data/entranceData';
+  import { allEntrances, findReverseEntrance } from './data/entranceData';
   import * as T from './data/types';
 
   import CheckGroup from './components/CheckGroup.svelte';
+  import { initLogicStore, logicEnabled, showOutOfLogic, logicAgeFilter, logicResult, logicLoading, logicManualSettings, specialConditionsStore } from './stores/logicStore';
+  import { defaultLogicSettings } from './data/logicSettingsDef';
+
+  function ageLogic(checkName: string, result: typeof $logicResult): 'child' | 'adult' | 'both' | 'none' {
+    const n = checkName.replace(/^(OOT|MM) /, '');
+    const c = result!.childChecks.has(n);
+    const a = result!.adultChecks.has(n);
+    if (c && a) return 'both';
+    if (c) return 'child';
+    if (a) return 'adult';
+    return 'none';
+  }
+  import LogicSettings from './components/LogicSettings.svelte';
   import CheckItem from './components/CheckItem.svelte';
   import MapModal from './components/MapModal.svelte';
   import ERTracker from './components/ERTracker.svelte';
@@ -170,8 +183,7 @@ yKeepalive.observe((event: any) => {
     // Remove any active ping for this check when it gets checked
     if (state === T.CheckState.checked) {
       for (const [scene, ping] of yPings.entries()) {
-        const pn = typeof ping?.checkName === 'string' ? ping.checkName.replace(/^(OOT|MM) /, '') : null;
-        if (pn === checkName) { yPings.delete(scene); break; }
+        if (ping?.checkName === checkName) { yPings.delete(scene); break; }
       }
     }
   }
@@ -272,11 +284,10 @@ yKeepalive.observe((event: any) => {
     }, 30000);
   }
 
-  // Pinged checks visible in the checklist: check name (no prefix) → color
   $: pinnedChecks = (() => {
     const map = new Map<string, string>();
     for (const [, ping] of ($sPings as Map<string, any>).entries()) {
-      if (ping?.checkName) map.set(ping.checkName.replace(/^(OOT|MM) /, ''), ping.color ?? '#ff6b6b');
+      if (ping?.checkName) map.set(ping.checkName, ping.color ?? '#ff6b6b');
     }
     return map;
   })();
@@ -365,7 +376,7 @@ yKeepalive.observe((event: any) => {
     }
   });
   const sSettings = readableMap(ySettings);
-  $: songEventShuffle = $sSettings.get('songEventShuffle') === true;
+
   const sMqSettings = readableMap(yMqSettings);
   const sVariantSettings = readableMap(yVariantSettings);
   const sShopItems = readableMap(yShopItems);
@@ -373,7 +384,20 @@ yKeepalive.observe((event: any) => {
   const sEntrances = readableMap(yEntrances);
   const sNotes = readableMap(yNotes);
 
+  initLogicStore(yItems, ySettings, yEntrances, _itemsRevStore, sSettings, sEntrances, ySongEvents);
+
+  // Sync all logic manual settings to ySettings so the OBS overlay can read them
+  const _logicDefaults = defaultLogicSettings();
+  $: {
+    for (const [key, val] of Object.entries($logicManualSettings)) {
+      if (val !== undefined && val !== _logicDefaults[key]) ySettings.set(key, val);
+      else ySettings.delete(key);
+    }
+  }
+
   $: checkStatesMap = new Map($sChecks) as Map<string, T.CheckState>;
+  // Only consider settings as "from spoiler" when a real spoiler is loaded
+  $: spoilerSettingKeys = spoilerSeedInfo ? new Set(($sSettings as Map<string, any>).keys()) : new Set<string>();
   $: shopItemsMap = new Map($sShopItems) as Map<string, string>;
   $: shopPricesMap = new Map($sShopPrices) as Map<string, number>;
   $: entranceValuesMap = (spoilerFillEntrances && spoilerEntrances)
@@ -1328,6 +1352,13 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
   };
   $: showTypeColors = (displaySettings.showTypeColors ?? true) as boolean;
 
+  $: gameTab = (displaySettings.OOTMM ?? 'both') as string;
+
+  function setGameTab(tab: string) {
+    saveDisplaySetting('OOTMM', tab);
+    saveDisplaySetting('OOTMMDungeons', tab === 'oot' ? 'ootdungeons' : tab === 'mm' ? 'mmdungeons' : 'both');
+  }
+
   // ==========================================
   // SPOILER LOG
   // Locations are stored without OOT/MM prefix for check name lookup
@@ -1351,6 +1382,20 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     const out: Record<string, string> = {};
     for (const [k, v] of Object.entries(raw)) out[SPOILER_ALIASES[k] ?? k] = v;
     return out;
+  }
+
+  function applyJunkLocations(junkLocs: string[]) {
+    if (!junkLocs.length) return;
+    ydoc.transact(() => {
+      for (const loc of junkLocs) {
+        // Strip game prefix ("OOT "/"MM ") — tracker check names don't have it
+        const name = loc.replace(/^(OOT|MM) /, '');
+        const canonical = SPOILER_ALIASES[name] ?? name;
+        if ((yChecks.get(canonical) ?? T.CheckState.unchecked) === T.CheckState.unchecked) {
+          yChecks.set(canonical, T.CheckState.checked);
+        }
+      }
+    });
   }
 
   let spoilerLocations: Record<string, string> = applyAliases(JSON.parse(localStorage.getItem('spoilerLocations') ?? '{}'));
@@ -1426,6 +1471,13 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
   }
   let inviteCopied = false;
   let watchCopied = false;
+  let roomCodeCopied = false;
+  function summaryClick(e: MouseEvent) {
+    if ((e.target as Element).closest('.room-code-copy')) {
+      e.preventDefault();
+      copyText(roomBaseCode ?? '', (v) => roomCodeCopied = v);
+    }
+  }
   function copyText(text: string, setFlag: (v: boolean) => void) {
     navigator.clipboard.writeText(text).then(() => {
       setFlag(true);
@@ -1465,7 +1517,6 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
   let spoilerErSettings: ErSettings | null = JSON.parse(localStorage.getItem('spoilerErSettings') ?? 'null');
   let spoilerExtraEr: Record<string, any> | null = JSON.parse(localStorage.getItem('spoilerExtraEr') ?? 'null');
   let spoilerEntrances: Record<string, string> | null = JSON.parse(localStorage.getItem('spoilerEntrances') ?? 'null');
-  let spoilerSongEvents: Record<string, string> = JSON.parse(localStorage.getItem('spoilerSongEvents') ?? '{}');
   let spoilerFillEntrances = localStorage.getItem('spoilerFillEntrances') === 'true';
 
   function toggleSpoilerFillEntrances() {
@@ -1558,8 +1609,6 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
       localStorage.setItem('spoilerExtraEr', JSON.stringify(spoilerExtraEr));
       spoilerEntrances = Object.keys(data.entrances).length ? data.entrances : null;
       localStorage.setItem('spoilerEntrances', JSON.stringify(spoilerEntrances));
-      spoilerSongEvents = data.songEvents;
-      localStorage.setItem('spoilerSongEvents', JSON.stringify(data.songEvents));
       spoilerSpecialConditions = data.specialConditions;
       localStorage.setItem('spoilerSpecialConditions', JSON.stringify(data.specialConditions));
       spoilerCoinCounts = {
@@ -1601,6 +1650,16 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
         saveDisplaySetting('OOTMM', data.OOTMM);
         saveDisplaySetting('OOTMMDungeons', data.OOTMMDungeons);
       });
+      // Apply starting items from spoiler (non-destructive: only raise, never lower)
+      if (Object.keys(data.startingItems).length > 0) {
+        const mapped = mapOotmmStartingItems(data.startingItems);
+        for (const [itemId, level] of Object.entries(mapped)) {
+          const current = yItems.get(itemId) ?? 0;
+          if (current < level) yItems.set(itemId, level);
+        }
+      }
+      // Auto-check junk locations (nothing useful to find there)
+      applyJunkLocations(data.junkLocations);
     };
     shareSpoiler = false;
     input.click();
@@ -1644,6 +1703,13 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     Object.entries(preset.settings).forEach(([k, v]) => ySettings.set(k, v));
     saveDisplaySetting('OOTMM', preset.OOTMM ?? 'both');
     saveDisplaySetting('OOTMMDungeons', preset.OOTMMDungeons ?? 'both');
+    // Apply preset starting items: set each item to at least the preset's required level.
+    if (preset.startingItems) {
+      for (const [itemId, level] of Object.entries(preset.startingItems)) {
+        const current = yItems.get(itemId) ?? 0;
+        if (current < level) yItems.set(itemId, level);
+      }
+    }
   }
 
   function exportPresets() {
@@ -1774,22 +1840,59 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
   // ==========================================
   let mapData: MapData | null = null;
   let showMapModal = false;
+
   let currentMapScene = '';
   let currentSceneData: SceneData | null = null;
   let mapInitialSubscene = '';
   let currentGroupName = '';
   let matchedScenes: string[] = [];
   let filteredCheckNames: Set<string> = new Set();
+
+  // Ordered list of primary scenes from the checklist (for ‹ › navigation)
+  $: checklistNavScenes = (sortedChecks ?? []).flatMap(g => {
+    const normalize = (s: string) => s.toLowerCase().replace(/[''']/g, '').replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
+    const overrides = (groupToSceneMapping as Record<string, string[]>)[g.groupName];
+    if (overrides?.length) return overrides.filter(s => mapData?.[s]).slice(0, 1);
+    const np = normalize(g.groupName);
+    const scene = Object.keys(mapData ?? {}).find(s => {
+      const ns = normalize(s);
+      return ns === np || ns.replace(/^(oot|mm) /, '') === np;
+    });
+    return scene ? [scene] : [];
+  });
   let showAgeFilter = true;
   let ageFilter: 'child' | 'adult' = 'child';
   let scrollPosition = 0;
   let erHighlightId: string | null = null;
 
-  // Rebuild map data when MQ settings change
-  $: if ($sMqSettings) {
-    buildMapData($sMqSettings).then(data => {
-      mapData = data;
-    });
+  // Rebuild map data only when MQ settings actually change
+  let lastMqKey = '';
+  $: {
+    const key = JSON.stringify([...$sMqSettings.entries()].sort());
+    if (key !== lastMqKey) {
+      lastMqKey = key;
+      buildMapData($sMqSettings).then(data => { mapData = data; });
+    }
+  }
+
+  let mapImagesPreloaded = false;
+  $: if (mapData && !mapImagesPreloaded) {
+    mapImagesPreloaded = true;
+    const srcs = [...new Set(
+      Object.values(mapData).flatMap(sd =>
+        Object.values(sd.subscenes).map(sub => `/ootmmr-checklist/maps/${sub.image}`)
+      )
+    )];
+    setTimeout(() => {
+      const BATCH = 20;
+      let idx = 0;
+      function loadBatch() {
+        srcs.slice(idx, idx + BATCH).forEach(src => { const img = new Image(); img.src = src; });
+        idx += BATCH;
+        if (idx < srcs.length) setTimeout(loadBatch, 150);
+      }
+      loadBatch();
+    }, 2000);
   }
 
   // Some check names differ between CSV (map) and JSON (checklist)
@@ -1825,6 +1928,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     'Snowhead Temple': ['MM_TEMPLE_SNOWHEAD'],
     'Great Bay Temple': ['MM_TEMPLE_GREAT_BAY'],
     'Stone Tower Temple': ['MM_TEMPLE_STONE_TOWER', 'MM_TEMPLE_STONE_TOWER_INVERTED'],
+    'Stone Tower Temple Inverted': ['MM_TEMPLE_STONE_TOWER_INVERTED', 'MM_TEMPLE_STONE_TOWER'],
     'The Moon': ['MM_MOON'],
   };
 
@@ -1854,72 +1958,75 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     scrollPosition = 0;
   }
 
-  function normEntName(s: string): string {
-    return s.replace(/ \(Game Link\)$/, '').replace(/ from .+$/, '');
-  }
-
-  function findReverseEntrance(ent: { name: string; id: string }) {
-    const i = ent.name.indexOf(' to ');
-    if (i < 0) return undefined;
-    const nSrc = normEntName(ent.name.slice(0, i));
-    const nDst = normEntName(ent.name.slice(i + 4));
-    const parts = (e: { name: string }) => { const j = e.name.indexOf(' to '); return j < 0 ? null : [normEntName(e.name.slice(0, j)), normEntName(e.name.slice(j + 4))] as const; };
-    // 1. Exact match on normalized names — handles Game Link and "from X" qualifiers automatically
-    const exact = allEntrances.find(e => { const p = parts(e); return p !== null && p[0] === nDst && p[1] === nSrc; });
-    if (exact) return exact;
-    // 2. Source has extra qualifier beyond normalized dst (e.g. "Lost Woods Lost Forest" vs "Lost Woods")
-    return allEntrances.find(e => { const p = parts(e); return p !== null && p[1] === nSrc && p[0].startsWith(nDst + ' '); });
-  }
-
   async function handleOpenErForEntrance(entranceId: string) {
+    erHighlightId = null;
+    await tick();
     erHighlightId = entranceId;
     showMapModal = false;
     secEr = true;
     erTab = 'tracker';
     localStorage.setItem('sec_er', 'true');
-    // Wait for modal close + scroll restore, then scroll to ER section and flash the row
     setTimeout(async () => {
       const el = document.getElementById('er-tracker-details');
       if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
       await tick();
-      // Clear highlight after animation completes
       setTimeout(() => { erHighlightId = null; }, 2500);
     }, 120);
   }
 
   async function openMapForEntrance(entranceId: string) {
     if (!mapData) return;
-    // If a destination is assigned, navigate to the spawn point (reverse entrance interior) if available
-    let targetId = entranceId;
-    const destName = entranceValuesMap.get(entranceId);
-    if (destName) {
-      const destEntrance = allEntrances.find(e => e.name === destName);
-      if (destEntrance) {
-        // Prefer the destination's own position (the scene you arrive in)
-        // Fallback: reverse of destination (exterior perspective)
-        if (entrancePositions.some(p => p.entranceId === destEntrance.id)) {
-          targetId = destEntrance.id;
-        } else {
-          const rev = findReverseEntrance(destEntrance);
-          if (rev && entrancePositions.some(p => p.entranceId === rev.id)) targetId = rev.id;
+
+    const normalize = (s: string) =>
+      s.toLowerCase().replace(/[''']/g, '').replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
+
+    function findSceneByAreaName(areaName: string): string | undefined {
+      const words = normalize(areaName).split(' ');
+      const keys  = Object.keys(mapData!);
+      // Try longest prefix first, then drop trailing qualifier words one by one.
+      // "OOT Lost Woods Bridge" → tries "oot lost woods bridge" (no match)
+      //                         → tries "oot lost woods"        (matches OOT_LOST_WOODS) ✓
+      for (let len = words.length; len >= 2; len--) {
+        const candidate = words.slice(0, len).join(' ');
+        const found = keys.find(s => {
+          const ns = normalize(s);
+          return ns === candidate || ns.replace(/^(oot|mm) /, '') === candidate.replace(/^(oot|mm) /, '');
+        });
+        if (found) return found;
+      }
+      return undefined;
+    }
+
+    async function openScene(sceneKey: string, subscene = '') {
+      scrollPosition = window.scrollY;
+      currentGroupName = '';
+      filteredCheckNames = new Set();
+      currentMapScene = sceneKey;
+      currentSceneData = mapData![sceneKey];
+      mapInitialSubscene = subscene;
+      if (showMapModal) { showMapModal = false; await tick(); }
+      showMapModal = true;
+    }
+
+    const sourceEntrance = allEntrances.find(e => e.id === entranceId);
+
+    // Priority 1: entrance position marker — most precise, opens the exact source subscene
+    // e.g. "Kokiri Forest Near Deku Tree" → opens Kokiri Forest at the entrance marker spot
+    const pos = entrancePositions.find(p => p.entranceId === entranceId);
+    if (pos) {
+      for (const [sceneKey, sd] of Object.entries(mapData)) {
+        if (sd.subscenes[pos.renderscene]) {
+          await openScene(sceneKey, pos.renderscene);
+          return;
         }
       }
     }
-    const pos = entrancePositions.find(p => p.entranceId === targetId);
-    if (!pos) return;
-    const renderscene = pos.renderscene;
-    for (const [sceneKey, sd] of Object.entries(mapData)) {
-      if (sd.subscenes[renderscene]) {
-        scrollPosition = window.scrollY;
-        currentGroupName = '';
-        filteredCheckNames = new Set();
-        currentMapScene = sceneKey;
-        currentSceneData = sd;
-        mapInitialSubscene = renderscene;
-        if (showMapModal) { showMapModal = false; await tick(); }
-        showMapModal = true;
-        return;
-      }
+
+    // Fallback: resolve source area name ("X to Y" → X)
+    if (sourceEntrance) {
+      const sourceArea = sourceEntrance.name.split(' to ')[0];
+      const sceneKey = sourceArea ? findSceneByAreaName(sourceArea) : undefined;
+      if (sceneKey) { await openScene(sceneKey); return; }
     }
   }
 
@@ -1977,7 +2084,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
   function handleMapToggle(event: CustomEvent) {
     if (isWatchMode) return;
     const fromMap = event.detail.checkName;
-    const actual = checkNameMappingReverse[fromMap] ?? fromMap.replace(/^(OOT|MM) /, '');
+    const actual = checkNameMappingReverse[fromMap] ?? fromMap;
     const newState = toggleState(yChecks.get(actual) ?? T.CheckState.unchecked);
     yChecks.set(actual, newState);
     setAuthor(actual, newState);
@@ -2009,6 +2116,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     'ICE_CAVERN',
     'GANON_TOWER',
     'INSIDE_GANON_CASTLE',
+    'GERUDO_TRAINING_GROUND',
   ];
 
   const mmDungeons = [
@@ -2026,9 +2134,6 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     'LAIR_IKANA',
     'SPIDER_HOUSE_SWAMP',
     'SPIDER_HOUSE_OCEAN',
-    'PIRATE_FORTRESS_INTERIOR',
-    'PIRATE_FORTRESS_ENTRANCE',
-    'PIRATE_FORTRESS_EXTERIOR',
     'LAIR_MAJORA',
   ];
 
@@ -2045,7 +2150,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
   const toggleState = (x: T.CheckState) => (x !== T.CheckState.checked ? T.CheckState.checked : T.CheckState.unchecked);
 
   let filter = '';
-  let hideChecked = false;
+  let hideChecked: boolean = localStorage.getItem('hideChecked') === 'true';
 
   // ==========================================
   // CHECK FILTERING PREDICATE
@@ -2129,9 +2234,9 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
 
     // --- Scrubs ---
     let matchesScrubsOOT = true;
-    if (check.type === T.CheckType.deku_scrub && !check.tags.includes(T.Tag.special_scrub)) {
+    if (check.type === T.CheckType.deku_scrub && !check.tags.includes(T.Tag.special_scrub))
       matchesScrubsOOT = $sSettings.get('ScrubsOOT') ?? false;
-    }
+
     let matchesScrubsMM = true;
     if (check.game === T.Game.mm && check.id?.startsWith('SCRUB_')) {
       const special = ['SCRUB_TELESCOPE', 'SCRUB_BOMB_BAG'];
@@ -2426,6 +2531,15 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
       ? ($sVariantSettings.get(group.groupName) ?? 0) === check.variantNumber
       : true;
     const matchesHide = (!ignoreHide && hideChecked) ? $sChecks.get(check.name) !== T.CheckState.checked : true;
+    const matchesAge = $logicAgeFilter === 'both' || check.game !== T.Game.oot || !check.age || check.age === 'both' || check.age === $logicAgeFilter;
+    const matchesLogic = (!ignoreHide && $logicEnabled && !$showOutOfLogic && $logicResult)
+      ? (() => {
+          const n = check.name.replace(/^(OOT|MM) /, '');
+          if ($logicAgeFilter === 'child') return $logicResult.childChecks.has(n);
+          if ($logicAgeFilter === 'adult') return $logicResult.adultChecks.has(n);
+          return $logicResult.childChecks.has(n) || $logicResult.adultChecks.has(n);
+        })()
+      : true;
 
     const passesCategories =
       matchesOverworld &&
@@ -2496,16 +2610,50 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
       passesCategories &&
       matchesMq &&
       matchesVariant &&
-      matchesHide
+      matchesAge &&
+      matchesHide &&
+      matchesLogic
     );
   };
 
   // ==========================================
   // FILTERED & SORTED CHECKS
   // ==========================================
+
+  $: erIsActive = Object.values(activeErSettings).some(Boolean);
+  $: spawnHint = (activeErSettings.erSpawns && !entranceValuesMap.get('OOT_SPAWN_CHILD') && !entranceValuesMap.get('OOT_SPAWN_ADULT'))
+    ? 'Set your spawn entrances in the ER Tracker to get started.'
+    : null;
+
+  // Map groupName → entrances that originate from that zone (source area matches group name)
+  $: groupEntranceMap = (() => {
+    const norm = (s: string) =>
+      s.toLowerCase().replace(/^(oot|mm) /i, '').replace(/[''']/g, '').replace(/\s+/g, ' ').trim();
+    const map = new Map<string, typeof allEntrances>();
+    for (const e of allEntrances) {
+      const srcArea = e.name.split(' to ')[0];
+      const key = norm(srcArea);
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(e);
+    }
+    return map;
+  })();
+
+  function groupHasEntrances(groupName: string): boolean {
+    const norm = (s: string) =>
+      s.toLowerCase().replace(/[''']/g, '').replace(/\s+/g, ' ').trim();
+    return groupEntranceMap.has(norm(groupName));
+  }
+
   $: filteredChecks = structuredChecks?.flatMap(group => {
     const filtered = group.checks.filter(c => checkPredicate(group, c));
-    return filtered.length === 0 ? [] : [{ ...group, checks: filtered }];
+    if (filtered.length === 0) {
+      // Only keep the group as "entrance-only" if there are genuinely no type-visible checks
+      // (not just all-checked with hide-checked on)
+      const typeVisible = group.checks.filter(c => checkPredicate(group, c, true));
+      if (typeVisible.length > 0 || !erIsActive || !groupHasEntrances(group.groupName)) return [];
+    }
+    return [{ ...group, checks: filtered }];
   });
 
   $: countableChecks = structuredChecks?.flatMap(group => {
@@ -2521,16 +2669,27 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     {} as Record<string, boolean>,
   ) ?? {});
 
-  $: groupCheckCounts = trackDep($_checksRevStore, countableChecks?.reduce(
-    (acc, group) => {
-      acc[group.groupName] = {
-        checked: group.checks.filter(c => yChecks.get(c.name) === T.CheckState.checked).length,
-        total: group.checks.length,
-      };
-      return acc;
-    },
-    {} as Record<string, { checked: number; total: number }>,
-  ) ?? {});
+  $: groupCheckCounts = (() => {
+    void $_checksRevStore;
+    const lr = $logicEnabled ? $logicResult : null;
+    const ageFilter = $logicAgeFilter;
+    const result: Record<string, { checked: number; total: number; accessible?: number }> = {};
+    for (const group of countableChecks ?? []) {
+      const checked = group.checks.filter(c => yChecks.get(c.name) === T.CheckState.checked).length;
+      const total = group.checks.length;
+      let accessible: number | undefined;
+      if (lr) {
+        accessible = group.checks.filter(c => {
+          const n = c.name.replace(/^(OOT|MM) /, '');
+          if (ageFilter === 'child') return lr.childChecks.has(n);
+          if (ageFilter === 'adult') return lr.adultChecks.has(n);
+          return lr.childChecks.has(n) || lr.adultChecks.has(n);
+        }).length;
+      }
+      result[group.groupName] = accessible !== undefined ? { checked, total, accessible } : { checked, total };
+    }
+    return result;
+  })();
 
   $: totalCheckCount = trackDep($_checksRevStore, countableChecks?.reduce(
     (acc, group) => {
@@ -2541,30 +2700,121 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     { checked: 0, total: 0 },
   ) ?? { checked: 0, total: 0 });
 
-  $: ootCheckCount = trackDep($_checksRevStore, countableChecks?.reduce(
-    (acc, group) => {
-      const oot = group.checks.filter(c => c.game === T.Game.oot);
-      acc.checked += oot.filter(c => yChecks.get(c.name) === T.CheckState.checked).length;
-      acc.total += oot.length;
-      return acc;
-    },
-    { checked: 0, total: 0 },
-  ) ?? { checked: 0, total: 0 });
+  $: ootCheckCount = (() => {
+    void $_checksRevStore;
+    const lr = $logicEnabled ? $logicResult : null;
+    const af = $logicAgeFilter;
+    return countableChecks?.reduce(
+      (acc, group) => {
+        const oot = group.checks.filter(c => c.game === T.Game.oot);
+        acc.checked += oot.filter(c => yChecks.get(c.name) === T.CheckState.checked).length;
+        acc.total += oot.length;
+        if (lr) acc.accessible += oot.filter(c => {
+          const n = c.name.replace(/^(OOT|MM) /, '');
+          if (af === 'child') return lr.childChecks.has(n);
+          if (af === 'adult') return lr.adultChecks.has(n);
+          return lr.childChecks.has(n) || lr.adultChecks.has(n);
+        }).length;
+        return acc;
+      },
+      { checked: 0, total: 0, accessible: lr ? 0 : -1 },
+    ) ?? { checked: 0, total: 0, accessible: -1 };
+  })();
 
-  $: mmCheckCount = trackDep($_checksRevStore, countableChecks?.reduce(
-    (acc, group) => {
-      const mm = group.checks.filter(c => c.game === T.Game.mm);
-      acc.checked += mm.filter(c => yChecks.get(c.name) === T.CheckState.checked).length;
-      acc.total += mm.length;
-      return acc;
-    },
-    { checked: 0, total: 0 },
-  ) ?? { checked: 0, total: 0 });
+  $: mmCheckCount = (() => {
+    void $_checksRevStore;
+    const lr = $logicEnabled ? $logicResult : null;
+    const af = $logicAgeFilter;
+    return countableChecks?.reduce(
+      (acc, group) => {
+        const mm = group.checks.filter(c => c.game === T.Game.mm);
+        acc.checked += mm.filter(c => yChecks.get(c.name) === T.CheckState.checked).length;
+        acc.total += mm.length;
+        if (lr) acc.accessible += mm.filter(c => {
+          const n = c.name.replace(/^(OOT|MM) /, '');
+          if (af === 'child') return lr.childChecks.has(n);
+          if (af === 'adult') return lr.adultChecks.has(n);
+          return lr.childChecks.has(n) || lr.adultChecks.has(n);
+        }).length;
+        return acc;
+      },
+      { checked: 0, total: 0, accessible: lr ? 0 : -1 },
+    ) ?? { checked: 0, total: 0, accessible: -1 };
+  })();
 
   let sortMode: 'default' | 'alpha' = 'default';
   $: sortedChecks = filteredChecks
     ? [...filteredChecks].sort((a, b) => (sortMode === 'alpha' ? a.groupName.localeCompare(b.groupName) : 0))
     : filteredChecks;
+
+  let splitModeOot: 'ow' | 'dj' | 'both' = 'both';
+  let splitModeMm:  'ow' | 'dj' | 'both' = 'both';
+  let ootTimestamp = Date.now();
+  let mmTimestamp  = Date.now();
+
+  function forceOpenGame(isOot: boolean) {
+    const groups = isOot ? ootSplitChecks : mmSplitChecks;
+    const shouldCollapse = isOot ? ootShouldCollapse : mmShouldCollapse;
+    const open = !shouldCollapse;
+    for (const g of (groups ?? [])) {
+      groupStates.set(g.groupName, open);
+      allGroupStatesMemory.set(g.groupName, open);
+    }
+    groupStates = new Map(groupStates);
+    localStorage.setItem('groupStates', JSON.stringify([...allGroupStatesMemory]));
+    if (isOot) ootTimestamp = Date.now();
+    else       mmTimestamp  = Date.now();
+  }
+  let splitRatio = parseFloat(localStorage.getItem('splitRatio') ?? '50');
+
+  function startSplitResize(e: PointerEvent) {
+    const el = (e.currentTarget as HTMLElement).closest('.split-layout') as HTMLElement;
+    if (!el) return;
+    e.preventDefault();
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    function onMove(ev: PointerEvent) {
+      const rect = el.getBoundingClientRect();
+      splitRatio = Math.min(80, Math.max(20, ((ev.clientX - rect.left) / rect.width) * 100));
+    }
+    function onUp() {
+      localStorage.setItem('splitRatio', String(splitRatio));
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+    }
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  }
+
+  function isDungeonGroup(g: T.CheckGroup): boolean {
+    return !!(g.checks[0]?.scene && allDungeons.includes(g.checks[0].scene));
+  }
+  function splitFilter(isDungeon: boolean, mode: 'ow' | 'dj' | 'both'): boolean {
+    if (mode === 'both') return true;
+    return mode === 'dj' ? isDungeon : !isDungeon;
+  }
+
+  function groupGame(g: T.CheckGroup): 'oot' | 'mm' | null {
+    if (g.checks.length > 0) return g.checks[0].game;
+    // For entrance-only groups (0 visible checks), look up the unfiltered original
+    const original = structuredChecks?.find(sc => sc.groupName === g.groupName);
+    if (original && original.checks.length > 0) return original.checks[0].game;
+    return null;
+  }
+
+  $: ootSplitChecks = (sortedChecks ?? []).filter(g => {
+    const game = groupGame(g);
+    return game === 'oot' && splitFilter(isDungeonGroup(g), splitModeOot);
+  });
+  $: mmSplitChecks = (sortedChecks ?? []).filter(g => {
+    const game = groupGame(g);
+    return game === 'mm' && splitFilter(isDungeonGroup(g), splitModeMm);
+  });
+  // Single-column view: filter by active game tab so entrance-only groups don't leak across games
+  $: singleColChecks = (sortedChecks ?? []).filter(g => {
+    if (gameTab === 'oot') return groupGame(g) === 'oot';
+    if (gameTab === 'mm') return groupGame(g) === 'mm';
+    return true;
+  });
 
   $: visibleGroupCount = sortedChecks?.length ?? 0;
   $: visibleCheckCount = sortedChecks?.reduce((a, g) => a + g.checks.length, 0) ?? 0;
@@ -2711,6 +2961,8 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
   }
 
   $: shouldShowCollapse = groupStates.size > 0 ? Array.from(groupStates.values()).some(s => s) : allGroupsExpanded;
+  $: ootShouldCollapse = (ootSplitChecks ?? []).some(g => groupStates.get(g.groupName) ?? allGroupsExpanded);
+  $: mmShouldCollapse  = (mmSplitChecks  ?? []).some(g => groupStates.get(g.groupName) ?? allGroupsExpanded);
 
   function exportAllEntranceMarkers() {
     let markers: { uid?: string; id: string; renderscene: string; x: number; y: number }[] = [];
@@ -2853,6 +3105,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     [...yEntrances.keys()].forEach(k => yEntrances.delete(k));
     [...yItems.keys()].forEach(k => yItems.delete(k));
     [...yNotes.keys()].forEach(k => yNotes.delete(k));
+    [...ySongEvents.keys()].forEach(k => ySongEvents.delete(k));
     yHints.delete(0, yHints.length);
     spoilerLocations = {};
     localStorage.removeItem('spoilerLocations');
@@ -2866,8 +3119,6 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     localStorage.removeItem('spoilerExtraEr');
     spoilerEntrances = null;
     localStorage.removeItem('spoilerEntrances');
-    spoilerSongEvents = {};
-    localStorage.removeItem('spoilerSongEvents');
     spoilerFillEntrances = false;
     localStorage.removeItem('spoilerFillEntrances');
     spoilerSpecialConditions = null;
@@ -2892,9 +3143,9 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
 
   function resetSettings() {
     if (!window.confirm('Are you sure you want to reset all settings to default?')) return;
+    logicManualSettings.set(defaultLogicSettings());
     [...ySettings.keys()].forEach(k => ySettings.delete(k));
     [...ySongEvents.keys()].forEach(k => ySongEvents.delete(k));
-    [...yEntrances.keys()].forEach(k => yEntrances.delete(k));
     saveDisplaySetting('OOTMM', 'both');
     saveDisplaySetting('OOTMMDungeons', 'both');
     saveDisplaySetting('showUnshuffledGS', false);
@@ -2945,13 +3196,13 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     randoImportError = '';
     randoImportOk = false;
     try {
-      const { appSettings, clearedKeys, unmapped } = await importRandomizerSettings(randoImportStr);
-      ydoc.transact(() => {
-        // Apply settings present in the hash
-        Object.entries(appSettings).forEach(([k, v]) => ySettings.set(k, v));
-        // Delete settings absent from hash (= OoTMM default = disabled)
-        clearedKeys.forEach(k => ySettings.delete(k));
-      });
+      const { appSettings, startingItems, unmapped, junkLocations } = await importRandomizerSettings(randoImportStr);
+      Object.entries(appSettings).forEach(([k, v]) => ySettings.set(k, v));
+      for (const [itemId, level] of Object.entries(startingItems)) {
+        const current = yItems.get(itemId) ?? 0;
+        if (current < level) yItems.set(itemId, level);
+      }
+      applyJunkLocations(junkLocations);
       randoImportOk = true;
       randoImportStr = '';
       if (unmapped.length) console.info('Unmapped settings:', unmapped);
@@ -2970,7 +3221,6 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
       localStorage.setItem('spoilerExtraEr', JSON.stringify(mergedEr));
       setTimeout(() => { randoImportOpen = false; randoImportOk = false; }, 1200);
     } catch (e: any) {
-      console.error('[Hash Import] Error:', e);
       randoImportError = e?.message ?? 'Unknown error';
     }
   }
@@ -3183,9 +3433,91 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     localStorage.setItem('theme', theme);
   }
 
-  let activeTab: 'oot' | 'mm' | 'other' = 'oot';
+  let activeTab: 'oot' | 'mm' | 'other' | 'logic' | 'conditions' = 'oot';
+
+  const CONDITION_NAMES = ['BRIDGE', 'MOON', 'LACS', 'GANON_BK', 'MAJORA'] as const;
+  type ConditionName = typeof CONDITION_NAMES[number];
+  const CONDITION_LABELS: Record<ConditionName, string> = {
+    BRIDGE: 'Rainbow Bridge', MOON: 'Moon', LACS: 'LACS',
+    GANON_BK: "Ganon's BK", MAJORA: 'Majora',
+  };
+  const COND_FLAGS: { key: keyof SpecialCondition; label: string }[] = [
+    { key: 'stones',        label: 'Stones'       },
+    { key: 'medallions',    label: 'Medallions'   },
+    { key: 'remains',       label: 'Remains'      },
+    { key: 'skullsGold',    label: 'Gold Skulls'  },
+    { key: 'skullsSwamp',   label: 'Swamp Skulls' },
+    { key: 'skullsOcean',   label: 'Ocean Skulls' },
+    { key: 'fairiesWF',     label: 'WF Fairies'   },
+    { key: 'fairiesSH',     label: 'SH Fairies'   },
+    { key: 'fairiesGB',     label: 'GB Fairies'   },
+    { key: 'fairiesST',     label: 'ST Fairies'   },
+    { key: 'fairyTown',     label: 'Town Fairy'   },
+    { key: 'masksRegular',  label: 'Reg. Masks'   },
+    { key: 'masksTransform',label: 'Trans. Masks' },
+    { key: 'masksOot',      label: 'OoT Masks'    },
+    { key: 'triforce',      label: 'Triforce'     },
+    { key: 'coinsRed',      label: 'Red Coins'    },
+    { key: 'coinsGreen',    label: 'Green Coins'  },
+    { key: 'coinsBlue',     label: 'Blue Coins'   },
+    { key: 'coinsYellow',   label: 'Yellow Coins' },
+  ];
+
+  // Static max count per flag (coins/triforce are seed-dependent → unknown)
+  const COND_FLAG_MAX: Partial<Record<keyof SpecialCondition, number>> = {
+    stones: 3, medallions: 6, remains: 4,
+    skullsGold: 100, skullsSwamp: 30, skullsOcean: 30,
+    fairiesWF: 15, fairiesSH: 15, fairiesGB: 15, fairiesST: 15, fairyTown: 1,
+    masksRegular: 21, masksTransform: 4, masksOot: 12,
+  };
+
+  function getCondMax(cond: SpecialCondition | undefined): { total: number; known: boolean } | null {
+    if (!cond) return null;
+    let total = 0, anyFlag = false, hasUnknown = false;
+    for (const [key, val] of Object.entries(cond)) {
+      if (key === 'count' || !val) continue;
+      anyFlag = true;
+      const m = COND_FLAG_MAX[key as keyof SpecialCondition];
+      if (m === undefined) hasUnknown = true;
+      else total += m;
+    }
+    return anyFlag ? { total, known: !hasUnknown } : null;
+  }
+  const EMPTY_COND = (): SpecialCondition => ({
+    count: 0, stones: false, medallions: false, remains: false,
+    skullsGold: false, skullsSwamp: false, skullsOcean: false,
+    fairiesWF: false, fairiesSH: false, fairiesGB: false, fairiesST: false, fairyTown: false,
+    masksRegular: false, masksTransform: false, masksOot: false,
+    triforce: false, coinsRed: false, coinsGreen: false, coinsBlue: false, coinsYellow: false,
+  });
+  let manualConditions: Record<ConditionName, SpecialCondition> =
+    JSON.parse(localStorage.getItem('manualConditions') ?? 'null') ??
+    Object.fromEntries(CONDITION_NAMES.map(n => [n, EMPTY_COND()])) as Record<ConditionName, SpecialCondition>;
+
+  function updateConditionCount(name: ConditionName, e: Event) {
+    updateCondition(name, 'count', parseInt((e.target as HTMLInputElement).value) || 0);
+  }
+  function updateConditionFlag(name: ConditionName, key: keyof SpecialCondition, e: Event) {
+    updateCondition(name, key, (e.target as HTMLInputElement).checked);
+  }
+  function getCondFlag(cond: SpecialCondition | undefined, key: string): boolean {
+    return !!((cond as any)?.[key]);
+  }
+  function updateCondition(name: ConditionName, key: keyof SpecialCondition | 'count', value: any) {
+    if (isWatchMode) return;
+    manualConditions = { ...manualConditions, [name]: { ...manualConditions[name], [key]: value } };
+    localStorage.setItem('manualConditions', JSON.stringify(manualConditions));
+  }
+  function resetCondition(name: ConditionName) {
+    if (isWatchMode) return;
+    manualConditions = { ...manualConditions, [name]: EMPTY_COND() };
+    localStorage.setItem('manualConditions', JSON.stringify(manualConditions));
+  }
   let compact = false;
   let showLegend = false;
+  const isDevEnv = import.meta.env.DEV;
+  let devMode = isDevEnv && localStorage.getItem('devMode') === 'true';
+  function toggleDevMode() { devMode = !devMode; localStorage.setItem('devMode', String(devMode)); }
   let showShortcuts = false;
   let scrollY = 0;
 
@@ -3672,11 +4004,15 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
 
   $: hasSpoilerData = spoilerSeedInfo !== null || Object.keys(spoilerLocations).length > 0;
 
-  $: specialConditionEntries = spoilerSpecialConditions
-    ? Object.entries(spoilerSpecialConditions).filter(([, cond]) => cond.count > 0 || Object.values(cond).some(v => v === true))
-    : [];
+  $: {
+    const hasManual = CONDITION_NAMES.some(n => manualConditions[n]?.count > 0);
+    specialConditionsStore.set(spoilerSpecialConditions ?? (hasManual ? (manualConditions as unknown as SpecialConditionsMap) : null));
+  }
 
-  $: conditionProgress = trackDep($_itemsRevStore, spoilerSpecialConditions ? computeConditionProgress(spoilerSpecialConditions, spoilerCoinCounts) : null);
+  $: _activeConditions = spoilerSpecialConditions ?? (manualConditions as unknown as SpecialConditionsMap);
+  $: specialConditionEntries = Object.entries(_activeConditions).filter(([, cond]) => cond.count > 0 || Object.values(cond).some(v => v === true));
+
+  $: conditionProgress = trackDep($_itemsRevStore, specialConditionEntries.length > 0 ? computeConditionProgress(_activeConditions, spoilerCoinCounts) : null);
 
   function computeConditionProgress(conditions: import('./util/spoilerParser').SpecialConditionsMap, coinCounts: Record<string, number>): Record<string, Record<string, { obtained: number; total: number }>> {
     const result: Record<string, Record<string, { obtained: number; total: number }>> = {};
@@ -3767,8 +4103,8 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
   {#if relocationCode}
     <div class="relocation-banner">
       🔒 Room password changed by host
-      <button class="pure-button" on:click={() => { const pw = window.prompt('Enter the new room password:'); if (pw != null) { const code = relocationCode; persistRelocationCode(null, 'dismiss'); if (code) joinCoopRoom(code, pw.trim() || undefined); } }}>Join new room</button>
-      <button class="pure-button" on:click={() => persistRelocationCode(null, 'dismiss')}>Dismiss</button>
+      <button type="button" class="pure-button" on:click={() => { const pw = window.prompt('Enter the new room password:'); if (pw != null) { const code = relocationCode; persistRelocationCode(null, 'dismiss'); if (code) joinCoopRoom(code, pw.trim() || undefined); } }}>Join new room</button>
+      <button type="button" class="pure-button" on:click={() => persistRelocationCode(null, 'dismiss')}>Dismiss</button>
     </div>
   {/if}
   <main class:modal-active={showMapModal}>
@@ -3776,43 +4112,17 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     <section class="top-bar">
       <!-- General Settings -->
       <details id="general-settings-details" bind:open={secGeneral} on:toggle={() => localStorage.setItem('sec_general', String(secGeneral))}>
-        <summary>
+        <summary on:click={summaryClick}>
           <strong class="interactable">General Settings</strong>
           {#if connectionProvider != null}
-            <span>&nbsp; (Connected to room: <code>{roomBaseCode}</code> {roomHasPassword ? '🔒' : '🔓'})</span>
+            <span>&nbsp; (Connected to room: <code class="room-code-copy" title="Click to copy">{roomCodeCopied ? '✓' : roomBaseCode}</code> {roomHasPassword ? '🔒' : '🔓'})</span>
           {/if}
-          <button class="undo-btn" on:click|stopPropagation={undo} disabled={isWatchMode || !canUndo} title="Undo (Ctrl+Z)">↩ Undo</button>
-          <button class="undo-btn" on:click|stopPropagation={redo} disabled={isWatchMode || !canRedo} title="Redo (Ctrl+Y)">↪ Redo</button>
-          <span class="summary-sep"></span>
-          <span class="game-filter-label">Overworld</span>
-          <button class="game-filter-btn" class:active={(displaySettings.OOTMM ?? 'both') === 'both'} on:click|stopPropagation={() => { if (isWatchMode) return; saveDisplaySetting('OOTMM', 'both'); }}>Both</button>
-          <button class="game-filter-btn" class:active={(displaySettings.OOTMM ?? 'both') === 'oot'} on:click|stopPropagation={() => { if (isWatchMode) return; saveDisplaySetting('OOTMM', 'oot'); }}>OoT</button>
-          <button class="game-filter-btn" class:active={(displaySettings.OOTMM ?? 'both') === 'mm'} on:click|stopPropagation={() => { if (isWatchMode) return; saveDisplaySetting('OOTMM', 'mm'); }}>MM</button>
-          <button class="game-filter-btn" class:active={(displaySettings.OOTMM ?? 'both') === 'none'} on:click|stopPropagation={() => { if (isWatchMode) return; saveDisplaySetting('OOTMM', 'none'); }}>None</button>
-          <span class="summary-sep"></span>
-          <span class="game-filter-label">Dungeons</span>
-          <button class="game-filter-btn" class:active={(displaySettings.OOTMMDungeons ?? 'both') === 'both'} on:click|stopPropagation={() => { if (isWatchMode) return; saveDisplaySetting('OOTMMDungeons', 'both'); }}>Both</button>
-          <button class="game-filter-btn" class:active={(displaySettings.OOTMMDungeons ?? 'both') === 'ootdungeons'} on:click|stopPropagation={() => { if (isWatchMode) return; saveDisplaySetting('OOTMMDungeons', 'ootdungeons'); }}>OoT</button>
-          <button class="game-filter-btn" class:active={(displaySettings.OOTMMDungeons ?? 'both') === 'mmdungeons'} on:click|stopPropagation={() => { if (isWatchMode) return; saveDisplaySetting('OOTMMDungeons', 'mmdungeons'); }}>MM</button>
-          <button class="game-filter-btn" class:active={(displaySettings.OOTMMDungeons ?? 'both') === 'none'} on:click|stopPropagation={() => { if (isWatchMode) return; saveDisplaySetting('OOTMMDungeons', 'none'); }}>None</button>
+          <button type="button" class="undo-btn" on:click|stopPropagation={undo} disabled={isWatchMode || !canUndo} title="Undo (Ctrl+Z)">↩ Undo</button>
+          <button type="button" class="undo-btn" on:click|stopPropagation={redo} disabled={isWatchMode || !canRedo} title="Redo (Ctrl+Y)">↪ Redo</button>
         </summary>
         <div id="general-container" class="flex flex-wrap" style="margin-top: 0.8em">
           <form class="pure-form pure-form-stacked">
             <fieldset>
-              <label>
-                Show OOT/MM Overworld
-                <select
-                  value={displaySettings.OOTMM ?? 'both'}
-                  on:change={e => { if (isWatchMode) return; saveDisplaySetting('OOTMM', selectValue(e)); }}
-                  class="dropdown-select"
-                  disabled={isWatchMode}
-                >
-                  <option value="both">Both</option>
-                  <option value="oot">OoT</option>
-                  <option value="mm">MM</option>
-                  <option value="none">None</option>
-                </select>
-              </label>
               <label>
                 Show OOT/MM Dungeons
                 <select
@@ -4086,10 +4396,10 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
                         <option value={slot.id}>{slot.name} ({Object.values(slot.checks).filter(v => v === T.CheckState.checked).length}✓)</option>
                       {/each}
                     </select>
-                    <button class="pure-button bg-primary" title="Save current state to this slot" on:click={() => { if (isWatchMode) return; currentSlotId && saveToSlot(currentSlotId); }} disabled={isWatchMode}>💾</button>
-                    <button class="pure-button bg-primary" title="Load this slot" on:click={() => { if (isWatchMode) return; const s = saveSlots.find(x => x.id === currentSlotId); if (s) loadSlot(s); }} disabled={isWatchMode}>📂</button>
-                    <button class="pure-button" title="Rename slot" on:click={() => { if (isWatchMode) return; const s = saveSlots.find(x => x.id === currentSlotId); if (!s) return; const n = window.prompt('Rename slot:', s.name); if (n != null) renameSlot(s.id, n); }} disabled={isWatchMode}>✎</button>
-                    <button class="pure-button bg-danger" title="Delete slot" on:click={() => { if (isWatchMode) return; currentSlotId && deleteSlot(currentSlotId); }} disabled={isWatchMode}>✕</button>
+                    <button type="button" class="pure-button bg-primary" title="Save current state to this slot" on:click={() => { if (isWatchMode) return; currentSlotId && saveToSlot(currentSlotId); }} disabled={isWatchMode}>💾</button>
+                    <button type="button" class="pure-button bg-primary" title="Load this slot" on:click={() => { if (isWatchMode) return; const s = saveSlots.find(x => x.id === currentSlotId); if (s) loadSlot(s); }} disabled={isWatchMode}>📂</button>
+                    <button type="button" class="pure-button" title="Rename slot" on:click={() => { if (isWatchMode) return; const s = saveSlots.find(x => x.id === currentSlotId); if (!s) return; const n = window.prompt('Rename slot:', s.name); if (n != null) renameSlot(s.id, n); }} disabled={isWatchMode}>✎</button>
+                    <button type="button" class="pure-button bg-danger" title="Delete slot" on:click={() => { if (isWatchMode) return; currentSlotId && deleteSlot(currentSlotId); }} disabled={isWatchMode}>✕</button>
                   </div>
                   {#if currentSlot}
                     <p class="spoiler-no-log" style="margin:0 0 0.4em;">{formatSlotDate(currentSlot.updatedAt)}</p>
@@ -4097,7 +4407,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
                 {:else}
                   <p class="spoiler-no-log">No slots yet.</p>
                 {/if}
-                <button class="pure-button" style="font-size:0.82em;" on:click={() => { if (isWatchMode) return; newSlot(); }} disabled={isWatchMode}>+ New Slot</button>
+                <button type="button" class="pure-button" style="font-size:0.82em;" on:click={() => { if (isWatchMode) return; newSlot(); }} disabled={isWatchMode}>+ New Slot</button>
               </div>
             </details>
           </form>
@@ -4192,7 +4502,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
                     <span class="connected-dot" style="background:{u.color}" title={u.name}></span>
                     <span class="connected-name">{u.name}{#if u.isHost} 👑{/if}</span>
                     {#if !isWatchMode && connectedUsers.find(x => x.peerId === peerId)?.isHost && u.peerId !== peerId}
-                      <button class="give-host-btn" title="Give host to {u.name}" on:click={() => yHostOverride.set('peerId', u.peerId)}>👑</button>
+                      <button type="button" class="give-host-btn" title="Give host to {u.name}" on:click={() => yHostOverride.set('peerId', u.peerId)}>👑</button>
                     {/if}
                   {/each}
                 </div>
@@ -4220,12 +4530,12 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
                 >
                   {sortMode === 'alpha' ? '↩️ Default' : '🔤 A-Z'}
                 </button>
-                  <button class="bg-primary pure-button" on:click|preventDefault={exportData} disabled={isWatchMode}>Export Save</button>
-                  <button class="bg-primary pure-button" on:click|preventDefault={importData} disabled={isWatchMode}>Import Save</button>
-                  <button class="bg-primary pure-button" on:click|preventDefault={importSpoilerLog} disabled={isWatchMode}>Import Spoiler</button>
-                  <button class="pure-button" on:click|preventDefault={() => { if (isWatchMode) return; randoImportOpen = !randoImportOpen; randoImportError = ''; randoImportOk = false; }} disabled={isWatchMode}>🎲 Import Hash</button>
-                  <button class="bg-danger pure-button" on:click|preventDefault={reset} disabled={isWatchMode}>Clear Checks</button>
-                  <button class="bg-danger pure-button" on:click|preventDefault={resetSettings} disabled={isWatchMode}>Reset Settings</button>
+                  <button type="button" class="bg-primary pure-button" on:click|preventDefault={exportData} disabled={isWatchMode}>Export Save</button>
+                  <button type="button" class="bg-primary pure-button" on:click|preventDefault={importData} disabled={isWatchMode}>Import Save</button>
+                  <button type="button" class="bg-primary pure-button" on:click|preventDefault={importSpoilerLog} disabled={isWatchMode}>Import Spoiler</button>
+                  <button type="button" class="pure-button" on:click|preventDefault={() => { if (isWatchMode) return; randoImportOpen = !randoImportOpen; randoImportError = ''; randoImportOk = false; }} disabled={isWatchMode}>🎲 Import Hash</button>
+                  <button type="button" class="bg-danger pure-button" on:click|preventDefault={reset} disabled={isWatchMode}>Clear Checks</button>
+                  <button type="button" class="bg-danger pure-button" on:click|preventDefault={resetSettings} disabled={isWatchMode}>Reset Settings</button>
                 {#if spoilerSyncedFromPeer}<div class="spoiler-sync-toast">📥 Spoiler synced</div>{/if}
               </div>
               {#if randoImportOpen}
@@ -4254,8 +4564,8 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
             <fieldset style="margin-top: 1em;">
               <legend>Presets</legend>
               <div style="display: flex; gap: 0.4em; margin-bottom: 0.5em; flex-wrap: wrap;">
-                <button class="pure-button" style="font-size:0.8em; padding:0.2em 0.6em" on:click={exportPresets} disabled={isWatchMode}>↗ Export</button>
-                <button class="pure-button" style="font-size:0.8em; padding:0.2em 0.6em" on:click={importPresets} disabled={isWatchMode}>↙ Import</button>
+                <button type="button" class="pure-button" style="font-size:0.8em; padding:0.2em 0.6em" on:click={exportPresets} disabled={isWatchMode}>↗ Export</button>
+                <button type="button" class="pure-button" style="font-size:0.8em; padding:0.2em 0.6em" on:click={importPresets} disabled={isWatchMode}>↙ Import</button>
               </div>
               <div style="display: flex; gap: 0.5em; margin-bottom: 0.5em;">
                 <input
@@ -4266,7 +4576,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
                   style="flex: 1"
                   disabled={isWatchMode}
                 />
-                <button class="pure-button bg-primary" on:click={() => { if (isWatchMode) return; savePreset(); }} disabled={isWatchMode}>💾 Save</button>
+                <button type="button" class="pure-button bg-primary" on:click={() => { if (isWatchMode) return; savePreset(); }} disabled={isWatchMode}>💾 Save</button>
               </div>
               {#if Object.keys(allPresets).length > 0}
                 <div style="display: flex; gap: 0.5em; align-items: center;">
@@ -4275,7 +4585,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
                       <option value={name}>{defaultPresetNames.has(name) ? '⭐ ' : ''}{name}</option>
                     {/each}
                   </select>
-                  <button class="pure-button bg-primary" on:click={() => { if (isWatchMode) return; selectedPreset && loadPreset(selectedPreset); }}
+                  <button type="button" class="pure-button bg-primary" on:click={() => { if (isWatchMode) return; selectedPreset && loadPreset(selectedPreset); }}
                     disabled={isWatchMode}>Load</button
                   >
                   <button
@@ -4301,7 +4611,6 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
       <details style="margin-top: 0.8em" id="er-tracker-details" bind:open={secEr} on:toggle={() => localStorage.setItem('sec_er', String(secEr))}>
         <summary>
           <strong class="interactable">Entrance Rando Tracker</strong>
-          {#if entranceValuesMap.size > 0}<span class="section-badge">{entranceValuesMap.size}</span>{/if}
           {#if spoilerEntrances}
             <button
               class="spoiler-fill-btn"
@@ -4312,11 +4621,13 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
           {/if}
         </summary>
         <div class="er-tabs" role="tablist">
-          <button class="er-tab" class:active={erTab === 'tracker'} on:click={() => erTab = 'tracker'} role="tab">Tracker</button>
-          <button class="er-tab" class:active={erTab === 'pathfinder'} on:click={() => erTab = 'pathfinder'} role="tab">Pathfinder</button>
+          <button type="button" class="er-tab" class:active={erTab === 'tracker'} on:click={() => erTab = 'tracker'} role="tab">Tracker</button>
+          <button type="button" class="er-tab" class:active={erTab === 'pathfinder'} on:click={() => erTab = 'pathfinder'} role="tab">Pathfinder</button>
         </div>
         {#if erTab === 'tracker'}
-          <ERTracker {yEntrances} entranceValues={entranceValuesMap} {spoilerErSettings} {spoilerExtraEr} isWatchMode={isWatchMode || spoilerFillEntrances} bind:activeErSettings={activeErSettings} highlightedEntranceId={erHighlightId} on:openMapForEntrance={e => openMapForEntrance(e.detail.entranceId)} />
+          <ERTracker {yEntrances} entranceValues={entranceValuesMap} {spoilerErSettings} {spoilerExtraEr} isWatchMode={isWatchMode || spoilerFillEntrances} bind:activeErSettings={activeErSettings} highlightedEntranceId={erHighlightId}
+            on:openMapForEntrance={e => openMapForEntrance(e.detail.entranceId)}
+          />
         {:else}
           <Pathfinder entranceValues={entranceValuesMap} />
         {/if}
@@ -4332,16 +4643,21 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
       <details style="margin-top: 0.8em" id="hint-tracker-details" bind:open={secHint} on:toggle={() => localStorage.setItem('sec_hint', String(secHint))}>
         <summary>
           <strong class="interactable">Hint Tracker / Notes / Song Events</strong>
-          {#if hints.length + notesEntries.length + shopEntries.length > 0}
-            <span class="section-badge">{hints.length + notesEntries.length + shopEntries.length}</span>
+          {#each [['woth','WotH','#3a7bd5'],['barren','Barren/Junk','#cc3333'],['item','Item','#e67e22'],['other','Other','#9b59b6']] as [type, label, color]}
+            {@const n = hints.filter(h => h.type === type).length}
+            {#if n > 0}
+              <span class="hint-type-badge" style="background:{color}">{label}: {n}</span>
+            {/if}
+          {/each}
+          {#if notesEntries.length + shopEntries.length > 0}
+            <span class="section-badge">{notesEntries.length + shopEntries.length} notes</span>
           {/if}
         </summary>
         <HintTracker
           {yHints} {hints}
           {notesEntries} {shopEntries}
           {isWatchMode}
-          {ySongEvents} {yItems} {ySettings} {songEventShuffle}
-          songEventAssignments={spoilerSongEvents}
+          {ySongEvents}
           onEditNote={handleEditNote}
           onEditShop={handleShopEditByName}
           onDeleteNote={(id) => { if (!isWatchMode) yNotes.delete(id); }}
@@ -4349,19 +4665,25 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
         />
       </details>
 
-      <!-- Game Settings (shuffle options) -->
+      <!-- Game / Logic Settings (shuffle options + item visibility + logic) -->
       <details id="shuffle-settings-details" style="margin-top: 0.8em" bind:open={secShuffle} on:toggle={() => localStorage.setItem('sec_shuffle', String(secShuffle))}>
-        <summary><strong class="interactable">Game Settings</strong></summary>
+        <summary><strong class="interactable">Game / Logic Settings</strong></summary>
         <div style="margin-top: 0.8em">
           <div class="tabs">
-            <button class="tab-button" class:active={activeTab === 'oot'} on:click={() => (activeTab = 'oot')}
+            <button type="button" class="tab-button" class:active={activeTab === 'oot'} on:click={() => (activeTab = 'oot')}
               >OoT Shuffle Settings</button
             >
-            <button class="tab-button" class:active={activeTab === 'mm'} on:click={() => (activeTab = 'mm')}
+            <button type="button" class="tab-button" class:active={activeTab === 'mm'} on:click={() => (activeTab = 'mm')}
               >MM Shuffle Settings</button
             >
-            <button class="tab-button" class:active={activeTab === 'other'} on:click={() => (activeTab = 'other')}
+            <button type="button" class="tab-button" class:active={activeTab === 'other'} on:click={() => (activeTab = 'other')}
               >Other Settings</button
+            >
+            <button type="button" class="tab-button" class:active={activeTab === 'logic'} on:click={() => (activeTab = 'logic')}
+              >Logic Settings</button
+            >
+            <button type="button" class="tab-button" class:active={activeTab === 'conditions'} on:click={() => (activeTab = 'conditions')}
+              >Conditions</button
             >
           </div>
             {#if isWatchMode}
@@ -4441,6 +4763,48 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
                       {/if}
                     {/each}
                   </div>
+                {:else if activeTab === 'logic'}
+                  <div style="padding: 4px 0;">
+                    <LogicSettings spoilerKeys={spoilerSettingKeys} {ySettings} {sSettings} />
+                  </div>
+                {:else if activeTab === 'conditions'}
+                  <div class="conditions-editor">
+                    {#if specialConditionEntries.length > 0 && spoilerSpecialConditions}
+                      <p class="conditions-spoiler-note">Conditions loaded from spoiler — pre-filled fields are read only.</p>
+                    {/if}
+                    {#each CONDITION_NAMES as condName}
+                      {@const fromSpoiler = !!(spoilerSpecialConditions?.[condName]?.count > 0 || Object.values(spoilerSpecialConditions?.[condName] ?? {}).some(v => v === true))}
+                      {@const cond = spoilerSpecialConditions?.[condName] ?? manualConditions[condName]}
+                      {@const condMaxInfo = getCondMax(cond)}
+                      <div class="cond-block" class:cond-active={cond?.count > 0}>
+                        <div class="cond-header">
+                          <span class="cond-name">{CONDITION_LABELS[condName]}</span>
+                          <label class="cond-count-label">Count:
+                            <input type="number" min="0" max={condMaxInfo?.known ? condMaxInfo.total : 999} class="cond-count"
+                              value={cond?.count ?? 0}
+                              on:input={e => updateConditionCount(condName, e)}
+                              disabled={fromSpoiler || isWatchMode} />
+                            {#if condMaxInfo}
+                              <span class="cond-max">/ {condMaxInfo.known ? condMaxInfo.total : '?'}</span>
+                            {/if}
+                          </label>
+                          {#if !fromSpoiler}
+                            <button type="button" class="cond-reset-btn" on:click={() => resetCondition(condName)} title="Reset" disabled={isWatchMode}>✕</button>
+                          {/if}
+                        </div>
+                        <div class="cond-flags">
+                          {#each COND_FLAGS as flag}
+                            <label class="cond-flag" class:flag-on={getCondFlag(cond, flag.key)}>
+                              <input type="checkbox" checked={getCondFlag(cond, flag.key)}
+                                on:change={e => updateConditionFlag(condName, flag.key, e)}
+                                disabled={fromSpoiler || isWatchMode} />
+                              {flag.label}
+                            </label>
+                          {/each}
+                        </div>
+                      </div>
+                    {/each}
+                  </div>
                 {/if}
               </fieldset>
             </form>
@@ -4459,28 +4823,57 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
               class="pure-button"
               type="button"
               class:pure-button-active={hideChecked}
-              on:click={() => (hideChecked = !hideChecked)}
+              on:click={() => { hideChecked = !hideChecked; localStorage.setItem('hideChecked', String(hideChecked)); }}
             >
               {hideChecked ? 'Show Checked' : 'Hide Checked'}
             </button>
-            <button class="pure-button" type="button" on:click={toggleAllGroups}>
+            {#if gameTab !== 'both'}
+            <button type="button" class="pure-button" on:click={toggleAllGroups}>
               {shouldShowCollapse ? 'Collapse All' : 'Expand All'}
             </button>
-            <input type="text" style="width: 16em" placeholder="Filter… (Ctrl+F)" bind:value={filter} bind:this={filterInputEl} />
+            {/if}
+            <button
+              class="pure-button logic-btn"
+              type="button"
+              class:pure-button-active={$logicEnabled}
+              title={$logicEnabled ? 'Disable logic engine' : 'Enable logic engine'}
+              on:click={() => logicEnabled.update(v => !v)}
+            >Logic {$logicEnabled ? 'ON' : 'OFF'}</button>
+            {#if $logicEnabled}
+              <button
+                class="pure-button"
+                type="button"
+                class:pure-button-active={!$showOutOfLogic}
+                title={$showOutOfLogic ? 'Click to hide out-of-logic checks' : 'Click to show out-of-logic checks'}
+                on:click={() => showOutOfLogic.update(v => !v)}
+              >{$showOutOfLogic ? 'Hide OOL' : 'Show OOL'}</button>
+              {#if $logicLoading}<span class="logic-spinner">⏳</span>{/if}
+            {/if}
+            <select class="logic-age-sel" bind:value={$logicAgeFilter} title="Filter checks by age">
+              <option value="both">👶🧑 Both</option>
+              <option value="child">🧒 Child</option>
+              <option value="adult">🧑 Adult</option>
+            </select>
+            <div class="filter-wrap">
+              <input type="text" class="filter-input" style="width: 16em" placeholder="Filter… (Ctrl+F)" bind:value={filter} bind:this={filterInputEl} />
+              {#if filter}
+                <button type="button" class="filter-clear-btn" on:click={() => { filter = ''; filterInputEl?.focus(); }} title="Clear (Esc)">✕</button>
+              {/if}
+            </div>
             <button
               class="pure-button"
               type="button"
               class:pure-button-active={compact}
               on:click={() => (compact = !compact)}
               title="Alt+C"
-            >Compact</button>
+            >Compact {compact ? 'ON' : 'OFF'}</button>
             <button
               class="pure-button"
               type="button"
               class:pure-button-active={showTypeColors}
               on:click={() => { if (isWatchMode) return; saveDisplaySetting('showTypeColors', !showTypeColors); }}
               title="Toggle type colors on checks"
-            >Colors</button>
+            >Colors {showTypeColors ? 'ON' : 'OFF'}</button>
             <span class="check-stat">{visibleGroupCount} zones · {visibleCheckCount} checks</span>
             <button
               class="pure-button legend-toggle-btn"
@@ -4496,6 +4889,16 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
               on:click={() => (showShortcuts = !showShortcuts)}
               title="Keyboard shortcuts"
             >⌨️</button>
+            {#if isDevEnv}
+            <button
+              class="pure-button legend-toggle-btn"
+              type="button"
+              class:pure-button-active={devMode}
+              on:click={toggleDevMode}
+              title="Dev mode (placement, CSV import/export)"
+            >🔧</button>
+            {/if}
+            {#if devMode}
             <button
               class="pure-button legend-toggle-btn"
               type="button"
@@ -4514,6 +4917,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
               on:click={clearAllEntranceMarkers}
               title="Clear all entrance markers"
             >🚪✕</button>
+            {/if}
             <input type="file" accept=".csv" style="display:none" bind:this={importFileInput} on:change={importEntranceMarkers} />
                 </fieldset>
               </form>
@@ -4545,14 +4949,14 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
         {@const pct = Math.round(ootCheckCount.checked / ootCheckCount.total * 100)}
         <div class="progress-wrap">
           <div class="progress-fill oot" style="width: {pct}%"></div>
-          <span class="progress-label">OoT — {ootCheckCount.checked} / {ootCheckCount.total} ({pct}%)</span>
+          <span class="progress-label">OoT — {ootCheckCount.checked}{ootCheckCount.accessible >= 0 ? `/${ootCheckCount.accessible}` : ''}/{ootCheckCount.total} ({pct}%)</span>
         </div>
       {/if}
       {#if mmCheckCount.total > 0}
         {@const pct = Math.round(mmCheckCount.checked / mmCheckCount.total * 100)}
         <div class="progress-wrap">
           <div class="progress-fill mm" style="width: {pct}%"></div>
-          <span class="progress-label">MM — {mmCheckCount.checked} / {mmCheckCount.total} ({pct}%)</span>
+          <span class="progress-label">MM — {mmCheckCount.checked}{mmCheckCount.accessible >= 0 ? `/${mmCheckCount.accessible}` : ''}/{mmCheckCount.total} ({pct}%)</span>
         </div>
       {/if}
 
@@ -4563,90 +4967,198 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
         </div>
       {/if}
 
+      <!-- Game tabs -->
+      <div class="game-tab-row">
+        <button type="button" class="game-tab-btn" class:active={gameTab === 'oot'} on:click={() => { if (!isWatchMode) setGameTab('oot'); }}>
+          Ocarina of Time
+        </button>
+        <button type="button" class="game-tab-btn" class:active={gameTab === 'mm'} on:click={() => { if (!isWatchMode) setGameTab('mm'); }}>
+          Majora's Mask
+        </button>
+        <button type="button" class="game-tab-btn" class:active={gameTab === 'both'} on:click={() => { if (!isWatchMode) setGameTab('both'); }}>
+          Both
+        </button>
+      </div>
+
       <!-- Check groups -->
-      <div class:checks-locked={spoilerPlayers > 1 && spoilerPlayerWorld === 0}>
+      <div class:checks-locked={spoilerPlayers > 1 && spoilerPlayerWorld === 0} class:split-layout={gameTab === 'both'}>
       {#if sortedChecks != null}
-        {#each sortedChecks as group (group.groupName)}
-          <section>
-            <CheckGroup
-              groupName={group.groupName}
-              canBeMq={group.canHaveMq}
-              isMq={$sMqSettings.get(group.groupName) ?? false}
-              canHaveVariant={group.canHaveVariant}
-              variant={$sVariantSettings.get(group.groupName) ?? 0}
-              forceOpen={groupStates.get(group.groupName) ?? allGroupsExpanded}
-              {forceOpenTimestamp}
-              allChecked={groupCompletionStatus[group.groupName] ?? false}
-              checkCount={groupCheckCounts[group.groupName] ?? { checked: 0, total: 0 }}
-              pingColor={groupPings.get(group.groupName) ?? ''}
-              {compact}
-              woth={wothGroups.has(group.groupName)}
-              barren={barrenGroups.has(group.groupName)}
-              on:toggleGroup={() => toggleWholeGroup(group)}
-              on:markGroup={() => markWholeGroup(group)}
-              on:toggleMq={() => toggleYmap(yMqSettings, group.groupName)}
-              on:cycleVariant={() => cycleVariant(group.groupName, group.maxVariant ?? 0)}
-              on:individualToggle={handleIndividualToggle}
-              on:openMap={() => openMap(group.groupName)}
-            >
-              {#each group.checks as check, checkIndex}
-                <CheckItem
-                  name={check.shortName}
-                  vanillaItem={check.item ?? ''}
-                  type={check.type}
-                  state={$sChecks.get(check.name) ?? T.CheckState.unchecked}
-                  shopItem={$sShopItems.get(check.name) ?? ''}
-                  shopPrice={$sShopPrices.get(check.name) ?? null}
-                  isShop={check.type === T.CheckType.deku_scrub ||
-                    check.type === T.CheckType.shop ||
-                    priceEditIds.has(check.id)}
-                  showPrice={!itemOnlyIds.has(check.id)}
-                  spoilerItem={showSpoilerItems ? (spoilerLocations[check.name] ?? '') : ''}
-                  author={connectionProvider ? ($sCheckAuthors.get(check.name) ?? '') : ''}
-                  pingColor={pinnedChecks.get(check.name) ?? ''}
-                  note={$sNotes.get(check.name) ?? ''}
-                  {compact}
-                  woth={wothCheckNames.has(check.name)}
-                  barren={barrenCheckNames.has(check.name)}
-                  disableTypeColor={!showTypeColors}
-                  highlighted={spoilerHighlight === check.name}
-                  spiderHouse={!!check.scene?.startsWith('MM_SPIDER_HOUSE')}
-                  checkName={check.name}
-                  zone={group.groupName}
-                  {filter}
-                  on:editNote={() => { if (!isWatchMode) handleEditNote(check.name); }}
-                  on:toggle={e => {
-                    if (isWatchMode) return;
-                    if (e.detail.range) {
-                      toggleRangeTo(group, checkIndex);
-                    } else {
-                      const newState = toggleState($sChecks.get(check.name) ?? T.CheckState.unchecked);
-                      lastAction = { group, checkIndex, newState };
-                      yChecks.set(check.name, newState);
-                      setAuthor(check.name, newState);
-                      if (newState === T.CheckState.checked) yNotes.delete(check.name);
-                    }
-                  }}
-                  on:mark={e => {
-                    if (isWatchMode) return;
-                    if (e.detail.range) {
-                      markRangeTo(group, checkIndex);
-                    } else {
-                      const cur = $sChecks.get(check.name) ?? T.CheckState.unchecked;
-                      const newState = cur === T.CheckState.marked ? T.CheckState.unchecked : T.CheckState.marked;
-                      lastMarkAction = { group, checkIndex, newState };
-                      yChecks.set(check.name, newState);
-                      setAuthor(check.name, newState);
-                    }
-                  }}
-                  on:shopEdit={() => { if (!isWatchMode) handleShopEdit(check.name, check.id); }}
-                />
+
+        {#if gameTab === 'both'}
+          <!-- ── Split view: OoT left / MM right ── -->
+          {#each [
+            { label: 'Ocarina of Time', groups: ootSplitChecks, count: ootCheckCount, cls: 'split-col-oot', mode: splitModeOot, setMode: (m) => { splitModeOot = m; } },
+            { label: "Majora's Mask",   groups: mmSplitChecks,  count: mmCheckCount,  cls: 'split-col-mm',  mode: splitModeMm,  setMode: (m) => { splitModeMm  = m; } },
+          ] as col, i}
+            {#if i === 1}<div class="split-resizer" on:pointerdown={startSplitResize}></div>{/if}
+            <div class="split-col {col.cls}" style={i === 0 ? `flex: 0 0 ${splitRatio}%; max-width: ${splitRatio}%` : ''}>
+              <div class="split-col-header">
+                <span class="split-col-title">{col.label}</span>
+                <div class="split-col-actions">
+                  <div class="split-seg">
+                    {#each [['ow','Overworld'],['dj','Dungeon'],['both','Both']] as [val, lbl]}
+                      <button type="button" class="split-seg-btn" class:active={col.mode === val} on:click={() => col.setMode(val)}>{lbl}</button>
+                    {/each}
+                  </div>
+                  <button type="button" class="split-seg-btn split-expand-all-btn" on:click={() => forceOpenGame(i === 0)}>
+                    {i === 0 ? (ootShouldCollapse ? 'Collapse' : 'Expand') : (mmShouldCollapse ? 'Collapse' : 'Expand')}
+                  </button>
+                  <span class="split-col-count">{col.count.checked}/{col.count.total}</span>
+                </div>
+              </div>
+              {#each col.groups as group (group.groupName)}
+                <section>
+                  <CheckGroup
+                    groupName={group.groupName}
+                    canBeMq={group.canHaveMq}
+                    isMq={$sMqSettings.get(group.groupName) ?? false}
+                    canHaveVariant={group.canHaveVariant}
+                    variant={$sVariantSettings.get(group.groupName) ?? 0}
+                    forceOpen={groupStates.get(group.groupName) ?? allGroupsExpanded}
+                    forceOpenTimestamp={i === 0 ? ootTimestamp : mmTimestamp}
+                    allChecked={groupCompletionStatus[group.groupName] ?? false}
+                    checkCount={groupCheckCounts[group.groupName] ?? { checked: 0, total: 0 }}
+                    pingColor={groupPings.get(group.groupName) ?? ''}
+                    {compact}
+                    woth={wothGroups.has(group.groupName)}
+                    barren={barrenGroups.has(group.groupName) && !wothGroups.has(group.groupName)}
+                    on:toggleGroup={() => toggleWholeGroup(group)}
+                    on:markGroup={() => markWholeGroup(group)}
+                    on:toggleMq={() => toggleYmap(yMqSettings, group.groupName)}
+                    on:cycleVariant={() => cycleVariant(group.groupName, group.maxVariant ?? 0)}
+                    on:individualToggle={handleIndividualToggle}
+                    on:openMap={() => openMap(group.groupName)}
+                  >
+                    {#each group.checks as check, checkIndex}
+                      <CheckItem
+                        name={check.shortName}
+                        vanillaItem={check.item ?? ''}
+                        type={check.type}
+                        state={$sChecks.get(check.name) ?? T.CheckState.unchecked}
+                        shopItem={$sShopItems.get(check.name) ?? ''}
+                        shopPrice={$sShopPrices.get(check.name) ?? null}
+                        isShop={check.type === T.CheckType.deku_scrub || check.type === T.CheckType.shop || priceEditIds.has(check.id)}
+                        showPrice={!itemOnlyIds.has(check.id)}
+                        spoilerItem={showSpoilerItems ? (spoilerLocations[check.name] ?? '') : ''}
+                        author={connectionProvider ? ($sCheckAuthors.get(check.name) ?? '') : ''}
+                        pingColor={pinnedChecks.get(check.name) ?? ''}
+                        note={$sNotes.get(check.name) ?? ''}
+                        {compact}
+                        woth={wothCheckNames.has(check.name)}
+                        barren={barrenCheckNames.has(check.name) && !wothCheckNames.has(check.name)}
+                        disableTypeColor={!showTypeColors}
+                        highlighted={spoilerHighlight === check.name}
+                        spiderHouse={!!check.scene?.startsWith('MM_SPIDER_HOUSE')}
+                        checkName={check.name}
+                        zone={group.groupName}
+
+                        {filter}
+                        inLogic={$logicEnabled && $logicResult ? ageLogic(check.name, $logicResult) : null}
+                        on:editNote={() => { if (!isWatchMode) handleEditNote(check.name); }}
+                        on:toggle={e => {
+                          if (isWatchMode) return;
+                          if (e.detail.range) { toggleRangeTo(group, checkIndex); }
+                          else { const newState = toggleState($sChecks.get(check.name) ?? T.CheckState.unchecked); lastAction = { group, checkIndex, newState }; yChecks.set(check.name, newState); setAuthor(check.name, newState); if (newState === T.CheckState.checked) yNotes.delete(check.name); }
+                        }}
+                        on:mark={e => {
+                          if (isWatchMode) return;
+                          if (e.detail.range) { markRangeTo(group, checkIndex); }
+                          else { const cur = $sChecks.get(check.name) ?? T.CheckState.unchecked; const newState = cur === T.CheckState.marked ? T.CheckState.unchecked : T.CheckState.marked; lastMarkAction = { group, checkIndex, newState }; yChecks.set(check.name, newState); setAuthor(check.name, newState); }
+                        }}
+                        on:shopEdit={() => { if (!isWatchMode) handleShopEdit(check.name, check.id); }}
+                      />
+                    {/each}
+                    {#if group.checks.length === 0}
+                      <span class="entrance-only-note">No shuffled checks — entrance zone</span>
+                    {/if}
+                  </CheckGroup>
+                </section>
               {/each}
-            </CheckGroup>
-          </section>
-        {/each}
+              {#if $logicEnabled && $logicResult && col.groups.length === 0 && !(ootSplitChecks.length === 0 && mmSplitChecks.length === 0)}
+                <div class="checks-empty-logic">{spawnHint ?? 'No reachable checks — assign entrances in the ER Tracker to progress.'}</div>
+              {/if}
+            </div>
+          {/each}
+
+        {:else}
+          <!-- ── Single column view ── -->
+          {#each singleColChecks as group (group.groupName)}
+            <section>
+              <CheckGroup
+                groupName={group.groupName}
+                canBeMq={group.canHaveMq}
+                isMq={$sMqSettings.get(group.groupName) ?? false}
+                canHaveVariant={group.canHaveVariant}
+                variant={$sVariantSettings.get(group.groupName) ?? 0}
+                forceOpen={groupStates.get(group.groupName) ?? allGroupsExpanded}
+                {forceOpenTimestamp}
+                allChecked={groupCompletionStatus[group.groupName] ?? false}
+                checkCount={groupCheckCounts[group.groupName] ?? { checked: 0, total: 0 }}
+                pingColor={groupPings.get(group.groupName) ?? ''}
+                {compact}
+                woth={wothGroups.has(group.groupName)}
+                barren={barrenGroups.has(group.groupName)}
+                on:toggleGroup={() => toggleWholeGroup(group)}
+                on:markGroup={() => markWholeGroup(group)}
+                on:toggleMq={() => toggleYmap(yMqSettings, group.groupName)}
+                on:cycleVariant={() => cycleVariant(group.groupName, group.maxVariant ?? 0)}
+                on:individualToggle={handleIndividualToggle}
+                on:openMap={() => openMap(group.groupName)}
+              >
+                {#each group.checks as check, checkIndex}
+                  <CheckItem
+                    name={check.shortName}
+                    vanillaItem={check.item ?? ''}
+                    type={check.type}
+                    state={$sChecks.get(check.name) ?? T.CheckState.unchecked}
+                    shopItem={$sShopItems.get(check.name) ?? ''}
+                    shopPrice={$sShopPrices.get(check.name) ?? null}
+                    isShop={check.type === T.CheckType.deku_scrub || check.type === T.CheckType.shop || priceEditIds.has(check.id)}
+                    showPrice={!itemOnlyIds.has(check.id)}
+                    spoilerItem={showSpoilerItems ? (spoilerLocations[check.name] ?? '') : ''}
+                    author={connectionProvider ? ($sCheckAuthors.get(check.name) ?? '') : ''}
+                    pingColor={pinnedChecks.get(check.name) ?? ''}
+                    note={$sNotes.get(check.name) ?? ''}
+                    {compact}
+                    woth={wothCheckNames.has(check.name)}
+                    barren={barrenCheckNames.has(check.name) && !wothCheckNames.has(check.name)}
+                    disableTypeColor={!showTypeColors}
+                    highlighted={spoilerHighlight === check.name}
+                    spiderHouse={!!check.scene?.startsWith('MM_SPIDER_HOUSE')}
+                    checkName={check.name}
+                    zone={group.groupName}
+                    {filter}
+                    inLogic={$logicEnabled && $logicResult ? ageLogic(check.name, $logicResult) : null}
+                    on:editNote={() => { if (!isWatchMode) handleEditNote(check.name); }}
+                    on:toggle={e => {
+                      if (isWatchMode) return;
+                      if (e.detail.range) { toggleRangeTo(group, checkIndex); }
+                      else { const newState = toggleState($sChecks.get(check.name) ?? T.CheckState.unchecked); lastAction = { group, checkIndex, newState }; yChecks.set(check.name, newState); setAuthor(check.name, newState); if (newState === T.CheckState.checked) yNotes.delete(check.name); }
+                    }}
+                    on:mark={e => {
+                      if (isWatchMode) return;
+                      if (e.detail.range) { markRangeTo(group, checkIndex); }
+                      else { const cur = $sChecks.get(check.name) ?? T.CheckState.unchecked; const newState = cur === T.CheckState.marked ? T.CheckState.unchecked : T.CheckState.marked; lastMarkAction = { group, checkIndex, newState }; yChecks.set(check.name, newState); setAuthor(check.name, newState); }
+                    }}
+                    on:shopEdit={() => { if (!isWatchMode) handleShopEdit(check.name, check.id); }}
+                  />
+                {/each}
+                {#if group.checks.length === 0}
+                  <span class="entrance-only-note">No shuffled checks — entrance zone</span>
+                {/if}
+              </CheckGroup>
+            </section>
+          {/each}
+          {#if $logicEnabled && $logicResult && singleColChecks.length === 0}
+            <div class="checks-empty-logic">{spawnHint ?? 'No reachable checks — assign entrances in the ER Tracker to progress.'}</div>
+          {/if}
+        {/if}
+
       {/if}
       </div>
+      {#if gameTab === 'both' && $logicEnabled && $logicResult && ootSplitChecks.length === 0 && mmSplitChecks.length === 0}
+        <div class="checks-empty-logic">{spawnHint ?? 'No reachable checks — assign entrances in the ER Tracker to progress.'}</div>
+      {/if}
     </section>
 
     <!-- ===== MAP MODAL ===== -->
@@ -4654,10 +5166,13 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
       <MapModal
         scene={currentMapScene}
         sceneData={currentSceneData}
+        {devMode}
         groupName={currentGroupName}
         allScenes={matchedScenes}
+        navScenes={checklistNavScenes}
         allScenesData={mapData}
         checkStates={checkStatesMap}
+        {hideChecked}
         {filteredCheckNames}
         {checkNameMappingReverse}
         mqSettings={$sMqSettings}
@@ -4665,12 +5180,17 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
         bind:showAgeFilter
         bind:ageFilter
         on:close={() => { showMapModal = false; mapInitialSubscene = ''; }}
-        on:openErForEntrance={e => handleOpenErForEntrance(e.detail.entranceId)}
         on:toggleCheck={handleMapToggle}
         on:changeScene={e => {
           currentMapScene = e.detail.scene;
           currentSceneData = mapData?.[e.detail.scene] ?? null;
           if (e.detail.subscene) mapInitialSubscene = e.detail.subscene;
+          filteredCheckNames = new Set();
+          currentGroupName = '';
+          if (!matchedScenes.includes(e.detail.scene)) {
+            const group = Object.values(groupToSceneMapping).find(scenes => scenes.includes(e.detail.scene));
+            matchedScenes = group ? [...new Set(group)] : [e.detail.scene];
+          }
         }}
         shopItems={shopItemsMap}
         shopPrices={shopPricesMap}
@@ -4681,6 +5201,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
         erSettings={erSettingsForMap}
         entranceValues={entranceValuesMap}
         initialSubscene={mapInitialSubscene}
+        on:openErForEntrance={e => handleOpenErForEntrance(e.detail.entranceId)}
       />
     {/if}
 
@@ -4692,11 +5213,11 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
             <div class="chat-header">
               <span>Chat</span>
               <div class="chat-header-actions">
-                <button class="chat-filter-btn" class:active={chatFilter==='all'} on:click={() => chatFilter='all'}>All</button>
-                <button class="chat-filter-btn" class:active={chatFilter==='chat'} on:click={() => chatFilter='chat'}>💬</button>
-                <button class="chat-filter-btn" class:active={chatFilter==='pings'} on:click={() => chatFilter='pings'}>📍</button>
-                <button class="chat-clear-btn" on:click={clearChat} title="Clear chat" disabled={isWatchMode}>🗑</button>
-                <button class="chat-close-btn" on:click={() => { chatOpen = false; }}>✕</button>
+                <button type="button" class="chat-filter-btn" class:active={chatFilter==='all'} on:click={() => chatFilter='all'}>All</button>
+                <button type="button" class="chat-filter-btn" class:active={chatFilter==='chat'} on:click={() => chatFilter='chat'}>💬</button>
+                <button type="button" class="chat-filter-btn" class:active={chatFilter==='pings'} on:click={() => chatFilter='pings'}>📍</button>
+                <button type="button" class="chat-clear-btn" on:click={clearChat} title="Clear chat" disabled={isWatchMode}>🗑</button>
+                <button type="button" class="chat-close-btn" on:click={() => { chatOpen = false; }}>✕</button>
               </div>
             </div>
             <div class="chat-messages" bind:this={chatScrollEl}>
@@ -4734,7 +5255,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
             </form>
           </div>
         {/if}
-        <button class="chat-toggle-btn" on:click={toggleChat}>
+        <button type="button" class="chat-toggle-btn" on:click={toggleChat}>
           💬 Chat
           {#if chatUnread > 0}
             <span class="chat-unread-badge">{chatUnread > 99 ? '99+' : chatUnread}</span>
@@ -4746,7 +5267,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
 {/if}
 
 {#if scrollY > 400}
-  <button class="scroll-top-btn" on:click={() => window.scrollTo({ top: 0, behavior: 'smooth' })} title="Back to top">↑</button>
+  <button type="button" class="scroll-top-btn" on:click={() => window.scrollTo({ top: 0, behavior: 'smooth' })} title="Back to top">↑</button>
 {/if}
 
 {#if noteEditOpen}
@@ -4765,8 +5286,8 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
         ></textarea>
       </label>
       <div class="shop-edit-actions">
-        <button class="shop-edit-confirm" on:click={confirmNoteEdit}>Save</button>
-        <button class="shop-edit-cancel" on:click={() => noteEditOpen = false}>Cancel</button>
+        <button type="button" class="shop-edit-confirm" on:click={confirmNoteEdit}>Save</button>
+        <button type="button" class="shop-edit-cancel" on:click={() => noteEditOpen = false}>Cancel</button>
       </div>
     </div>
   </div>
@@ -4789,8 +5310,8 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
         </label>
       {/if}
       <div class="shop-edit-actions">
-        <button class="shop-edit-confirm" on:click={confirmShopEdit}>Save</button>
-        <button class="shop-edit-cancel" on:click={() => shopEditOpen = false}>Cancel</button>
+        <button type="button" class="shop-edit-confirm" on:click={confirmShopEdit}>Save</button>
+        <button type="button" class="shop-edit-cancel" on:click={() => shopEditOpen = false}>Cancel</button>
       </div>
     </div>
   </div>
@@ -4848,6 +5369,16 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     padding: 0.2em 0.6em;
   }
 
+  .logic-age-sel {
+    padding: 2px 4px; border: 1px solid #444; border-radius: 3px;
+    background: #252525; color: #e0e0e0; font-size: 0.82em;
+  }
+  .logic-age-badge {
+    font-size: 0.82em; padding: 2px 6px; border-radius: 3px;
+    background: rgba(255,255,255,0.07); color: #bbb; border: 1px solid #444;
+  }
+  .logic-spinner { font-size: 0.85em; opacity: 0.7; }
+
   main {
     margin: 0.8em;
   }
@@ -4887,6 +5418,17 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     background: var(--color-primary);
     color: #fff;
     opacity: 0.85;
+    vertical-align: middle;
+  }
+  .hint-type-badge {
+    display: inline-block;
+    margin-left: 0.4em;
+    padding: 0 6px;
+    font-size: 0.72em;
+    font-weight: bold;
+    border-radius: 8px;
+    color: #fff;
+    opacity: 0.9;
     vertical-align: middle;
   }
   .spoiler-fill-btn {
@@ -4978,31 +5520,155 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     white-space: nowrap;
   }
 
-  .game-filter-label {
-    display: inline-block;
-    font-size: 0.75em;
-    font-weight: bold;
-    opacity: 0.5;
-    vertical-align: middle;
-    margin-left: 0.2em;
-    letter-spacing: 0.03em;
-    text-transform: uppercase;
-  }
 
-  .game-filter-btn {
-    margin-left: 0.2em;
-    padding: 0.2em 0.6em;
-    font-size: 0.85em;
+
+  /* ── Game tabs ── */
+  .game-tab-row {
+    display: flex;
+    gap: 0.4em;
+    border-bottom: 1px solid var(--color-border);
+    padding-bottom: 0.4em;
+    margin-top: 0.6em;
+  }
+  .game-tab-btn {
+    padding: 4px 14px;
     border: 1px solid var(--color-border);
-    border-radius: 4px;
-    background: var(--color-bg);
+    border-radius: 3px 3px 0 0;
+    background: transparent;
     color: var(--color-text);
     cursor: pointer;
-    vertical-align: middle;
-    opacity: 0.6;
+    font-size: 0.85em;
+    opacity: 0.5;
   }
-  .game-filter-btn:hover { opacity: 1; }
-  .game-filter-btn.active { opacity: 1; background: var(--color-primary); border-color: var(--color-primary); }
+  .game-tab-btn:hover { opacity: 0.8; }
+  .game-tab-btn.active { opacity: 1; background: var(--color-border); font-weight: bold; }
+
+  .filter-wrap { position: relative; display: inline-flex; align-items: center; }
+  .filter-input {
+    background: color-mix(in srgb, var(--color-bg) 60%, #000 40%);
+    border: 1px solid var(--color-border);
+    color: var(--color-text);
+    padding-right: 1.4em;
+  }
+  .filter-clear-btn {
+    position: absolute;
+    right: 3px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--color-text);
+    opacity: 0.5;
+    font-size: 0.85em;
+    padding: 0 3px;
+    line-height: 1;
+  }
+  .filter-clear-btn:hover { opacity: 1; }
+
+  .split-layout {
+    display: flex;
+    gap: 0;
+    align-items: flex-start;
+    position: relative;
+  }
+  .split-col {
+    flex: 1;
+    min-width: 0;
+    overflow-y: auto;
+    max-height: calc(100vh - 12em);
+  }
+  .checks-empty-logic {
+    padding: 24px 16px;
+    text-align: center;
+    font-size: 0.88em;
+    opacity: 0.5;
+    font-style: italic;
+  }
+  .entrance-only-note {
+    display: block;
+    padding: 6px 8px;
+    font-size: 0.82em;
+    font-style: italic;
+    color: #888;
+    grid-column: 1 / -1;
+  }
+  .split-resizer {
+    flex: 0 0 5px;
+    width: 5px;
+    align-self: stretch;
+    cursor: col-resize;
+    background: var(--color-border);
+    opacity: 0.4;
+    transition: opacity 0.15s, background 0.15s;
+    z-index: 2;
+  }
+  .split-resizer:hover, .split-resizer:active {
+    opacity: 1;
+    background: var(--color-primary);
+  }
+  .split-col-oot { border-right: none; }
+  .split-col-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.35em 0.7em;
+    font-weight: 700;
+    font-size: 0.85em;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    border-bottom: 2px solid;
+  }
+  .split-col-oot .split-col-header {
+    background: linear-gradient(rgba(70,130,210,0.15), rgba(70,130,210,0.15)) var(--color-bg);
+    border-bottom-color: rgba(70,130,210,0.5);
+    color: #7eb8ff;
+  }
+  .split-col-mm .split-col-header {
+    background: linear-gradient(rgba(140,60,200,0.15), rgba(140,60,200,0.15)) var(--color-bg);
+    border-bottom-color: rgba(140,60,200,0.5);
+    color: #c97eff;
+  }
+  .split-expand-all-btn {
+    border: 1px solid rgba(255,255,255,0.15) !important;
+    border-radius: 4px;
+    font-size: 0.95em !important;
+    font-weight: 700 !important;
+    padding: 1px 7px !important;
+    opacity: 0.5;
+  }
+  .split-expand-all-btn:hover { opacity: 1; }
+  .split-col-title { letter-spacing: 0.02em; }
+  .split-col-actions { display: flex; align-items: center; gap: 0.5em; }
+  .split-col-count {
+    font-weight: normal;
+    opacity: 0.75;
+    font-size: 0.88em;
+    background: rgba(255,255,255,0.07);
+    padding: 1px 6px;
+    border-radius: 10px;
+  }
+  .split-seg {
+    display: flex;
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .split-seg-btn {
+    background: none;
+    border: none;
+    border-right: 1px solid rgba(255,255,255,0.1);
+    color: var(--color-text);
+    cursor: pointer;
+    padding: 1px 6px;
+    font-size: 0.78em;
+    opacity: 0.4;
+    transition: opacity 0.12s, background 0.12s;
+    line-height: 1.5;
+  }
+  .split-seg-btn:last-child { border-right: none; }
+  .split-seg-btn:hover { opacity: 0.75; }
+  .split-seg-btn.active { opacity: 1; background: rgba(255,255,255,0.12); font-weight: 600; }
+
   main.modal-active {
     overflow: hidden;
   }
@@ -5100,6 +5766,21 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     font-weight: 600;
   }
 
+  .conditions-editor { display: flex; flex-direction: column; gap: 0.5em; padding: 4px 0; }
+  .conditions-spoiler-note { font-size: 0.8em; opacity: 0.6; margin: 0 0 0.3em; }
+  .cond-block { border: 1px solid var(--color-border); border-radius: 5px; padding: 6px 8px; }
+  .cond-block.cond-active { border-color: #3a7bd5; }
+  .cond-header { display: flex; align-items: center; gap: 0.6em; margin-bottom: 4px; }
+  .cond-name { font-weight: bold; font-size: 0.85em; min-width: 7em; }
+  .cond-count-label { font-size: 0.8em; display: flex; align-items: center; gap: 0.3em; }
+  .cond-count { width: 3.5em; padding: 1px 4px; background: var(--color-bg); color: var(--color-text); border: 1px solid var(--color-border); border-radius: 3px; font-size: 0.9em; }
+  .cond-max { font-size: 0.85em; opacity: 0.6; min-width: 2em; }
+  .cond-reset-btn { margin-left: auto; background: none; border: none; color: var(--color-danger, #c00); cursor: pointer; font-size: 0.8em; opacity: 0.5; padding: 0 3px; }
+  .cond-reset-btn:hover { opacity: 1; }
+  .cond-flags { display: flex; flex-wrap: wrap; gap: 3px 8px; }
+  .cond-flag { font-size: 0.75em; display: flex; align-items: center; gap: 3px; cursor: pointer; }
+  .cond-flag.flag-on { color: #7eb8ff; font-weight: 600; }
+
   .unshuffled-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -5142,8 +5823,10 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     inset: 0 auto 0 0;
     transition: width 0.3s;
   }
-  .progress-fill.oot { background: #2e7d32; }
-  .progress-fill.mm  { background: #3a7bd5; }
+  .progress-fill.oot   { background: #1976d2; }
+  .progress-fill.mm    { background: #7b1fa2; }
+  .progress-accessible { color: #4caf50; }
+
   .progress-label {
     position: absolute;
     inset: 0;
@@ -5222,6 +5905,8 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
   .seed-table .condition-met td:first-child { opacity: 0.8; }
   .copy-hash-btn { cursor: pointer; opacity: 0.45; font-size: 0.9em; user-select: none; }
   .copy-hash-btn:hover { opacity: 1; }
+  .room-code-copy { cursor: pointer; }
+  .room-code-copy:hover { background: rgba(255,255,255,0.15); }
   .hide-btn { cursor: pointer; opacity: 0.5; font-size: 1.15em; user-select: none; margin-left: 0.3em; }
   .hide-btn:hover { opacity: 1; }
 
@@ -5578,6 +6263,23 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
   .er-tab.active {
     color: #81c784;
     border-bottom-color: #81c784;
+  }
+
+  @media screen and (max-width: 1100px) {
+    .summary-sep { margin: 0 0.25em; }
+    #general-settings-details summary { font-size: 0.85em; }
+    #general-settings-details .undo-btn { font-size: 0.75em; padding: 0.15em 0.4em; }
+  }
+  @media screen and (max-width: 820px) {
+    form.pure-form fieldset { flex-wrap: wrap; gap: 0.3em; }
+    input[type="text"][style*="16em"] { width: 10em !important; }
+    .check-stat { display: none; }
+    .legend-toggle-btn { padding: 0.2em 0.4em; font-size: 0.75em; }
+  }
+  @media screen and (max-width: 600px) {
+    form.pure-form fieldset { flex-direction: column; align-items: stretch; }
+    input[type="text"][style*="16em"] { width: auto !important; }
+    details summary strong { font-size: 0.85em; }
   }
 
 </style>

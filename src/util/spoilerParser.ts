@@ -11,10 +11,11 @@ export interface ErSettings {
   erIndoors: boolean;
   erOverworld: boolean;
   erOneWays: boolean;
-  erOwls: boolean;
   erWallmasters: boolean;
   erMixed: boolean;
   erAlterLw: boolean;
+  erDecoupled: boolean;
+  erSpawns: boolean;
   // Sub-types
   erMajorDungeons: boolean;
   erMinorDungeons: boolean;
@@ -37,7 +38,6 @@ export interface ErSettings {
   erOneWaysWaterVoids: boolean;
   erOneWaysAnywhere: boolean;
   erOneWaysOwls: boolean;
-  erDecoupled: boolean;
 }
 
 export const defaultErSettings: ErSettings = {
@@ -47,10 +47,11 @@ export const defaultErSettings: ErSettings = {
   erIndoors: false,
   erOverworld: false,
   erOneWays: false,
-  erOwls: false,
   erWallmasters: false,
   erMixed: false,
   erAlterLw: false,
+  erDecoupled: false,
+  erSpawns: false,
   erMajorDungeons: false,
   erMinorDungeons: false,
   erGanonCastle: false,
@@ -72,7 +73,6 @@ export const defaultErSettings: ErSettings = {
   erOneWaysWaterVoids: false,
   erOneWaysAnywhere: false,
   erOneWaysOwls: false,
-  erDecoupled: false,
 };
 
 export interface SeedInfo {
@@ -128,6 +128,7 @@ export interface SpoilerSphere {
 
 export interface SpoilerData {
   settings: Record<string, any>;
+  startingItems: Record<string, number>;
   locations: Record<string, string>;
   entrances: Record<string, string>;
   spheres: SpoilerSphere[];
@@ -140,6 +141,7 @@ export interface SpoilerData {
   worldLocations: Record<number, Record<string, string>>;
   worldEntrances: Record<number, Record<string, string>>;
   songEvents: Record<string, string>;
+  junkLocations: string[];
 }
 
 const SONG_NAME_TO_ID: Record<string, string> = {
@@ -179,6 +181,7 @@ export function parseSpoilerLog(text: string): SpoilerData {
   const isMultiworld = players > 1;
 
   const settings: Record<string, any> = {};
+  const rawStartingItems: Record<string, number> = {};
   const locations: Record<string, string> = {};
   const entrances: Record<string, string> = {};
   const spheres: SpoilerSphere[] = [];
@@ -200,16 +203,21 @@ export function parseSpoilerLog(text: string): SpoilerData {
   const specialConditions: Record<string, Record<string, any>> = {};
   let inSongEvents = false;
   const songEvents: Record<string, string> = {};
+  let inJunkLocations = false;
+  const junkLocations: string[] = [];
 
   for (const line of lines) {
-    if (line.trim() === 'Settings') { inSettings = true; inLocations = false; inEntrances = false; inSpecialConditions = false; inSongEvents = false; continue; }
-    if (line.trim() === 'Entrances') { inEntrances = true; inSettings = false; inLocations = false; inSpecialConditions = false; inSongEvents = false; continue; }
-    if (line.trim() === 'Song Events') { inSongEvents = true; inSettings = false; inEntrances = false; inSpecialConditions = false; continue; }
+    if (line.trim() === 'Settings') { inSettings = true; inLocations = false; inEntrances = false; inSpecialConditions = false; inSongEvents = false; inJunkLocations = false; continue; }
+    if (line.trim() === 'Entrances') { inEntrances = true; inSettings = false; inLocations = false; inSpecialConditions = false; inSongEvents = false; inJunkLocations = false; continue; }
+    if (line.trim() === 'Song Events') { inSongEvents = true; inSettings = false; inEntrances = false; inSpecialConditions = false; inJunkLocations = false; continue; }
     if (line.startsWith('Special Conditions')) {
-      inSettings = false; inEntrances = false; inSpecialConditions = true; inSongEvents = false; currentCondition = null; continue;
+      inSettings = false; inEntrances = false; inSpecialConditions = true; inSongEvents = false; currentCondition = null; inJunkLocations = false; continue;
     }
-    if (line.startsWith('Tricks') || line.startsWith('World Flags') || line.startsWith('Hints') || line.startsWith('Paths') || line.startsWith('Junk Locations') || line.startsWith('Plando')) {
-      inSettings = false; inEntrances = false; inSpecialConditions = false; inSongEvents = false; currentCondition = null;
+    if (line.startsWith('Junk Locations')) {
+      inSettings = false; inEntrances = false; inSpecialConditions = false; inSongEvents = false; currentCondition = null; inJunkLocations = true; continue;
+    }
+    if (line.startsWith('Tricks') || line.startsWith('World Flags') || line.startsWith('Hints') || line.startsWith('Paths') || line.startsWith('Plando')) {
+      inSettings = false; inEntrances = false; inSpecialConditions = false; inSongEvents = false; currentCondition = null; inJunkLocations = false;
     }
 
     if (inSongEvents) {
@@ -224,6 +232,11 @@ export function parseSpoilerLog(text: string): SpoilerData {
         inSongEvents = false;
       }
     }
+
+    if (inJunkLocations) {
+      const loc = line.trim();
+      if (loc) junkLocations.push(loc);
+    }
     if (line.startsWith('Location List')) { inLocations = true; inSettings = false; inEntrances = false; inSpheres = false; currentSphere = null; inSpecialConditions = false; continue; }
     if (line.trim() === 'Spheres') { inSpheres = true; inSettings = false; inLocations = false; inEntrances = false; currentSphere = null; inSpecialConditions = false; continue; }
     if (inEntrances && line && !line.startsWith(' ')) { inEntrances = false; }
@@ -233,12 +246,24 @@ export function parseSpoilerLog(text: string): SpoilerData {
       if (match) {
         const [, key, rawValue] = match;
         const trackerKey = settingsMap[key];
-        if (trackerKey) settings[trackerKey] = parseValue(key, rawValue.trim());
-        else if (key.startsWith('shared') || directBoolKeys.has(key)) settings[key] = rawValue.trim() === 'true';
+        if (key === 'startingItems') {
+          for (const id of rawValue.trim().split(/\s+/).filter(Boolean))
+            rawStartingItems[id] = (rawStartingItems[id] ?? 0) + 1;
+        } else if (trackerKey) {
+          const v = parseValue(key, rawValue.trim());
+          settings[trackerKey] = v;
+          // Also store under the OoTMM key name so the logic engine can find it
+          if (key === 'ganonBossKey')             settings['ganonBossKey'] = v;
+          if (key === 'smallKeyShuffleChestGame') settings['smallKeyShuffleChestGame'] = v;
+        } else if (key.startsWith('shared') || directBoolKeys.has(key)) {
+          settings[key] = rawValue.trim() === 'true';
+        } else if (key === 'smallKeyShuffleOot' || key === 'smallKeyShuffleMm') {
+          settings[key] = parseValue(key, rawValue.trim());
+        }
         if (key.startsWith('er')) rawEr[key] = rawValue.trim();
         if (key === 'owlShuffle') settings['owlShuffleEnabled'] = rawValue.trim() !== 'none';
-        if (key === 'bossKeyShuffleOot') settings['bossKeyOotEnabled'] = rawValue.trim() !== 'removed';
-        if (key === 'bossKeyShuffleMm') settings['bossKeyMmEnabled'] = rawValue.trim() !== 'removed';
+        if (key === 'bossKeyShuffleOot') { settings['bossKeyShuffleOot'] = parseValue(key, rawValue.trim()); settings['bossKeyOotEnabled'] = rawValue.trim() !== 'removed'; }
+        if (key === 'bossKeyShuffleMm')  { settings['bossKeyShuffleMm']  = parseValue(key, rawValue.trim()); settings['bossKeyMmEnabled']  = rawValue.trim() !== 'removed'; }
         if (key === 'ganonBossKey') settings['ganonBossKeyEnabled'] = rawValue.trim() !== 'removed';
         if (key.startsWith('coins')) {
           const val = rawValue.trim();
@@ -340,11 +365,12 @@ export function parseSpoilerLog(text: string): SpoilerData {
     erGrottos:    isErActive(rawEr['erGrottos']),
     erIndoors:    isErActive(rawEr['erIndoors']),
     erOverworld:  isErActive(rawEr['erOverworld']) || isErActive(rawEr['erRegions']),
-    erOneWays:    isErActive(rawEr['erOneWays']),
-    erOwls:       rawEr['erOneWaysOwls'] === 'true',
+    erOneWays:    isErActive(rawEr['erOneWays']) || rawEr['erOneWaysOwls'] === 'true',
     erWallmasters: isErActive(rawEr['erWallmasters']),
     erMixed:      isErActive(rawEr['erMixed']) || rawEr['erMixed'] === 'dungeon',
     erAlterLw:    rawEr['alterLostWoodsExits'] === 'true',
+    erDecoupled:  rawEr['erDecoupled'] === 'true',
+    erSpawns:     rawEr['erSpawns'] !== undefined && rawEr['erSpawns'] !== 'none',
     erMajorDungeons:     rawEr['erMajorDungeons'] === 'true',
     erMinorDungeons:     rawEr['erMinorDungeons'] === 'true',
     erGanonCastle:       rawEr['erGanonCastle'] === 'true',
@@ -366,7 +392,6 @@ export function parseSpoilerLog(text: string): SpoilerData {
     erOneWaysWaterVoids: rawEr['erOneWaysWaterVoids'] === 'true',
     erOneWaysAnywhere:   rawEr['erOneWaysAnywhere'] === 'true',
     erOneWaysOwls:       rawEr['erOneWaysOwls'] === 'true',
-    erDecoupled:         rawEr['erDecoupled'] === 'true',
   };
 
   // Store sub-type / extra ER settings in general settings record
@@ -410,5 +435,11 @@ export function parseSpoilerLog(text: string): SpoilerData {
     Object.assign(entrances, worldEntrances[1]);
   }
 
-  return { settings, locations, entrances, spheres, erSettings, OOTMM, OOTMMDungeons, seedInfo, specialConditions: specialConditions as SpecialConditionsMap, players, worldLocations, worldEntrances, songEvents };
+  // Propagate combined goron lullaby setting to per-game keys used in logic
+  if (settings['progressiveGoronLullaby'] !== undefined) {
+    if (settings['progressiveGoronLullabyOot'] === undefined) settings['progressiveGoronLullabyOot'] = settings['progressiveGoronLullaby'];
+    if (settings['progressiveGoronLullabyMm'] === undefined) settings['progressiveGoronLullabyMm'] = settings['progressiveGoronLullaby'];
+  }
+
+  return { settings, startingItems: rawStartingItems, locations, entrances, spheres, erSettings, OOTMM, OOTMMDungeons, seedInfo, specialConditions: specialConditions as SpecialConditionsMap, players, worldLocations, worldEntrances, songEvents, junkLocations };
 }

@@ -2,495 +2,500 @@
 oot:
   Kokiri Forest:
     scenes:
-      - KOKIRI_FOREST
-      - KOKIRI_KNOW_IT_ALL
-      - KOKIRI_MIDO
-      - KOKIRI_SARIA
-      - KOKIRI_TWINS
-      - LINK_HOUSE
-      - KOKIRI_SHOP
+    - KOKIRI_FOREST
+    - KOKIRI_KNOW_IT_ALL
+    - KOKIRI_MIDO
+    - KOKIRI_SARIA
+    - KOKIRI_TWINS
+    - LINK_HOUSE
+    - KOKIRI_SHOP
     checks:
-      - ^Kokiri Forest Storms Grotto
+    - ^Kokiri Forest Storms Grotto
   Lost Woods:
     scenes:
-      - LOST_WOODS
+    - LOST_WOODS
     checks:
-      - ^Lost Woods Grotto
-      - ^Deku Theater
+    - ^Lost Woods Grotto
+    - ^Deku Theater
   Sacred Forest Meadow:
     replacements:
-      - ['^Sacred Meadow', '']
+    - [ '^Sacred Meadow', '' ]
     scenes:
-      - SACRED_FOREST_MEADOW
+    - SACRED_FOREST_MEADOW
     checks:
-      - ^Sacred Meadow Fairy Fountain Fairy [0-9]+
-      - ^Sacred Meadow.*Grotto
+    - ^Sacred Meadow Fairy Fountain Fairy [0-9]+
+    - ^Sacred Meadow.*Grotto
   Hyrule Field:
     scenes:
-      - HYRULE_FIELD
+    - HYRULE_FIELD
     checks:
-      - ^Hyrule Field Fairy Fountain Fairy [0-9]+
-      - ^Hyrule Field.*Grotto
+    - ^Hyrule Field Fairy Fountain Fairy [0-9]+
+    - ^Hyrule Field.*Grotto
   Lon Lon Ranch:
     scenes:
-      - LON_LON_RANCH
-      - RANCH_HOUSE_SILO
+    - LON_LON_RANCH
+    - RANCH_HOUSE_SILO
     checks:
-      - ^Lon Lon Ranch Grotto
+    - ^Lon Lon Ranch Grotto
   Market:
     scenes:
-      - BACK_ALLEY_HOUSE
-      - BACK_ALLEY_HOUSE2
-      - BOMBCHU_BOWLING_ALLEY
-      - BOMBCHU_SHOP
-      - MARKET_CHILD_DAY
-      - MARKET_CHILD_NIGHT
-      - MARKET_POTION_SHOP
-      - GUARD_HOUSE
-      - TREASURE_SHOP
+    - BACK_ALLEY_HOUSE
+    - BACK_ALLEY_HOUSE2
+    - BOMBCHU_BOWLING_ALLEY
+    - BOMBCHU_SHOP
+    - MARKET_CHILD_DAY
+    - MARKET_CHILD_NIGHT
+    - MARKET_POTION_SHOP
+    - GUARD_HOUSE
+    - TREASURE_SHOP
     checks:
-      - ^Shooting Gallery Child
-      - ^Market Bazaar
+    - ^Shooting Gallery Child
+    - ^Market Bazaar
   Temple of Time:
     scenes:
-      - TEMPLE_OF_TIME
+    - TEMPLE_OF_TIME
   Hyrule/Ganon's Castle Exterior:
     replacements:
-      - ['^(Hyrule|Ganon) Castle', '']
+    - [ '^(Hyrule|Ganon) Castle', '' ]
     scenes:
-      - CASTLE_COURTYARD
-      - GANON_CASTLE_EXTERIOR
-      - HYRULE_CASTLE
+    - CASTLE_COURTYARD
+    - GANON_CASTLE_EXTERIOR
+    - HYRULE_CASTLE
     checks:
-      - ^Great Fairy Din's Fire
-      - ^Great Fairy Defense Upgrade
-      - ^Hatch Chicken
-      - ^Hyrule Castle GS Grotto
-      - ^Hyrule Castle Grotto Pot
-      - ^Hyrule Castle Grotto Rock Circle
+    - ^Great Fairy Din's Fire
+    - ^Great Fairy Defense Upgrade
+    - ^Hatch Chicken
+    - ^Hyrule Castle GS Grotto
+    - ^Hyrule Castle Grotto Pot
+    - ^Hyrule Castle Grotto Rock Circle
   Kakariko Village:
     replacements:
-      - ['^Kakariko', '']
+    - [ '^Kakariko', '' ]
     scenes:
-      - KAKARIKO_POTION_SHOP
-      - KAKARIKO_VILLAGE
-      - IMPA_HOUSE
-      - HOUSE_OF_SKULLTULA
+    - KAKARIKO_POTION_SHOP
+    - KAKARIKO_VILLAGE
+    - IMPA_HOUSE
+    - HOUSE_OF_SKULLTULA
     checks:
-      - ^Hatch Pocket Cucco
-      - ^Kakariko Grotto
-      - ^Shooting Gallery Adult
-      - ^Windmill
-      - ^Kakariko Bazaar
+    - ^Hatch Pocket Cucco
+    - ^Kakariko Grotto
+    - ^Shooting Gallery Adult
+    - ^Windmill
+    - ^Kakariko Bazaar
   Graveyard:
     scenes:
-      - GRAVEYARD
-      - TOMB_FAIRY
-      - TOMB_REDEAD
-      - TOMB_ROYAL
+    - GRAVEYARD
+    - TOMB_FAIRY
+    - TOMB_REDEAD
+    - TOMB_ROYAL
     checks:
-      - ^Graveyard Dampe
+    - ^Graveyard Dampe
   Zora's River:
     replacements:
-      - ['^Zora River', '']
+    - [ '^Zora River', '' ]
     scenes:
-      - ZORA_RIVER
+    - ZORA_RIVER
     checks:
-      - ^Zora River Fairy Fountain Fairy [0-9]+
-      - ^Zora River.*Grotto
+    - ^Zora River Fairy Fountain Fairy [0-9]+
+    - ^Zora River.*Grotto
   Zora's Domain:
     replacements:
-      - ['^Zora Domain', '']
+    - [ '^Zora Domain', '' ]
     scenes:
-      - ZORA_DOMAIN
-      - ZORA_SHOP
+    - ZORA_DOMAIN
+    - ZORA_SHOP
     checks:
-      - ^Zora Domain Fairy Fountain Fairy [0-9]+
+    - ^Zora Domain Fairy Fountain Fairy [0-9]+
   Zora's Fountain:
     replacements:
-      - ['^Zora Fountain', '']
+    - [ '^Zora Fountain', '' ]
     scenes:
-      - ZORA_FOUNTAIN
+    - ZORA_FOUNTAIN
     checks:
-      - ^Great Fairy Farore's Wind
+    - ^Great Fairy Farore's Wind
   Death Mountain Trail:
     scenes:
-      - DEATH_MOUNTAIN_TRAIL
+    - DEATH_MOUNTAIN_TRAIL
     checks:
-      - ^Great Fairy Magic Upgrade$
-      - ^Death Mountain Trail.*Grotto
+    - ^Great Fairy Magic Upgrade$
+    - ^Death Mountain Trail.*Grotto
   Goron City:
     scenes:
-      - GORON_CITY
-      - GORON_SHOP
+    - GORON_CITY
+    - GORON_SHOP
     checks:
-      - ^Goron City Grotto
+    - ^Goron City Grotto
   Death Mountain Crater:
     scenes:
-      - DEATH_MOUNTAIN_CRATER
+    - DEATH_MOUNTAIN_CRATER
     checks:
-      - ^Great Fairy Magic Upgrade 2
-      - ^Death Mountain Crater Grotto
-      - ^Death Mountain Crater Scrub Grotto
+    - ^Great Fairy Magic Upgrade 2
+    - ^Death Mountain Crater Grotto
+    - ^Death Mountain Crater Scrub Grotto
   Lake Hylia:
     scenes:
-      - FISHING_POND
-      - LAKE_HYLIA
-      - LABORATORY
+    - FISHING_POND
+    - LAKE_HYLIA
+    - LABORATORY
     checks:
-      - ^Lake Hylia Grotto
+    - ^Lake Hylia Grotto
   Gerudo Valley:
     scenes:
-      - GERUDO_VALLEY
+    - GERUDO_VALLEY
     checks:
-      - ^Gerudo Valley.*Grotto
+    - ^Gerudo Valley.*Grotto
     exclude:
-      - ^Gerudo Valley Crate Child Unreachable
+    - ^Gerudo Valley Crate Child Unreachable
   Gerudo Fortress:
     scenes:
-      - GERUDO_FORTRESS
-      - THIEVES_HIDEOUT
+    - GERUDO_FORTRESS
+    - THIEVES_HIDEOUT
     checks:
-      - ^Gerudo Fortress Fairy Fountain Fairy [0-9]+
+    - ^Gerudo Fortress Fairy Fountain Fairy [0-9]+
   Haunted Wasteland:
     scenes:
-      - HAUNTED_WASTELAND
+    - HAUNTED_WASTELAND
   Desert Colossus:
     scenes:
-      - DESERT_COLOSSUS
+    - DESERT_COLOSSUS
     checks:
-      - ^Great Fairy Nayru's Love
-      - ^Desert Colossus Grotto
+    - ^Great Fairy Nayru's Love
+    - ^Desert Colossus Grotto
   Deku Tree:
     canBeMq: true
     scenes:
-      - DEKU_TREE
-      - LAIR_GOHMA
+    - DEKU_TREE
+    - LAIR_GOHMA
   Dodongo's Cavern:
     canBeMq: true
     replacements:
-      - ['^Dodongo Cavern', '']
+    - [ '^Dodongo Cavern', '' ]
     scenes:
-      - DODONGO_CAVERN
-      - LAIR_KING_DODONGO
+    - DODONGO_CAVERN
+    - LAIR_KING_DODONGO
   Jabu Jabu's Belly:
     canBeMq: true
     replacements:
-      - ['Jabu-Jabu', '']
+    - [ 'Jabu-Jabu', '' ]
     scenes:
-      - INSIDE_JABU_JABU
-      - LAIR_BARINADE
+    - INSIDE_JABU_JABU
+    - LAIR_BARINADE
   Bottom of the Well:
     canBeMq: true
     scenes:
-      - BOTTOM_OF_THE_WELL
+    - BOTTOM_OF_THE_WELL
   Ice Cavern:
     canBeMq: true
     scenes:
-      - ICE_CAVERN
+    - ICE_CAVERN
   Gerudo Training Grounds:
     canBeMq: true
     replacements:
-      - ['^Gerudo Training( Grounds|)', '']
+    - [ '^Gerudo Training( Grounds|)', '' ]
     scenes:
-      - GERUDO_TRAINING_GROUND
+    - GERUDO_TRAINING_GROUND
   Forest Temple:
     canBeMq: true
     scenes:
-      - TEMPLE_FOREST
-      - LAIR_PHANTOM_GANON
+    - TEMPLE_FOREST
+    - LAIR_PHANTOM_GANON
   Fire Temple:
     canBeMq: true
     scenes:
-      - TEMPLE_FIRE
-      - LAIR_VOLVAGIA
+    - TEMPLE_FIRE
+    - LAIR_VOLVAGIA
   Water Temple:
     canBeMq: true
     scenes:
-      - TEMPLE_WATER
-      - LAIR_MORPHA
+    - TEMPLE_WATER
+    - LAIR_MORPHA
   Shadow Temple:
     canBeMq: true
     scenes:
-      - TEMPLE_SHADOW
-      - LAIR_BONGO_BONGO
+    - TEMPLE_SHADOW
+    - LAIR_BONGO_BONGO
   Spirit Temple:
     canBeMq: true
     scenes:
-      - TEMPLE_SPIRIT
-      - LAIR_TWINROVA
+    - TEMPLE_SPIRIT
+    - LAIR_TWINROVA
   Ganon's Castle:
     canBeMq: true
     replacements:
-      - ['^Ganon Castle', '']
+    - [ '^Ganon Castle', '' ]
     scenes:
-      - INSIDE_GANON_CASTLE
-      - GANON_TOWER
+    - INSIDE_GANON_CASTLE
+    - GANON_TOWER
 mm:
   South Clock Town:
     replacements:
-      - ['^Clock (Town|Tower Roof)', '']
+    - [ '^Clock (Town|Tower Roof)', '' ]
     scenes:
-      - CLOCK_TOWN_SOUTH
-      - CLOCK_TOWER_ROOFTOP
+    - CLOCK_TOWN_SOUTH
+    - CLOCK_TOWER_ROOFTOP
     exclude:
-      - ^Tingle Map
+    - ^Tingle Map
   Laundry Pool:
     replacements:
-      - ['^Clock Town', '']
+    - [ '^Clock Town', '' ]
     scenes:
-      - LAUNDRY_POOL
+    - LAUNDRY_POOL
   North Clock Town:
     replacements:
-      - ['^Clock Town', '']
+    - [ '^Clock Town', '' ]
     scenes:
-      - CLOCK_TOWN_NORTH
-      - DEKU_PLAYGROUND
+    - CLOCK_TOWN_NORTH
+    - DEKU_PLAYGROUND
     checks:
-      - ^Tingle Map Clock Town
-      - ^Tingle Map Woodfall
-      - ^Clock Town Great Fairy
+    - ^Tingle Map Clock Town
+    - ^Tingle Map Woodfall
+    - ^Clock Town Great Fairy
 
-      
   East Clock Town:
     replacements:
-      - ['^Clock Town', '']
+    - [ '^Clock Town', '' ]
     scenes:
-      - CLOCK_TOWN_EAST
-      - MAYOR_HOUSE
-      - MILK_BAR
-      - SHOOTING_GALLERY
-      - TREASURE_SHOP
-      - HONEY_DARLING
-      - OBSERVATORY
+    - CLOCK_TOWN_EAST
+    - MAYOR_HOUSE
+    - MILK_BAR
+    - SHOOTING_GALLERY
+    - TREASURE_SHOP
+    - HONEY_DARLING
+    - OBSERVATORY
     exclude:
-      - ^Astral Observatory Moon Tear
+    - ^Astral Observatory Moon Tear
   Stock Pot Inn:
     scenes:
-      - STOCK_POT_INN
+    - STOCK_POT_INN
   West Clock Town:
     replacements:
-      - ['^Clock Town', '']
+    - [ '^Clock Town', '' ]
     scenes:
-      - CLOCK_TOWN_WEST
-      - TRADING_POST
-      - BOMB_SHOP
-      - CURIOSITY_SHOP
-      - POST_OFFICE
-      - SWORDSMAN_SCHOOL
-      - LOTTERY
+    - CLOCK_TOWN_WEST
+    - TRADING_POST
+    - BOMB_SHOP
+    - CURIOSITY_SHOP
+    - POST_OFFICE
+    - SWORDSMAN_SCHOOL
+    - LOTTERY
   Termina Field:
     scenes:
-      - TERMINA_FIELD
+    - TERMINA_FIELD
     checks:
-      # Should be 134 checks!
-      - ^Termina Field Gossip Stones HP
-      - ^Termina Field Scrub
-      - ^Termina Field Cow
-      - ^Termina Field.*Grotto
-      - ^(Ocean|Canyon) Gossip Grotto
-      - ^(Bio Baba|Peahat) Grotto
-      - ^Astral Observatory Moon Tear
+    # Should be 134 checks!
+    - ^Termina Field Gossip Stones HP
+    - ^Termina Field Scrub
+    - ^Termina Field Cow
+    - ^Termina Field.*Grotto
+    - ^(Ocean|Canyon) Gossip Grotto
+    - ^(Bio Baba|Peahat) Grotto
+    - ^Astral Observatory Moon Tear
   Milk Road:
     scenes:
-      - MILK_ROAD
-      - GORMAN_TRACK
+    - MILK_ROAD
+    - GORMAN_TRACK
     checks:
-      - ^Tingle Map Ranch
-      - ^Tingle Map Great Bay
+    - ^Tingle Map Ranch
+    - ^Tingle Map Great Bay
   Romani Ranch:
     scenes:
-      - ROMANI_RANCH
-      - RANCH_HOUSE_BARN
-      - CUCCO_SHACK
-      - DOG_RACETRACK
+    - ROMANI_RANCH
+    - RANCH_HOUSE_BARN
+    - CUCCO_SHACK
+    - DOG_RACETRACK
   Road To Southern Swamp:
     scenes:
-      - ROAD_SOUTHERN_SWAMP
-      - SHOOTING_GALLERY_SWAMP
+    - ROAD_SOUTHERN_SWAMP
+    - SHOOTING_GALLERY_SWAMP
     checks:
-      - ^Tingle Map Woodfall
-      - ^Tingle Map Snowhead
-      - ^Road to Southern Swamp Grotto
-      
+    - ^Tingle Map Woodfall
+    - ^Tingle Map Snowhead
+    - ^Road to Southern Swamp Grotto
+
   Southern Swamp:
     scenes:
-      - SOUTHERN_SWAMP
-      - WOODS_MYSTERY
-      - POTION_SHOP
-      - TOURIST_INFORMATION
+    - SOUTHERN_SWAMP
+    - WOODS_MYSTERY
+    - POTION_SHOP
+    - TOURIST_INFORMATION
     checks:
-      - ^Southern Swamp Grotto
-      - ^Woods of Mystery Grotto
+    - ^Southern Swamp Grotto
+    - ^Woods of Mystery Grotto
   Deku Palace:
     scenes:
-      - DEKU_PALACE
-      - DEKU_KING_CHAMBER
-      - DEKU_SHRINE
+    - DEKU_PALACE
+    - DEKU_KING_CHAMBER
+    - DEKU_SHRINE
     checks:
-      - ^Deku Palace Grotto
-      - ^Deku Palace JP Line Grotto
-      - ^Beans Grotto Soil
+    - ^Deku Palace Grotto
+    - ^Deku Palace JP Line Grotto
+    - ^Beans Grotto Soil
   Woodfall:
     scenes:
-      - WOODFALL
+    - WOODFALL
     checks:
-      - ^Woodfall Great Fairy
+    - ^Woodfall Great Fairy
   Swamp Spider House:
     replacements:
-      - ['^Swamp', '']
+    - [ '^Swamp', '' ]
     scenes:
-      - SPIDER_HOUSE_SWAMP
+    - SPIDER_HOUSE_SWAMP
   Path To Mountain Village:
     scenes:
-      - PATH_MOUNTAIN_VILLAGE
+    - PATH_MOUNTAIN_VILLAGE
     checks:
-      - 
+    
+    - 
   Mountain Village:
     scenes:
-      - MOUNTAIN_VILLAGE_WINTER
-      - MOUNTAIN_VILLAGE_SPRING
-      - BLACKSMITH
-      - GORON_GRAVEYARD
+    - MOUNTAIN_VILLAGE_WINTER
+    - MOUNTAIN_VILLAGE_SPRING
+    - BLACKSMITH
+    - GORON_GRAVEYARD
     checks:
-      - ^Mountain Village Tunnel Grotto
+    - ^Mountain Village Tunnel Grotto
   Twin Islands:
     scenes:
-      - TWIN_ISLANDS_WINTER
-      - TWIN_ISLANDS_SPRING
-      - GORON_RACETRACK
+    - TWIN_ISLANDS_WINTER
+    - TWIN_ISLANDS_SPRING
+    - GORON_RACETRACK
     checks:
-      - ^Tingle Map Snowhead
-      - ^Tingle Map Ranch
-      - ^Twin Islands (Frozen|Ramp) Grotto
-      
+    - ^Tingle Map Snowhead
+    - ^Tingle Map Ranch
+    - ^Twin Islands (Frozen|Ramp) Grotto
+
   Goron Village:
     replacements:
-      - ['^(Goron Shrine|Goron)', '']
+    - [ '^(Goron Shrine|Goron)', '' ]
     scenes:
-      - GORON_SHRINE
-      - GORON_SHOP
-      - GORON_VILLAGE_WINTER
+    - GORON_SHRINE
+    - GORON_SHOP
+    - GORON_VILLAGE_WINTER
     checks:
-      - ^Lone Peak Shrine
+    - ^Lone Peak Shrine
   Path To Snowhead:
     scenes:
-      - PATH_SNOWHEAD
-      - SNOWHEAD
+    - PATH_SNOWHEAD
     checks:
-      - ^Snowhead Great Fairy
-      - ^Snowhead Owl Statue$
-      - ^Path to Snowhead Grotto
+    - ^Path to Snowhead Grotto
+  Snowhead:
+    scenes:
+    - SNOWHEAD
+    checks:
+    - ^Snowhead Great Fairy
+    - ^Snowhead Owl Statue$
   Great Bay Coast:
     replacements:
-      - ['^(Great Bay Coast|Great Bay)', '']
+    - [ '^(Great Bay Coast|Great Bay)', '' ]
     scenes:
-      - GREAT_BAY_COAST
-      - LABORATORY
+    - GREAT_BAY_COAST
+    - LABORATORY
     checks:
-      - ^Tingle Map Great Bay
-      - ^Tingle Map Ikana
-      - ^Great Bay Coast Fisherman Grotto
-      - ^Great Bay Cow Grotto
-      
+    - ^Tingle Map Great Bay
+    - ^Tingle Map Ikana
+    - ^Great Bay Coast Fisherman Grotto
+    - ^Great Bay Cow Grotto
+
   Zora Cape:
     scenes:
-      - ZORA_CAPE
-      - WATERFALL_RAPIDS
+    - ZORA_CAPE
+    - WATERFALL_RAPIDS
     checks:
-      - ^Great Bay Great Fairy
-      - ^Zora Cape Grotto
-      - ^Zora Cape Pot Game
+    - ^Great Bay Great Fairy
+    - ^Zora Cape Grotto
+    - ^Zora Cape Pot Game
   Zora Hall:
     scenes:
-      - ZORA_HALL
-      - ZORA_HALL_ROOMS
+    - ZORA_HALL
+    - ZORA_HALL_ROOMS
   Pinnacle Rock:
     scenes:
-      - PINNACLE_ROCK
+    - PINNACLE_ROCK
     exclude:
-      - ^Pinnacle Rock Rock Unreachable
+    - ^Pinnacle Rock Rock Unreachable
   Pirates Fortress:
     replacements:
-      - ['^Pirate Fortress', '']
+    - [ '^Pirate Fortress', '' ]
     scenes:
-      - PIRATE_FORTRESS_ENTRANCE
-      - PIRATE_FORTRESS_INTERIOR
-      - PIRATE_FORTRESS_EXTERIOR
+    - PIRATE_FORTRESS_ENTRANCE
+    - PIRATE_FORTRESS_INTERIOR
+    - PIRATE_FORTRESS_EXTERIOR
   Ocean Spider House:
     replacements:
-      - ['^Ocean', '']
+    - [ '^Ocean', '' ]
     scenes:
-      - SPIDER_HOUSE_OCEAN
+    - SPIDER_HOUSE_OCEAN
   Road To Ikana:
     scenes:
-      - ROAD_IKANA
+    - ROAD_IKANA
     checks:
-      - ^Road to Ikana Grotto
+    - ^Road to Ikana Grotto
   Ikana Graveyard:
     replacements:
-      - ['^Ikana Graveyard', '']
-      - ['^Beneath The Graveyard', 'Grave']
+    - [ '^Ikana Graveyard', '' ]
+    - [ '^Beneath The Graveyard', 'Grave' ]
     scenes:
-      - IKANA_GRAVEYARD
-      - BENEATH_THE_GRAVEYARD
-      - DAMPE_HOUSE
+    - IKANA_GRAVEYARD
+    - BENEATH_THE_GRAVEYARD
+    - DAMPE_HOUSE
     checks:
-      - ^Ikana Graveyard Grotto
+    - ^Ikana Graveyard Grotto
   Ikana Canyon:
     replacements:
-      - ['^(Ikana Valley|Ikana Canyon)', '']
+    - [ '^(Ikana Valley|Ikana Canyon)', '' ]
     scenes:
-      - IKANA_CANYON
-      - GHOST_HUT
-      - MUSIC_BOX_HOUSE
-      - SAKON_HIDEOUT
+    - IKANA_CANYON
+    - GHOST_HUT
+    - MUSIC_BOX_HOUSE
+    - SAKON_HIDEOUT
     checks:
-      - ^Tingle Map Ikana
-      - ^Tingle Map Clock Town
-      - ^Ikana Great Fairy
-      - ^Ikana Valley Grotto
-      
+    - ^Tingle Map Ikana
+    - ^Tingle Map Clock Town
+    - ^Ikana Great Fairy
+    - ^Ikana Valley Grotto
+
   Secret Shrine:
     scenes:
-      - SECRET_SHRINE
+    - SECRET_SHRINE
   Beneath The Well:
     scenes:
-      - BENEATH_THE_WELL
+    - BENEATH_THE_WELL
   Ikana Castle:
     replacements:
-      - ['^Ancient Castle of Ikana', '']
+    - [ '^Ancient Castle of Ikana', '' ]
     scenes:
-      - CASTLE_IKANA
-      - LAIR_IKANA
+    - CASTLE_IKANA
+    - LAIR_IKANA
   Stone Tower:
     scenes:
-      - STONE_TOWER
-      - STONE_TOWER_INVERTED
+    - STONE_TOWER
+    - STONE_TOWER_INVERTED
   Woodfall Temple:
     scenes:
-      - TEMPLE_WOODFALL
-      - LAIR_ODOLWA
+    - TEMPLE_WOODFALL
+    - LAIR_ODOLWA
   Snowhead Temple:
     scenes:
-      - TEMPLE_SNOWHEAD
-      - LAIR_GOHT
+    - TEMPLE_SNOWHEAD
+    - LAIR_GOHT
   Great Bay Temple:
     scenes:
-      - TEMPLE_GREAT_BAY
-      - LAIR_GYORG
+    - TEMPLE_GREAT_BAY
+    - LAIR_GYORG
   Stone Tower Temple:
     scenes:
-      - TEMPLE_STONE_TOWER
-      - TEMPLE_STONE_TOWER_INVERTED
-      - LAIR_TWINMOLD
+    - TEMPLE_STONE_TOWER
+    - LAIR_TWINMOLD
+  Stone Tower Temple Inverted:
+    scenes:
+    - TEMPLE_STONE_TOWER_INVERTED
   The Moon:
     replacements:
-      - ['^Moon', '']
+    - [ '^Moon', '' ]
     scenes:
-      - MOON
-      - MOON_DEKU
-      - MOON_GORON
-      - MOON_ZORA
-      - MOON_LINK
-      - LAIR_MAJORA
+    - MOON
+    - MOON_DEKU
+    - MOON_GORON
+    - MOON_ZORA
+    - MOON_LINK
+    - LAIR_MAJORA

@@ -3,7 +3,7 @@
 // ==========================================
 
 export type EntranceType = 'boss' | 'dungeon' | 'grotto' | 'owl' | 'interior' | 'overworld';
-export type ErSettingKey = 'erBoss' | 'erDungeons' | 'erGrottos' | 'erIndoors' | 'erOneWays' | 'erOwls' | 'erOverworld' | 'erWallmasters' | 'erAlterLw';
+export type ErSettingKey = 'erBoss' | 'erDungeons' | 'erGrottos' | 'erIndoors' | 'erOneWays' | 'erOverworld' | 'erWallmasters' | 'erAlterLw' | 'erSpawns';
 
 export interface EntranceInfo {
   id: string;
@@ -11,11 +11,12 @@ export interface EntranceInfo {
   type: EntranceType;
   erType: ErSettingKey;
   game: 'oot' | 'mm';
+  hideWhenErActive?: ErSettingKey;
 }
 
 export const allEntrances: EntranceInfo[] = [
-  { id: 'OOT_SPAWN_CHILD', name: "OOT Spawn Child to OOT Link's House", type: 'overworld', erType: 'erOverworld', game: 'oot' },
-  { id: 'OOT_SPAWN_ADULT', name: "OOT Spawn Adult to OOT Temple of Time", type: 'overworld', erType: 'erOverworld', game: 'oot' },
+  { id: 'OOT_SPAWN_CHILD', name: "OOT Spawn Child to OOT Link's House", type: 'overworld', erType: 'erSpawns', game: 'oot' },
+  { id: 'OOT_SPAWN_ADULT', name: "OOT Spawn Adult to OOT Temple of Time", type: 'overworld', erType: 'erSpawns', game: 'oot' },
   { id: 'OOT_BOSS_DEKU_TREE', name: "OOT Deku Tree Before Boss to OOT Deku Tree Boss", type: 'boss', erType: 'erBoss', game: 'oot' },
   { id: 'OOT_BOSS_DODONGO_CAVERN', name: "OOT Dodongo Cavern Pre-Boss Lobby to OOT Dodongo Cavern Boss", type: 'boss', erType: 'erBoss', game: 'oot' },
   { id: 'OOT_BOSS_JABU_JABU', name: "OOT Jabu-Jabu Pre-Boss Room to OOT Jabu-Jabu Boss", type: 'boss', erType: 'erBoss', game: 'oot' },
@@ -40,8 +41,6 @@ export const allEntrances: EntranceInfo[] = [
   { id: 'OOT_KOKIRI_FOREST_FROM_DEKU_TREE', name: "OOT Deku Tree to OOT Kokiri Forest Near Deku Tree", type: 'dungeon', erType: 'erDungeons', game: 'oot' },
   { id: 'OOT_MOUNTAIN_TRAIL_FROM_DODONGO_CAVERN', name: "OOT Dodongo Cavern to OOT Death Mountain", type: 'dungeon', erType: 'erDungeons', game: 'oot' },
   { id: 'OOT_ZORA_FOUNTAIN_FROM_JABU_JABU', name: "OOT Jabu-Jabu to OOT Zora Fountain", type: 'dungeon', erType: 'erDungeons', game: 'oot' },
-  { id: 'OOT_JABU_JABU_PRE_BOSS_ROOM', name: "OOT Jabu-Jabu to OOT Jabu-Jabu Pre-Boss Room", type: 'overworld', erType: 'erOverworld', game: 'oot' },
-  { id: 'OOT_PRE_BOSS_ROOM_JABU_JABU', name: "OOT Jabu-Jabu Pre-Boss Room to OOT Jabu-Jabu", type: 'overworld', erType: 'erOverworld', game: 'oot' },
   { id: 'OOT_SACRED_MEADOW_FROM_TEMPLE_FOREST', name: "OOT Forest Temple to OOT Sacred Meadow Forest Platform", type: 'dungeon', erType: 'erDungeons', game: 'oot' },
   { id: 'OOT_DEATH_CRATER_FROM_TEMPLE_FIRE', name: "OOT Fire Temple to OOT Death Mountain Crater Near Temple", type: 'dungeon', erType: 'erDungeons', game: 'oot' },
   { id: 'OOT_LAKE_HYLIA_FROM_TEMPLE_WATER', name: "OOT Water Temple to OOT Lake Hylia Near Water Temple", type: 'dungeon', erType: 'erDungeons', game: 'oot' },
@@ -61,9 +60,9 @@ export const allEntrances: EntranceInfo[] = [
   { id: 'OOT_DEATH_MOUNTAIN_FROM_KAKARIKO', name: "OOT Kakariko Trail Start to OOT Death Mountain", type: 'overworld', erType: 'erOverworld', game: 'oot' },
   { id: 'OOT_GERUDO_VALLEY_FROM_FIELD', name: "OOT Hyrule Field to OOT Gerudo Valley", type: 'overworld', erType: 'erOverworld', game: 'oot' },
   { id: 'OOT_MARKET_ENTRANCE_FROM_FIELD', name: "OOT Hyrule Field to OOT Market Entryway", type: 'overworld', erType: 'erOverworld', game: 'oot' },
-  { id: 'OOT_ZORA_RIVER_FROM_LOST_WOODS', name: "OOT Lost Woods Zora River Shortcut to OOT Zora River Shortcut Underwater", type: 'overworld', erType: 'erOverworld', game: 'oot' },
+  { id: 'OOT_ZORA_RIVER_FROM_LOST_WOODS', name: "OOT Lost Woods Shortcut to OOT Zora River Shortcut", type: 'overworld', erType: 'erOverworld', game: 'oot' },
   { id: 'OOT_GORON_CITY_FROM_LOST_WOODS', name: "OOT Lost Woods to OOT Goron City Shortcut", type: 'overworld', erType: 'erOverworld', game: 'oot' },
-  { id: 'OOT_LAKE_HYLIA_FROM_ZORA_DOMAIN', name: "OOT Zora Domain Shortcut to OOT Lake Hylia Underwater", type: 'overworld', erType: 'erOverworld', game: 'oot' },
+  { id: 'OOT_LAKE_HYLIA_FROM_ZORA_DOMAIN', name: "OOT Zora Domain Shortcut to OOT Lake Hylia Shortcut", type: 'overworld', erType: 'erOverworld', game: 'oot' },
   { id: 'OOT_FIELD_FROM_LOST_WOODS_BRIDGE', name: "OOT Lost Woods Bridge to OOT Hyrule Field", type: 'overworld', erType: 'erOverworld', game: 'oot' },
   { id: 'OOT_FIELD_FROM_ZORA_RIVER', name: "OOT Zora River Front to OOT Hyrule Field", type: 'overworld', erType: 'erOverworld', game: 'oot' },
   { id: 'OOT_FIELD_FROM_KAKARIKO', name: "OOT Kakariko to OOT Hyrule Field", type: 'overworld', erType: 'erOverworld', game: 'oot' },
@@ -73,9 +72,9 @@ export const allEntrances: EntranceInfo[] = [
   { id: 'OOT_VALLEY_FROM_GERUDO_FORTRESS', name: "OOT Gerudo Fortress Exterior to OOT Gerudo Valley After Bridge", type: 'overworld', erType: 'erOverworld', game: 'oot' },
   { id: 'OOT_KAKARIKO_FROM_DEATH_MOUNTAIN', name: "OOT Death Mountain to OOT Kakariko Trail Start", type: 'overworld', erType: 'erOverworld', game: 'oot' },
   { id: 'OOT_FIELD_FROM_MARKET_ENTRANCE', name: "OOT Market Entryway to OOT Hyrule Field", type: 'overworld', erType: 'erOverworld', game: 'oot' },
-  { id: 'OOT_LOST_WOODS_FROM_ZORA_RIVER', name: "OOT Zora River Lost Woods Shortcut to OOT Lost Woods Shortcut Underwater", type: 'overworld', erType: 'erOverworld', game: 'oot' },
+  { id: 'OOT_LOST_WOODS_FROM_ZORA_RIVER', name: "OOT Zora River Shortcut to OOT Lost Woods Shortcut", type: 'overworld', erType: 'erOverworld', game: 'oot' },
   { id: 'OOT_LOST_WOODS_FROM_GORON_CITY', name: "OOT Goron City Shortcut to OOT Lost Woods", type: 'overworld', erType: 'erOverworld', game: 'oot' },
-  { id: 'OOT_ZORA_DOMAIN_FROM_LAKE_HYLIA', name: "OOT Lake Hylia Near Shortcut to OOT Zora Domain Underwater", type: 'overworld', erType: 'erOverworld', game: 'oot' },
+  { id: 'OOT_ZORA_DOMAIN_FROM_LAKE_HYLIA', name: "OOT Lake Hylia Shortcut to OOT Zora Domain Shortcut", type: 'overworld', erType: 'erOverworld', game: 'oot' },
   { id: 'OOT_SACRED_FOREST_MEADOW', name: "OOT Lost Woods Deep to OOT Sacred Meadow Entryway", type: 'overworld', erType: 'erOverworld', game: 'oot' },
   { id: 'OOT_LOST_WOODS_FROM_MEADOW', name: "OOT Sacred Meadow Entryway to OOT Lost Woods Deep", type: 'overworld', erType: 'erOverworld', game: 'oot' },
   { id: 'OOT_GORON_CITY', name: "OOT Death Mountain to OOT Goron City", type: 'overworld', erType: 'erOverworld', game: 'oot' },
@@ -89,7 +88,7 @@ export const allEntrances: EntranceInfo[] = [
   { id: 'OOT_DEATH_MOUNTAIN_CRATER', name: "OOT Death Mountain Summit to OOT Death Mountain Crater Top", type: 'overworld', erType: 'erOverworld', game: 'oot' },
   { id: 'OOT_TRAIL_SUMMIT_FROM_CRATER', name: "OOT Death Mountain Crater Top to OOT Death Mountain Summit", type: 'overworld', erType: 'erOverworld', game: 'oot' },
   { id: 'OOT_LOST_WOODS_FROM_KOKIRI_FOREST', name: "OOT Kokiri Forest to OOT Lost Woods", type: 'overworld', erType: 'erOverworld', game: 'oot' },
-  { id: 'OOT_KOKIRI_FOREST_FROM_LOST_WOODS', name: "OOT Lost Woods Lost Forest to OOT Kokiri Forest", type: 'overworld', erType: 'erOverworld', game: 'oot' },
+  { id: 'OOT_KOKIRI_FOREST_FROM_LOST_WOODS', name: "OOT Lost Woods Lost Forest to OOT Kokiri Forest", type: 'overworld', erType: 'erOverworld', hideWhenErActive: 'erAlterLw', game: 'oot' },
   { id: 'OOT_FOREST_FROM_LOST_WOODS_BRIDGE', name: "OOT Lost Woods Bridge to OOT Kokiri Forest", type: 'overworld', erType: 'erOverworld', game: 'oot' },
   { id: 'OOT_LOST_WOODS_BRIDGE_FROM_FOREST', name: "OOT Kokiri Forest to OOT Lost Woods Bridge from Forest", type: 'overworld', erType: 'erOverworld', game: 'oot' },
   { id: 'OOT_GRAVEYARD', name: "OOT Kakariko to OOT Graveyard", type: 'overworld', erType: 'erOverworld', game: 'oot' },
@@ -110,12 +109,6 @@ export const allEntrances: EntranceInfo[] = [
   { id: 'OOT_HYRULE_CASTLE_GROTTO_FROM_FIELD', name: "OOT Hyrule Castle Near Grotto to OOT Hyrule Field", type: 'overworld', erType: 'erOverworld', game: 'oot' },
   { id: 'OOT_ZORA_RIVER_TO_OCTOROK_GROTTO', name: "OOT Zora River Upper to OOT Octorok Grotto Ledge", type: 'overworld', erType: 'erOverworld', game: 'oot' },
   { id: 'OOT_OCTOROK_GROTTO_FROM_ZORA_RIVER', name: "OOT Octorok Grotto Ledge to OOT Zora River Upper", type: 'overworld', erType: 'erOverworld', game: 'oot' },
-  { id: 'OOT_WARP_SONG_MEADOW', name: "OOT Sacred Meadow Forest Platform to OOT Sacred Meadow Forest Platform", type: 'overworld', erType: 'erOneWays', game: 'oot' },
-  { id: 'OOT_WARP_SONG_CRATER', name: "OOT Death Mountain Crater Near Temple to OOT Death Mountain Crater Near Temple", type: 'overworld', erType: 'erOneWays', game: 'oot' },
-  { id: 'OOT_WARP_SONG_LAKE', name: "OOT Lake Hylia Near Water Temple to OOT Lake Hylia Near Water Temple", type: 'overworld', erType: 'erOneWays', game: 'oot' },
-  { id: 'OOT_WARP_SONG_GRAVE', name: "OOT Graveyard Upper to OOT Graveyard Upper", type: 'overworld', erType: 'erOneWays', game: 'oot' },
-  { id: 'OOT_WARP_SONG_DESERT', name: "OOT Desert Colossus Spirit Exit to OOT Desert Colossus Spirit Exit", type: 'overworld', erType: 'erOneWays', game: 'oot' },
-  { id: 'OOT_WARP_SONG_TEMPLE', name: "OOT Temple of Time Exterior to OOT Temple of Time Exterior", type: 'overworld', erType: 'erOneWays', game: 'oot' },
   { id: 'OOT_LAKE_HYLIA_FROM_VALLEY', name: "OOT Gerudo Valley Falls to OOT Lake Hylia", type: 'overworld', erType: 'erOneWays', game: 'oot' },
   { id: 'OOT_LOST_WOODS_FROM_LOST_WOODS_NORTH', name: "OOT Lost Woods Lost North to OOT Lost Woods", type: 'overworld', erType: 'erAlterLw', game: 'oot' },
   { id: 'OOT_LOST_WOODS_FROM_LOST_WOODS_EAST', name: "OOT Lost Woods Lost East to OOT Lost Woods", type: 'overworld', erType: 'erAlterLw', game: 'oot' },
@@ -203,6 +196,12 @@ export const allEntrances: EntranceInfo[] = [
   { id: 'OOT_OUTSIDE_GANON_FROM_FAIRY', name: "OOT Fairy Fountain Defense to OOT Near Fairy Fountain Defense", type: 'interior', erType: 'erIndoors', game: 'oot' },
   { id: 'OOT_VILLAGE_OWL', name: "OOT Death Mountain Summit to OOT Kakariko Rooftop", type: 'overworld', erType: 'erOneWays', game: 'oot' },
   { id: 'OOT_FIELD_OWL', name: "OOT Lake Hylia to OOT Hyrule Field Drawbridge", type: 'overworld', erType: 'erOneWays', game: 'oot' },
+  { id: 'OOT_WARP_SONG_MEADOW', name: "OOT Warp Song Forest to OOT Sacred Meadow", type: 'overworld', erType: 'erOneWays', game: 'oot' },
+  { id: 'OOT_WARP_SONG_CRATER', name: "OOT Warp Song Fire to OOT Death Mountain Crater Warp", type: 'overworld', erType: 'erOneWays', game: 'oot' },
+  { id: 'OOT_WARP_SONG_LAKE', name: "OOT Warp Song Water to OOT Lake Hylia", type: 'overworld', erType: 'erOneWays', game: 'oot' },
+  { id: 'OOT_WARP_SONG_GRAVE', name: "OOT Warp Song Shadow to OOT Graveyard Upper", type: 'overworld', erType: 'erOneWays', game: 'oot' },
+  { id: 'OOT_WARP_SONG_DESERT', name: "OOT Warp Song Spirit to OOT Desert Colossus", type: 'overworld', erType: 'erOneWays', game: 'oot' },
+  { id: 'OOT_WARP_SONG_TEMPLE', name: "OOT Warp Song Light to OOT Temple of Time", type: 'overworld', erType: 'erOneWays', game: 'oot' },
   { id: 'OOT_WALLMASTER_FOREST_CORRIDOR_WEST', name: "OOT Forest Temple Wallmaster West to OOT Void", type: 'overworld', erType: 'erWallmasters', game: 'oot' },
   { id: 'OOT_WALLMASTER_FOREST_CORRIDOR_EAST', name: "OOT Forest Temple Wallmaster East to OOT Void", type: 'overworld', erType: 'erWallmasters', game: 'oot' },
   { id: 'OOT_WALLMASTER_SHADOW', name: "OOT Shadow Temple Wallmaster to OOT Void", type: 'overworld', erType: 'erWallmasters', game: 'oot' },
@@ -290,7 +289,7 @@ export const allEntrances: EntranceInfo[] = [
   { id: 'OOT_GRAVE_EXIT_REDEAD', name: "OOT Graveyard ReDead Grave to OOT Graveyard", type: 'overworld', erType: 'erOverworld', game: 'oot' },
   { id: 'OOT_GRAVE_EXIT_ROYAL', name: "OOT Graveyard Royal Tomb to OOT Graveyard", type: 'overworld', erType: 'erOverworld', game: 'oot' },
   { id: 'OOT_GRAVE_EXIT_DAMPE', name: "OOT Dampe Grave Entrance to OOT Graveyard", type: 'overworld', erType: 'erOverworld', game: 'oot' },
-  { id: 'OOT_MARKET_FROM_MASK_SHOP', name: "OOT Market Mask Shop to OOT Market", type: 'interior', erType: 'erIndoors', game: 'oot' },
+  { id: 'OOT_MARKET_FROM_MASK_SHOP', name: "OOT Market to MM Clock Town South (Game Link)", type: 'interior', erType: 'erIndoors', game: 'oot' },
   { id: 'MM_BOSS_TEMPLE_WOODFALL', name: "MM Woodfall Temple Boss Access to MM Woodfall Temple Boss", type: 'boss', erType: 'erBoss', game: 'mm' },
   { id: 'MM_BOSS_TEMPLE_SNOWHEAD', name: "MM Snowhead Temple Boss Access to MM Snowhead Temple Boss", type: 'boss', erType: 'erBoss', game: 'mm' },
   { id: 'MM_BOSS_TEMPLE_GREAT_BAY', name: "MM Great Bay Temple Boss Access to MM Great Bay Temple Boss", type: 'boss', erType: 'erBoss', game: 'mm' },
@@ -390,7 +389,7 @@ export const allEntrances: EntranceInfo[] = [
   { id: 'MM_MYSTERY_WOODS', name: "MM Swamp Near Potion Shop to MM Woods of Mystery", type: 'overworld', erType: 'erOverworld', game: 'mm' },
   { id: 'MM_SWAMP_FROM_MYSTERY_WOODS', name: "MM Woods of Mystery Lost to MM Swamp Near Potion Shop", type: 'overworld', erType: 'erOverworld', game: 'mm' },
   { id: 'MM_SEWERS_FROM_EXTERIOR_GATE', name: "MM Pirate Fortress Entrance to MM Pirate Fortress Sewers", type: 'overworld', erType: 'erOverworld', game: 'mm' },
-  { id: 'MM_EXTERIOR_GATE_FROM_SEWERS', name: "MM Pirate Fortress Sewers to MM Pirate Fortress Sewers Entrance", type: 'overworld', erType: 'erOverworld', game: 'mm' },
+  { id: 'MM_EXTERIOR_GATE_FROM_SEWERS', name: "MM Pirate Fortress Sewers to MM Pirate Fortress Entrance", type: 'overworld', erType: 'erOverworld', game: 'mm' },
   { id: 'MM_PIRATE_FORTRESS_INTERIOR', name: "MM Pirate Fortress Entrance Balcony to MM Pirate Fortress Interior", type: 'overworld', erType: 'erOverworld', game: 'mm' },
   { id: 'MM_PIRATE_FORTRESS_EXTERIOR_FROM_INTERIOR', name: "MM Pirate Fortress Interior to MM Pirate Fortress Entrance Balcony", type: 'overworld', erType: 'erOverworld', game: 'mm' },
   { id: 'MM_PIRATE_FORTRESS_INTERIOR_FROM_LOOKOUT', name: "MM Pirate Fortress Entrance Lookout to MM Pirate Fortress Barrel Maze Entry", type: 'overworld', erType: 'erOverworld', game: 'mm' },
@@ -484,7 +483,7 @@ export const allEntrances: EntranceInfo[] = [
   { id: 'MM_CLOCK_TOWN_EAST_FROM_MAYORS_OFFICE', name: "MM Mayor's Office to MM Clock Town East", type: 'interior', erType: 'erIndoors', game: 'mm' },
   { id: 'MM_CLOCK_TOWN_EAST_FROM_TOWN_ARCHERY', name: "MM Town Archery to MM Clock Town East", type: 'interior', erType: 'erIndoors', game: 'mm' },
   { id: 'MM_CLOCK_TOWN_EAST_FROM_STOCK_POT_INN', name: "MM Stock Pot Inn to MM Clock Town East", type: 'interior', erType: 'erIndoors', game: 'mm' },
-  { id: 'MM_CLOCK_TOWN_EAST_FROM_STOCK_POT_INN_ROOF', name: "MM Stock Pot Inn to MM Stock Pot Inn Roof", type: 'interior', erType: 'erIndoors', game: 'mm' },
+  { id: 'MM_CLOCK_TOWN_EAST_FROM_STOCK_POT_INN_ROOF', name: "MM Stock Pot Inn to MM Clock Town East Stock Pot Inn Roof", type: 'interior', erType: 'erIndoors', game: 'mm' },
   { id: 'MM_CLOCK_TOWN_EAST_FROM_MILK_BAR', name: "MM Milk Bar to MM Clock Town East", type: 'interior', erType: 'erIndoors', game: 'mm' },
   { id: 'MM_CLOCK_TOWN_NORTH_FROM_FAIRY_FOUNTAIN', name: "MM Clock Town Fairy Fountain to MM Clock Town North", type: 'interior', erType: 'erIndoors', game: 'mm' },
   { id: 'MM_CLOCK_TOWN_WEST_FROM_SWORDSMAN_SCHOOL', name: "MM Swordsman School to MM Clock Town West", type: 'interior', erType: 'erIndoors', game: 'mm' },
@@ -513,13 +512,13 @@ export const allEntrances: EntranceInfo[] = [
   { id: 'MM_SNOWHEAD_FROM_FAIRY_FOUNTAIN', name: "MM Snowhead Fairy Fountain to MM Snowhead Near Fairy Fountain", type: 'interior', erType: 'erIndoors', game: 'mm' },
   { id: 'MM_SWAMP_FROM_TOURIST_INFORMATION', name: "MM Tourist Information to MM Swamp Front", type: 'interior', erType: 'erIndoors', game: 'mm' },
   { id: 'MM_WOODFALL_FROM_FAIRY_FOUNTAIN', name: "MM Woodfall Fairy Fountain to MM Woodfall Near Fairy Fountain", type: 'interior', erType: 'erIndoors', game: 'mm' },
-  { id: 'MM_MOUNTAIN_VILLAGE_FROM_GORON_GRAVEYARD', name: "MM Goron Graveyard to MM Near Goron Graveyard", type: 'interior', erType: 'erIndoors', game: 'mm' },
+  { id: 'MM_MOUNTAIN_VILLAGE_FROM_GORON_GRAVEYARD', name: "MM Goron Graveyard to MM Mountain Village Cliff", type: 'interior', erType: 'erIndoors', game: 'mm' },
   { id: 'MM_MOUNTAIN_VILLAGE_FROM_BLACKSMITH', name: "MM Blacksmith to MM Mountain Village", type: 'interior', erType: 'erIndoors', game: 'mm' },
   { id: 'MM_ROMANI_RANCH_FROM_CUCCO_SHACK', name: "MM Cucco Shack to MM Romani Ranch", type: 'interior', erType: 'erIndoors', game: 'mm' },
   { id: 'MM_ROMANI_RANCH_FROM_DOGGY_RACETRACK', name: "MM Doggy Racetrack to MM Romani Ranch", type: 'interior', erType: 'erIndoors', game: 'mm' },
   { id: 'MM_ROMANI_RANCH_FROM_STABLES', name: "MM Stables to MM Romani Ranch", type: 'interior', erType: 'erIndoors', game: 'mm' },
   { id: 'MM_ROMANI_RANCH_FROM_RANCH_HOUSE', name: "MM Ranch House to MM Romani Ranch", type: 'interior', erType: 'erIndoors', game: 'mm' },
-  { id: 'MM_CLOCK_TOWN_EAST_FROM_ASTRAL_OBSERVATORY', name: "MM Astral Observatory Passage to MM Clock Town East Near Hideout", type: 'interior', erType: 'erIndoors', game: 'mm' },
+  { id: 'MM_CLOCK_TOWN_EAST_FROM_ASTRAL_OBSERVATORY', name: "MM Astral Observatory Passage to MM Clock Town East Main", type: 'interior', erType: 'erIndoors', game: 'mm' },
   { id: 'MM_FIELD_FROM_ASTRAL_OBSERVATORY', name: "MM Astral Observatory to MM Astral Observatory Balcony", type: 'interior', erType: 'erIndoors', game: 'mm' },
   { id: 'MM_SWAMP_ROAD_FROM_ARCHERY', name: "MM Swamp Archery to MM Road to Southern Swamp", type: 'interior', erType: 'erIndoors', game: 'mm' },
   { id: 'MM_TWIN_ISLANDS_FROM_GORON_RACETRACK', name: "MM Goron Race to MM Near Goron Race", type: 'interior', erType: 'erIndoors', game: 'mm' },
@@ -631,14 +630,196 @@ export const allEntrances: EntranceInfo[] = [
   { id: 'MM_GRAVE_EXIT_NIGHT1', name: "MM Beneath The Graveyard Night 1 to MM Ikana Graveyard", type: 'overworld', erType: 'erOverworld', game: 'mm' },
   { id: 'MM_GRAVE_EXIT_NIGHT2', name: "MM Beneath The Graveyard Night 2 to MM Ikana Graveyard", type: 'overworld', erType: 'erOverworld', game: 'mm' },
   { id: 'MM_GRAVE_EXIT_NIGHT3', name: "MM Beneath The Graveyard Night 3 Fake Exit to MM Ikana Graveyard", type: 'overworld', erType: 'erOverworld', game: 'mm' },
-  { id: 'MM_VOID_GREAT_BAY', name: "MM Great Bay Coast Water Void to MM Void", type: 'overworld', erType: 'erWallmasters', game: 'mm' },
-  { id: 'MM_VOID_GREAT_BAY_BY_PINNACLE_ROCK', name: "MM Great Bay Coast Near Pinnacle Water Void to MM Void", type: 'overworld', erType: 'erWallmasters', game: 'mm' },
-  { id: 'MM_VOID_ZORA_CAPE', name: "MM Zora Cape Water Void to MM Void", type: 'overworld', erType: 'erWallmasters', game: 'mm' },
-  { id: 'MM_VOID_PINNACLE_ROCK', name: "MM Pinnacle Rock Water Void to MM Void", type: 'overworld', erType: 'erWallmasters', game: 'mm' },
-  { id: 'MM_CLOCK_TOWN_FROM_CLOCK_TOWER', name: "MM Clock Tower to MM Clock Town From Clock Tower", type: 'interior', erType: 'erIndoors', game: 'mm' },
+  { id: 'MM_VOID_GREAT_BAY', name: "MM Great Bay Coast Water Void to MM Void", type: 'overworld', erType: 'erOneWays', game: 'mm' },
+  { id: 'MM_VOID_GREAT_BAY_BY_PINNACLE_ROCK', name: "MM Great Bay Coast Near Pinnacle Water Void to MM Void", type: 'overworld', erType: 'erOneWays', game: 'mm' },
+  { id: 'MM_VOID_ZORA_CAPE', name: "MM Zora Cape Water Void to MM Void", type: 'overworld', erType: 'erOneWays', game: 'mm' },
+  { id: 'MM_VOID_PINNACLE_ROCK', name: "MM Pinnacle Rock Water Void to MM Void", type: 'overworld', erType: 'erOneWays', game: 'mm' },
+  { id: 'MM_CLOCK_TOWN_FROM_CLOCK_TOWER', name: "MM Clock Town South to OOT Market (Game Link)", type: 'interior', erType: 'erIndoors', game: 'mm' },
+
+  // ========== CSV-ONLY (non-YAML, shown as unshuffled) ==========
+  { id: 'OOT_BACK_ALLEY_TREASURE_FROM_MARKET', name: "OOT Market Treasure Game Side to OOT Back Alley Treasure Game Side", type: 'overworld', erType: 'erOverworld', game: 'oot' },
+  { id: 'OOT_BACK_ALLEY_FROM_HOUSE', name: "OOT Dog Lady's House to OOT Back Alley", type: 'interior', erType: 'erIndoors', game: 'oot' },
+  { id: 'OOT_BACK_ALLEY_SHOOTING_FROM_MARKET', name: "OOT Market Shooting Side to OOT Back Alley Shooting Side", type: 'overworld', erType: 'erOverworld', game: 'oot' },
+  { id: 'OOT_DOG_LADY_FROM_BACK_ALLEY', name: "OOT Back Alley to OOT Dog Lady's House", type: 'overworld', erType: 'erOverworld', game: 'oot' },
+  { id: 'OOT_END', name: "OOT End Credits to OOT Sages Chamber -> End Credits", type: 'overworld', erType: 'erOverworld', game: 'oot' },
+  { id: 'OOT_SAGES_CHANBER_END_FROM_GANON2', name: "OOT Ganon Beaten to OOT Sages Chamber - Ganon Beaten", type: 'overworld', erType: 'erOverworld', game: 'oot' },
+  { id: 'OOT_HYRULE_END', name: "OOT Hyrule Field to OOT End Credits -> Hyrule Field", type: 'overworld', erType: 'erOverworld', game: 'oot' },
+  { id: 'OOT_DMT_OWL', name: "OOT Owl Pick to OOT Death Mountain Trail -> Owl Pick", type: 'owl', erType: 'erOneWays', game: 'oot' },
+  { id: 'OOT_DESERT_FROM_MIROR', name: "OOT Mirror Shield to OOT Desert Colossus", type: 'overworld', erType: 'erOverworld', game: 'oot' },
+  { id: 'OOT_DESERT_FROM_GAUNTLET', name: "OOT Silver Gauntlet to OOT Desert Colossus", type: 'overworld', erType: 'erOverworld', game: 'oot' },
+  { id: 'OOT_BOSS_GANON2_FROM_GANONDORF', name: "OOT Ganondorf Beaten to OOT Ganon Battle Arena - Ganondorf Beaten", type: 'boss', erType: 'erBoss', game: 'oot' },
+  { id: 'OOT_GANON_CASTLE_EXTERIOR', name: "OOT Market to OOT Ganon Castle Exterior", type: 'dungeon', erType: 'erDungeons', game: 'oot' },
+  { id: 'OOT_GANONDORF_CUTSCENE', name: "OOT Ganondorf's Lair to OOT Ganon Tower -> Ganondorf's Lair", type: 'overworld', erType: 'erOverworld', game: 'oot' },
+  { id: 'OOT_FORTRESS_FROM_HIDEOUT_LEFT_JAIL_1', name: "OOT Thieves' Hideout Jail 1 Left to OOT Gerudo's Fortress Jail 1 Left", type: 'overworld', erType: 'erOverworld', game: 'oot' },
+  { id: 'OOT_FORTRESS_FROM_HIDEOUT_RIGHT_JAIL_1', name: "OOT Thieves' Hideout Jail 1 Right to OOT Gerudo's Fortress Jail 1 Right", type: 'overworld', erType: 'erOverworld', game: 'oot' },
+  { id: 'OOT_FORTRESS_FROM_HIDEOUT_KITCHEN_BOTTOM', name: "OOT Thieves' Hideout Kitchen Bottom to OOT Gerudo's Fortress Kitchen Bottom", type: 'overworld', erType: 'erOverworld', game: 'oot' },
+  { id: 'OOT_FORTRESS_FROM_HIDEOUT_KITCHEN_BOTTOM_TO_TOP', name: "OOT Thieves' Hideout Kitchen Bottom to Top to OOT Gerudo's Fortress Kitchen Bottom to Top", type: 'overworld', erType: 'erOverworld', game: 'oot' },
+  { id: 'OOT_FORTRESS_FROM_HIDEOUT_JAIL_3_BOTTOM', name: "OOT Thieves' Hideout Jail 3 Bottom to OOT Gerudo's Fortress Jail 3 Bottom", type: 'overworld', erType: 'erOverworld', game: 'oot' },
+  { id: 'OOT_FORTRESS_FROM_HIDEOUT_JAIL_3_TOP', name: "OOT Thieves' Hideout Jail 3 Top to OOT Gerudo's Fortress Jail 3 Top", type: 'overworld', erType: 'erOverworld', game: 'oot' },
+  { id: 'OOT_FORTRESS_FROM_HIDEOUT_JAIL_2_BOTTOM', name: "OOT Thieves' Hideout Jail 2 Bottom to OOT Gerudo's Fortress Jail 2 Bottom", type: 'overworld', erType: 'erOverworld', game: 'oot' },
+  { id: 'OOT_FORTRESS_FROM_HIDEOUT_JAIL_2_TOP', name: "OOT Thieves' Hideout Jail 2 Top to OOT Gerudo's Fortress Jail 2 Top", type: 'overworld', erType: 'erOverworld', game: 'oot' },
+  { id: 'OOT_FORTRESS_FROM_HIDEOUT_KITCHEN_TOP_RIGHT', name: "OOT Thieves' Hideout Kitchen Top Right to OOT Gerudo's Fortress Kitchen Top Right", type: 'overworld', erType: 'erOverworld', game: 'oot' },
+  { id: 'OOT_FORTRESS_FROM_HIDEOUT_KITCHEN_TOP_LEFT', name: "OOT Thieves' Hideout Kitchen Top Left to OOT Gerudo's Fortress Kitchen Top Left", type: 'overworld', erType: 'erOverworld', game: 'oot' },
+  { id: 'OOT_FORTRESS_FROM_HIDEOUT_BREAKOUT', name: "OOT Thieves' Hideout Breakout Bottom to OOT Gerudo's Fortress Breakout Bottom", type: 'overworld', erType: 'erOverworld', game: 'oot' },
+  { id: 'OOT_FORTRESS_FROM_HIDEOUT_BREAKOUT_JAIL', name: "OOT Thieves' Hideout Breakout Top to OOT Gerudo's Fortress Breakout Top", type: 'overworld', erType: 'erOverworld', game: 'oot' },
+  { id: 'OOT_FORTRESS_FROM_HIDEOUT_JAIL_4', name: "OOT Thieves' Hideout Jail 4 to OOT Gerudo's Fortress Jail 4", type: 'overworld', erType: 'erOverworld', game: 'oot' },
+  { id: 'OOT_GERUDO_FORTRESS_JAIL', name: "OOT Caught to OOT Gerudo's Fortress -> Caught", type: 'interior', erType: 'erIndoors', game: 'oot' },
+  { id: 'OOT_GERUDO_VALLEY_CAUGHT', name: "OOT Caught to OOT Gerudo's Valley -> Caught", type: 'overworld', erType: 'erOverworld', game: 'oot' },
+  { id: 'OOT_CASTLE_GATE', name: "OOT Caught to OOT Hyrule Castle -> Caught", type: 'overworld', erType: 'erOverworld', game: 'oot' },
+  { id: 'OOT_HYRULE_END_FROM_END', name: "OOT End Credits to OOT Hyrule Field - End Credits", type: 'overworld', erType: 'erOverworld', game: 'oot' },
+  { id: 'OOT_KOKIRI_END_FROM_ZORA_DOMAIN', name: "OOT End Credits to OOT Kokiri Forest - End Credits", type: 'overworld', erType: 'erOverworld', game: 'oot' },
+  { id: 'OOT_WARP_BOSS_DEKU_TREE', name: "OOT Warp Gohma to OOT Kokiri Forest - Warp Gohma", type: 'boss', erType: 'erBoss', game: 'oot' },
+  { id: 'OOT_BOSS_JABU_JABU_WARP_OUT', name: "OOT Warp Boss to OOT Barinade's Lair -> Warp Boss", type: 'boss', erType: 'erBoss', game: 'oot' },
+  { id: 'OOT_BOSS_SHADOW_TEMPLE_WARP_OUT', name: "OOT Warp Boss to OOT Bongo-Bongo's Lair -> Warp Boss", type: 'boss', erType: 'erBoss', game: 'oot' },
+  { id: 'OOT_BOSS_GANONDORF', name: "OOT Ganondorf Beaten to OOT Ganondorf's Lair -> Ganondorf Beaten", type: 'boss', erType: 'erBoss', game: 'oot' },
+  { id: 'OOT_GANONDORF_CUTSCENE_FROM_GANON_TOWER', name: "OOT Ganon Tower to OOT Ganondorf's Lair - Ganon Tower", type: 'overworld', erType: 'erOverworld', game: 'oot' },
+  { id: 'OOT_BOSS_DEKU_TREE_WARP_OUT', name: "OOT Warp Boss to OOT Gohma's Lair -> Warp Boss", type: 'boss', erType: 'erBoss', game: 'oot' },
+  { id: 'OOT_BOSS_DODONGO_CAVERN_WARP_OUT', name: "OOT Warp Boss to OOT King Dodongo's Lair -> Warp Boss", type: 'boss', erType: 'erBoss', game: 'oot' },
+  { id: 'OOT_BOSS_WATER_TEMPLE_WARP_OUT', name: "OOT Warp Boss to OOT Morpha's Lair -> Warp Boss", type: 'boss', erType: 'erBoss', game: 'oot' },
+  { id: 'OOT_BOSS_FOREST_TEMPLE_WARP_OUT', name: "OOT Warp Boss to OOT Phantom Ganon's Lair -> Warp Boss", type: 'boss', erType: 'erBoss', game: 'oot' },
+  { id: 'OOT_BOSS_SPIRIT_TEMPLE_WARP_OUT', name: "OOT Warp Boss to OOT Twinrova's Lair -> Warp Boss", type: 'boss', erType: 'erBoss', game: 'oot' },
+  { id: 'OOT_BOSS_FIRE_TEMPLE_WARP_OUT', name: "OOT Warp Boss to OOT Volvagia's Lair -> Warp Boss", type: 'boss', erType: 'erBoss', game: 'oot' },
+  { id: 'OOT_LAKE_OWL', name: "OOT Owl Pick to OOT Lake Hylia -> Owl Pick", type: 'owl', erType: 'erOneWays', game: 'oot' },
+  { id: 'OOT_LON_LON_EPONA_JUMP_MIDDLE', name: "OOT Jump Middle Fence to OOT Lon Lon's Ranch -> Jump Middle Fence", type: 'overworld', erType: 'erOverworld', game: 'oot' },
+  { id: 'OOT_LON_LON_EPONA_JUMP_RIGHT', name: "OOT Jump Right Fence to OOT Lon Lon's Ranch -> Jump Right Fence", type: 'overworld', erType: 'erOverworld', game: 'oot' },
+  { id: 'OOT_LON_LON_EPONA_JUMP_LEFT', name: "OOT Jump Left Fence to OOT Lon Lon's Ranch -> Jump Left Fence", type: 'overworld', erType: 'erOverworld', game: 'oot' },
+  { id: 'OOT_MARKET_FROM_BACK_ALLEY_SHOOTING', name: "OOT Back Alley Shooting Side to OOT Market Shooting Side", type: 'overworld', erType: 'erOverworld', game: 'oot' },
+  { id: 'OOT_MARKET_FROM_BACK_ALLEY_TREASURE', name: "OOT Back Alley Treasure Game Side to OOT Market Treasure Game Side", type: 'overworld', erType: 'erOverworld', game: 'oot' },
+  { id: 'OOT_MARKET_ADULT_FROM_GANON_CASTLE_EXTERIOR', name: "OOT Ganon Castle Exterior to OOT Market", type: 'dungeon', erType: 'erDungeons', game: 'oot' },
+
+  { id: 'WARP_LOADING', name: "OOT/MM Warp Loading Zone", type: 'overworld', erType: 'erOverworld', game: 'oot' },
+  { id: 'OOT_SPIRIT_TEMPLE_DESERT_MIROR', name: "OOT Mirror Shield to OOT Spirit Temple", type: 'dungeon', erType: 'erDungeons', game: 'oot' },
+  { id: 'OOT_SPIRIT_TEMPLE_DESERT_GAUNTLET', name: "OOT Silver Gauntlet to OOT Spirit Temple", type: 'dungeon', erType: 'erDungeons', game: 'oot' },
+  { id: 'OOT_HIDEOUT_LEFT_JAIL_1_FROM_FORTRESS', name: "OOT Gerudo's Fortress Jail 1 Left to OOT Thieves' Hideout Jail 1 Left", type: 'interior', erType: 'erIndoors', game: 'oot' },
+  { id: 'OOT_HIDEOUT_RIGHT_JAIL_1_FROM_FORTRESS', name: "OOT Gerudo's Fortress Jail 1 Right to OOT Thieves' Hideout Jail 1 Right", type: 'interior', erType: 'erIndoors', game: 'oot' },
+  { id: 'OOT_HIDEOUT_KITCHEN_BOTTOM_FROM_FORTRESS', name: "OOT Gerudo's Fortress Kitchen Bottom to OOT Thieves' Hideout Kitchen Bottom", type: 'interior', erType: 'erIndoors', game: 'oot' },
+  { id: 'OOT_HIDEOUT_KITCHEN_BOTTOM_TO_TOP_FROM_FORTRESS', name: "OOT Gerudo's Fortress Kitchen Bottom to Top to OOT Thieves' Hideout Kitchen Bottom to Top", type: 'interior', erType: 'erIndoors', game: 'oot' },
+  { id: 'OOT_HIDEOUT_JAIL_3_BOTTOM_FROM_FORTRESS', name: "OOT Gerudo's Fortress Jail 3 Bottom to OOT Thieves' Hideout Jail 3 Bottom", type: 'interior', erType: 'erIndoors', game: 'oot' },
+  { id: 'OOT_HIDEOUT_JAIL_3_TOP_FROM_FORTRESS', name: "OOT Gerudo's Fortress Jail 3 Top to OOT Thieves' Hideout Jail 3 Top", type: 'interior', erType: 'erIndoors', game: 'oot' },
+  { id: 'OOT_HIDEOUT_JAIL_2_BOTTOM_FROM_FORTRESS', name: "OOT Gerudo's Fortress Jail 2 Bottom to OOT Thieves' Hideout Jail 2 Bottom", type: 'interior', erType: 'erIndoors', game: 'oot' },
+  { id: 'OOT_HIDEOUT_JAIL_2_TOP_FROM_FORTRESS', name: "OOT Gerudo's Fortress Jail 2 Top to OOT Thieves' Hideout Jail 2 Top", type: 'interior', erType: 'erIndoors', game: 'oot' },
+  { id: 'OOT_HIDEOUT_KITCHEN_TOP_RIGHT_FROM_FORTRESS', name: "OOT Gerudo's Fortress Kitchen Top Right to OOT Thieves' Hideout Kitchen Top Right", type: 'interior', erType: 'erIndoors', game: 'oot' },
+  { id: 'OOT_HIDEOUT_KITCHEN_TOP_LEFT_FROM_FORTRESS', name: "OOT Gerudo's Fortress Kitchen Top Left to OOT Thieves' Hideout Kitchen Top Left", type: 'interior', erType: 'erIndoors', game: 'oot' },
+  { id: 'OOT_HIDEOUT_BREAKOUT_FROM_FORTRESS', name: "OOT Gerudo's Fortress Breakout Bottom to OOT Thieves' Hideout Breakout Bottom", type: 'interior', erType: 'erIndoors', game: 'oot' },
+  { id: 'OOT_HIDEOUT_BREAKOUT_FROM_FORTRESS_JAIL', name: "OOT Gerudo's Fortress Breakout Top to OOT Thieves' Hideout Breakout Top", type: 'interior', erType: 'erIndoors', game: 'oot' },
+  { id: 'OOT_HIDEOUT_JAIL_4_FROM_FORTRESS', name: "OOT Gerudo's Fortress Jail 4 to OOT Thieves' Hideout Jail 4", type: 'interior', erType: 'erIndoors', game: 'oot' },
+  { id: 'OOT_KOKIRI_END', name: "OOT Zora Domain to OOT End Credits -> Kokiri Forest", type: 'overworld', erType: 'erOverworld', game: 'oot' },
+  { id: 'MM_IKANA_CASTLE_ROOF_KEG', name: "MM Powder Keg to MM Ikana Castle Exterior -> Powder Keg", type: 'dungeon', erType: 'erDungeons', game: 'mm' },
+  { id: 'MM_IKANA_CASTLE_ROOF_BLOCK', name: "MM Block to MM Ikana Castle Exterior -> Block", type: 'dungeon', erType: 'erDungeons', game: 'mm' },
+  { id: 'MM_ROOFTOP_TO_MOON', name: "MM Clock Tower Roof to MM Moon", type: 'overworld', erType: 'erOverworld', game: 'mm' },
+  { id: 'MM_DEKU_PALACE_CAUGHT', name: "MM Caught to MM Deku Palace -> Caught", type: 'overworld', erType: 'erOverworld', game: 'mm' },
+  { id: 'MM_DEKU_PALACE_BRIDGE', name: "MM Bridge to MM Deku Palace - Bridge", type: 'overworld', erType: 'erOverworld', game: 'mm' },
+  { id: 'MM_GORON_VILLAGE_SPRING_FROM_TWIN_ISLANDS', name: "MM Twin Islands to MM Goron Village", type: 'overworld', erType: 'erOverworld', game: 'mm' },
+  { id: 'MM_GORON_VILLAGE_SPRING_FROM_GORON_SHRINE', name: "MM Goron Shrine to MM Goron City", type: 'overworld', erType: 'erOverworld', game: 'mm' },
+  { id: 'MM_GORON_VILLAGE_SPRING_FROM_LONE_PEAK_SHRINE', name: "MM Lone Peak Shrine to MM Goron City", type: 'overworld', erType: 'erOverworld', game: 'mm' },
+  { id: 'MM_VOID_GREAT_BAY_BEACH', name: "MM Void Beach Side to MM Great Bay Coast -> Void Beach Side", type: 'dungeon', erType: 'erDungeons', game: 'mm' },
+  { id: 'MM_VOID_GREAT_BAY_LEDGE_BY_PINNACLE_ROCK', name: "MM Void Pinnacle Rock Side to MM Great Bay Coast -> Void Pinnacle Rock Side", type: 'dungeon', erType: 'erDungeons', game: 'mm' },
+  { id: 'MM_COAST_FROM_MIKAU_TOMB', name: "MM Mikau's Cutscene to MM Great Bay Coast -> Mikau's Tomb", type: 'overworld', erType: 'erOverworld', game: 'mm' },
+  { id: 'MM_GREAT_BAY_FROM_ENTRANCE_CAUGHT', name: "MM Trapdoor to MM Great Bay Coast - Trapdoor", type: 'dungeon', erType: 'erDungeons', game: 'mm' },
+  { id: 'MM_IKANA_CANYON_WATERFALLS', name: "MM Waterfalls to MM Ikana Canyon -> Waterfalls", type: 'overworld', erType: 'erOverworld', game: 'mm' },
+  { id: 'MM_WARP_BOSS_STONE_TOWER_INVERTED', name: "MM Warp Twinmold to MM Ikana Canyon - Warp Twinmold", type: 'boss', erType: 'erBoss', game: 'mm' },
+  { id: 'MM_BOSS_TEMPLE_WOODFALL_WARP_OUT', name: "MM Warp Boss to MM Odolwa's Lair -> Warp Boss", type: 'boss', erType: 'erBoss', game: 'mm' },
+  { id: 'MM_BOSS_TEMPLE_SNOWHEAD_WARP_OUT', name: "MM Warp Boss to MM Goht's Lair -> Warp Boss", type: 'boss', erType: 'erBoss', game: 'mm' },
+  { id: 'MM_BOSS_TEMPLE_GREAT_BAY_WARP_OUT', name: "MM Warp Boss to MM Gyorg's Lair -> Warp Boss", type: 'boss', erType: 'erBoss', game: 'mm' },
+  { id: 'MM_BOSS_IKANA_CASTLE', name: "MM Inside Ikana Castle to MM Igos' Lair", type: 'boss', erType: 'erBoss', game: 'mm' },
+  { id: 'MM_MAJORA_LAIR_FROM_MOON', name: "MM Moon to MM Majora's Lair", type: 'dungeon', erType: 'erDungeons', game: 'mm' },
+  { id: 'MM_BOSS_TEMPLE_STONE_TOWER_INVERTED_WARP_OUT', name: "MM Warp Boss to MM Twinmold's Lair -> Warp Boss", type: 'boss', erType: 'erBoss', game: 'mm' },
+  { id: 'MM_MOON_TO_MOON_DEKU', name: "MM Odolwa Child to MM Moon -> Odolwa Child", type: 'overworld', erType: 'erOverworld', game: 'mm' },
+  { id: 'MM_MOON_TO_MOON_GORON', name: "MM Goht Child to MM Moon -> Goht Child", type: 'overworld', erType: 'erOverworld', game: 'mm' },
+  { id: 'MM_MOON_TO_MOON_ZORA', name: "MM Gyorg Child to MM Moon -> Gyorg Child", type: 'overworld', erType: 'erOverworld', game: 'mm' },
+  { id: 'MM_MOON_TO_MOON_LINK', name: "MM Twinmold Child to MM Moon -> Twinmold Child", type: 'overworld', erType: 'erOverworld', game: 'mm' },
+  { id: 'MM_MOON_TO_MAJORA_LAIR', name: "MM Majora Child to MM Moon -> Majora Child", type: 'dungeon', erType: 'erDungeons', game: 'mm' },
+  { id: 'MM_MOON_DEKU_FROM_MOON', name: "MM Moon to MM Deku's Trial", type: 'overworld', erType: 'erOverworld', game: 'mm' },
+  { id: 'MM_MOON_FROM_MOON_DEKU', name: "MM Deku's Trial to MM Moon", type: 'overworld', erType: 'erOverworld', game: 'mm' },
+  { id: 'MM_MOON_GORON_FROM_MOON', name: "MM Moon to MM Goron's Trial", type: 'overworld', erType: 'erOverworld', game: 'mm' },
+  { id: 'MM_MOON_FROM_MOON_GORON', name: "MM Goron's Trial to MM Moon", type: 'overworld', erType: 'erOverworld', game: 'mm' },
+  { id: 'MM_MOON_LINK_FROM_MOON', name: "MM Moon to MM Link's Trial", type: 'overworld', erType: 'erOverworld', game: 'mm' },
+  { id: 'MM_MOON_FROM_MOON_LINK', name: "MM Link's Trial to MM Moon", type: 'overworld', erType: 'erOverworld', game: 'mm' },
+  { id: 'MM_MOON_ZORA_WRONG_PIPE', name: "MM Wrong Pipe to MM Zora's Trial", type: 'overworld', erType: 'erOverworld', game: 'mm' },
+  { id: 'MM_MOON_ZORA_FROM_MOON', name: "MM Moon to MM Zora's Trial", type: 'overworld', erType: 'erOverworld', game: 'mm' },
+  { id: 'MM_MOON_FROM_MOON_ZORA', name: "MM Zora's Trial to MM Moon", type: 'overworld', erType: 'erOverworld', game: 'mm' },
+  { id: 'MM_GROTTO_EXIT_GENERIC_MOUNTAIN_VILLAGE_WINTER', name: "MM Open Grotto to MM Mountain Village Winter", type: 'grotto', erType: 'erGrottos', game: 'mm' },
+  { id: 'MM_GROTTO_EXIT_GENERIC_MOUNTAIN_VILLAGE_SPRING', name: "MM Open Grotto to MM Mountain Village", type: 'grotto', erType: 'erGrottos', game: 'mm' },
+  { id: 'MM_MOUNTAIN_VILLAGE_SPRING_FROM_BLACKSMITH', name: "MM Blacksmith to MM Mountain Village", type: 'overworld', erType: 'erOverworld', game: 'mm' },
+  { id: 'MM_MOUNTAIN_VILLAGE_SPRING_FROM_TWIN_ISLANDS', name: "MM Twin Islands to MM Mountain Village", type: 'overworld', erType: 'erOverworld', game: 'mm' },
+  { id: 'MM_MOUNTAIN_VILLAGE_SPRING_FROM_GORON_GRAVEYARD', name: "MM Goron Graveyard to MM Mountain Village", type: 'overworld', erType: 'erOverworld', game: 'mm' },
+  { id: 'MM_MOUNTAIN_VILLAGE_SPRING_FROM_SNOWHEAD_PATH', name: "MM Path to Snowhead to MM Mountain Village", type: 'dungeon', erType: 'erDungeons', game: 'mm' },
+  { id: 'MM_WARP_BOSS_MOUNTAIN_VILLAGE_SPRING', name: "MM Warp Goht to MM Mountain Village - Warp Goht", type: 'boss', erType: 'erBoss', game: 'mm' },
+  { id: 'MM_WARP_OWL_MOUNTAIN_VILLAGE_SPRING', name: "MM Warp Owl to MM Mountain Village", type: 'owl', erType: 'erOneWays', game: 'mm' },
+  { id: 'MM_TWIN_ISLANDS_SPRING_FROM_MOUNTAIN_VILLAGE', name: "MM Mountain Village to MM Twin Islands", type: 'overworld', erType: 'erOverworld', game: 'mm' },
+  { id: 'MM_VOID_PINNACLE_ROCK_MAIN', name: "MM Void to MM Pinnacle Rock -> Void", type: 'interior', erType: 'erIndoors', game: 'mm' },
+  { id: 'MM_PIRATE_ENTRANCE_CAUGHT', name: "MM Caught to MM Pirate Fortress Entrance -> Caught", type: 'overworld', erType: 'erOverworld', game: 'mm' },
+  { id: 'MM_ENTRANCE_VENT_FROM_SEWERS', name: "MM Sewers' Vent to MM Pirate Fortress Entrance - Sewers' Vent", type: 'interior', erType: 'erIndoors', game: 'mm' },
+  { id: 'MM_PIRATE_ENTRANCE_FROM_EXTERIOR_CAUGHT', name: "MM Trapdoor to MM Pirate Fortress Entrance - Trapdoor", type: 'interior', erType: 'erIndoors', game: 'mm' },
+  { id: 'MM_PIRATE_EXTERIOR_FROM_HOOKSHOT', name: "MM Hookshot to MM Pirate Fortress Exterior", type: 'interior', erType: 'erIndoors', game: 'mm' },
+  { id: 'MM_PIRATE_EXTERIOR_FROM_HOOKSHOT_LOOKOUT', name: "MM Hookshot Lookout to MM Pirate Fortress Exterior", type: 'interior', erType: 'erIndoors', game: 'mm' },
+  { id: 'MM_PIRATE_EXTERIOR_FROM_TREASURE', name: "MM Treasure to MM Pirate Fortress Exterior", type: 'interior', erType: 'erIndoors', game: 'mm' },
+  { id: 'MM_PIRATE_EXTERIOR_FROM_TREASURE_EGG', name: "MM Treasure Egg Side to MM Pirate Fortress Exterior", type: 'interior', erType: 'erIndoors', game: 'mm' },
+  { id: 'MM_PIRATE_EXTERIOR_FROM_CANON', name: "MM Canon to MM Pirate Fortress Exterior", type: 'interior', erType: 'erIndoors', game: 'mm' },
+  { id: 'MM_PIRATE_EXTERIOR_FROM_CANON_EGG', name: "MM Canon Egg Side to MM Pirate Fortress Exterior", type: 'interior', erType: 'erIndoors', game: 'mm' },
+  { id: 'MM_PIRATE_EXTERIOR_FROM_BARREL', name: "MM Barrel to MM Pirate Fortress Exterior", type: 'interior', erType: 'erIndoors', game: 'mm' },
+  { id: 'MM_PIRATE_EXTERIOR_FROM_BARREL_EGG', name: "MM Barrel Egg Side to MM Pirate Fortress Exterior", type: 'interior', erType: 'erIndoors', game: 'mm' },
+  { id: 'MM_PIRATE_EXTERIOR_CAUGHT', name: "MM Caught to MM Pirate Fortress Exterior -> Caught", type: 'interior', erType: 'erIndoors', game: 'mm' },
+  { id: 'MM_PIRATE_INTERIOR_FROM_HOOKSHOT', name: "MM Hookshot to MM Pirate Fortress Interior", type: 'interior', erType: 'erIndoors', game: 'mm' },
+  { id: 'MM_PIRATE_INTERIOR_FROM_HOOKSHOT_LOOKOUT', name: "MM Hookshot Lookout to MM Pirate Fortress Interior", type: 'interior', erType: 'erIndoors', game: 'mm' },
+  { id: 'MM_PIRATE_INTERIOR_FROM_TREASURE', name: "MM Treasure to MM Pirate Fortress Interior", type: 'interior', erType: 'erIndoors', game: 'mm' },
+  { id: 'MM_PIRATE_INTERIOR_FROM_TREASURE_EGG', name: "MM Treasure Egg Side to MM Pirate Fortress Interior", type: 'interior', erType: 'erIndoors', game: 'mm' },
+  { id: 'MM_PIRATE_INTERIOR_FROM_CANON', name: "MM Canon to MM Pirate Fortress Interior", type: 'interior', erType: 'erIndoors', game: 'mm' },
+  { id: 'MM_PIRATE_INTERIOR_FROM_CANON_EGG', name: "MM Canon Egg Side to MM Pirate Fortress Interior", type: 'interior', erType: 'erIndoors', game: 'mm' },
+  { id: 'MM_PIRATE_INTERIOR_FROM_BARREL', name: "MM Barrel to MM Pirate Fortress Interior", type: 'interior', erType: 'erIndoors', game: 'mm' },
+  { id: 'MM_PIRATE_INTERIOR_FROM_BARREL_EGG', name: "MM Barrel Egg Side to MM Pirate Fortress Interior", type: 'interior', erType: 'erIndoors', game: 'mm' },
+  { id: 'MM_KOUME_RIDE_FROM_TOURIST', name: "MM Koume's Ride to MM Southern Swamp", type: 'overworld', erType: 'erOverworld', game: 'mm' },
+  { id: 'MM_SWAMP_CLEARED_FROM_ROAD', name: "MM Road to Southern Swamp to MM Southern Swamp", type: 'overworld', erType: 'erOverworld', game: 'mm' },
+  { id: 'MM_SWAMP_CLEARED_FROM_TOURIST_INFORMATION', name: "MM Tourist Information to MM Southern Swamp", type: 'overworld', erType: 'erOverworld', game: 'mm' },
+  { id: 'MM_SWAMP_CLEARED_FROM_WOODFALL', name: "MM Woodfall to MM Southern Swamp", type: 'dungeon', erType: 'erDungeons', game: 'mm' },
+  { id: 'MM_SWAMP_CLEARED_FROM_PALACE_MAIN_ENTRANCE', name: "MM Deku Palace to MM Southern Swamp", type: 'overworld', erType: 'erOverworld', game: 'mm' },
+  { id: 'MM_SWAMP_CLEARED_FROM_PALACE_LEDGE', name: "MM Ledge to MM Southern Swamp", type: 'overworld', erType: 'erOverworld', game: 'mm' },
+  { id: 'MM_SWAMP_CLEARED_FROM_POTION_SHOP', name: "MM Potion Shop to MM Southern Swamp", type: 'interior', erType: 'erIndoors', game: 'mm' },
+  { id: 'MM_KOUME_TARGET_FROM_TOURIST', name: "MM Koume's Target to MM Southern Swamp", type: 'overworld', erType: 'erOverworld', game: 'mm' },
+  { id: 'MM_SWAMP_CLEARED_FROM_MYSTERY_WOODS', name: "MM Mystery Woods to MM Southern Swamp", type: 'overworld', erType: 'erOverworld', game: 'mm' },
+  { id: 'MM_SWAMP_CLEARED_FROM_SPIDER_HOUSE', name: "MM Swamp Spider House to MM Southern Swamp", type: 'dungeon', erType: 'erDungeons', game: 'mm' },
+  { id: 'MM_SWAMP_CLEARED_FROM_IKANA_CANYON', name: "MM Waterfalls to MM Southern Swamp", type: 'overworld', erType: 'erOverworld', game: 'mm' },
+  { id: 'MM_WARP_OWL_SOUTHERN_SWAMP_CLEARED', name: "MM Warp Owl to MM Southern Swamp", type: 'owl', erType: 'erOneWays', game: 'mm' },
+  { id: 'MM_OWL_SOUTHERN_SWAMP_CHOICE', name: "MM Southern Swamp Owl Choice to MM Song of Soaring -> Southern Swamp", type: 'owl', erType: 'erOneWays', game: 'mm' },
+  { id: 'MM_OWL_IKANA_CANYON_CHOICE', name: "MM Ikana Canyon Owl Choice to MM Song of Soaring -> Ikana Canyon", type: 'owl', erType: 'erOneWays', game: 'mm' },
+  { id: 'MM_OWL_STONE_TOWER_CHOICE', name: "MM Stone Tower Owl Choice to MM Song of Soaring -> Stone Tower", type: 'owl', erType: 'erOneWays', game: 'mm' },
+  { id: 'MM_OWL_GREAT_BAY_CHOICE', name: "MM Great Bay Coast Owl Choice to MM Song of Soaring -> Great Bay Coast", type: 'owl', erType: 'erOneWays', game: 'mm' },
+  { id: 'MM_OWL_ZORA_CAPE_CHOICE', name: "MM Zora Cape Owl Choice to MM Song of Soaring -> Zora Cape", type: 'owl', erType: 'erOneWays', game: 'mm' },
+  { id: 'MM_OWL_SNOWHEAD_CHOICE', name: "MM Snowhead Owl Choice to MM Song of Soaring -> Snowhead", type: 'owl', erType: 'erOneWays', game: 'mm' },
+  { id: 'MM_OWL_MOUNTAIN_VILLAGE_CHOICE', name: "MM Mountain Village Owl Choice to MM Song of Soaring -> Mountain Village", type: 'owl', erType: 'erOneWays', game: 'mm' },
+  { id: 'MM_OWL_CLOCK_TOWN_CHOICE', name: "MM Clock Town Owl Choice to MM Song of Soaring -> Clock Town", type: 'owl', erType: 'erOneWays', game: 'mm' },
+  { id: 'MM_OWL_MILK_ROAD_CHOICE', name: "MM Milk Road Owl Choice to MM Song of Soaring -> Milk Road", type: 'owl', erType: 'erOneWays', game: 'mm' },
+  { id: 'MM_OWL_WOODFALL_CHOICE', name: "MM Woodfall Owl Choice to MM Song of Soaring -> Woodfall", type: 'owl', erType: 'erOneWays', game: 'mm' },
+  { id: 'MM_STONE_TOWER_FROM_STONE_TOWER_INVERTED', name: "MM Stone Tower Inverted to MM Stone Tower", type: 'dungeon', erType: 'erDungeons', game: 'mm' },
+  { id: 'MM_STONE_TOWER_INVERTED_FROM_STONE_TOWER', name: "MM Stone Tower to MM Stone Tower Inverted", type: 'dungeon', erType: 'erDungeons', game: 'mm' },
+  { id: 'MM_WARP_BOSS_DEKU_PRINCESS', name: "MM Warp Odolwa to MM Woodfall Temple - Warp Odolwa", type: 'boss', erType: 'erBoss', game: 'mm' },
+  { id: 'MM_DEKU_PRINCESS', name: "MM Woodfall to MM Temple Woodfall (Deku Princess)", type: 'overworld', erType: 'erOverworld', game: 'mm' },
+  { id: 'MM_KOUME_RIDE', name: "MM Koume's Ride to MM Tourist Information", type: 'overworld', erType: 'erOverworld', game: 'mm' },
+  { id: 'MM_KOUME_TARGET', name: "MM Koume's Target to MM Tourist Information", type: 'overworld', erType: 'erOverworld', game: 'mm' },
+  { id: 'MM_TWIN_ISLANDS_SPRING_FROM_GORON_VILLAGE', name: "MM Goron Village to MM Twin Islands", type: 'overworld', erType: 'erOverworld', game: 'mm' },
+  { id: 'MM_TWIN_ISLANDS_SPRING_FROM_GORON_RACETRACK', name: "MM Goron Racetrack to MM Twin Islands", type: 'overworld', erType: 'erOverworld', game: 'mm' },
+  { id: 'MM_BEAVERS_RACE_FROM_START_RACE', name: "MM Race Begin to MM Waterfall Rapids - Race Begin", type: 'overworld', erType: 'erOverworld', game: 'mm' },
+  { id: 'MM_START_RACE_BEAVERS', name: "MM Start Race to MM Waterfall Rapids -> Start Race", type: 'overworld', erType: 'erOverworld', game: 'mm' },
+  { id: 'MM_BEAVERS_RACE_FROM_END_RACE', name: "MM Race End to MM Waterfall Rapids - Race End", type: 'overworld', erType: 'erOverworld', game: 'mm' },
+  { id: 'MM_END_RACE_BEAVERS', name: "MM Finished Race to MM Waterfall Rapids -> Finished Race", type: 'overworld', erType: 'erOverworld', game: 'mm' },
+  { id: 'MM_WOODFALL_FROM_PRINCESS', name: "MM Temple Woodfall to MM Woodfall (Deku Princess)", type: 'dungeon', erType: 'erDungeons', game: 'mm' },
+  { id: 'MM_VOID_ZORA_CAPE_BEACH', name: "MM Void to MM Zora Cape -> Void", type: 'overworld', erType: 'erOverworld', game: 'mm' },
 ];
 
 export const entranceById = Object.fromEntries(allEntrances.map(e => [e.id, e]));
+
+// Boss-room exits (boss room → dungeon/overworld) — one-way, untestable, excluded from ER tracker
+export const bossExitIds = new Set([
+  'OOT_BOSS_GANON2_FROM_GANONDORF', 'OOT_WARP_BOSS_DEKU_TREE',
+  'OOT_BOSS_JABU_JABU_WARP_OUT', 'OOT_BOSS_SHADOW_TEMPLE_WARP_OUT',
+  'OOT_BOSS_GANONDORF', 'OOT_BOSS_DEKU_TREE_WARP_OUT',
+  'OOT_BOSS_DODONGO_CAVERN_WARP_OUT', 'OOT_BOSS_WATER_TEMPLE_WARP_OUT',
+  'OOT_BOSS_FOREST_TEMPLE_WARP_OUT', 'OOT_BOSS_SPIRIT_TEMPLE_WARP_OUT',
+  'OOT_BOSS_FIRE_TEMPLE_WARP_OUT', 'MM_WARP_BOSS_STONE_TOWER_INVERTED',
+  'MM_BOSS_TEMPLE_WOODFALL_WARP_OUT', 'MM_BOSS_TEMPLE_SNOWHEAD_WARP_OUT',
+  'MM_BOSS_TEMPLE_GREAT_BAY_WARP_OUT', 'MM_BOSS_TEMPLE_STONE_TOWER_INVERTED_WARP_OUT',
+  'MM_WARP_BOSS_MOUNTAIN_VILLAGE_SPRING', 'MM_WARP_BOSS_DEKU_PRINCESS',
+]);
 
 // Sub-type mappings — maps sub-type setting to entrance IDs that it controls
 export const entranceSubTypes: Record<string, string[]> = {
@@ -693,7 +874,7 @@ export const entranceSubTypes: Record<string, string[]> = {
     'OOT_MARKET_POTION', 'OOT_MARKET_FROM_POTION',
     'OOT_MARKET_FROM_BOMBCHU_SHOP', 'OOT_MARKET_FROM_BOWLING',
     'OOT_MARKET_FROM_TREASURE_GAME',
-    'OOT_MARKET_FROM_ARCHERY', 'OOT_MARKET_FROM_MASK_SHOP',
+    'OOT_MARKET_FROM_ARCHERY',
     'OOT_MARKET_FROM_ALLEY_HOUSE',
     'OOT_BOMBCHU_BOWLING', 'OOT_BOMBCHU_SHOP',
     'OOT_ADULT_ARCHERY', 'OOT_CHILD_ARCHERY',
@@ -787,6 +968,7 @@ export const entranceSubTypes: Record<string, string[]> = {
     'MM_EXTERIOR_DOOR_FROM_SEWERS', 'MM_SEWERS_FROM_EXTERIOR_DOOR',
   ],
   erIndoorsGameLinks: [
+    'OOT_MARKET_FROM_MASK_SHOP',
     'MM_CLOCK_TOWN_FROM_CLOCK_TOWER',
   ],
   erOneWaysMajor: [
@@ -832,9 +1014,51 @@ export const subTypeToParent: Record<string, ErSettingKey> = {
   erBeneathWell: 'erDungeons', erIkanaCastle: 'erDungeons', erSecretShrine: 'erDungeons',
   erIndoorsMajor: 'erIndoors', erIndoorsExtra: 'erIndoors', erIndoorsGameLinks: 'erIndoors',
   erOneWaysMajor: 'erOneWays', erOneWaysIkana: 'erOneWays', erOneWaysSongs: 'erOneWays',
-  erOneWaysStatues: 'erOneWays', erOneWaysWoods: 'erOneWays',
+  erOneWaysStatues: 'erOneWays', erOneWaysWoods: 'erAlterLw',
   erOneWaysWaterVoids: 'erOneWays', erOneWaysAnywhere: 'erOneWays', erOneWaysOwls: 'erOneWays',
 };
+
+// Strip asymmetric trailing qualifiers before name comparison
+function normEntName(s: string): string {
+  return s.replace(/ \(Game Link\)$/, '').replace(/ from .+$/, '');
+}
+
+// Find the semantic "A to B" split: both sides must start with OOT/MM prefix
+function splitEntName(name: string): [string, string] | null {
+  let pos = 0;
+  while (true) {
+    const i = name.indexOf(' to ', pos);
+    if (i < 0) return null;
+    const src = name.slice(0, i);
+    const dst = name.slice(i + 4);
+    if ((src.startsWith('OOT ') || src.startsWith('MM ')) &&
+        (dst.startsWith('OOT ') || dst.startsWith('MM ')))
+      return [normEntName(src), normEntName(dst)];
+    pos = i + 4;
+  }
+}
+
+// Find the reverse entrance ("B to A" given "A to B"), tolerating name qualifiers
+export function findReverseEntrance(ent: EntranceInfo): EntranceInfo | undefined {
+  const split = splitEntName(ent.name);
+  if (!split) return undefined;
+  const [nSrc, nDst] = split;
+  const parts = (e: EntranceInfo) => splitEntName(e.name);
+  // 1. Exact match on normalized names
+  const exact = allEntrances.find(e => { const p = parts(e); return p !== null && p[0] === nDst && p[1] === nSrc; });
+  if (exact) return exact;
+  // 2. Reverse source has extra qualifier (e.g. "Lost Woods Lost Forest" vs "Lost Woods")
+  const fb2 = allEntrances.find(e => { const p = parts(e); return p !== null && p[1] === nSrc && p[0].startsWith(nDst + ' '); });
+  if (fb2) return fb2;
+  // 3. Reverse destination has extra qualifier (e.g. "Desert Colossus Spirit Exit" vs "Desert Colossus")
+  const fb3 = allEntrances.find(e => { const p = parts(e); return p !== null && p[0] === nDst && p[1].startsWith(nSrc + ' '); });
+  if (fb3) return fb3;
+  // 4. Our destination has extra qualifier vs candidate source
+  const fb4 = allEntrances.find(e => { const p = parts(e); return p !== null && nDst.startsWith(p[0] + ' ') && p[1] === nSrc; });
+  if (fb4) return fb4;
+  // 5. Our source has extra qualifier vs candidate destination
+  return allEntrances.find(e => { const p = parts(e); return p !== null && p[0] === nDst && nSrc.startsWith(p[1] + ' '); });
+}
 
 // Display labels for sub-type toggles (matching generator names)
 export const subTypeLabels: Record<string, string> = {

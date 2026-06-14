@@ -147,3 +147,22 @@ section {
         outline: 1px auto #129fea;
     }
 }
+
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+::-webkit-scrollbar-thumb {
+    background: var(--color-border, #444);
+    border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: var(--color-primary, #66d1ff);
+}
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border, #444) transparent;
+}

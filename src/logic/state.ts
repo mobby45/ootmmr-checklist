@@ -1,0 +1,188 @@
+import type { LogicState } from './types';
+import { buildItemsMap } from './itemMapping';
+
+// ER tracker: entrance name → destination area name (from yEntrances)
+// We need to convert from "OoT X to OoT Y" names → region names
+// This mapping will be filled in once we have the world graph loaded
+export function buildLogicState(
+  yItemsSnapshot: Map<string, number>,
+  ySettingsSnapshot: Map<string, any>,
+  yEntrancesSnapshot: Map<string, string>,
+  enabledTricks: Set<string> = new Set(),
+  erMode = false,
+  resolvedSpecial: Map<string, boolean> = new Map(),
+  prebuiltItems?: Map<string, number>,
+  ySongEventsSnapshot: Map<string, string> = new Map(),
+): LogicState {
+  const items = prebuiltItems ?? buildItemsMap(yItemsSnapshot);
+
+  // Settings: flatten the Yjs settings map
+  const settings = new Map<string, string | boolean | number>();
+  for (const [k, v] of ySettingsSnapshot) {
+    settings.set(k, v);
+  }
+
+  // Vanilla defaults for settings used in logic but absent from ySettings when at default.
+  // The UI only writes to ySettings when a value differs from its default, so any setting
+  // compared against its default string value must be seeded here, otherwise
+  // setting(x, 'none'/'vanilla'/...) wrongly returns false.
+  const HIDDEN_DEFAULTS: Record<string, string | boolean> = {
+    // Always OoTMM combined game
+    games:                  'ootmm',
+
+    // Open areas — logic checks setting(x, 'vanilla'/'closed'/'remains'/'cycle'/'none'/'oot')
+    startingAge:            'child',
+    ageChange:              'oot',
+    doorOfTime:             'vanilla',   // 'vanilla' = door closed; presets may override to 'open'
+    beneathWell:            'vanilla',   // 'vanilla' = need shadow medal; 'open' = always open
+    dekuTree:               'vanilla',
+    kakarikoGate:           'closed',
+    gerudoFortress:         'normal',    // 'normal' | 'single' | 'open'
+    zoraKing:               'vanilla',
+    moon:                   'vanilla',
+    moonCrash:              'cycle',
+    rainbowBridge:          'vanilla',
+    lacs:                   'vanilla',
+    majoraChild:            'none',
+    bossWarpPads:           'remains',
+    regionState:            'dungeonBeaten',
+
+    // Hookshot/climb — logic checks setting(x, 'off')
+    hookshotAnywhereOot:    'off',
+    hookshotAnywhereMm:     'off',
+    climbMostSurfacesOot:   'off',
+
+    // Ganon trials — multicheck; default = all 6 active (vanilla)
+    ganonTrials:            'Fire Forest Light Shadow Spirit Water',
+
+    // Key shuffle — logic checks setting(x, 'removed'/'vanilla') — vanilla = not removed
+    bossKeyShuffleOot:      'vanilla',
+    bossKeyShuffleMm:       'vanilla',
+    smallKeyShuffleOot:     'vanilla',
+    smallKeyShuffleMm:      'vanilla',
+    smallKeyShuffleChestGame: 'vanilla',
+    ganonBossKey:           'vanilla',
+
+    // Bombchu — OoT UI sets bombchuBehaviorOot; MM has no separate UI toggle
+    bombchuBehaviorOot:     'bagFirst',
+    bombchuBehaviorMm:      'bagFirst',
+
+    // ER — logic checks setting(x, 'none'); default = no ER
+    erBoss:                 'none',
+    erGrottos:              'none',
+    erOverworld:            'none',
+    erRegions:              'none',
+    erWallmasters:          'none',
+    erWarps:                'none',
+
+    // MM pots — logic checks setting(shufflePotsMm, 'none')
+    shufflePotsMm:          'none',
+
+    // Goal — ganon by default (affects triforce check logic)
+    goal:                   'ganon',
+
+    // Auto-invert time — off by default
+    autoInvert:             'never',
+
+    // Progressive items — separate (vanilla) by default
+    progressiveSwordsOot:   'separate',
+    progressiveShieldsOot:  'separate',
+    progressiveClocks:      'separate',
+
+    // Key rings — none by default (use individual key counts)
+    smallKeyRingOot:        'none',
+    smallKeyRingMm:         'none',
+
+    // Silver rupee pouches — none by default
+    silverRupeePouches:     'none',
+
+    // Dungeon ER type — none by default
+    erDungeons:             'none',
+
+    // Stray fairy count per dungeon (used by sf_dungeon macro via var(STRAY_FAIRY_COUNT))
+    STRAY_FAIRY_COUNT:      '15',
+    strayFairyChestShuffle: 'own_dungeon',
+    strayFairyOtherShuffle: 'vanilla',
+
+    // Shop/scrub/merchant price modes — default vanilla (wallet capacity gates access)
+    priceOotShops:          'vanilla',
+    priceOotScrubs:         'vanilla',
+    priceOotMerchants:      'vanilla',
+    priceMmShops:           'vanilla',
+    priceMmTingle:          'vanilla',
+
+    // Boolean settings used directly in eval — explicit false avoids relying on undefined → falsy
+    bottomlessWallets:      false,
+    childWallets:           false,
+    colossalWallets:        false,
+    sharedWallets:          false,
+    clocks:                 false,
+    songEventShuffle:       false,
+
+    // Special features — off by default
+    shortHookshotMm:        false,
+    songOfDoubleTimeOot:    false,
+    extraChildSwordsOot:    false,
+    ocarinaButtonsShuffleOot: false,
+    ocarinaButtonsShuffleMm:  false,
+  };
+  for (const [k, v] of Object.entries(HIDDEN_DEFAULTS)) {
+    if (!settings.has(k)) settings.set(k, v);
+  }
+
+  // ER overrides: map entrance ID → destination region name
+  // yEntrances stores: entranceId → destination entrance name (full OoTMM name)
+  // The engine will resolve these against the world graph
+  const erOverrides = new Map<string, string>();
+  for (const [entranceId, destName] of yEntrancesSnapshot) {
+    erOverrides.set(entranceId, destName);
+  }
+
+  // Seed consumable events from owned items.
+  // In OoTMM, ammo events (ARROWS, BOMBS, SEEDS…) are normally generated by shops/drops
+  // reached during BFS. If the player has the launcher, assume they have ammo.
+  const events = new Set<string>();
+  // itemMapping produces OOT_BOW / MM_BOW / SHARED_BOW — never a bare 'BOW' key.
+  // MM macros (has_arrows_mm) also rely on event(ARROWS), so seed it for any bow.
+  if ((items.get('OOT_BOW') ?? 0) + (items.get('MM_BOW') ?? 0) + (items.get('SHARED_BOW') ?? 0) > 0) {
+    events.add('ARROWS'); events.add('MM_ARROWS');
+  }
+  // itemMapping: bomb → OOT_BOMB_BAG, mm_bomb → MM_BOMB_BAG, shared_bomb → SHARED_BOMB_BAG.
+  if ((items.get('OOT_BOMB_BAG') ?? 0) + (items.get('MM_BOMB_BAG') ?? 0) + (items.get('SHARED_BOMB_BAG') ?? 0) > 0) {
+    events.add('BOMBS'); events.add('BOMBS_OR_BOMBCHU'); events.add('MM_BOMBS'); events.add('MM_BOMBS_OR_BOMBCHU');
+  }
+  // itemMapping: bombchu → OOT_BOMBCHU + license; mm_bombchu → MM_BOMBCHU + license; shared_bombchu → BOMBCHU + license.
+  // Seeding BOMBCHU/MM_BOMBCHU satisfies bombchu_source so has_bombchu resolves correctly.
+  if ((items.get('OOT_BOMBCHU') ?? 0) + (items.get('MM_BOMBCHU') ?? 0) + (items.get('BOMBCHU') ?? 0) > 0) {
+    events.add('BOMBCHU'); events.add('MM_BOMBCHU'); events.add('BOMBS_OR_BOMBCHU'); events.add('MM_BOMBS_OR_BOMBCHU');
+  }
+  // itemMapping: slingshot → OOT_SLINGSHOT (OoT-only item).
+  if ((items.get('OOT_SLINGSHOT') ?? 0) > 0) events.add('SEEDS');
+  // itemMapping: sticks_oot → OOT_STICKS (covers both OoT and MM via shared nuts/sticks setting).
+  if ((items.get('OOT_STICKS') ?? 0) > 0) {
+    events.add('STICKS'); events.add('MM_STICKS');
+  }
+  // itemMapping: nuts_oot → OOT_NUTS.
+  if ((items.get('OOT_NUTS') ?? 0) > 0) {
+    events.add('NUTS'); events.add('MM_NUTS');
+  }
+  // itemMapping: magic_oot → OOT_MAGIC_UPGRADE, mm_magic → MM_MAGIC_UPGRADE, shared_magic → MAGIC_UPGRADE.
+  if ((items.get('OOT_MAGIC_UPGRADE') ?? 0) + (items.get('MM_MAGIC_UPGRADE') ?? 0) + (items.get('MAGIC_UPGRADE') ?? 0) > 0) {
+    events.add('MAGIC'); events.add('MM_MAGIC');
+  }
+  // Rupees are always farmable — seed RUPEES/MM_RUPEES so can_use_wallet/wallet_price resolve correctly.
+  events.add('RUPEES'); events.add('MM_RUPEES');
+
+  return {
+    items,
+    age: 'child', // placeholder — engine overrides this via stateForAge()
+    events,
+    settings,
+    erOverrides,
+    tricks: enabledTricks,
+    flags: new Set(),
+    erMode,
+    resolvedSpecial,
+    songEvents: ySongEventsSnapshot,
+  };
+}

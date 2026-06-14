@@ -10,12 +10,12 @@
   export let forceOpen: boolean = true;
   export let forceOpenTimestamp: number = Date.now();
   export let allChecked: boolean = false;
-  export let checkCount: { checked: number; total: number } = { checked: 0, total: 0 };
+  export let checkCount: { checked: number; total: number; accessible?: number } = { checked: 0, total: 0 };
   export let pingColor: string = '';
   export let compact: boolean = false;
   export let woth: boolean = false;
   export let barren: boolean = false;
-
+  
   let isOpen = forceOpen;
   let lastTimestamp = forceOpenTimestamp;
   let prevAllChecked = allChecked;
@@ -41,7 +41,7 @@
 <!-- svelte-ignore a11y-click-events-have-key-events -->
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <div class="check-group">
-  <h3 class="header" style="border-image: linear-gradient(to right, {allChecked ? '#2e7d32' : '#3a7bd5'} {pct}%, var(--color-border) {pct}%) 1;">
+  <h3 class="header" style="border-image: linear-gradient(to right, {allChecked ? '#2e7d32' : woth ? '#3a7bd5' : '#3a7bd5'} {pct}%, var(--color-border) {pct}%) 1;">
     <span
       class="ping-zone"
       class:pinged={!!pingColor}
@@ -56,7 +56,9 @@
       >
         <strong class:completed={allChecked}>{groupName}</strong>
       </span>
-      <span class="check-count" class:completed={allChecked}>{checkCount.checked}/{checkCount.total}</span>
+      <span class="check-count" class:completed={allChecked}>
+        {checkCount.checked}{#if checkCount.accessible !== undefined}/<span class="logic-count">{checkCount.accessible}</span>{/if}/{checkCount.total}
+      </span>
       {#if woth}<span class="hint-pill woth-pill">WotH</span>{/if}
       {#if barren}<span class="hint-pill barren-pill">Barren</span>{/if}
     </span>
@@ -88,6 +90,7 @@
     display: flex;
     align-items: center;
     gap: 5px;
+    background: var(--color-bg);
   }
 
   .arrow {
@@ -141,6 +144,11 @@
 
   .check-count.completed {
     color: #999;
+  }
+
+  .logic-count {
+    color: #6dbf6d;
+    opacity: 1;
   }
 
   .hint-pill {

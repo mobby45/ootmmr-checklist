@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Array as YArray, Map as YMap } from 'yjs';
   import { allTrackerItems } from '../data/itemData';
-  import { sharedToOot, sharedToMm, ootToShared, mmToShared } from '../data/sharedSync';
+  import { onMount, tick } from 'svelte';
 
   export let yHints: YArray<any>;
   export let hints: any[] = [];
@@ -13,8 +13,7 @@
   export let onDeleteShop: ((id: string) => void) | null = null;
   export let isWatchMode = false;
   export let ySongEvents: YMap<string> | null = null;
-  export let yItems: YMap<number> | null = null;
-  export let songEventShuffle = false;
+
 
   $: annotationCount = notesEntries.length + shopEntries.length;
 
@@ -36,33 +35,71 @@
     return groups;
   })();
 
-  type HintType = 'woth' | 'barren' | 'location' | 'item' | 'junk' | 'other';
+  type HintType = 'woth' | 'barren' | 'item' | 'other';
 
   const hintTypes: { id: HintType; label: string; color: string }[] = [
-    { id: 'woth',     label: 'WotH',     color: '#3a7bd5' },
-    { id: 'barren',   label: 'Barren',   color: '#cc3333' },
-    { id: 'location', label: 'Location', color: '#2ecc71' },
-    { id: 'item',     label: 'Item',     color: '#e67e22' },
-    { id: 'junk',     label: 'Junk',     color: '#555' },
-    { id: 'other',    label: 'Other',    color: '#9b59b6' },
+    { id: 'woth',   label: 'WotH',         color: '#3a7bd5' },
+    { id: 'barren', label: 'Barren/Junk',  color: '#cc3333' },
+    { id: 'item',   label: 'Item',         color: '#e67e22' },
+    { id: 'other',  label: 'Other',        color: '#9b59b6' },
   ];
 
   // Song Events Shuffle data
-  const SONG_EVENT_SLOTS = [
-    { slot: 0,  oot: null,                      mm: 'Open Woodfall Temple' },
-    { slot: 1,  oot: 'Drain Well',              mm: 'Open Snowhead' },
-    { slot: 2,  oot: 'Open Royal Tomb',         mm: 'Wake Turtle' },
-    { slot: 4,  oot: 'Darunia (child)',         mm: 'Goron Graveyard Mask' },
-    { slot: 5,  oot: "Farore's Wind",           mm: 'Gibdo Mask' },
-    { slot: 6,  oot: "Din's Fire",              mm: 'Kamaro Mask' },
-    { slot: 7,  oot: "Nayru's Love",            mm: 'Zora Mask' },
-    { slot: 8,  oot: 'Magic Upgrade (DMT)',     mm: 'Wake Keeta' },
-    { slot: 9,  oot: 'Double Magic (DMC)',      mm: null },
-    { slot: 10, oot: 'Defense Upgrade',         mm: 'Goron Baby' },
-    { slot: 11, oot: null,                      mm: 'Lift Ikana Curse' },
+  // vanilla: the song that triggers this event in the unrandomized game
+  // doneNA: Done? column shows N/A (event not song-triggered in vanilla)
+  type SongEventEntry = { id: string; label: string; vanilla: string; doneNA?: true };
+
+  const OOT_EVENTS: SongEventEntry[] = [
+    { id: 'oot_0',  label: 'Temple of Time - Door of Time',        vanilla: 'oot_song_time'     },
+    { id: 'oot_1',  label: 'Hyrule Castle - Great Fairy',          vanilla: 'oot_song_zelda'    },
+    { id: 'oot_2',  label: "Graveyard - Royal Family's Tomb",      vanilla: 'oot_song_zelda'    },
+    { id: 'oot_3',  label: "Goron City - Darunia's Room",          vanilla: 'oot_song_saria'    },
+    { id: 'oot_4',  label: 'Death Mountain Trail - Great Fairy',   vanilla: 'oot_song_zelda'    },
+    { id: 'oot_5',  label: "Zora's River - Waterfall",             vanilla: 'oot_song_zelda'    },
+    { id: 'oot_6',  label: "Zora's Fountain - Great Fairy",        vanilla: 'oot_song_zelda'    },
+    { id: 'oot_7',  label: 'Kakariko - Windmill',                  vanilla: 'oot_song_storms'   },
+    { id: 'oot_8',  label: 'Bottom of the Well - Water Level',     vanilla: 'oot_song_zelda'    },
+    { id: 'oot_9',  label: 'Death Mountain Crater - Great Fairy',  vanilla: 'oot_song_zelda'    },
+    { id: 'oot_10', label: 'Water Temple - Levels',                vanilla: 'oot_song_zelda',   doneNA: true },
+    { id: 'oot_11', label: 'Desert Colossus - Great Fairy',        vanilla: 'oot_song_zelda'    },
+    { id: 'oot_12', label: 'Spirit Temple - Statue',               vanilla: 'oot_song_zelda'    },
+    { id: 'oot_13', label: 'Spirit Temple - Lower',                vanilla: 'oot_song_zelda'    },
+    { id: 'oot_14', label: 'Spirit Temple - Upper',                vanilla: 'oot_song_zelda'    },
+    { id: 'oot_15', label: 'Shadow Temple - Boat',                 vanilla: 'oot_song_zelda'    },
+    { id: 'oot_16', label: 'Outside Ganon Castle - Great Fairy',   vanilla: 'oot_song_zelda'    },
+    { id: 'oot_17', label: 'Ganon Castle - Light Trial',           vanilla: 'oot_song_zelda'    },
   ];
 
+  const MM_EVENTS: SongEventEntry[] = [
+    { id: 'mm_0',  label: 'Clock Tower Roof - Moon Access',       vanilla: 'mm_song_oath'    },
+    { id: 'mm_1',  label: 'Termina Field - Heal Kamaro',           vanilla: 'mm_song_healing' },
+    { id: 'mm_2',  label: 'Woodfall Temple - Entrance',           vanilla: 'mm_song_sonata'  },
+    { id: 'mm_4',  label: 'Goron Shrine - Baby Goron',            vanilla: 'mm_song_lullaby' },
+    { id: 'mm_5',  label: 'Mountain Village - Heal Darmani',      vanilla: 'mm_song_healing' },
+    { id: 'mm_6',  label: 'Snowhead Temple - Entrance',           vanilla: 'mm_song_lullaby' },
+    { id: 'mm_7',  label: 'Great Bay Coast - Heal Mikau',         vanilla: 'mm_song_healing' },
+    { id: 'mm_8',  label: 'Great Bay Temple - Entrance',          vanilla: 'mm_song_nova'    },
+    { id: 'mm_9',  label: 'Ikana Graveyard - Wake Captain Keeta', vanilla: 'mm_song_sonata'  },
+    { id: 'mm_10', label: "Ikana Valley - Lift Curse",            vanilla: 'mm_song_storms'  },
+    { id: 'mm_11', label: "Ikana Valley - Heal Pamala's Father",  vanilla: 'mm_song_healing' },
+  ];
+
+
   const songChoices = allTrackerItems.filter(i => i.category === 'songs' && i.maxLevel >= 1);
+
+  // Cross-game clones: MM songs placed in OoT pool and OoT songs placed in MM pool
+  const CROSS_IN_OOT = new Set(['oot_elegy','oot_song_healing','oot_song_soaring','oot_song_sonata','oot_song_lullaby','oot_song_nova','oot_song_oath']);
+  const CROSS_IN_MM  = new Set(['mm_song_zelda','mm_song_saria','mm_song_minuet','mm_song_bolero','mm_song_serenade','mm_song_requiem','mm_song_nocturne','mm_song_prelude']);
+
+  const ootSongs = songChoices.filter(s => s.game === 'oot' && !CROSS_IN_OOT.has(s.id));
+  const mmSongs  = songChoices.filter(s => s.game === 'mm'  && !CROSS_IN_MM.has(s.id));
+
+  // Songs that share a name across both games (Epona, Song of Time, Song of Storms, Sun's Song)
+  // → show only the home-game version to avoid duplicates in the "opposite" optgroup
+  const ootNames = new Set(ootSongs.map(s => s.name));
+  const mmNames  = new Set(mmSongs.map(s => s.name));
+  const mmOnlySongs  = mmSongs.filter(s => !ootNames.has(s.name)); // MM-exclusive for OoT select
+  const ootOnlySongs = ootSongs.filter(s => !mmNames.has(s.name)); // OoT-exclusive for MM select
 
   let songEventMap: Record<string, string> = {};
   $: if (ySongEvents) {
@@ -70,38 +107,54 @@
     songEventMap = Object.fromEntries(ySongEvents.entries());
   }
 
-  let itemMap: Record<string, number> = {};
-  $: if (yItems) {
-    yItems.observe(() => { itemMap = Object.fromEntries(yItems!.entries()); });
-    itemMap = Object.fromEntries(yItems.entries());
-  }
-
-  function setSongEvent(slot: number, songId: string) {
+  function setSongEvent(key: string, songId: string) {
     if (isWatchMode || !ySongEvents) return;
-    if (songId) ySongEvents.set(String(slot), songId);
-    else ySongEvents.delete(String(slot));
+    if (songId) ySongEvents.set(key, songId);
+    else ySongEvents.delete(key);
   }
 
-  function isSongObtained(songId: string): boolean {
-    if ((itemMap[songId] ?? 0) > 0) return true;
-    // Check via shared ↔ game-specific counterparts
-    const shId = ootToShared[songId] ?? mmToShared[songId] ?? (songId.startsWith('sh_') ? songId : null);
-    if (shId) {
-      if ((itemMap[shId] ?? 0) > 0) return true;
-      for (const id of (sharedToOot[shId] ?? [])) if ((itemMap[id] ?? 0) > 0) return true;
-      for (const id of (sharedToMm[shId] ?? []))  if ((itemMap[id] ?? 0) > 0) return true;
-    }
-    return false;
+  function toggleDone(key: string) {
+    if (isWatchMode || !ySongEvents) return;
+    const doneKey = key + '_done';
+    if (songEventMap[doneKey] === 'yes') ySongEvents.delete(doneKey);
+    else ySongEvents.set(doneKey, 'yes');
   }
+
 
   function selectValue(e: Event): string {
     return (e.target as HTMLSelectElement | null)?.value ?? '';
   }
 
+  let ootTableEl: HTMLTableElement;
+  let mmTableEl: HTMLTableElement;
+  let ro: ResizeObserver;
+
+  async function equalizeMMRows() {
+    await tick();
+    if (!ootTableEl || !mmTableEl) return;
+    const ootTbody = ootTableEl.querySelector('tbody') as HTMLElement;
+    const mmRows = Array.from(mmTableEl.querySelectorAll('tbody tr')) as HTMLElement[];
+    if (!ootTbody || !mmRows.length) return;
+    mmRows.forEach(r => r.style.height = '');
+    await tick();
+    const h = ootTbody.offsetHeight / mmRows.length;
+    if (h > 0) mmRows.forEach(r => r.style.height = h + 'px');
+  }
+
+  $: if (view === 'songs') tick().then(equalizeMMRows);
+
+  onMount(() => {
+    ro = new ResizeObserver(equalizeMMRows);
+    return () => ro?.disconnect();
+  });
+
+  $: if (ootTableEl) { ro?.disconnect(); ro?.observe(ootTableEl); }
+
   let view: 'hints' | 'notes' | 'songs' = 'hints';
   let newText = '';
   let newType: HintType = 'woth';
   let filterType: HintType | 'all' = 'all';
+
   let notesFilter = '';
   let copiedId = '';
 
@@ -113,6 +166,7 @@
 
   function addHint() {
     if (isWatchMode) return;
+
     const text = newText.trim();
     if (!text) return;
 
@@ -124,7 +178,7 @@
         const h = hints[i];
         if (h.type === opposite) {
           const hl = h.text.toLowerCase();
-          if (tl.includes(hl) || hl.includes(tl)) yHints.delete(i, 1);
+          if (tl === hl) yHints.delete(i, 1);
         }
       }
     }
@@ -139,6 +193,15 @@
     if (idx !== -1) yHints.delete(idx, 1);
   }
 
+  function toggleHintDone(id: string) {
+    if (isWatchMode) return;
+    const idx = hints.findIndex(h => h.id === id);
+    if (idx === -1) return;
+    const h = hints[idx];
+    yHints.delete(idx, 1);
+    yHints.insert(idx, [{ ...h, done: !h.done }]);
+  }
+
   function clearAll() {
     if (isWatchMode) return;
     if (!confirm('Clear all hints?')) return;
@@ -149,7 +212,7 @@
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); addHint(); }
   }
 
-  $: filtered = filterType === 'all' ? hints : hints.filter(h => h.type === filterType);
+  $: filtered = filterType === 'all' ? hints : hints.filter((h: any) => h.type === filterType);
   $: if (filterType !== 'all' && hints.filter(h => h.type === filterType).length === 0) filterType = 'all';
 
   $: filteredAnnotations = (() => {
@@ -178,17 +241,15 @@
 <div class="hint-tracker">
   <!-- Tab toggle -->
   <div class="tab-row">
-    <button class="tab-btn" class:active={view === 'hints'} on:click={() => view = 'hints'}>
+    <button type="button" class="tab-btn" class:active={view === 'hints'} on:click={() => view = 'hints'}>
       Hints {#if hints.length > 0}<span class="tab-count">{hints.length}</span>{/if}
     </button>
-    <button class="tab-btn" class:active={view === 'notes'} on:click={() => view = 'notes'}>
+    <button type="button" class="tab-btn" class:active={view === 'notes'} on:click={() => view = 'notes'}>
       Notes {#if annotationCount > 0}<span class="tab-count">{annotationCount}</span>{/if}
     </button>
-    {#if songEventShuffle}
-      <button class="tab-btn" class:active={view === 'songs'} on:click={() => view = 'songs'}>
-        Songs
-      </button>
-    {/if}
+    <button type="button" class="tab-btn" class:active={view === 'songs'} on:click={() => view = 'songs'}>
+      Song Events
+    </button>
   </div>
 
   {#if view === 'hints'}
@@ -214,14 +275,14 @@
           rows="2"
           disabled={isWatchMode}
         ></textarea>
-        <button class="add-btn" on:click={addHint} disabled={!newText.trim() || isWatchMode}>Add</button>
+        <button type="button" class="add-btn" on:click={addHint} disabled={!newText.trim() || isWatchMode}>Add</button>
       </div>
     </div>
 
     <!-- Filter + Clear -->
     <div class="filter-row">
       <span class="filter-label">Filter:</span>
-      <button class="filter-btn" class:active={filterType === 'all'} on:click={() => filterType = 'all'}>All ({hints.length})</button>
+      <button type="button" class="filter-btn" class:active={filterType === 'all'} on:click={() => filterType = 'all'}>All ({hints.length})</button>
       {#each hintTypes as t}
         {@const count = hints.filter(h => h.type === t.id).length}
         {#if count > 0}
@@ -234,7 +295,7 @@
         {/if}
       {/each}
       {#if hints.length > 0}
-        <button class="clear-all-btn" on:click={clearAll} disabled={isWatchMode}>Clear all</button>
+        <button type="button" class="clear-all-btn" on:click={clearAll} disabled={isWatchMode}>Clear all</button>
       {/if}
     </div>
 
@@ -244,13 +305,20 @@
     {:else}
       <ul class="hint-list">
         {#each filtered as hint (hint.id)}
-          <li class="hint-item">
+          <li class="hint-item" class:hint-done={hint.done}>
+            <button type="button" class="hint-done-btn" class:is-done={hint.done} on:click={() => toggleHintDone(hint.id)} title="{hint.done ? 'Mark undone' : 'Mark done'}" disabled={isWatchMode}>
+              {hint.done ? '✓' : '○'}
+            </button>
             <span class="hint-badge" style="background: {typeColor(hint.type)}">{typeLabel(hint.type)}</span>
             <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
             <span class="hint-text" on:click={() => copyHint(hint.id, hint.type, hint.text)} title="Click to copy" style="cursor:copy">
-              {#if copiedId === hint.id}<span class="hint-copied">✓ Copied</span>{:else}{hint.text}{/if}
+              {#if copiedId === hint.id}
+                <span class="hint-copied">✓ Copied</span>
+              {:else}
+                {hint.text}
+              {/if}
             </span>
-            <button class="del-btn" on:click={() => removeHint(hint.id)} title="Delete" disabled={isWatchMode}>✕</button>
+            <button type="button" class="del-btn" on:click={() => removeHint(hint.id)} title="Delete" disabled={isWatchMode}>✕</button>
           </li>
         {/each}
       </ul>
@@ -269,7 +337,7 @@
           bind:value={notesFilter}
         />
         {#if notesFilter}
-          <button class="notes-filter-clear" on:click={() => notesFilter = ''}>✕</button>
+          <button type="button" class="notes-filter-clear" on:click={() => notesFilter = ''}>✕</button>
         {/if}
       </div>
       {#if filteredAnnotations.length === 0}
@@ -286,16 +354,16 @@
                 </span>
                 <span class="annotation-name" title={entry.id}>{entry.id}</span>
                 {#if entry.kind === 'note' && onEditNote && !isWatchMode}
-                  <button class="annotation-edit" on:click={() => onEditNote?.(entry.id)} title="Edit">✎</button>
+                  <button type="button" class="annotation-edit" on:click={() => onEditNote?.(entry.id)} title="Edit">✎</button>
                 {/if}
                 {#if entry.kind === 'shop' && onEditShop && !isWatchMode}
-                  <button class="annotation-edit" on:click={() => onEditShop?.(entry.id)} title="Edit">✎</button>
+                  <button type="button" class="annotation-edit" on:click={() => onEditShop?.(entry.id)} title="Edit">✎</button>
                 {/if}
                 {#if entry.kind === 'note' && onDeleteNote && !isWatchMode}
-                  <button class="annotation-del" on:click={() => onDeleteNote?.(entry.id)} title="Delete">✕</button>
+                  <button type="button" class="annotation-del" on:click={() => onDeleteNote?.(entry.id)} title="Delete">✕</button>
                 {/if}
                 {#if entry.kind === 'shop' && onDeleteShop && !isWatchMode}
-                  <button class="annotation-del" on:click={() => onDeleteShop?.(entry.id)} title="Delete">✕</button>
+                  <button type="button" class="annotation-del" on:click={() => onDeleteShop?.(entry.id)} title="Delete">✕</button>
                 {/if}
               </div>
               <div class="annotation-body">
@@ -314,49 +382,71 @@
       {/each}
     {/if}
   {:else if view === 'songs'}
-    <!-- Song Events Shuffle -->
-    <table class="song-events-table">
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>OoT effect</th>
-          <th>MM effect</th>
-          <th>Required song</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        {#each SONG_EVENT_SLOTS as evt}
-          {@const selectedId = songEventMap[String(evt.slot)] ?? ''}
-          {@const obtained = selectedId ? isSongObtained(selectedId) : null}
+    <div class="song-events-wrap">
+      <!-- OoT -->
+      <table class="song-events-table" bind:this={ootTableEl}>
+        <thead>
+          <tr><th colspan="3" class="game-header oot-game-header">Ocarina of Time</th></tr>
           <tr>
-            <td class="slot-num">{evt.slot}</td>
-            <td class="effect-cell">{evt.oot ?? '—'}</td>
-            <td class="effect-cell">{evt.mm ?? '—'}</td>
-            <td>
-              <select
-                value={selectedId}
-                on:change={e => setSongEvent(evt.slot, selectValue(e))}
-                disabled={isWatchMode}
-                class="song-select"
-              >
-                <option value="">—</option>
-                {#each songChoices as song}
-                  <option value={song.id}>{song.name}</option>
-                {/each}
-              </select>
-            </td>
-            <td class="status-cell">
-              {#if obtained === true}
-                <span class="status-ok">✓</span>
-              {:else if obtained === false}
-                <span class="status-no">✗</span>
-              {/if}
-            </td>
+            <th class="event-th">Song Event</th>
+            <th class="song-th">Required Song</th>
+            <th class="done-th">Done?</th>
           </tr>
-        {/each}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {#each OOT_EVENTS as evt}
+            {@const sel = songEventMap[evt.id] ?? ''}
+            {@const eff = sel || evt.vanilla}
+            {@const done = songEventMap[evt.id + '_done'] === 'yes'}
+            <tr class:event-done={done}>
+              <td class="event-cell oot-event">{evt.label}</td>
+              <td>
+                <select value={eff} on:change={e => { const v = selectValue(e); setSongEvent(evt.id, v === evt.vanilla ? '' : v); }} disabled={isWatchMode} class="song-select" class:vanilla-select={!sel}>
+                  <optgroup label="Ocarina of Time">{#each ootSongs as s}<option value={s.id}>{s.name}</option>{/each}</optgroup>
+                  <optgroup label="Majora's Mask">{#each mmOnlySongs as s}<option value={s.id}>{s.name}</option>{/each}</optgroup>
+                </select>
+              </td>
+              <td class="done-cell">
+                {#if evt.doneNA}<span class="na-text">N/A</span>
+                {:else}<button type="button" class="done-btn" class:done-yes={done} on:click={() => toggleDone(evt.id)} disabled={isWatchMode}>{done ? '✓' : '✗'}</button>
+                {/if}
+              </td>
+            </tr>
+          {/each}
+        </tbody>
+      </table>
+
+      <!-- MM -->
+      <table class="song-events-table" bind:this={mmTableEl}>
+        <thead>
+          <tr><th colspan="3" class="game-header mm-game-header">Majora's Mask</th></tr>
+          <tr>
+            <th class="event-th">Song Event</th>
+            <th class="song-th">Required Song</th>
+            <th class="done-th">Done?</th>
+          </tr>
+        </thead>
+        <tbody>
+          {#each MM_EVENTS as evt}
+            {@const sel = songEventMap[evt.id] ?? ''}
+            {@const eff = sel || evt.vanilla}
+            {@const done = songEventMap[evt.id + '_done'] === 'yes'}
+            <tr class:event-done={done}>
+              <td class="event-cell mm-event">{evt.label}</td>
+              <td>
+                <select value={eff} on:change={e => { const v = selectValue(e); setSongEvent(evt.id, v === evt.vanilla ? '' : v); }} disabled={isWatchMode} class="song-select" class:vanilla-select={!sel}>
+                  <optgroup label="Ocarina of Time">{#each ootOnlySongs as s}<option value={s.id}>{s.name}</option>{/each}</optgroup>
+                  <optgroup label="Majora's Mask">{#each mmSongs as s}<option value={s.id}>{s.name}</option>{/each}</optgroup>
+                </select>
+              </td>
+              <td class="done-cell">
+                <button type="button" class="done-btn" class:done-yes={done} on:click={() => toggleDone(evt.id)} disabled={isWatchMode}>{done ? '✓' : '✗'}</button>
+              </td>
+            </tr>
+          {/each}
+        </tbody>
+      </table>
+    </div>
   {/if}
 </div>
 
@@ -469,7 +559,24 @@
     border: 1px solid var(--color-border);
     border-radius: 4px;
     font-size: 0.85em;
+    transition: opacity 0.15s;
   }
+  .hint-done { opacity: 0.45; }
+  .hint-done .hint-text { text-decoration: line-through; }
+
+  .hint-done-btn {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1em;
+    padding: 0 2px;
+    opacity: 0.4;
+    color: var(--color-text);
+    line-height: 1;
+  }
+  .hint-done-btn:hover { opacity: 0.9; }
+  .hint-done-btn.is-done { opacity: 1; color: #2ecc71; }
 
   .hint-badge {
     flex-shrink: 0;
@@ -596,6 +703,19 @@
 
   .hint-text { flex: 1; color: var(--color-text); white-space: pre-wrap; word-break: break-word; }
 
+  .non-req-row { display: flex; align-items: center; gap: 0.4em; }
+  .game-btns { display: flex; gap: 0.2em; flex-shrink: 0; }
+  .game-btn {
+    padding: 2px 7px; border: 1px solid var(--color-border); border-radius: 3px;
+    background: transparent; color: var(--color-text); cursor: pointer; font-size: 0.8em; opacity: 0.5;
+  }
+  .game-btn.active { opacity: 1; background: var(--color-border); font-weight: bold; }
+  .item-select {
+    flex: 1; padding: 3px 5px; border: 1px solid var(--color-border); border-radius: 4px;
+    background: var(--color-bg); color: var(--color-text); font-size: 0.85em;
+  }
+  .non-req-game-tag { font-size: 0.8em; opacity: 0.7; font-weight: bold; }
+
   .del-btn {
     flex-shrink: 0;
     background: none;
@@ -608,22 +728,58 @@
   }
   .del-btn:hover { opacity: 1; }
 
-  .song-events-table { width: 100%; border-collapse: collapse; font-size: 0.82em; }
-  .song-events-table th, .song-events-table td { padding: 3px 6px; border-bottom: 1px solid var(--color-border); text-align: left; }
-  .song-events-table th { opacity: 0.6; font-weight: normal; }
-  .slot-num { width: 1.5em; text-align: center; opacity: 0.5; }
-  .effect-cell { color: var(--color-text-muted, #aaa); font-size: 0.9em; }
+  /* ── Song Events ── */
+  .song-events-wrap { display: flex; gap: 1em; align-items: flex-start; }
+  .song-events-wrap .song-events-table { flex: 1; min-width: 0; }
+
+  .song-events-table { width: 100%; border-collapse: collapse; font-size: 0.8em; }
+  .song-events-table th,
+  .song-events-table td { padding: 3px 5px; border-bottom: 1px solid var(--color-border); text-align: left; }
+  .song-events-table tr:last-child td { border-bottom: none; }
+  .song-events-table tbody tr:hover { background: rgba(255,255,255,0.04); }
+
+  .game-header { text-align: center; font-weight: bold; font-size: 1em; padding: 4px; }
+  .oot-game-header { background: rgba(70,130,210,0.18); color: #7eb8ff; border-bottom: 2px solid #4682d2; }
+  .mm-game-header  { background: rgba(200,60,60,0.15);  color: #ff9090; border-bottom: 2px solid #c03030; }
+
+  .event-th { opacity: 0.6; font-weight: normal; }
+  .song-th  { opacity: 0.6; font-weight: normal; }
+  .done-th  { opacity: 0.6; font-weight: normal; width: 3.5em; text-align: center; }
+
+  .event-cell { white-space: normal; line-height: 1.3; }
+  .oot-event { color: #7eb8ff; }
+  .mm-event  { color: #ff9090; }
+
+  .event-done .event-cell { opacity: 0.45; text-decoration: line-through; }
+
+  .done-cell { width: 3.5em; text-align: center; }
+  .na-text { opacity: 0.35; font-size: 0.85em; }
+
   .song-select {
-    background: var(--color-bg-input, #1a1a1a);
+    background: var(--color-bg);
     color: var(--color-text);
     border: 1px solid var(--color-border);
     border-radius: 3px;
-    padding: 1px 4px;
-    font-size: 0.85em;
-    max-width: 14em;
+    padding: 1px 3px;
+    font-size: 0.9em;
+    width: 100%;
   }
-  .status-cell { width: 1.5em; text-align: center; }
-  .status-ok { color: #2ecc71; font-weight: bold; }
-  .status-no { color: #e74c3c; font-weight: bold; }
+  .vanilla-select { opacity: 0.55; font-style: italic; }
+  .vanilla-select:focus, .vanilla-select:hover { opacity: 1; font-style: normal; }
+
+  .done-btn {
+    background: none;
+    border: 1px solid var(--color-border);
+    border-radius: 3px;
+    color: #e74c3c;
+    cursor: pointer;
+    font-size: 0.9em;
+    padding: 1px 5px;
+    width: 100%;
+  }
+  .done-btn:disabled { cursor: default; opacity: 0.5; }
+  .done-btn.done-yes { color: #2ecc71; border-color: #2ecc71; }
+
+  .event-done .event-cell { opacity: 0.5; }
 
 </style>

@@ -32,6 +32,8 @@ export interface SceneData {
       image: string;
       checks: MapCheck[];
       displayName: string;
+      jpOnly?: boolean;
+      usOnly?: boolean;
     };
   };
 }
@@ -325,7 +327,7 @@ export async function buildMapData(mqSettings?: Map<string, boolean>): Promise<M
   function processSubsceneEntry(
     mainScene: string,
     game: 'oot' | 'mm',
-    subsceneEntry: string | { renderscene: string; displayName?: string }
+    subsceneEntry: string | { renderscene: string; displayName?: string; imagePath?: string; jpOnly?: boolean; usOnly?: boolean }
   ) {
     const renderscene = typeof subsceneEntry === 'string'
       ? subsceneEntry
@@ -334,6 +336,13 @@ export async function buildMapData(mqSettings?: Map<string, boolean>): Promise<M
     const customDisplayName = typeof subsceneEntry === 'string'
       ? null
       : subsceneEntry.displayName;
+
+    const customImagePath = typeof subsceneEntry === 'string'
+      ? null
+      : subsceneEntry.imagePath ?? null;
+
+    const subsceneJpOnly = typeof subsceneEntry === 'string' ? undefined : subsceneEntry.jpOnly;
+    const subsceneUsOnly = typeof subsceneEntry === 'string' ? undefined : subsceneEntry.usOnly;
 
     // SPECIAL CASE: renderscene already in mapData via roomMapping → merge
     if (mapData[renderscene] && renderscene !== mainScene) {
@@ -345,18 +354,28 @@ export async function buildMapData(mqSettings?: Map<string, boolean>): Promise<M
       return;
     }
 
+    // If the subscene was already created in Step 1 (room-based), preserve it
+    if (mapData[mainScene].subscenes[renderscene]) {
+      if (customDisplayName) {
+        mapData[mainScene].subscenes[renderscene].displayName = customDisplayName;
+      }
+      return;
+    }
+
     // Cas normal : subscene simple — utilise allValidChecks pour inclure les extra checks
     const sceneChecks = allValidChecks.filter(check =>
       check.renderscene === renderscene &&
       check.game === game
     );
 
-    if (sceneChecks.length > 0) {
-      const gameFolder = game === 'oot' ? 'OoT' : 'MM';
+    const gameFolder = game === 'oot' ? 'OoT' : 'MM';
+    if (sceneChecks.length > 0 || customDisplayName !== null) {
       mapData[mainScene].subscenes[renderscene] = {
-        image: `${gameFolder}/${renderscene.toLowerCase()}.png`,
+        image: customImagePath ?? `${gameFolder}/${renderscene.toLowerCase()}.png`,
         checks: sceneChecks,
-        displayName: customDisplayName || rendersceneToDisplayName(renderscene)
+        displayName: customDisplayName || rendersceneToDisplayName(renderscene),
+        jpOnly: subsceneJpOnly,
+        usOnly: subsceneUsOnly,
       };
     }
 
@@ -388,6 +407,12 @@ export async function buildMapData(mqSettings?: Map<string, boolean>): Promise<M
     const mainScene = rendersceneToParent.get(check.renderscene) || check.scene;
 
     if (processedScenes.has(mainScene)) return;
+
+    // Skip lair/boss scenes whose checks already render inside a processed dungeon scene.
+    // Without this guard, e.g. OOT_LAIR_TWINROVA would be created with a flat subscene
+    // keyed 'OOT_TEMPLE_SPIRIT', which Fallback B in navigateToEntrance would incorrectly
+    // match when clicking a Spirit Temple entrance dot.
+    if (mainScene !== check.renderscene && processedScenes.has(check.renderscene)) return;
 
     const mainScenePrefix = mainScene.split('_')[0];
     const renderscenePrefix = check.renderscene.split('_')[0];

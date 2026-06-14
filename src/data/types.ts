@@ -39,6 +39,7 @@ export interface RawPoolEntry {
     scene: string;
     id: string;
     item: string;
+    age?: 'child' | 'adult' | 'both';
 }
 
 export type RawPoolData = {
@@ -94,6 +95,7 @@ export interface Check {
     scene: string;
     item: string;
     id: string;
+    age?: 'child' | 'adult' | 'both';
 }
 
 export enum CheckState {

@@ -18,6 +18,15 @@
   const bgOpacity   = parseFloat(_p.get('opacity') ?? '1');
   const transparent = _p.get('transparent') === 'true';
   const debugMode   = _p.get('debug') === 'true';
+  const showOotQuests   = _p.get('oot_quests')   !== '0';
+  const showMmQuests    = _p.get('mm_quests')    !== '0';
+  const showOotExt      = _p.get('oot_ext')      !== '0';
+  const showMmExt       = _p.get('mm_ext')       !== '0';
+  const showMasks       = _p.get('masks')        !== '0';
+  const showOotSongs    = _p.get('oot_songs')    !== '0';
+  const showMmSongs     = _p.get('mm_songs')     !== '0';
+  const showOotDungeons = _p.get('oot_dungeons') !== '0';
+  const showMmDungeons  = _p.get('mm_dungeons')  !== '0';
   if (_p.get('room') && onJoinRoom) onJoinRoom(_p.get('room')!);
 
   const itemStore = readable(new Map<string, number>(), set => {
@@ -113,11 +122,12 @@
     'mm_bk_gb':                'bossKeyMmEnabled',
     'mm_bk_st':                'bossKeyMmEnabled',
   };
-  $: disabledItems = new Set(
-    Object.entries(itemVisibilityMap)
+  $: disabledItems = new Set([
+    ...Object.entries(itemVisibilityMap)
       .filter(([, sk]) => $settingsStore.get(sk) === false)
-      .map(([id]) => id)
-  );
+      .map(([id]) => id),
+    ...($settingsStore.get('rustyKeysMm') ? ['mm_roomkey'] : []),
+  ]);
 
   function isHidden(cellId: string, game: 'oot' | 'mm' | 'shared'): boolean {
     if (disabledItems.has(cellId)) return true;
@@ -153,15 +163,15 @@
     { title: 'Items', rows: [
       ['sticks_oot','nuts_oot','bomb','bow','arrow_fire_oot','din'],
       ['slingshot','ocarina','bombchu','hookshot','arrow_ice_oot','farore'],
-      ['boomerang','lens','bean','hammer','arrow_light_oot','nayru'],
-      ['bottle_letter','bottle_1','bottle_2','bottle_3'],
-      ['skulltula_token','agony','gerudo_card'],
+      ['boomerang','lens','hammer','arrow_light_oot','nayru'],
+      ['bottle_1','bottle_2','bottle_3'],
+      ['skulltula_token','gerudo_card'],
     ]},
     { title: 'Equipment', rows: [
       ['sword_kokiri','sword_master','giant_knife','sword_biggoron'],
       ['deku_shield','hyrule_shield','shield_mirror'],
       ['tunic_goron','tunic_zora','boots_iron','boots_hover'],
-      ['strength','scale','wallet','magic_oot'],
+      ['strength','scale','magic_oot'],
     ]},
     { title: 'Songs', rows: [
       ['oot_song_zelda','oot_song_epona','oot_song_saria','oot_song_sun','oot_song_time','oot_song_storms'],
@@ -186,14 +196,14 @@
 
   const mmSects: Section[] = [
     { title: 'Items', rows: [
-      ['mm_ocarina','mm_bow','mm_arrow_fire','mm_arrow_ice','mm_arrow_light','mm_clocktown_stray_fairy'],
-      ['mm_bomb','mm_bombchu','mm_stick','mm_nuts','mm_bean','mm_skulltulla_woodfall'],
-      ['mm_keg','mm_pictobox','mm_lens','mm_hookshot','mm_fairysword','mm_skulltulla_greatbay'],
-      ['mm_dust','mm_bottle_1','mm_bottle_2','mm_bottle_3','mm_bottle_4','mm_bottle_5','mm_bomber'],
+      ['mm_ocarina','mm_bow','mm_arrow_fire','mm_arrow_ice','mm_arrow_light'],
+      ['mm_bomb','mm_bombchu','mm_stick','mm_nuts','mm_bean'],
+      ['mm_keg','mm_lens','mm_hookshot','mm_fairysword'],
+      ['mm_dust','mm_bottle_1','mm_bottle_2','mm_bottle_3','mm_bottle_4','mm_bottle_5'],
     ]},
     { title: 'Equipment', rows: [
       ['mm_sword','mm_spin_upgrade','mm_magic'],
-      ['mm_shield','mm_mirror','mm_wallet'],
+      ['mm_shield','mm_mirror'],
     ]},
     { title: 'Songs', rows: [
       ['mm_song_time','mm_song_healing','mm_song_epona','mm_song_soaring','mm_song_storms','mm_song_sun'],
@@ -254,8 +264,24 @@
   // Combined EXT rows for merged section at bottom of MM
   const mmExtRows: (string | null)[][] = [...mmSects[6].rows, ...mmSects[7].rows];
 
-  const iconSize = _p.get('size') ?? '18px';
-  const keySize  = '13px';
+  const OOT_RUSTY_KEYS_FLAT: string[] = [
+    'oot_rk_laboratory','oot_rk_fishing_pond','oot_rk_ranch_house','oot_rk_ranch_house_room','oot_rk_ranch_stable','oot_rk_silo',
+    'oot_rk_windmill','oot_rk_impa_house','oot_rk_skulltula_house','oot_rk_carpenter_house','oot_rk_granny_potion_shop','oot_rk_graveyard',
+    'oot_rk_guard_house','oot_rk_bombchu_bowling','oot_rk_treasure_chest_game','oot_rk_bombchu_shop','oot_rk_dog_lady_house','oot_rk_back_alley_house',
+    'oot_rk_child_shooting_gallery','oot_rk_child_bazaar','oot_rk_child_potion_shop','oot_rk_adult_shooting_gallery','oot_rk_adult_bazaar','oot_rk_adult_potion_shop','oot_rk_adult_potion_shop_back','oot_rk_mask_shop',
+  ];
+  const MM_RUSTY_KEYS_FLAT: string[] = [
+    'mm_rk_bomb_shop','mm_rk_trading_post','mm_rk_curiosity_shop','mm_rk_post_office','mm_rk_swordsman_school','mm_rk_lottery','mm_rk_kafei_hideout',
+    'mm_rk_mayor_residence','mm_rk_mayor_residence_office','mm_rk_mayor_residence_salon','mm_rk_mayor_residence_kafei','mm_rk_town_archery','mm_rk_treasure_chest_game','mm_rk_honey_darling',
+    'mm_rk_inn_guest_room','mm_rk_stock_pot_inn_roof','mm_rk_stock_pot_inn_staff_room','mm_rk_stock_pot_inn_dormitory','mm_rk_grandma_room','mm_rk_milk_bar','mm_rk_observatory',
+    'mm_rk_swamp_archery','mm_rk_tourist_information','mm_rk_potion_shop','mm_rk_cucco_shack','mm_rk_dog_racetrack','mm_rk_ranch_barn','mm_rk_ranch_house','mm_rk_ranch_house_room',
+    'mm_rk_laboratory','mm_rk_zora_shop','mm_rk_zora_tijo_room','mm_rk_zora_japas_room','mm_rk_zora_evan_room','mm_rk_zora_lulu_room',
+    'mm_rk_beneath_graveyard','mm_rk_dampe_house','mm_rk_music_house','mm_rk_blacksmith',
+  ];
+
+  const isHLayout = _p.get('layout') === 'h';
+  const iconSize = _p.get('size') ?? (isHLayout ? '15px' : '18px');
+  const keySize  = _p.get('keysize') ?? (isHLayout ? '11px' : '13px');
 
   let rootEl: HTMLElement;
   let natW = 0, natH = 0;
@@ -274,6 +300,7 @@
 
 <div
   class="ov-root"
+  class:layout-h={isHLayout}
   bind:this={rootEl}
   style="--icon-size:{iconSize}; --key-size:{keySize}; {transparent ? 'background:transparent;' : ''}"
 >
@@ -327,7 +354,7 @@
     </div>
 
     <!-- Songs -->
-    {#if secVis(ootSects[2].rows, 'oot')}
+    {#if showOotSongs && secVis(ootSects[2].rows, 'oot')}
     <div class="ov-section">
       <div class="ov-sec-title ov-sec-oot">Songs</div>
       {#each visRows(ootSects[2].rows, 'oot') as irow}
@@ -348,7 +375,7 @@
     {/if}
 
     <!-- Item Extensions -->
-    {#if secVis(ootSects[3].rows, 'oot')}
+    {#if showOotExt && secVis(ootSects[3].rows, 'oot')}
     <div class="ov-section">
       <div class="ov-sec-title ov-sec-oot">Ext</div>
       {#each visRows(ootSects[3].rows, 'oot') as irow}
@@ -370,7 +397,7 @@
     {/if}
 
     <!-- Side Quests -->
-    {#if secVis(ootSects[4].rows, 'oot')}
+    {#if showOotQuests && secVis(ootSects[4].rows, 'oot')}
     <div class="ov-section">
       <div class="ov-sec-title ov-sec-oot">Quests</div>
       {#each visRows(ootSects[4].rows, 'oot') as irow}
@@ -392,6 +419,7 @@
     {/if}
 
     <!-- Dungeons: reward row + SK row + optional BK row -->
+    {#if showOotDungeons}
     <div class="ov-section">
       <div class="ov-sec-title ov-sec-oot">Dungeons</div>
       <div class="ov-irow ov-irow-dung-rwd">
@@ -442,6 +470,27 @@
       </div>
       {/if}
     </div>
+    {/if}
+
+    <!-- Rusty Keys (OoT) -->
+    {#if $settingsStore.get('rustyKeysOot')}
+    <div class="ov-section">
+      <div class="ov-sec-title ov-sec-oot">Rusty Keys</div>
+      <div class="ov-irow">
+        {#each OOT_RUSTY_KEYS_FLAT as cid}
+          {#if itemById[cid]}
+            {@const item = itemById[cid]}
+            {@const lvl  = $itemStore.get(cid) ?? 0}
+            <div class="ov-cell ov-key" class:obtained={isObt(item, lvl)}>
+              <img loading="lazy" src={getIconSrc(item, lvl)} alt="" class="ov-icon" draggable="false" />
+              {#if getBadge(item, lvl)}<span class="ov-badge">{getBadge(item, lvl)}</span>{/if}
+            </div>
+          {/if}
+        {/each}
+      </div>
+    </div>
+    {/if}
+
   </div>
   {/if}
 
@@ -493,7 +542,7 @@
     </div>
 
     <!-- Songs -->
-    {#if secVis(mmSects[2].rows, 'mm')}
+    {#if showMmSongs && secVis(mmSects[2].rows, 'mm')}
     <div class="ov-section">
       <div class="ov-sec-title ov-sec-mm">Songs</div>
       {#each visRows(mmSects[2].rows, 'mm') as irow}
@@ -514,7 +563,7 @@
     {/if}
 
     <!-- Side Quests -->
-    {#if secVis(mmSects[3].rows, 'mm')}
+    {#if showMmQuests && secVis(mmSects[3].rows, 'mm')}
     <div class="ov-section">
       <div class="ov-sec-title ov-sec-mm">Quests</div>
       {#each visRows(mmSects[3].rows, 'mm') as irow}
@@ -558,6 +607,7 @@
     {/if}
 
     <!-- Dungeons: compact columns WF/SH/GB/ST -->
+    {#if showMmDungeons}
     <div class="ov-section">
       <div class="ov-sec-title ov-sec-mm">Dungeons</div>
       <div class="ov-dung-row">
@@ -598,9 +648,29 @@
         {/each}
       </div>
     </div>
+    {/if}
+
+    <!-- Rusty Keys (MM) -->
+    {#if $settingsStore.get('rustyKeysMm')}
+    <div class="ov-section">
+      <div class="ov-sec-title ov-sec-mm">Rusty Keys</div>
+      <div class="ov-irow">
+        {#each MM_RUSTY_KEYS_FLAT as cid}
+          {#if itemById[cid]}
+            {@const item = itemById[cid]}
+            {@const lvl  = $itemStore.get(cid) ?? 0}
+            <div class="ov-cell ov-key" class:obtained={isObt(item, lvl)}>
+              <img loading="lazy" src={getIconSrc(item, lvl)} alt="" class="ov-icon" draggable="false" />
+              {#if getBadge(item, lvl)}<span class="ov-badge">{getBadge(item, lvl)}</span>{/if}
+            </div>
+          {/if}
+        {/each}
+      </div>
+    </div>
+    {/if}
 
     <!-- Merged EXT: OoT Ext + Item Ext on one dense block -->
-    {#if secVis(mmExtRows, 'mm')}
+    {#if showMmExt && secVis(mmExtRows, 'mm')}
     <div class="ov-section">
       <div class="ov-sec-title ov-sec-mm">Ext</div>
       <div class="ov-irow">
@@ -852,5 +922,51 @@
     padding: 2px 6px;
     border-radius: 3px;
     pointer-events: none;
+  }
+
+  /* ============ HORIZONTAL LAYOUT (?layout=h) ============ */
+  /* Each game gets its own row; sections flow left-to-right within it */
+  .layout-h {
+    width: 100%;
+    max-width: none;
+  }
+  .layout-h .ov-games-row {
+    flex-direction: column;
+    gap: 2px;
+  }
+  /* Separator becomes a horizontal line between the two game rows */
+  .layout-h .ov-col-sep {
+    width: 100%;
+    height: 1px;
+  }
+  /* Game columns become horizontal rows of sections */
+  .layout-h .ov-col,
+  .layout-h .ov-col-oot {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: flex-start;
+    gap: 3px;
+    width: 100%;
+  }
+  /* Game label becomes a narrow vertical tab on the left */
+  .layout-h .ov-game-lbl {
+    writing-mode: vertical-lr;
+    transform: rotate(180deg);
+    align-self: stretch;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 1px;
+    flex-shrink: 0;
+    font-size: 7px;
+    letter-spacing: 2px;
+  }
+  /* Sections don't shrink — they keep their natural width */
+  .layout-h .ov-section {
+    flex-shrink: 0;
+  }
+  /* IE row (Items+Equipment) loses its full-width constraint */
+  .layout-h .ov-section.ov-ie-row {
+    width: auto;
   }
 </style>
