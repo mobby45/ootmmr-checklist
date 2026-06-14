@@ -82,8 +82,12 @@ const KEY_MAP: Record<string, string> = {
   openMoon:               'openMoon',
   majoraChild:            'majoraChild',
   bossWarpPads:           'bossWarpPads',
+  // Win condition
+  goal:                   'goal',
   // Special logic (select/bool)
   ageChange:              'ageChange',
+  autoInvert:             'autoInvert',
+  ootPreplantedBeans:     'ootPreplantedBeans',
   hookshotAnywhereOot:    'hookshotAnywhereOot',
   hookshotAnywhereMm:     'hookshotAnywhereMm',
   climbMostSurfacesOot:   'climbMostSurfacesOot',
@@ -120,7 +124,8 @@ const KEY_MAP: Record<string, string> = {
   smallKeyRingMm:         'smallKeyRingMm',
   // Silver rupee pouches (select)
   silverRupeePouches:     'silverRupeePouches',
-  // Progressive Goron Lullaby per-game
+  // Progressive Goron Lullaby — release uses single key, dev splits per-game
+  progressiveGoronLullaby:    'progressiveGoronLullabyOot', // release alias (fan-out handled below)
   progressiveGoronLullabyOot: 'progressiveGoronLullabyOot',
   shuffleMasterSword:           'shuffleMasterSword',
   shuffleGerudoCard:            'shuffleGerudoCard',
@@ -549,6 +554,13 @@ const MULTICHECK_KEYS = new Set(['openDungeonsOot', 'openDungeonsMm', 'clearStat
 function translateValue(ootmmKey: string, value: unknown): unknown {
   // Multicheck: generator stores as array, tracker expects space-separated string
   if (MULTICHECK_KEYS.has(ootmmKey) && Array.isArray(value)) return (value as string[]).join(' ');
+  // Key rings: release uses {type:"specific", values:[...]} object; extract the values array
+  if ((ootmmKey === 'smallKeyRingOot' || ootmmKey === 'smallKeyRingMm') && typeof value === 'object' && value !== null && !Array.isArray(value)) {
+    const obj = value as { type?: string; values?: string[] };
+    if (obj.type === 'specific' && Array.isArray(obj.values)) return obj.values.join(' ');
+    if (obj.type === 'all') return 'all';
+    return '';
+  }
   // strayFairyRewardCount is a number in OoTMM, tracker expects a string for the select
   if (ootmmKey === 'strayFairyRewardCount') return String(value);
   if (typeof value !== 'string') return value;
@@ -623,6 +635,8 @@ export async function importRandomizerSettings(str: string): Promise<{
       // Some keys are stored under a legacy tracker alias AND under their OoTMM name for the logic engine
       if (ootmmKey === 'ganonBossKey')             appSettings['ganonBossKey'] = v;
       if (ootmmKey === 'smallKeyShuffleChestGame') appSettings['smallKeyShuffleChestGame'] = v;
+      // Release uses a single progressiveGoronLullaby key — fan out to both Oot and Mm
+      if (ootmmKey === 'progressiveGoronLullaby')  appSettings['progressiveGoronLullabyMm'] = v;
     } else if (ootmmKey === 'bossKeyShuffleOot') {
       appSettings['bossKeyShuffleOot'] = translateValue(ootmmKey, value); // logic engine
       appSettings['bossKeyOotEnabled'] = value !== 'removed'; // item tracker badge
