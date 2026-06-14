@@ -287,19 +287,9 @@ export function evalExpr(node: ExprNode, state: LogicState, macros: MacroTable):
         return itemPrice <= node.threshold;
       }
 
-      // 'random' / 'weighted': exact prices unknown — use wallet capacity as optimistic gate.
-      // threshold=0 = free item check; assume nothing is free in random mode.
-      if (node.threshold === 0) return false;
-      const childWallets = Boolean(state.settings.get('childWallets'));
-      const walletLevel = Math.max(
-        state.items.get('OOT_WALLET') ?? 0,
-        state.items.get('MM_WALLET') ?? 0,
-        state.items.get('WALLET') ?? 0,
-        state.items.get('SHARED_WALLET') ?? 0,
-      );
-      const CAPS = childWallets ? [0, 99, 200, 500, 999] : [99, 200, 500, 999];
-      const capacity = CAPS[Math.min(walletLevel, CAPS.length - 1)];
-      return capacity >= node.threshold;
+      // 'random' / 'weighted': prices are unknown at logic time → always accessible.
+      // The player will find out the actual price in-game; we can't gate by wallet here.
+      return true;
     }
 
     case 'cond': {
