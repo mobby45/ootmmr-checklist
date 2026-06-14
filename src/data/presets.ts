@@ -242,6 +242,7 @@ export const defaultPresets: Record<string, PresetData> = {
     settings: {
       ...base,
       ...blitzLogic,
+      goal: 'triforce',
       DungeonChestSFShuffleMM: 'starting',
       TingleMapShuffleMM: 'starting_items',
     },
@@ -316,6 +317,7 @@ export const defaultPresets: Record<string, PresetData> = {
     settings: {
       ...base,
       ...blitzLogic,
+      goal: 'ganon',
     },
     OOTMM: 'oot',
     OOTMMDungeons: 'ootdungeons',
@@ -331,6 +333,7 @@ export const defaultPresets: Record<string, PresetData> = {
   'Only MM': {
     settings: {
       ...base,
+      goal: 'majora',
       DungeonChestSFShuffleMM: 'starting',
       TingleMapShuffleMM: 'starting_items',
     },
