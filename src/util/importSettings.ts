@@ -5,6 +5,8 @@ const KEY_MAP: Record<string, string> = {
   goldSkulltulaTokens:          'goldSkulltulaShuffleOOT',
   silverRupeeShuffle:           'SilverRupeeShuffleOOT',
   smallKeyShuffleChestGame:     'TreasureChestShuffleOOT',
+  smallKeyShuffleOot:           'smallKeyShuffleOot',
+  smallKeyShuffleMm:            'smallKeyShuffleMm',
   ganonBossKey:                 'GanonBKShuffleOOT',
   scrubShuffleOot:              'ScrubsOOT',
   cowShuffleOot:                'CowShuffleOOT',
@@ -541,7 +543,7 @@ export async function decodeRandomizerSettings(str: string): Promise<Record<stri
 
 // Settings that don't affect check visibility — silenced from unmapped report
 const KNOWN_UNTRACKED = new Set([
-  'mapCompassShuffle', 'smallKeyShuffleOot', 'smallKeyShuffleMm', 'smallKeyShuffleHideout',
+  'mapCompassShuffle', 'smallKeyShuffleHideout',
   'dungeonRewardShuffle', 'priceOotShops', 'priceOotScrubs', 'priceOotMerchants', 'priceMmShops',
   'csmcCow', 'openMaskShop', 'ocarinaButtonsShuffleOot', 'ocarinaButtonsShuffleMm',
 ]);
@@ -566,9 +568,11 @@ export async function importRandomizerSettings(str: string): Promise<{
     if (appKey) {
       appSettings[appKey] = translateValue(ootmmKey, value);
     } else if (ootmmKey === 'bossKeyShuffleOot') {
-      appSettings['bossKeyOotEnabled'] = value !== 'removed';
+      appSettings['bossKeyShuffleOot'] = translateValue(ootmmKey, value); // logic engine
+      appSettings['bossKeyOotEnabled'] = value !== 'removed'; // item tracker badge
     } else if (ootmmKey === 'bossKeyShuffleMm') {
-      appSettings['bossKeyMmEnabled'] = value !== 'removed';
+      appSettings['bossKeyShuffleMm'] = translateValue(ootmmKey, value); // logic engine
+      appSettings['bossKeyMmEnabled'] = value !== 'removed'; // item tracker badge
     } else if (!KNOWN_UNTRACKED.has(ootmmKey)) {
       // Skip non-shuffle settings (tricks, logic, etc.) silently — only report shuffle ones
       const isShuffleLike = /shuffle|cow|scrub|shop|fairy|egg|fish|frog|merchant|lottery|actor|zelda/i.test(ootmmKey);
