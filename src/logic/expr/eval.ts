@@ -12,7 +12,7 @@ export type MacroTable = Map<string, ExprNode | ((...args: ExprNode[]) => ExprNo
 const OOT_VANILLA_SONG: Record<number, number> = {
   0: 5,   // Door of Time → Song of Time
   1: 3,   // Windmill/Well Drain → Song of Storms
-  2: 4,   // Graveyard Royal Tomb → Sun's Song
+  2: 0,   // Graveyard Royal Tomb → Zelda's Lullaby
   3: 0,   // Zora River Falls → Zelda's Lullaby
   4: 2,   // Goron City Darunia → Saria's Song
   5: 0,   // Great Fairy (HC) → Zelda's Lullaby
@@ -22,10 +22,10 @@ const OOT_VANILLA_SONG: Record<number, number> = {
   9: 0,   // Great Fairy (Desert) → Zelda's Lullaby
   10: 0,  // Great Fairy (Ganon exterior) → Zelda's Lullaby
   11: 0,  // Water Temple Levels → Zelda's Lullaby
-  12: 10, // Shadow Temple Boat → Nocturne of Shadow (tp_shadow)
+  12: 0,  // Shadow Temple Boat → Zelda's Lullaby
   13: 0,  // Spirit Temple Statue → Zelda's Lullaby
-  14: 9,  // Spirit Temple Lower → Requiem of Spirit (tp_spirit)
-  15: 9,  // Spirit Temple Upper → Requiem of Spirit (tp_spirit)
+  14: 0,  // Spirit Temple Lower → Zelda's Lullaby
+  15: 0,  // Spirit Temple Upper → Zelda's Lullaby
   16: 0,  // Bottom of the Well Water → Zelda's Lullaby
   17: 0,  // Ganon Castle Light → Zelda's Lullaby
 };
@@ -37,7 +37,7 @@ const MM_VANILLA_SONG: Record<number, number> = {
   5:  12, // Ikana / Heal Pamala's Father → Song of Healing
   6:  12, // Termina Field / Heal Kamaro → Song of Healing
   7:  12, // Great Bay Coast / Heal Mikau → Song of Healing
-  8:  18, // Ikana Graveyard / Captain Keeta → Elegy of Emptiness
+  8:  14, // Ikana Graveyard / Captain Keeta → Sonata of Awakening
   10: 15, // Goron Shrine / Baby Goron → Goron's Lullaby
   11: 3,  // Ikana Valley / Lift Curse → Song of Storms
   12: 19, // Clock Tower Roof / Moon → Oath to Order
@@ -62,10 +62,11 @@ const SONG_ID_TO_IDX: Record<string, number> = {
   mm_song_healing: 12, mm_song_soaring: 13, mm_song_sonata: 14,
   mm_song_lullaby: 15, mm_song_lullaby_half: 16, mm_song_nova: 17,
   mm_song_elegy: 18, mm_song_oath: 19,
-  // Cross-game clones
+  // Cross-game clones — OoT songs available in MM pool and vice versa
   oot_elegy: 18, oot_song_healing: 12, oot_song_soaring: 13,
   oot_song_sonata: 14, oot_song_lullaby: 15, oot_song_nova: 17, oot_song_oath: 19,
-  mm_song_zelda: 0, mm_song_saria: 2, mm_song_minuet: 6,
+  mm_song_zelda: 0, mm_song_epona: 1, mm_song_saria: 2, mm_song_storms: 3,
+  mm_song_sun: 4, mm_song_time: 5, mm_song_minuet: 6,
   mm_song_bolero: 7, mm_song_serenade: 8, mm_song_requiem: 9,
   mm_song_nocturne: 10, mm_song_prelude: 11,
 };
@@ -223,8 +224,8 @@ export function evalExpr(node: ExprNode, state: LogicState, macros: MacroTable):
       // String/number sentinel args (from parser) — should not reach eval directly
       if (node.name.startsWith('__str__') || node.name.startsWith('__num__')) return true;
 
-      // _song_event_oot(slot, songIdx) — built-in, needs game context from state
-      if (node.name === '_song_event_oot') {
+      // _song_event_oot / _song_event_mm — built-ins, use game context from state
+      if (node.name === '_song_event_oot' || node.name === '_song_event_mm') {
         const slotStr = node.args[0]?.kind === 'macro' ? node.args[0].name.replace(/^__num__/, '') : '0';
         const idxStr  = node.args[1]?.kind === 'macro' ? node.args[1].name.replace(/^__num__/, '') : '0';
         return evalSongEvent(Number(slotStr), Number(idxStr), state);

@@ -52,7 +52,7 @@
   const OOT_EVENTS: SongEventEntry[] = [
     { id: 'oot_0',  label: 'Temple of Time - Door of Time',        vanilla: 'oot_song_time'     },
     { id: 'oot_1',  label: 'Hyrule Castle - Great Fairy',          vanilla: 'oot_song_zelda'    },
-    { id: 'oot_2',  label: "Graveyard - Royal Family's Tomb",      vanilla: 'oot_song_sun'      },
+    { id: 'oot_2',  label: "Graveyard - Royal Family's Tomb",      vanilla: 'oot_song_zelda'    },
     { id: 'oot_3',  label: "Goron City - Darunia's Room",          vanilla: 'oot_song_saria'    },
     { id: 'oot_4',  label: 'Death Mountain Trail - Great Fairy',   vanilla: 'oot_song_zelda'    },
     { id: 'oot_5',  label: "Zora's River - Waterfall",             vanilla: 'oot_song_zelda'    },
@@ -63,9 +63,9 @@
     { id: 'oot_10', label: 'Water Temple - Levels',                vanilla: 'oot_song_zelda',   doneNA: true },
     { id: 'oot_11', label: 'Desert Colossus - Great Fairy',        vanilla: 'oot_song_zelda'    },
     { id: 'oot_12', label: 'Spirit Temple - Statue',               vanilla: 'oot_song_zelda'    },
-    { id: 'oot_13', label: 'Spirit Temple - Lower',                vanilla: 'oot_song_requiem'  },
-    { id: 'oot_14', label: 'Spirit Temple - Upper',                vanilla: 'oot_song_requiem'  },
-    { id: 'oot_15', label: 'Shadow Temple - Boat',                 vanilla: 'oot_song_nocturne' },
+    { id: 'oot_13', label: 'Spirit Temple - Lower',                vanilla: 'oot_song_zelda'    },
+    { id: 'oot_14', label: 'Spirit Temple - Upper',                vanilla: 'oot_song_zelda'    },
+    { id: 'oot_15', label: 'Shadow Temple - Boat',                 vanilla: 'oot_song_zelda'    },
     { id: 'oot_16', label: 'Outside Ganon Castle - Great Fairy',   vanilla: 'oot_song_zelda'    },
     { id: 'oot_17', label: 'Ganon Castle - Light Trial',           vanilla: 'oot_song_zelda'    },
   ];
@@ -79,7 +79,7 @@
     { id: 'mm_6',  label: 'Snowhead Temple - Entrance',           vanilla: 'mm_song_lullaby' },
     { id: 'mm_7',  label: 'Great Bay Coast - Heal Mikau',         vanilla: 'mm_song_healing' },
     { id: 'mm_8',  label: 'Great Bay Temple - Entrance',          vanilla: 'mm_song_nova'    },
-    { id: 'mm_9',  label: 'Ikana Graveyard - Wake Captain Keeta', vanilla: 'mm_song_elegy'   },
+    { id: 'mm_9',  label: 'Ikana Graveyard - Wake Captain Keeta', vanilla: 'mm_song_sonata'  },
     { id: 'mm_10', label: "Ikana Valley - Lift Curse",            vanilla: 'mm_song_storms'  },
     { id: 'mm_11', label: "Ikana Valley - Heal Pamala's Father",  vanilla: 'mm_song_healing' },
   ];
