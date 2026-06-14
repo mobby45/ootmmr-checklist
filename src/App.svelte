@@ -2679,7 +2679,9 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
       const total = group.checks.length;
       let accessible: number | undefined;
       if (lr) {
+        // Count only unchecked in-logic checks: shows "remaining" not "total accessible"
         accessible = group.checks.filter(c => {
+          if (yChecks.get(c.name) === T.CheckState.checked) return false;
           const n = c.name.replace(/^(OOT|MM) /, '');
           if (ageFilter === 'child') return lr.childChecks.has(n);
           if (ageFilter === 'adult') return lr.adultChecks.has(n);
@@ -2710,6 +2712,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
         acc.checked += oot.filter(c => yChecks.get(c.name) === T.CheckState.checked).length;
         acc.total += oot.length;
         if (lr) acc.accessible += oot.filter(c => {
+          if (yChecks.get(c.name) === T.CheckState.checked) return false;
           const n = c.name.replace(/^(OOT|MM) /, '');
           if (af === 'child') return lr.childChecks.has(n);
           if (af === 'adult') return lr.adultChecks.has(n);
@@ -2731,6 +2734,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
         acc.checked += mm.filter(c => yChecks.get(c.name) === T.CheckState.checked).length;
         acc.total += mm.length;
         if (lr) acc.accessible += mm.filter(c => {
+          if (yChecks.get(c.name) === T.CheckState.checked) return false;
           const n = c.name.replace(/^(OOT|MM) /, '');
           if (af === 'child') return lr.childChecks.has(n);
           if (af === 'adult') return lr.adultChecks.has(n);
