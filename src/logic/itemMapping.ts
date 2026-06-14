@@ -61,11 +61,11 @@ export function trackerItemToLogic(id: string, level: number): ItemGrant[] {
     case 'bow':       return [['OOT_BOW', 1], ['OOT_BOW_AMMO', level * 10]];
     case 'slingshot': return [['OOT_SLINGSHOT', 1], ['OOT_SLINGSHOT_AMMO', level * 10]];
     case 'bomb':      return [['OOT_BOMB_BAG', 1]];
-    case 'bombchu':   return [['OOT_BOMBCHU', 1]];
+    case 'bombchu':   return [['OOT_BOMBCHU', 1], ['license_BOMBCHU_5', 1]];
     case 'boomerang': return [['OOT_BOOMERANG', 1]];
     case 'hammer':    return [['OOT_HAMMER', 1]];
     case 'lens':      return [['OOT_LENS', 1]];
-    case 'bean':      return [['OOT_MAGIC_BEAN', 1]];
+    case 'bean':      return [['OOT_MAGIC_BEAN', 1], ['MAGIC_BEAN', 1], ['license_MAGIC_BEAN', 1]];
     case 'agony':     return [['OOT_STONE_OF_AGONY', 1]];
     case 'gerudo_card': return [['OOT_GERUDO_CARD', 1]];
     case 'din':       return [['OOT_SPELL_FIRE', 1]];
@@ -168,7 +168,7 @@ export function trackerItemToLogic(id: string, level: number): ItemGrant[] {
 
     case 'mm_bow':            return [['MM_BOW', 1]];
     case 'mm_bomb':           return [['MM_BOMB_BAG', 1]];
-    case 'mm_bombchu':        return [['MM_BOMBCHU', 1]];
+    case 'mm_bombchu':        return [['MM_BOMBCHU', 1], ['license_BOMBCHU', 1], ['license_BOMBCHU_5', 1]];
     case 'mm_hookshot':       return [['MM_HOOKSHOT', 1]];
     case 'mm_lens':           return [['MM_LENS', 1]];
     case 'mm_magic':          return [['MM_MAGIC_UPGRADE', level]];
@@ -346,7 +346,7 @@ export function trackerItemToLogic(id: string, level: number): ItemGrant[] {
     case 'shared_lens':       return [['LENS', 1]];
     case 'shared_ocarina':    return [['OCARINA', level]];
     case 'shared_wallet':     return [['WALLET', level]];
-    case 'shared_bombchu':    return [['BOMBCHU', 1]];
+    case 'shared_bombchu':    return [['BOMBCHU', 1], ['license_SHARED_BOMBCHU', 1], ['license_BOMBCHU_5', 1]];
     case 'shared_scale':      return [['SCALE', level]];
     case 'shared_strength':   return [['STRENGTH', level]];
     case 'shared_boots_iron': return [['BOOTS_IRON', 1]];

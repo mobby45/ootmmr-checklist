@@ -224,6 +224,16 @@ export function evalExpr(node: ExprNode, state: LogicState, macros: MacroTable):
       // String/number sentinel args (from parser) — should not reach eval directly
       if (node.name.startsWith('__str__') || node.name.startsWith('__num__')) return true;
 
+      // masks(N) — count how many distinct MM masks the player has
+      if (node.name === 'masks') {
+        const needed = node.args[0]?.kind === 'macro' ? Number(node.args[0].name.replace(/^__num__/, '')) : 0;
+        let count = 0;
+        for (const [key, val] of state.items) {
+          if (key.startsWith('MM_MASK_') && val > 0) count++;
+        }
+        return count >= needed;
+      }
+
       // _song_event_oot / _song_event_mm — built-ins, use game context from state
       if (node.name === '_song_event_oot' || node.name === '_song_event_mm') {
         const slotStr = node.args[0]?.kind === 'macro' ? node.args[0].name.replace(/^__num__/, '') : '0';

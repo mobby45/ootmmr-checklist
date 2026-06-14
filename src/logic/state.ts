@@ -131,6 +131,11 @@ export function buildLogicState(
   if ((items.get('OOT_BOMB_BAG') ?? 0) + (items.get('MM_BOMB_BAG') ?? 0) + (items.get('SHARED_BOMB_BAG') ?? 0) > 0) {
     events.add('BOMBS'); events.add('BOMBS_OR_BOMBCHU'); events.add('MM_BOMBS'); events.add('MM_BOMBS_OR_BOMBCHU');
   }
+  // itemMapping: bombchu → OOT_BOMBCHU + license; mm_bombchu → MM_BOMBCHU + license; shared_bombchu → BOMBCHU + license.
+  // Seeding BOMBCHU/MM_BOMBCHU satisfies bombchu_source so has_bombchu resolves correctly.
+  if ((items.get('OOT_BOMBCHU') ?? 0) + (items.get('MM_BOMBCHU') ?? 0) + (items.get('BOMBCHU') ?? 0) > 0) {
+    events.add('BOMBCHU'); events.add('MM_BOMBCHU'); events.add('BOMBS_OR_BOMBCHU'); events.add('MM_BOMBS_OR_BOMBCHU');
+  }
   // itemMapping: slingshot → OOT_SLINGSHOT (OoT-only item).
   if ((items.get('OOT_SLINGSHOT') ?? 0) > 0) events.add('SEEDS');
   // itemMapping: sticks_oot → OOT_STICKS (covers both OoT and MM via shared nuts/sticks setting).
