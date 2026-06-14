@@ -566,7 +566,11 @@ export async function importRandomizerSettings(str: string): Promise<{
     if (ootmmKey === 'startingItems') continue; // handled separately
     const appKey = KEY_MAP[ootmmKey];
     if (appKey) {
-      appSettings[appKey] = translateValue(ootmmKey, value);
+      const v = translateValue(ootmmKey, value);
+      appSettings[appKey] = v;
+      // Some keys are stored under a legacy tracker alias AND under their OoTMM name for the logic engine
+      if (ootmmKey === 'ganonBossKey')             appSettings['ganonBossKey'] = v;
+      if (ootmmKey === 'smallKeyShuffleChestGame') appSettings['smallKeyShuffleChestGame'] = v;
     } else if (ootmmKey === 'bossKeyShuffleOot') {
       appSettings['bossKeyShuffleOot'] = translateValue(ootmmKey, value); // logic engine
       appSettings['bossKeyOotEnabled'] = value !== 'removed'; // item tracker badge

@@ -210,12 +210,21 @@ export function parseSpoilerLog(text: string): SpoilerData {
         if (key === 'startingItems') {
           for (const id of rawValue.trim().split(/\s+/).filter(Boolean))
             rawStartingItems[id] = (rawStartingItems[id] ?? 0) + 1;
-        } else if (trackerKey) settings[trackerKey] = parseValue(key, rawValue.trim());
-        else if (key.startsWith('shared') || directBoolKeys.has(key)) settings[key] = rawValue.trim() === 'true';
+        } else if (trackerKey) {
+          const v = parseValue(key, rawValue.trim());
+          settings[trackerKey] = v;
+          // Also store under the OoTMM key name so the logic engine can find it
+          if (key === 'ganonBossKey')             settings['ganonBossKey'] = v;
+          if (key === 'smallKeyShuffleChestGame') settings['smallKeyShuffleChestGame'] = v;
+        } else if (key.startsWith('shared') || directBoolKeys.has(key)) {
+          settings[key] = rawValue.trim() === 'true';
+        } else if (key === 'smallKeyShuffleOot' || key === 'smallKeyShuffleMm') {
+          settings[key] = parseValue(key, rawValue.trim());
+        }
         if (key.startsWith('er')) rawEr[key] = rawValue.trim();
         if (key === 'owlShuffle') settings['owlShuffleEnabled'] = rawValue.trim() !== 'none';
-        if (key === 'bossKeyShuffleOot') settings['bossKeyOotEnabled'] = rawValue.trim() !== 'removed';
-        if (key === 'bossKeyShuffleMm') settings['bossKeyMmEnabled'] = rawValue.trim() !== 'removed';
+        if (key === 'bossKeyShuffleOot') { settings['bossKeyShuffleOot'] = parseValue(key, rawValue.trim()); settings['bossKeyOotEnabled'] = rawValue.trim() !== 'removed'; }
+        if (key === 'bossKeyShuffleMm')  { settings['bossKeyShuffleMm']  = parseValue(key, rawValue.trim()); settings['bossKeyMmEnabled']  = rawValue.trim() !== 'removed'; }
         if (key === 'ganonBossKey') settings['ganonBossKeyEnabled'] = rawValue.trim() !== 'removed';
         if (key.startsWith('coins')) {
           const val = rawValue.trim();
