@@ -359,7 +359,7 @@
       rows: [
         ['mm_button_a','mm_button_up','mm_button_down','mm_button_left','mm_button_right'],
         ['skulltula_platinum_mm','mm_skeleton_key','mm_transcendent_fairy'],
-        ['mm_clock1','mm_clock2','mm_clock3','mm_clock4','mm_clock5','mm_clock6'],
+        ['mm_clock1','mm_clock4','mm_clock2','mm_clock5','mm_clock3','mm_clock6'],
         ['mm_owl_clock_town','mm_owl_southern_swamp','mm_owl_woodfall','mm_owl_milk_road','mm_owl_mountain_village'],
         ['mm_owl_snowhead','mm_owl_great_bay','mm_owl_zora_cape','mm_owl_ikana_canyon','mm_owl_stone_tower'],
         ['coin_red','coin_green','coin_blue','coin_yellow'],

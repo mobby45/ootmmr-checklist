@@ -63,6 +63,63 @@ const KEY_MAP: Record<string, string> = {
   restoreBrokenActors:          'BrokenActorsOOT',
   skipZelda:                    'SkipChildZeldaOOT',
   housesSkulltulaTokens:        'housesSkulltulaTokens',
+  // Open world / access settings (select)
+  startingAge:            'startingAge',
+  doorOfTime:             'doorOfTime',
+  beneathWell:            'beneathWell',
+  dekuTree:               'dekuTree',
+  kakarikoGate:           'kakarikoGate',
+  gerudoFortress:         'gerudoFortress',
+  zoraKing:               'zoraKing',
+  moon:                   'moon',
+  moonCrash:              'moonCrash',
+  openMaskShop:           'openMaskShop',
+  alterLostWoodsExits:    'alterLostWoodsExits',
+  // MM access (select/bool)
+  regionState:            'regionState',
+  openMoon:               'openMoon',
+  majoraChild:            'majoraChild',
+  bossWarpPads:           'bossWarpPads',
+  // Special logic (select/bool)
+  ageChange:              'ageChange',
+  hookshotAnywhereOot:    'hookshotAnywhereOot',
+  hookshotAnywhereMm:     'hookshotAnywhereMm',
+  climbMostSurfacesOot:   'climbMostSurfacesOot',
+  rainbowBridge:          'rainbowBridge',
+  lacs:                   'lacs',
+  freeScarecrowOot:       'freeScarecrowOot',
+  freeScarecrowMm:        'freeScarecrowMm',
+  swordlessAdult:         'swordlessAdult',
+  timeTravelSword:        'timeTravelSword',
+  iceArrowPlatformsOot:   'iceArrowPlatformsOot',
+  openZdShortcut:         'openZdShortcut',
+  // Open dungeons (multicheck — space-separated flags, same key)
+  openDungeonsOot:        'openDungeonsOot',
+  openDungeonsMm:         'openDungeonsMm',
+  clearStateDungeonsMm:   'clearStateDungeonsMm',
+  ganonTrials:            'ganonTrials',
+  // Ageless items (bool)
+  agelessSwords:          'agelessSwords',
+  agelessHookshot:        'agelessHookshot',
+  agelessBoots:           'agelessBoots',
+  agelessBow:             'agelessBow',
+  agelessBoomerang:       'agelessBoomerang',
+  agelessStrength:        'agelessStrength',
+  agelessShields:         'agelessShields',
+  agelessHammer:          'agelessHammer',
+  agelessTunics:          'agelessTunics',
+  agelessSlingshot:       'agelessSlingshot',
+  agelessSticks:          'agelessSticks',
+  agelessSoaring:         'agelessSoaring',
+  agelessGFS:             'agelessGFS',
+  agelessChildTrade:      'agelessChildTrade',
+  // Key rings (select — value = dungeon type identifier)
+  smallKeyRingOot:        'smallKeyRingOot',
+  smallKeyRingMm:         'smallKeyRingMm',
+  // Silver rupee pouches (select)
+  silverRupeePouches:     'silverRupeePouches',
+  // Progressive Goron Lullaby per-game
+  progressiveGoronLullabyOot: 'progressiveGoronLullabyOot',
   shuffleMasterSword:           'shuffleMasterSword',
   shuffleGerudoCard:            'shuffleGerudoCard',
   shuffleOcarinasOot:           'shuffleOcarinasOot',
@@ -118,7 +175,7 @@ const KEY_MAP: Record<string, string> = {
   progressiveSwordsOot:      'progressiveSwordsOot',
   progressiveShieldsMm:      'progressiveShieldsMm',
   progressiveGFS:            'progressiveGFS',
-  progressiveGoronLullabyMm: 'progressiveGoronLullaby',
+  progressiveGoronLullabyMm:  'progressiveGoronLullabyMm',
   progressiveClocks:         'progressiveClocks',
   sharedBottles:        'sharedBottles',
   // Shared items between OoT and MM (control item tracker visibility)
@@ -435,8 +492,13 @@ export function mapOotmmStartingItems(startingItems: Record<string, number>): Re
   return result;
 }
 
+// Multicheck settings whose value is an array of flags → join with spaces
+const MULTICHECK_KEYS = new Set(['openDungeonsOot', 'openDungeonsMm', 'clearStateDungeonsMm', 'ganonTrials']);
+
 // camelCase value → snake_case, plus special-case overrides
 function translateValue(ootmmKey: string, value: unknown): unknown {
+  // Multicheck: generator stores as array, tracker expects space-separated string
+  if (MULTICHECK_KEYS.has(ootmmKey) && Array.isArray(value)) return (value as string[]).join(' ');
   if (typeof value !== 'string') return value;
   // goldSkulltulaTokens 'none' means "no shuffle" in the app
   if (ootmmKey === 'goldSkulltulaTokens' && value === 'none') return 'no_shuffle';
@@ -484,15 +546,17 @@ const KNOWN_UNTRACKED = new Set([
   'csmcCow', 'openMaskShop', 'ocarinaButtonsShuffleOot', 'ocarinaButtonsShuffleMm',
 ]);
 
-// Returns {appSettings, startingItems, unmapped}
+// Returns {appSettings, startingItems, unmapped, junkLocations}
 export async function importRandomizerSettings(str: string): Promise<{
   appSettings: Record<string, unknown>;
   startingItems: Record<string, number>;
   unmapped: string[];
+  junkLocations: string[];
 }> {
   const raw = await decodeRandomizerSettings(str);
   const appSettings: Record<string, unknown> = {};
   const unmapped: string[] = [];
+  const junkLocations: string[] = Array.isArray(raw['junkLocations']) ? (raw['junkLocations'] as string[]) : [];
   // Extract and convert starting items before iterating settings
   const rawStartingItems = raw['startingItems'] as Record<string, number> | undefined;
   const startingItems = rawStartingItems ? mapOotmmStartingItems(rawStartingItems) : {};
@@ -524,5 +588,5 @@ export async function importRandomizerSettings(str: string): Promise<{
     appSettings['songEventShuffle'] = true;
   }
 
-  return { appSettings, startingItems, unmapped };
+  return { appSettings, startingItems, unmapped, junkLocations };
 }

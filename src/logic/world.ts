@@ -101,7 +101,7 @@ function buildWorldGraph(rawRegions: RawWorld): WorldGraph {
   return graph;
 }
 
-// Resolve an OoTMM entrance name to the world region it leads into.
+// Resolve an OoTMM entrance name to the world region it leads into (destination side).
 // e.g. "OOT Kokiri Forest to OOT Deku Tree" → "Deku Tree Lobby" (or closest match)
 export function resolveEntranceName(graph: WorldGraph, entranceName: string): string | null {
   // Parse: extract destination part after "to OOT " or "to MM "
@@ -118,6 +118,25 @@ export function resolveEntranceName(graph: WorldGraph, entranceName: string): st
   }
   for (const regionName of graph.keys()) {
     if (regionName.toLowerCase().includes(dest.toLowerCase())) return regionName;
+  }
+  return null;
+}
+
+// Resolve an OoTMM entrance name to the world region at its SOURCE (outside the entrance).
+// Used for spawns: "OOT Death Mountain Crater Bottom to OOT Darunia Chamber" → "Death Mountain Crater Bottom"
+// because when the spawn connects to this entrance you are placed OUTSIDE it, in the source region.
+export function resolveEntranceSource(graph: WorldGraph, entranceName: string): string | null {
+  const m = entranceName.match(/^(?:OOT|MM) (.+?) to (?:OOT|MM) /);
+  if (!m) return null;
+  const src = m[1].trim();
+  for (const regionName of graph.keys()) {
+    if (regionName === src) return regionName;
+  }
+  for (const regionName of graph.keys()) {
+    if (regionName.startsWith(src)) return regionName;
+  }
+  for (const regionName of graph.keys()) {
+    if (regionName.toLowerCase().includes(src.toLowerCase())) return regionName;
   }
   return null;
 }

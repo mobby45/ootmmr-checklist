@@ -140,6 +140,7 @@ export interface SpoilerData {
   players: number;
   worldLocations: Record<number, Record<string, string>>;
   worldEntrances: Record<number, Record<string, string>>;
+  junkLocations: string[];
 }
 
 function parseValue(spoilerKey: string, rawValue: string): any {
@@ -177,15 +178,25 @@ export function parseSpoilerLog(text: string): SpoilerData {
   let inSpecialConditions = false;
   let currentCondition: string | null = null;
   const specialConditions: Record<string, Record<string, any>> = {};
+  let inJunkLocations = false;
+  const junkLocations: string[] = [];
 
   for (const line of lines) {
-    if (line.trim() === 'Settings') { inSettings = true; inLocations = false; inEntrances = false; inSpecialConditions = false; continue; }
-    if (line.trim() === 'Entrances') { inEntrances = true; inSettings = false; inLocations = false; inSpecialConditions = false; continue; }
+    if (line.trim() === 'Settings') { inSettings = true; inLocations = false; inEntrances = false; inSpecialConditions = false; inJunkLocations = false; continue; }
+    if (line.trim() === 'Entrances') { inEntrances = true; inSettings = false; inLocations = false; inSpecialConditions = false; inJunkLocations = false; continue; }
     if (line.startsWith('Special Conditions')) {
-      inSettings = false; inEntrances = false; inSpecialConditions = true; currentCondition = null; continue;
+      inSettings = false; inEntrances = false; inSpecialConditions = true; currentCondition = null; inJunkLocations = false; continue;
     }
-    if (line.startsWith('Tricks') || line.startsWith('World Flags') || line.startsWith('Hints') || line.startsWith('Paths') || line.startsWith('Junk Locations') || line.startsWith('Plando')) {
-      inSettings = false; inEntrances = false; inSpecialConditions = false; currentCondition = null;
+    if (line.startsWith('Junk Locations')) {
+      inSettings = false; inEntrances = false; inSpecialConditions = false; currentCondition = null; inJunkLocations = true; continue;
+    }
+    if (line.startsWith('Tricks') || line.startsWith('World Flags') || line.startsWith('Hints') || line.startsWith('Paths') || line.startsWith('Plando')) {
+      inSettings = false; inEntrances = false; inSpecialConditions = false; currentCondition = null; inJunkLocations = false;
+    }
+
+    if (inJunkLocations) {
+      const loc = line.trim();
+      if (loc) junkLocations.push(loc);
     }
     if (line.startsWith('Location List')) { inLocations = true; inSettings = false; inEntrances = false; inSpheres = false; currentSphere = null; inSpecialConditions = false; continue; }
     if (line.trim() === 'Spheres') { inSpheres = true; inSettings = false; inLocations = false; inEntrances = false; currentSphere = null; inSpecialConditions = false; continue; }
@@ -376,5 +387,11 @@ export function parseSpoilerLog(text: string): SpoilerData {
     Object.assign(entrances, worldEntrances[1]);
   }
 
-  return { settings, startingItems: rawStartingItems, locations, entrances, spheres, erSettings, OOTMM, OOTMMDungeons, seedInfo, specialConditions: specialConditions as SpecialConditionsMap, players, worldLocations, worldEntrances };
+  // Propagate combined goron lullaby setting to per-game keys used in logic
+  if (settings['progressiveGoronLullaby'] !== undefined) {
+    if (settings['progressiveGoronLullabyOot'] === undefined) settings['progressiveGoronLullabyOot'] = settings['progressiveGoronLullaby'];
+    if (settings['progressiveGoronLullabyMm'] === undefined) settings['progressiveGoronLullabyMm'] = settings['progressiveGoronLullaby'];
+  }
+
+  return { settings, startingItems: rawStartingItems, locations, entrances, spheres, erSettings, OOTMM, OOTMMDungeons, seedInfo, specialConditions: specialConditions as SpecialConditionsMap, players, worldLocations, worldEntrances, junkLocations };
 }

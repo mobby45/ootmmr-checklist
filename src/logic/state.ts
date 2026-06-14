@@ -12,6 +12,7 @@ export function buildLogicState(
   erMode = false,
   resolvedSpecial: Map<string, boolean> = new Map(),
   prebuiltItems?: Map<string, number>,
+  ySongEventsSnapshot: Map<string, string> = new Map(),
 ): LogicState {
   const items = prebuiltItems ?? buildItemsMap(yItemsSnapshot);
 
@@ -134,5 +135,6 @@ export function buildLogicState(
     flags: new Set(),
     erMode,
     resolvedSpecial,
+    songEvents: ySongEventsSnapshot,
   };
 }

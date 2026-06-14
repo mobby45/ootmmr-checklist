@@ -36,6 +36,7 @@ import type { EntranceInfo } from '../data/entranceData';
   export let erSettings: Record<string, boolean> = {};
   export let entranceValues: Map<string, string> = new Map();
   export let initialSubscene: string = '';
+  export let devMode = false;
 
   let currentSubscene = Object.keys(sceneData.subscenes)[0];
   let imageWidth = 1;
@@ -506,6 +507,7 @@ import type { EntranceInfo } from '../data/entranceData';
   $: showEntrances = Object.values(erSettings ?? {}).some(v => v);
   let showEntranceLabels = false;
   let placementMode = false;
+  $: if (!devMode && placementMode) { placementMode = false; selectedPlacementEntrances = []; }
   let showAllEntrances = false;
   let placementSearch = '';
   let zoneOnly = true;
@@ -862,6 +864,7 @@ import type { EntranceInfo } from '../data/entranceData';
         on:click={() => { showAllEntrances = !showAllEntrances; }}
         title="Show all entrances"
       >👁️</button>
+      {#if devMode}
       <button
         type="button"
         class="age-button"
@@ -869,6 +872,7 @@ import type { EntranceInfo } from '../data/entranceData';
         on:click={() => { placementMode = !placementMode; if (!placementMode) selectedPlacementEntrances = []; }}
         title="Mode placement (add/remove markers)"
       >✏️</button>
+      {/if}
     </div>
 
     {#if subsceneList.length > 1}
@@ -978,7 +982,7 @@ import type { EntranceInfo } from '../data/entranceData';
               <!-- svelte-ignore a11y-no-static-element-interactions -->
               <div
                 class="entrance-marker entrance-marker-unshuffled"
-                style="left:{vx}%;top:{vy}%;--ec:{vcol};--lbl-x:{vx > 70 ? '-80%' : vx < 30 ? '-20%' : '-50%'};"
+                style="left:{vx}%;top:{vy}%;--ec:{vcol};--lbl-x:{vx > 80 ? '-90%' : vx > 65 ? '-75%' : vx < 20 ? '-10%' : vx < 35 ? '-25%' : '-50%'};--lbl-below:{vy < 12 ? '1' : '0'};"
                 on:mouseenter={e => startEntranceHoverTimer(vlbl, e)}
                 on:mouseleave={clearHoverTimer}
                 on:contextmenu|preventDefault|stopPropagation={e => handleEntranceContextMenu(e, marker.uid, marker.id, true)}
@@ -1149,10 +1153,10 @@ import type { EntranceInfo } from '../data/entranceData';
   .map-with-panel {
     display: flex;
     flex-direction: row;
-    gap: 0.5em;
     flex: 1;
     min-height: 0;
     overflow: hidden;
+    position: relative;
   }
 
   .map-scroll {
@@ -1574,20 +1578,27 @@ import type { EntranceInfo } from '../data/entranceData';
     transform: translateX(var(--lbl-x, -50%));
     text-shadow: 0 0 3px #000, 0 0 3px #000;
     pointer-events: none;
-    order: -1;
-    margin-bottom: 2px;
+    /* order: -1 = above diamond; when --lbl-below=1, use order:1 to show below */
+    order: calc(-1 + 2 * var(--lbl-below, 0));
+    margin-bottom: calc(2px * (1 - var(--lbl-below, 0)));
+    margin-top: calc(2px * var(--lbl-below, 0));
   }
 
-  /* ===== Placement panel ===== */
+  /* ===== Placement panel (overlay — does not push the map) ===== */
   .placement-panel {
+    position: absolute;
+    right: 0;
+    top: 0;
+    height: 100%;
+    z-index: 20;
     border: 1px solid var(--color-primary, #8B6914);
-    border-radius: 6px;
+    border-radius: 6px 0 0 6px;
     background: var(--color-bg);
-    flex-shrink: 0;
     width: 220px;
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    box-shadow: -4px 0 12px rgba(0,0,0,0.4);
   }
   .placement-zone-row {
     display: flex;

@@ -384,7 +384,7 @@ yKeepalive.observe((event: any) => {
   const sEntrances = readableMap(yEntrances);
   const sNotes = readableMap(yNotes);
 
-  initLogicStore(yItems, ySettings, yEntrances, _itemsRevStore, sSettings, sEntrances);
+  initLogicStore(yItems, ySettings, yEntrances, _itemsRevStore, sSettings, sEntrances, ySongEvents);
 
   // Sync all logic manual settings to ySettings so the OBS overlay can read them
   const _logicDefaults = defaultLogicSettings();
@@ -1384,6 +1384,20 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     return out;
   }
 
+  function applyJunkLocations(junkLocs: string[]) {
+    if (!junkLocs.length) return;
+    ydoc.transact(() => {
+      for (const loc of junkLocs) {
+        // Strip game prefix ("OOT "/"MM ") — tracker check names don't have it
+        const name = loc.replace(/^(OOT|MM) /, '');
+        const canonical = SPOILER_ALIASES[name] ?? name;
+        if ((yChecks.get(canonical) ?? T.CheckState.unchecked) === T.CheckState.unchecked) {
+          yChecks.set(canonical, T.CheckState.checked);
+        }
+      }
+    });
+  }
+
   let spoilerLocations: Record<string, string> = applyAliases(JSON.parse(localStorage.getItem('spoilerLocations') ?? '{}'));
   let spoilerSpheres: SpoilerSphere[] = JSON.parse(localStorage.getItem('spoilerSpheres') ?? '[]');
   let spoilerSeedInfo: SeedInfo | null = JSON.parse(localStorage.getItem('spoilerSeedInfo') ?? 'null');
@@ -1644,6 +1658,8 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
           if (current < level) yItems.set(itemId, level);
         }
       }
+      // Auto-check junk locations (nothing useful to find there)
+      applyJunkLocations(data.junkLocations);
     };
     shareSpoiler = false;
     input.click();
@@ -3180,12 +3196,13 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     randoImportError = '';
     randoImportOk = false;
     try {
-      const { appSettings, startingItems, unmapped } = await importRandomizerSettings(randoImportStr);
+      const { appSettings, startingItems, unmapped, junkLocations } = await importRandomizerSettings(randoImportStr);
       Object.entries(appSettings).forEach(([k, v]) => ySettings.set(k, v));
       for (const [itemId, level] of Object.entries(startingItems)) {
         const current = yItems.get(itemId) ?? 0;
         if (current < level) yItems.set(itemId, level);
       }
+      applyJunkLocations(junkLocations);
       randoImportOk = true;
       randoImportStr = '';
       if (unmapped.length) console.info('Unmapped settings:', unmapped);
@@ -3498,6 +3515,8 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
   }
   let compact = false;
   let showLegend = false;
+  let devMode = localStorage.getItem('devMode') === 'true';
+  function toggleDevMode() { devMode = !devMode; localStorage.setItem('devMode', String(devMode)); }
   let showShortcuts = false;
   let scrollY = 0;
 
@@ -4872,6 +4891,14 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
             <button
               class="pure-button legend-toggle-btn"
               type="button"
+              class:pure-button-active={devMode}
+              on:click={toggleDevMode}
+              title="Dev mode (placement, CSV import/export)"
+            >🔧</button>
+            {#if devMode}
+            <button
+              class="pure-button legend-toggle-btn"
+              type="button"
               on:click={exportAllEntranceMarkers}
               title="Export all entrance markers (CSV)"
             >🚪⬇️</button>
@@ -4887,6 +4914,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
               on:click={clearAllEntranceMarkers}
               title="Clear all entrance markers"
             >🚪✕</button>
+            {/if}
             <input type="file" accept=".csv" style="display:none" bind:this={importFileInput} on:change={importEntranceMarkers} />
                 </fieldset>
               </form>
@@ -5135,6 +5163,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
       <MapModal
         scene={currentMapScene}
         sceneData={currentSceneData}
+        {devMode}
         groupName={currentGroupName}
         allScenes={matchedScenes}
         navScenes={checklistNavScenes}

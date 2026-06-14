@@ -1,7 +1,7 @@
 import type { WorldGraph, WorldExit, LogicState, ReachabilityResult } from './types';
 import type { MacroTable } from './expr/eval';
 import { evalExpr } from './expr/eval';
-import { resolveEntranceName } from './world';
+import { resolveEntranceName, resolveEntranceSource } from './world';
 
 type Age = 'child' | 'adult';
 
@@ -39,8 +39,9 @@ export function computeReachability(
     if (state.settings.get('erSpawns')) {
       const childDest = state.erOverrides.get('OOT_SPAWN_CHILD');
       const adultDest = state.erOverrides.get('OOT_SPAWN_ADULT');
-      if (childDest) { const r = resolveEntranceName(graph, childDest); if (r) enqueue(r, 'child'); }
-      if (adultDest) { const r = resolveEntranceName(graph, adultDest); if (r) enqueue(r, 'adult'); }
+      // Spawns place the player OUTSIDE the linked entrance (in the source region, not the destination)
+      if (childDest) { const r = resolveEntranceSource(graph, childDest); if (r) enqueue(r, 'child'); }
+      if (adultDest) { const r = resolveEntranceSource(graph, adultDest); if (r) enqueue(r, 'adult'); }
     } else {
       enqueue(OOT_SPAWN, 'child');
       enqueue(OOT_SPAWN, 'adult');

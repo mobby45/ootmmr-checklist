@@ -4,6 +4,86 @@ import type { LogicState } from '../types';
 // Macro table populated at world-load time (name → expanded ExprNode or parametrized factory)
 export type MacroTable = Map<string, ExprNode | ((...args: ExprNode[]) => ExprNode)>;
 
+// ─── Song event evaluation ────────────────────────────────────────────────────
+// OoT and MM share song event slot IDs. Vanilla song index per slot, per game.
+// Song indices match the order in macros.json: zelda=0, epona=1, saria=2, storms=3, sun=4,
+// time=5, tp_forest=6, tp_fire=7, tp_water=8, tp_spirit=9, tp_shadow=10, tp_light=11,
+// healing=12, soaring=13, awakening=14, goron=15, goron_half=16, zora=17, elegy=18, order=19
+const OOT_VANILLA_SONG: Record<number, number> = {
+  0: 5,   // Door of Time → Song of Time
+  1: 3,   // Windmill/Well Drain → Song of Storms
+  2: 4,   // Graveyard Royal Tomb → Sun's Song
+  3: 0,   // Zora River Falls → Zelda's Lullaby
+  4: 2,   // Goron City Darunia → Saria's Song
+  5: 0,   // Great Fairy (HC) → Zelda's Lullaby
+  6: 0,   // Great Fairy (DMT) → Zelda's Lullaby
+  7: 0,   // Great Fairy (ZF) → Zelda's Lullaby
+  8: 0,   // Great Fairy (DMC) → Zelda's Lullaby
+  9: 0,   // Great Fairy (Desert) → Zelda's Lullaby
+  10: 0,  // Great Fairy (Ganon exterior) → Zelda's Lullaby
+  11: 0,  // Water Temple Levels → Zelda's Lullaby
+  12: 10, // Shadow Temple Boat → Nocturne of Shadow (tp_shadow)
+  13: 0,  // Spirit Temple Statue → Zelda's Lullaby
+  14: 9,  // Spirit Temple Lower → Requiem of Spirit (tp_spirit)
+  15: 9,  // Spirit Temple Upper → Requiem of Spirit (tp_spirit)
+  16: 0,  // Bottom of the Well Water → Zelda's Lullaby
+  17: 0,  // Ganon Castle Light → Zelda's Lullaby
+};
+const MM_VANILLA_SONG: Record<number, number> = {
+  0:  14, // Woodfall Temple → Sonata of Awakening
+  1:  15, // Snowhead Temple → Goron's Lullaby
+  2:  17, // Great Bay Temple / Turtle → New Wave Bossa Nova
+  4:  12, // Mountain Village / Heal Darmani → Song of Healing
+  5:  12, // Ikana / Heal Pamala's Father → Song of Healing
+  6:  12, // Termina Field / Heal Kamaro → Song of Healing
+  7:  12, // Great Bay Coast / Heal Mikau → Song of Healing
+  8:  18, // Ikana Graveyard / Captain Keeta → Elegy of Emptiness
+  10: 15, // Goron Shrine / Baby Goron → Goron's Lullaby
+  11: 3,  // Ikana Valley / Lift Curse → Song of Storms
+  12: 19, // Clock Tower Roof / Moon → Oath to Order
+};
+// Tracker key (e.g. 'oot_0') for each song event slot, per game
+const OOT_SLOT_TO_TRACKER: Record<number, string> = {
+  0: 'oot_0', 1: 'oot_7', 2: 'oot_2', 3: 'oot_5', 4: 'oot_3',
+  5: 'oot_1', 6: 'oot_4', 7: 'oot_6', 8: 'oot_9', 9: 'oot_11',
+  10: 'oot_16', 11: 'oot_10', 12: 'oot_15', 13: 'oot_12', 14: 'oot_13',
+  15: 'oot_14', 16: 'oot_8', 17: 'oot_17',
+};
+const MM_SLOT_TO_TRACKER: Record<number, string> = {
+  0: 'mm_2', 1: 'mm_6', 2: 'mm_8', 4: 'mm_5', 5: 'mm_11',
+  6: 'mm_1', 7: 'mm_7', 8: 'mm_9', 10: 'mm_4', 11: 'mm_10', 12: 'mm_0',
+};
+// Tracker song item ID → song index
+const SONG_ID_TO_IDX: Record<string, number> = {
+  oot_song_zelda: 0, oot_song_epona: 1, oot_song_saria: 2,
+  oot_song_storms: 3, oot_song_sun: 4, oot_song_time: 5,
+  oot_song_minuet: 6, oot_song_bolero: 7, oot_song_serenade: 8,
+  oot_song_requiem: 9, oot_song_nocturne: 10, oot_song_prelude: 11,
+  mm_song_healing: 12, mm_song_soaring: 13, mm_song_sonata: 14,
+  mm_song_lullaby: 15, mm_song_lullaby_half: 16, mm_song_nova: 17,
+  mm_song_elegy: 18, mm_song_oath: 19,
+  // Cross-game clones
+  oot_elegy: 18, oot_song_healing: 12, oot_song_soaring: 13,
+  oot_song_sonata: 14, oot_song_lullaby: 15, oot_song_nova: 17, oot_song_oath: 19,
+  mm_song_zelda: 0, mm_song_saria: 2, mm_song_minuet: 6,
+  mm_song_bolero: 7, mm_song_serenade: 8, mm_song_requiem: 9,
+  mm_song_nocturne: 10, mm_song_prelude: 11,
+};
+
+function evalSongEvent(slot: number, songIdx: number, state: LogicState): boolean {
+  const game = state.currentGame ?? 'oot';
+  const shuffled = state.settings.get('songEventShuffle');
+  if (shuffled) {
+    const trackerKey = game === 'mm' ? MM_SLOT_TO_TRACKER[slot] : OOT_SLOT_TO_TRACKER[slot];
+    if (trackerKey === undefined) return false;
+    const assignedId = state.songEvents.get(trackerKey);
+    if (!assignedId) return false;
+    return (SONG_ID_TO_IDX[assignedId] ?? -1) === songIdx;
+  }
+  const vanilla = game === 'mm' ? MM_VANILLA_SONG[slot] : OOT_VANILLA_SONG[slot];
+  return vanilla === songIdx;
+}
+
 // MM region flags are persistent save-data flags in-game, not trackable per-BFS-step.
 // We derive them from events: CLEARED = boss defeated; CURSED = always true (initial state).
 // flag_off for any MM region flag = always true (checklist shows checks achievable across cycles).
@@ -142,6 +222,13 @@ export function evalExpr(node: ExprNode, state: LogicState, macros: MacroTable):
     case 'macro': {
       // String/number sentinel args (from parser) — should not reach eval directly
       if (node.name.startsWith('__str__') || node.name.startsWith('__num__')) return true;
+
+      // _song_event_oot(slot, songIdx) — built-in, needs game context from state
+      if (node.name === '_song_event_oot') {
+        const slotStr = node.args[0]?.kind === 'macro' ? node.args[0].name.replace(/^__num__/, '') : '0';
+        const idxStr  = node.args[1]?.kind === 'macro' ? node.args[1].name.replace(/^__num__/, '') : '0';
+        return evalSongEvent(Number(slotStr), Number(idxStr), state);
+      }
 
       const m = macros.get(node.name);
       if (!m) return false; // unknown macro → conservative false

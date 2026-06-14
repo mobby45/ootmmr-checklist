@@ -76,6 +76,8 @@ export interface LogicState {
   erMode: boolean;
   /** Pre-resolved special condition results (BRIDGE, MOON, LACS, GANON_BK, MAJORA) */
   resolvedSpecial: Map<string, boolean>;
+  /** Song event assignments: tracker key (oot_0, mm_2…) → song item ID (oot_song_zelda…) */
+  songEvents: Map<string, string>;
 }
 
 // ─── BFS Result ──────────────────────────────────────────────────────────────

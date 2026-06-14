@@ -82,8 +82,13 @@ export const settingsMap: Record<string, string> = {
   progressiveSwordsOot:    'progressiveSwordsOot',
   progressiveShieldsMm:    'progressiveShieldsMm',
   progressiveGFS:          'progressiveGFS',
-  progressiveGoronLullaby: 'progressiveGoronLullaby',
+  progressiveGoronLullaby:    'progressiveGoronLullaby',
+  progressiveGoronLullabyOot: 'progressiveGoronLullabyOot',
+  progressiveGoronLullabyMm:  'progressiveGoronLullabyMm',
   progressiveClocks:       'progressiveClocks',
+  smallKeyRingOot:         'smallKeyRingOot',
+  smallKeyRingMm:          'smallKeyRingMm',
+  silverRupeePouches:      'silverRupeePouches',
   // Select-type settings passed through unchanged
   autoInvert:     'autoInvert',
   // Visibility toggles passed through unchanged
@@ -159,6 +164,7 @@ export const directBoolKeys = new Set([
   'crossAge', 'gfsOot', 'powderKegOot', 'kegStrength3', 'ootPreplantedBeans', 'bottomlessWallets',
   'songSoaringOot', 'songHealingOot', 'songAwakeningOot', 'songGoronOot',
   'songZoraOot', 'songOrderOot', 'songOfDoubleTimeOot',
+  'openZdShortcut',
   'songZeldaLullabyMm', 'songSariasMm', 'sunSongMm',
   'songMinuetMm', 'songBoleroMm', 'songSerenadeMm',
   'songRequiemMm', 'songNocturneMm', 'songPreludeMm',
