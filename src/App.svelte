@@ -2651,7 +2651,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
       // Only keep the group as "entrance-only" if there are genuinely no type-visible checks
       // (not just all-checked with hide-checked on)
       const typeVisible = group.checks.filter(c => checkPredicate(group, c, true));
-      if (typeVisible.length > 0 || !erIsActive || !groupHasEntrances(group.groupName)) return [];
+      if (typeVisible.length > 0 || !erIsActive || !groupHasEntrances(group.groupName) || filter.length > 0) return [];
     }
     return [{ ...group, checks: filtered }];
   });
