@@ -363,6 +363,7 @@ export const LOGIC_SETTINGS_DEFS: LogicSettingDef[] = [
   { group: 'Extra Items', key: 'spinUpgradeOot',label: 'Spin Attack Upgrade (OoT)', type: 'bool', default: false, desc: 'A Spin Attack Upgrade item exists in the OoT item pool.' },
   { group: 'Extra Items', key: 'stoneMaskOot',  label: 'Stone Mask (OoT)',          type: 'bool', default: false, desc: 'A Stone Mask item exists in the OoT item pool.' },
   { group: 'Extra Items', key: 'blastMaskOot',  label: 'Blast Mask (OoT)',          type: 'bool', default: false, desc: 'A Blast Mask item exists in the OoT item pool.' },
+  { group: 'Extra Items', key: 'magicalRupee', label: 'Magical Rupee',             type: 'bool', default: false, desc: 'A Magical Rupee item exists — it represents all silver rupees.' },
 
   // ─── Stray fairies ───────────────────────────────────────────────────────────
   { group: 'Stray Fairies', key: 'STRAY_FAIRY_COUNT', label: 'Fairies per dungeon', type: 'select', default: '15',
@@ -396,7 +397,6 @@ export const LOGIC_SETTINGS_DEFS: LogicSettingDef[] = [
   { group: 'Wallets', key: 'childWallets',      label: 'Child Wallets',     type: 'bool', default: false, desc: 'Smaller wallet tiers (Child Wallet, etc.) are shuffled into the item pool.' },
   { group: 'Wallets', key: 'colossalWallets',   label: 'Colossal Wallets',  type: 'bool', default: false, desc: 'Colossal Wallet tiers are shuffled into the item pool.' },
   { group: 'Wallets', key: 'bottomlessWallets', label: 'Bottomless Wallets',type: 'bool', default: false, desc: 'Bottomless Wallet tiers are shuffled into the item pool.' },
-  { group: 'Wallets', key: 'magicalRupee',      label: 'Magical Rupee',     type: 'bool', default: false, desc: 'A Magical Rupee item exists — collecting it covers all rupee costs.' },
 ];
 
 export const SETTING_GROUPS = [...new Set(LOGIC_SETTINGS_DEFS.map(s => s.group))];

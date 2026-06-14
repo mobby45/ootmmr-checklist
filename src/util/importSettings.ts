@@ -329,6 +329,14 @@ const KEY_MAP: Record<string, string> = {
   erOneWaysOwls:        'erOneWaysOwls',
   erOneWaysWaterVoids:  'erOneWaysWaterVoids',
   erOneWaysAnywhere:    'erOneWaysAnywhere',
+  // Stray fairy count per dungeon (OoTMM key is strayFairyRewardCount, tracker uses STRAY_FAIRY_COUNT)
+  strayFairyRewardCount: 'STRAY_FAIRY_COUNT',
+  // Price settings
+  priceOotShops:     'priceOotShops',
+  priceOotScrubs:    'priceOotScrubs',
+  priceOotMerchants: 'priceOotMerchants',
+  priceMmShops:      'priceMmShops',
+  priceMmTingle:     'priceMmTingle',
 };
 
 // Maps OoTMM generator item IDs (used in startingItems) to tracker item IDs + levels.
@@ -541,6 +549,8 @@ const MULTICHECK_KEYS = new Set(['openDungeonsOot', 'openDungeonsMm', 'clearStat
 function translateValue(ootmmKey: string, value: unknown): unknown {
   // Multicheck: generator stores as array, tracker expects space-separated string
   if (MULTICHECK_KEYS.has(ootmmKey) && Array.isArray(value)) return (value as string[]).join(' ');
+  // strayFairyRewardCount is a number in OoTMM, tracker expects a string for the select
+  if (ootmmKey === 'strayFairyRewardCount') return String(value);
   if (typeof value !== 'string') return value;
   // goldSkulltulaTokens 'none' means "no shuffle" in the app
   if (ootmmKey === 'goldSkulltulaTokens' && value === 'none') return 'no_shuffle';

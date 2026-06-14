@@ -281,7 +281,7 @@
 </div>
 
 {#if activeSubTab === 'logic'}
-  {#each SETTING_GROUPS as group}
+  {#each SETTING_GROUPS.filter(g => g !== 'Shared Items') as group}
     {@const isOpen = !collapsed.has(group)}
     {@const modified = groupDefs(group).some(def => {
       const v = $logicManualSettings[def.key];
