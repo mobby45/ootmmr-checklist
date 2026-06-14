@@ -82,6 +82,7 @@ export function computeReachability(
       // Collect checks per age
       for (const loc of region.locations) {
         if (checksByAge[age].has(loc.name)) continue;
+        if (!isLocationEnabled(loc.name, region.game, state)) continue;
         if (evalExpr(loc.rule, s, macros)) {
           checksByAge[age].add(loc.name);
           changed = true;
@@ -110,6 +111,20 @@ export function computeReachability(
 
   const reachedRegions = new Set([...reachedByAge.child, ...reachedByAge.adult]);
   return { regions: reachedRegions, childChecks: checksByAge.child, adultChecks: checksByAge.adult, events };
+}
+
+// Checks whose world.json rule is "true" but are only in the pool when a shuffle setting is on.
+// OoTMM builds per-seed worlds dynamically; our static world.json includes everything.
+const POT_RE   = /\bPot\b/;
+const CRATE_RE = /\bCrate\b/;
+const GRASS_RE = /\bGrass\b/;
+
+function isLocationEnabled(locName: string, game: 'oot' | 'mm' | undefined, state: LogicState): boolean {
+  const suffix = game === 'mm' ? 'Mm' : 'Oot';
+  if (POT_RE.test(locName))   return state.settings.get(`shufflePots${suffix}`)   !== 'none';
+  if (CRATE_RE.test(locName)) return state.settings.get(`shuffleCrates${suffix}`) !== 'none';
+  if (GRASS_RE.test(locName)) return state.settings.get(`shuffleGrass${suffix}`)  !== 'none';
+  return true;
 }
 
 function resolveExitTarget(exit: WorldExit, state: LogicState, graph: WorldGraph): string | null {

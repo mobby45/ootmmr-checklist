@@ -75,9 +75,6 @@ export function buildLogicState(
     erWallmasters:          'none',
     erWarps:                'none',
 
-    // MM pots — logic checks setting(shufflePotsMm, 'none')
-    shufflePotsMm:          'none',
-
     // Goal — ganon by default (affects triforce check logic)
     goal:                   'ganon',
 
@@ -125,6 +122,15 @@ export function buildLogicState(
     extraChildSwordsOot:    false,
     ocarinaButtonsShuffleOot: false,
     ocarinaButtonsShuffleMm:  false,
+
+    // Collectible shuffles — off by default ('none' = not shuffled, so those checks don't exist)
+    shufflePotsOot:        'none',
+    shuffleCratesOot:      'none',
+    shuffleGrassOot:       'none',
+    shufflePotsMm:         'none',
+    shuffleCratesMm:       'none',
+    shuffleGrassMm:        'none',
+    restoreBrokenActors:   false,
   };
   for (const [k, v] of Object.entries(HIDDEN_DEFAULTS)) {
     if (!settings.has(k)) settings.set(k, v);

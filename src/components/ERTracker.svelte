@@ -387,15 +387,23 @@
                   else {
                     yEntrances.set(entrance.id, newVal);
                     if (!manualErSettings.erDecoupled) {
-                      const revName = findReverseEntranceName(entrance.name);
-                      if (revName) {
-                        const revDestName = findReverseEntranceName(newVal);
-                        if (revDestName) {
-                          const revId = allEntrances.find(e => e.name === revName)?.id;
-                          if (revId && !entranceValues.get(revId)) {
-                            yEntrances.set(revId, revDestName);
-                          }
-                        }
+                      const revName    = findReverseEntranceName(entrance.name); // revA
+                      const revDestName = findReverseEntranceName(newVal);        // revB
+
+                      // Exit pairing: revA → revB
+                      if (revName && revDestName) {
+                        const revId = allEntrances.find(e => e.name === revName)?.id;
+                        if (revId && !entranceValues.get(revId)) yEntrances.set(revId, revDestName);
+                      }
+
+                      // Cross-entrance: B → A (entering from the other dungeon's side)
+                      const destId = allEntrances.find(e => e.name === newVal)?.id;
+                      if (destId && !entranceValues.get(destId)) yEntrances.set(destId, entrance.name);
+
+                      // Cross-exit: revB → revA (exiting from the other dungeon's side)
+                      if (revDestName && revName) {
+                        const revDestId = allEntrances.find(e => e.name === revDestName)?.id;
+                        if (revDestId && !entranceValues.get(revDestId)) yEntrances.set(revDestId, revName);
                       }
                     }
                   }
