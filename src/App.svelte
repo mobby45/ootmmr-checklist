@@ -3515,7 +3515,8 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
   }
   let compact = false;
   let showLegend = false;
-  let devMode = localStorage.getItem('devMode') === 'true';
+  const isDevEnv = import.meta.env.DEV;
+  let devMode = isDevEnv && localStorage.getItem('devMode') === 'true';
   function toggleDevMode() { devMode = !devMode; localStorage.setItem('devMode', String(devMode)); }
   let showShortcuts = false;
   let scrollY = 0;
@@ -4888,6 +4889,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
               on:click={() => (showShortcuts = !showShortcuts)}
               title="Keyboard shortcuts"
             >⌨️</button>
+            {#if isDevEnv}
             <button
               class="pure-button legend-toggle-btn"
               type="button"
@@ -4895,6 +4897,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
               on:click={toggleDevMode}
               title="Dev mode (placement, CSV import/export)"
             >🔧</button>
+            {/if}
             {#if devMode}
             <button
               class="pure-button legend-toggle-btn"
