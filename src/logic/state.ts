@@ -78,6 +78,27 @@ export function buildLogicState(
     // MM pots — logic checks setting(shufflePotsMm, 'none')
     shufflePotsMm:          'none',
 
+    // Goal — ganon by default (affects triforce check logic)
+    goal:                   'ganon',
+
+    // Auto-invert time — off by default
+    autoInvert:             'never',
+
+    // Progressive items — separate (vanilla) by default
+    progressiveSwordsOot:   'separate',
+    progressiveShieldsOot:  'separate',
+    progressiveClocks:      'separate',
+
+    // Key rings — none by default (use individual key counts)
+    smallKeyRingOot:        'none',
+    smallKeyRingMm:         'none',
+
+    // Silver rupee pouches — none by default
+    silverRupeePouches:     'none',
+
+    // Dungeon ER type — none by default
+    erDungeons:             'none',
+
     // Special features — off by default
     shortHookshotMm:        false,
     songOfDoubleTimeOot:    false,
