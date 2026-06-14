@@ -357,6 +357,12 @@ export function trackerItemToLogic(id: string, level: number): ItemGrant[] {
       return              [['SWORD_BIGGORON', 1], ['SWORD', 3]];
     case 'shared_shield_mirror': return [['SHIELD_MIRROR', 1], ['SHIELD', 3]];
 
+    // ─── OoT pond fish (pondFishShuffle) ─────────────────────────────────────
+    case 'oot_child_fish':  return [['CHILD_FISH',  level]];
+    case 'oot_child_loach': return [['CHILD_LOACH', level]];
+    case 'oot_adult_fish':  return [['ADULT_FISH',  level]];
+    case 'oot_adult_loach': return [['ADULT_LOACH', level]];
+
     // ─── OoT rusty keys ──────────────────────────────────────────────────────
     case 'oot_rk_windmill':               return [['RUSTY_KEY_WINDMILL', 1]];
     case 'oot_rk_impa_house':             return [['RUSTY_KEY_IMPA_HOUSE', 1]];

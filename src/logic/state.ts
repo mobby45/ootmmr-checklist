@@ -99,6 +99,11 @@ export function buildLogicState(
     // Dungeon ER type — none by default
     erDungeons:             'none',
 
+    // Stray fairy count per dungeon (used by sf_dungeon macro via var(STRAY_FAIRY_COUNT))
+    STRAY_FAIRY_COUNT:      '15',
+    strayFairyChestShuffle: 'own_dungeon',
+    strayFairyOtherShuffle: 'vanilla',
+
     // Special features — off by default
     shortHookshotMm:        false,
     songOfDoubleTimeOot:    false,

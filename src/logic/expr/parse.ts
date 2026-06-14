@@ -195,7 +195,15 @@ class Parser {
     const exprArg = (i: number) => args[i] ?? { kind: 'true' as const };
 
     switch (name) {
-      case 'has':       return { kind: 'has',     item: strArg(0),   count: args[1] ? numArg(1) : 1 };
+      case 'has': {
+        const countArg = args[1];
+        // has(item, var(X)) — resolve count from a named setting at eval time
+        if (countArg?.kind === 'macro' && countArg.name === 'var' && countArg.args[0]?.kind === 'macro') {
+          const varName = countArg.args[0].name.replace(/^__str__/, '');
+          return { kind: 'has', item: strArg(0), count: 0, countVar: varName };
+        }
+        return { kind: 'has', item: strArg(0), count: countArg ? numArg(1) : 1 };
+      }
       case 'renewable': return { kind: 'renewable', item: strArg(0) };
       case 'license':   return { kind: 'license',   item: strArg(0) };
       case 'event':     return { kind: 'event',   name: strArg(0) };

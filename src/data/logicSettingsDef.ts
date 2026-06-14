@@ -364,6 +364,34 @@ export const LOGIC_SETTINGS_DEFS: LogicSettingDef[] = [
   { group: 'Extra Items', key: 'stoneMaskOot',  label: 'Stone Mask (OoT)',          type: 'bool', default: false, desc: 'A Stone Mask item exists in the OoT item pool.' },
   { group: 'Extra Items', key: 'blastMaskOot',  label: 'Blast Mask (OoT)',          type: 'bool', default: false, desc: 'A Blast Mask item exists in the OoT item pool.' },
 
+  // ─── Stray fairies ───────────────────────────────────────────────────────────
+  { group: 'Stray Fairies', key: 'STRAY_FAIRY_COUNT', label: 'Fairies per dungeon', type: 'select', default: '15',
+    desc: 'Number of stray fairies required per dungeon to claim the Great Fairy reward.',
+    options: [
+      { value: '5',  label: '5'  },
+      { value: '10', label: '10' },
+      { value: '15', label: '15 (default)' },
+    ] },
+  { group: 'Stray Fairies', key: 'strayFairyChestShuffle', label: 'Chest Fairies', type: 'select', default: 'own_dungeon',
+    desc: 'Where MM stray fairies found in chests are shuffled.',
+    options: [
+      { value: 'own_dungeon',     label: 'Own Dungeon' },
+      { value: 'anywhere',        label: 'Anywhere' },
+      { value: 'starting',        label: 'Starting Items' },
+      { value: 'starting_items',  label: 'Starting (pool)' },
+      { value: 'vanilla',         label: 'Vanilla' },
+    ] },
+  { group: 'Stray Fairies', key: 'strayFairyOtherShuffle', label: 'Freestanding Fairies', type: 'select', default: 'vanilla',
+    desc: 'Where MM freestanding stray fairies are shuffled.',
+    options: [
+      { value: 'vanilla',         label: 'Vanilla' },
+      { value: 'own_dungeon',     label: 'Own Dungeon' },
+      { value: 'anywhere',        label: 'Anywhere' },
+      { value: 'starting',        label: 'Starting Items' },
+    ] },
+  { group: 'Stray Fairies', key: 'pondFishShuffle', label: 'Pond Fish Shuffle', type: 'bool', default: false,
+    desc: 'Fish items are shuffled into the item pool — collecting them unlocks Fishing Pond rewards.' },
+
   // ─── Wallets ─────────────────────────────────────────────────────────────────
   { group: 'Wallets', key: 'childWallets',      label: 'Child Wallets',     type: 'bool', default: false, desc: 'Smaller wallet tiers (Child Wallet, etc.) are shuffled into the item pool.' },
   { group: 'Wallets', key: 'colossalWallets',   label: 'Colossal Wallets',  type: 'bool', default: false, desc: 'Colossal Wallet tiers are shuffled into the item pool.' },

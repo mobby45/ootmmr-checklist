@@ -6,7 +6,7 @@ export type ExprNode =
   | { kind: 'and';     left: ExprNode; right: ExprNode }
   | { kind: 'or';      left: ExprNode; right: ExprNode }
   | { kind: 'not';     expr: ExprNode }
-  | { kind: 'has';     item: string; count: number }
+  | { kind: 'has';     item: string; count: number; countVar?: string }
   | { kind: 'event';   name: string }
   | { kind: 'setting'; key: string; value: string | boolean | number }
   | { kind: 'age';     age: 'child' | 'adult' }

@@ -719,6 +719,11 @@ export const allTrackerItems: TrackerItem[] = [
   { id: 'mm_shield_progressive',                name: "Progressive Shield (MM)",       icon: 'mm/mm_shield',   game: 'mm',  category: 'equipment', maxLevel: 2, levelIcons: ['mm/mm_shield', 'mm/mm_mirror'] },
 
   // --- Coins (affichés dans les deux jeux, même compteur) ---
+  // Pond fish — only shown when pondFishShuffle is enabled
+  { id: 'oot_child_fish',  name: "Child Fish",     icon: 'item/bean', game: 'oot', category: 'misc', maxLevel: 7,  showCount: true, settingKey: 'pondFishShuffle' },
+  { id: 'oot_child_loach', name: "Child Loach",    icon: 'item/bean', game: 'oot', category: 'misc', maxLevel: 14, showCount: true, settingKey: 'pondFishShuffle' },
+  { id: 'oot_adult_fish',  name: "Adult Fish",     icon: 'item/bean', game: 'oot', category: 'misc', maxLevel: 8,  showCount: true, settingKey: 'pondFishShuffle' },
+  { id: 'oot_adult_loach', name: "Adult Loach",    icon: 'item/bean', game: 'oot', category: 'misc', maxLevel: 29, showCount: true, settingKey: 'pondFishShuffle' },
   { id: 'coin_red',    name: "Red Coin",    icon: 'ui/coin_red',    game: 'oot', category: 'misc', maxLevel: 999, showCount: true },
   { id: 'coin_green',  name: "Green Coin",  icon: 'ui/coin_green',  game: 'oot', category: 'misc', maxLevel: 999, showCount: true },
   { id: 'coin_blue',   name: "Blue Coin",   icon: 'ui/coin_blue',   game: 'oot', category: 'misc', maxLevel: 999, showCount: true },

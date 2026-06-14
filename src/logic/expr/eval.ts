@@ -122,7 +122,10 @@ export function evalExpr(node: ExprNode, state: LogicState, macros: MacroTable):
         const prefixed = state.currentGame.toUpperCase() + '_' + node.item;
         count = Math.max(count, state.items.get(prefixed) ?? 0);
       }
-      return count >= node.count;
+      const needed = node.countVar
+        ? (Number(state.settings.get(node.countVar)) || 0)
+        : node.count;
+      return count >= needed;
     }
 
     case 'renewable':
@@ -223,6 +226,15 @@ export function evalExpr(node: ExprNode, state: LogicState, macros: MacroTable):
     case 'macro': {
       // String/number sentinel args (from parser) — should not reach eval directly
       if (node.name.startsWith('__str__') || node.name.startsWith('__num__')) return true;
+
+      // has_pond_fish(type, count, price) — check fish item count; price covered by outer can_use_wallet check
+      if (node.name === 'has_pond_fish') {
+        const typeStr = node.args[0]?.kind === 'macro' ? node.args[0].name.replace(/^__str__/, '') : '';
+        const needed  = node.args[1]?.kind === 'macro' ? Number(node.args[1].name.replace(/^__num__/, '')) : 0;
+        if (!typeStr || needed === 0) return false;
+        const have = state.items.get(typeStr) ?? 0;
+        return have >= needed;
+      }
 
       // masks(N) — count how many distinct MM masks the player has
       if (node.name === 'masks') {
