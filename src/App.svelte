@@ -2255,11 +2255,11 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     // --- Shops ---
     let matchesShopOOT = true;
     if (check.type === T.CheckType.shop && check.game === T.Game.oot)
-      matchesShopOOT = ($sSettings.get('ShopShuffleOOT') ?? 'none') !== 'none';
+      matchesShopOOT = ($sSettings.get('shopShuffleOot') ?? $sSettings.get('ShopShuffleOOT') ?? 'none') !== 'none';
 
     let matchesShopMM = true;
     if (check.type === T.CheckType.shop && check.game === T.Game.mm)
-      matchesShopMM = ($sSettings.get('ShopShuffleMM') ?? 'none') !== 'none';
+      matchesShopMM = ($sSettings.get('shopShuffleMm') ?? $sSettings.get('ShopShuffleMM') ?? 'none') !== 'none';
 
     // --- Owl Statues ---
     let matchesOwl = true;
