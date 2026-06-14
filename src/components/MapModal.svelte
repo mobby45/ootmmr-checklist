@@ -37,6 +37,17 @@ import type { EntranceInfo } from '../data/entranceData';
   export let entranceValues: Map<string, string> = new Map();
   export let initialSubscene: string = '';
   export let devMode = false;
+  export let logicEnabled: boolean = false;
+  export let logicResult: { childChecks: Set<string>; adultChecks: Set<string> } | null = null;
+  export let logicAgeFilter: 'child' | 'adult' | 'both' = 'both';
+
+  function isCheckInLogic(checkKey: string): boolean {
+    if (!logicEnabled || !logicResult) return true;
+    const n = checkKey.replace(/^(OOT|MM) /, '');
+    if (logicAgeFilter === 'child') return logicResult.childChecks.has(n);
+    if (logicAgeFilter === 'adult') return logicResult.adultChecks.has(n);
+    return logicResult.childChecks.has(n) || logicResult.adultChecks.has(n);
+  }
 
   let currentSubscene = Object.keys(sceneData.subscenes)[0];
   let imageWidth = 1;
@@ -943,10 +954,12 @@ import type { EntranceInfo } from '../data/entranceData';
             {@const shopPrice = shopPrices.get(checkKey) ?? null}
             {@const showPrice = !itemOnlyIds.has(check.id)}
             {@const hasShopInfo = isShopOrScrub(check) && (shopItem || (shopPrice !== null && showPrice))}
+            {@const inLogic = isCheckInLogic(checkKey)}
             <button
               class="map-marker"
               class:checked={state === T.CheckState.checked}
               class:marked={state === T.CheckState.marked}
+              class:ool={!inLogic}
               style="left: {left}%; top: {top}%; z-index: {zIndex};"
               on:mouseenter={e => startHoverTimer(check, e)}
               on:mouseleave={clearHoverTimer}
@@ -1453,6 +1466,8 @@ import type { EntranceInfo } from '../data/entranceData';
     transform: scale(1.3);
     box-shadow: 0 0 0 3px white, 0 0 10px 4px rgba(255, 215, 0, 0.8);
   }
+
+  .map-marker.ool { opacity: 0.35; filter: grayscale(0.6); }
 
   .map-marker.checked::after {
     content: '✓';

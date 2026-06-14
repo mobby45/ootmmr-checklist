@@ -5179,6 +5179,9 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
         variantSettings={$sVariantSettings}
         bind:showAgeFilter
         bind:ageFilter
+        logicEnabled={$logicEnabled}
+        logicResult={$logicResult}
+        logicAgeFilter={$logicAgeFilter}
         on:close={() => { showMapModal = false; mapInitialSubscene = ''; }}
         on:toggleCheck={handleMapToggle}
         on:changeScene={e => {

@@ -173,6 +173,13 @@ export function buildLogicState(
   // Rupees are always farmable — seed RUPEES/MM_RUPEES so can_use_wallet/wallet_price resolve correctly.
   events.add('RUPEES'); events.add('MM_RUPEES');
 
+  // Pre-planted beans: treat all OoT bean soil spots as already planted — no Magic Bean needed.
+  if (ySettingsSnapshot.get('ootPreplantedBeans') === true) {
+    items.set('OOT_MAGIC_BEAN', 10);
+    items.set('MAGIC_BEAN', 10);
+    items.set('license_MAGIC_BEAN', 10);
+  }
+
   return {
     items,
     age: 'child', // placeholder — engine overrides this via stateForAge()
