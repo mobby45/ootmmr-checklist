@@ -3223,8 +3223,9 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     randoImportError = '';
     randoImportOk = false;
     try {
-      const { appSettings, startingItems, tricks, unmapped, junkLocations } = await importRandomizerSettings(randoImportStr);
+      const { appSettings, clearedKeys, startingItems, tricks, unmapped, junkLocations } = await importRandomizerSettings(randoImportStr);
       Object.entries(appSettings).forEach(([k, v]) => ySettings.set(k, v));
+      for (const k of clearedKeys) ySettings.delete(k);
       if (tricks.length > 0) enabledTricks.set(new Set(tricks));
       for (const [itemId, level] of Object.entries(startingItems)) {
         const current = yItems.get(itemId) ?? 0;

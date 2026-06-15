@@ -206,8 +206,9 @@
     const notebookShuffled  = $settingsStore.get('menuNotebook')             === true;
     const chuBehaviorOot    = $settingsStore.get('bombchuBehaviorOot') as string | undefined;
     const chuBehaviorMm     = $settingsStore.get('bombchuBehaviorMm')  as string | undefined;
+    const bronzeScale       = $settingsStore.get('bronzeScale')        === true;
     if (!shortHookshot && !fairyOcarina && progLullaby && !progGFS && !kegStrength3 && !childWallets && !colossalWallets && !bottomlessWallets && !notebookShuffled
-        && chuBehaviorOot !== 'bagSeparate' && chuBehaviorMm !== 'bagSeparate') return itemById;
+        && chuBehaviorOot !== 'bagSeparate' && chuBehaviorMm !== 'bagSeparate' && !bronzeScale) return itemById;
     const map: typeof itemById = { ...itemById };
     // Default (bagFirst) = 1 level / 50. bagSeparate = 3 bags with 20/30/40 capacity.
     if (chuBehaviorOot === 'bagSeparate')
@@ -226,6 +227,10 @@
       map['mm_strength']     = { ...itemById['mm_strength'],     maxLevel: 4, levelIcons: ['upgrade/lift1', 'upgrade/lift2', 'upgrade/lift3', 'upgrade/lift3'] };
     if (!notebookShuffled)
       map['mm_bomber']       = { ...itemById['mm_bomber'],       startUndimmed: true };
+    if (bronzeScale) {
+      map['scale']    = { ...itemById['scale'],    maxLevel: 3, levelIcons: ['upgrade/scale_bronze', 'upgrade/scale1', 'upgrade/scale2'] };
+      map['sh_scale'] = { ...itemById['sh_scale'], maxLevel: 3, levelIcons: ['upgrade/scale_bronze', 'upgrade/scale1', 'upgrade/scale2'] };
+    }
     if (childWallets || colossalWallets || bottomlessWallets) {
       const newLevel = bottomlessWallets ? 5 : colossalWallets ? 4 : 3;
       const icons = Array.from({ length: newLevel }, (_, i) => `upgrade/wallet${Math.min(i + 1, 3)}`);
