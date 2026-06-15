@@ -242,6 +242,10 @@
     ySettings.set(key, value);
   }
 
+  function onNumberChange(key: string, e: Event) {
+    setNumberSetting(key, parseInt((e.target as HTMLInputElement).value, 10));
+  }
+
   function visGet(key: string): any {
     return sSettings ? ($sSettings as Map<string, any>)?.get(key) : undefined;
   }
@@ -408,7 +412,7 @@
                   max={def.max}
                   value={visGet(def.key) ?? def.default}
                   disabled={spoiler}
-                  on:change={e => setNumberSetting(def.key, parseInt((e.target as HTMLInputElement).value, 10))}
+                  on:change={e => onNumberChange(def.key, e)}
                 />
               </label>
             {:else if def.type === 'multicheck'}
