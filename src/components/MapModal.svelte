@@ -376,14 +376,14 @@ import type { EntranceInfo } from '../data/entranceData';
     const destName = entranceValues.get(entranceId);
 
     if (destName) {
-      // Prefer destination's own position (the scene you arrive in)
+      // Navigate to where you ARRIVE = the reverse of the destination entrance.
+      // e.g. A→B mapped: clicking A should show the inside of B's region (rev of B),
+      // not B's marker which sits on the source side of B.
       const destEnt = allEntrances.find(e => e.name === destName);
       if (destEnt) {
-        if (entrancePositions.some(p => p.entranceId === destEnt.id)) targetId = destEnt.id;
-        else {
-          const rev = findReverseEntrance(destEnt);
-          if (rev && entrancePositions.some(p => p.entranceId === rev.id)) targetId = rev.id;
-        }
+        const rev = findReverseEntrance(destEnt);
+        if (rev && entrancePositions.some(p => p.entranceId === rev.id)) targetId = rev.id;
+        else if (entrancePositions.some(p => p.entranceId === destEnt.id)) targetId = destEnt.id;
       }
     } else {
       // Unassigned: navigate to vanilla destination via the entrance's own reverse
