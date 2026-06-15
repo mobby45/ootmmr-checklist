@@ -78,6 +78,8 @@ export interface LogicState {
   resolvedSpecial: Map<string, boolean>;
   /** Song event assignments: tracker key (oot_0, mm_2…) → song item ID (oot_song_zelda…) */
   songEvents: Map<string, string>;
+  /** Manually entered prices for shop checks (check name → rupee cost) */
+  shopPrices: Map<string, number>;
 }
 
 // ─── BFS Result ──────────────────────────────────────────────────────────────

@@ -384,7 +384,7 @@ yKeepalive.observe((event: any) => {
   const sEntrances = readableMap(yEntrances);
   const sNotes = readableMap(yNotes);
 
-  initLogicStore(yItems, ySettings, yEntrances, _itemsRevStore, sSettings, sEntrances, ySongEvents);
+  initLogicStore(yItems, ySettings, yEntrances, _itemsRevStore, sSettings, sEntrances, ySongEvents, yShopPrices);
 
   // Sync all logic manual settings to ySettings so the OBS overlay can read them
   const _logicDefaults = defaultLogicSettings();

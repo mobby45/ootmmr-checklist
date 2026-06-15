@@ -135,6 +135,7 @@ export function initLogicStore(
   settingsStore: Readable<Map<string, any>>,
   entrancesStore: Readable<Map<string, string>>,
   ySongEvents?: YMap<string>,
+  yShopPrices?: YMap<number>,
 ) {
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -211,7 +212,8 @@ export function initLogicStore(
     _cachedResolvedSpecial = resolvedSpecial;
 
     const songEventsSnap = ySongEvents ? new Map(ySongEvents.entries()) as Map<string, string> : new Map<string, string>();
-    const state = buildLogicState(itemsSnap, settingsSnap, erSnap, tricks, erMode, resolvedSpecial, undefined, songEventsSnap);
+    const shopPricesSnap = yShopPrices ? new Map(yShopPrices.entries()) as Map<string, number> : new Map<string, number>();
+    const state = buildLogicState(itemsSnap, settingsSnap, erSnap, tricks, erMode, resolvedSpecial, undefined, songEventsSnap, shopPricesSnap);
     try {
       const result = computeReachability(_graph!, state, _macros!);
       logicResult.set(result);
@@ -234,6 +236,7 @@ export function initLogicStore(
   enabledTricks.subscribe(() => scheduleRecompute());
   specialConditionsStore.subscribe(() => scheduleRecompute());
   if (ySongEvents) ySongEvents.observe(() => scheduleRecompute());
+  if (yShopPrices) yShopPrices.observe(() => scheduleRecompute());
   // age filter change does not require recompute — just re-reads the result
 }
 

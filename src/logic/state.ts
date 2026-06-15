@@ -13,6 +13,7 @@ export function buildLogicState(
   resolvedSpecial: Map<string, boolean> = new Map(),
   prebuiltItems?: Map<string, number>,
   ySongEventsSnapshot: Map<string, string> = new Map(),
+  yShopPricesSnapshot: Map<string, number> = new Map(),
 ): LogicState {
   const items = prebuiltItems ?? buildItemsMap(yItemsSnapshot);
 
@@ -213,5 +214,6 @@ export function buildLogicState(
     erMode,
     resolvedSpecial,
     songEvents: ySongEventsSnapshot,
+    shopPrices: yShopPricesSnapshot,
   };
 }

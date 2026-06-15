@@ -83,6 +83,8 @@ export function computeReachability(
       for (const loc of region.locations) {
         if (checksByAge[age].has(loc.name)) continue;
         if (!isLocationEnabled(loc.name, region.game, state)) continue;
+        const customPrice = state.shopPrices.get(loc.name);
+        if (customPrice !== undefined && !canAffordCustomPrice(customPrice, s)) continue;
         if (evalExpr(loc.rule, s, macros)) {
           checksByAge[age].add(loc.name);
           changed = true;
@@ -111,6 +113,27 @@ export function computeReachability(
 
   const reachedRegions = new Set([...reachedByAge.child, ...reachedByAge.adult]);
   return { regions: reachedRegions, childChecks: checksByAge.child, adultChecks: checksByAge.adult, events };
+}
+
+// Returns true if the player's wallet can cover the given rupee cost.
+// Mirrors the wallet_price macro: 99r base, 200r with 1 wallet, 500r with 2, 999r with 3 + colossalWallets.
+// childWallets shifts every tier up by 1 (even cheap items need a wallet).
+function canAffordCustomPrice(price: number, state: LogicState): boolean {
+  if (price <= 0) return true;
+  if (state.settings.get('bottomlessWallets')) return true;
+  if (!state.events.has('RUPEES')) return false;
+  const wallets = Math.max(
+    (state.items.get('WALLET') ?? 0),
+    (state.items.get('SHARED_WALLET') ?? 0),
+  );
+  const childW = !!state.settings.get('childWallets');
+  // has_wallet(n) with childWallets=false: needs (n-1) wallets; with true: needs n wallets.
+  const hasWallet = (n: number) => wallets >= (childW ? n : n - 1);
+  if (price <= 99  && hasWallet(1)) return true;
+  if (price <= 200 && hasWallet(2)) return true;
+  if (price <= 500 && hasWallet(3)) return true;
+  if (price <= 999 && hasWallet(4) && state.settings.get('colossalWallets')) return true;
+  return false;
 }
 
 // Checks whose world.json rule is "true" but are only in the pool when a shuffle setting is on.
