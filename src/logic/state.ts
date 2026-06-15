@@ -187,14 +187,12 @@ export function buildLogicState(
   }
   // itemMapping: slingshot → OOT_SLINGSHOT (OoT-only item).
   if ((items.get('OOT_SLINGSHOT') ?? 0) > 0) events.add('SEEDS');
-  // itemMapping: sticks_oot → OOT_STICKS (covers both OoT and MM via shared nuts/sticks setting).
-  if ((items.get('OOT_STICKS') ?? 0) > 0) {
-    events.add('STICKS'); events.add('MM_STICKS');
-  }
-  // itemMapping: nuts_oot → OOT_NUTS.
-  if ((items.get('OOT_NUTS') ?? 0) > 0) {
-    events.add('NUTS'); events.add('MM_NUTS');
-  }
+  // itemMapping: sticks_oot → OOT_STICKS; mm_stick → MM_STICKS.
+  if ((items.get('OOT_STICKS') ?? 0) > 0) { events.add('STICKS'); events.add('MM_STICKS'); }
+  if ((items.get('MM_STICKS')  ?? 0) > 0) { events.add('STICKS'); events.add('MM_STICKS'); }
+  // itemMapping: nuts_oot → OOT_NUTS; mm_nuts → MM_NUTS.
+  if ((items.get('OOT_NUTS') ?? 0) > 0) { events.add('NUTS'); events.add('MM_NUTS'); }
+  if ((items.get('MM_NUTS')  ?? 0) > 0) { events.add('NUTS'); events.add('MM_NUTS'); }
   // itemMapping: magic_oot → OOT_MAGIC_UPGRADE, mm_magic → MM_MAGIC_UPGRADE, shared_magic → MAGIC_UPGRADE.
   if ((items.get('OOT_MAGIC_UPGRADE') ?? 0) + (items.get('MM_MAGIC_UPGRADE') ?? 0) + (items.get('MAGIC_UPGRADE') ?? 0) > 0) {
     events.add('MAGIC'); events.add('MM_MAGIC');

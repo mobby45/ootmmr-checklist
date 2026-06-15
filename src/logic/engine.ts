@@ -123,7 +123,8 @@ function canAffordCustomPrice(price: number, state: LogicState): boolean {
   if (state.settings.get('bottomlessWallets')) return true;
   if (!state.events.has('RUPEES')) return false;
   const wallets = Math.max(
-    (state.items.get('WALLET') ?? 0),
+    (state.items.get('OOT_WALLET') ?? 0),
+    (state.items.get('MM_WALLET')  ?? 0),
     (state.items.get('SHARED_WALLET') ?? 0),
   );
   const childW = !!state.settings.get('childWallets');
@@ -138,10 +139,34 @@ function canAffordCustomPrice(price: number, state: LogicState): boolean {
 
 // Checks whose world.json rule is "true" but are only in the pool when a shuffle setting is on.
 // OoTMM builds per-seed worlds dynamically; our static world.json includes everything.
-const POT_RE     = /\bPot\b/;
-const CRATE_RE   = /\bCrate\b/;
-const GRASS_RE   = /\bGrass\b/;
+const POT_RE      = /\bPot\b/;
+const CRATE_RE    = /\bCrate\b/;
+const GRASS_RE    = /\bGrass\b/;
 const TCG_ROOM_RE = /^Treasure Chest Game (Room \d|HP)/;
+
+// Per-game collectible shuffle filters (boolean settings — off when absent from hash).
+// /\bHeart (?!Container)/ matches free heart drops but not Heart Containers (rule ≠ "true").
+const OOT_BOOL_FILTERS: [RegExp, string][] = [
+  [/\bRock \d/,            'RockShuffleOOT'],
+  [/\bTree \d/,            'TreeShuffleOOT'],
+  [/\bBush \d/,            'BushShuffleOOT'],
+  [/\bSoil \d/,            'SoilShuffleOOT'],
+  [/\bRupee \d/,           'RupeeShuffleOOT'],
+  [/\bHeart (?!Container)/, 'HeartsShuffleOOT'],
+  [/\bWonder Item\b/,      'WonderShuffleOOT'],
+  [/\bButterfly \d/,       'ButterflyShuffleOOT'],
+  [/\bRed Boulder\b/,      'RedBoulderShuffleOOT'],
+];
+const MM_BOOL_FILTERS: [RegExp, string][] = [
+  [/\bRock \d/,            'RockShuffleMM'],
+  [/\bTree \d/,            'TreeShuffleMM'],
+  [/\bRupee \d/,           'RupeeShuffleMM'],
+  [/\bHeart (?!Container)/, 'HeartsShuffleMM'],
+  [/\bWonder Item\b/,      'WonderShuffleMM'],
+  [/\bButterfly \d/,       'ButterflyShuffleMM'],
+  [/\bSnowball\b/,         'SnowballShuffleMM'],
+  [/\bBarrel\b/,           'BarrelsShuffleMM'],
+];
 
 function isLocationEnabled(locName: string, game: 'oot' | 'mm' | undefined, state: LogicState): boolean {
   const sfx = game === 'mm' ? 'MM' : 'OOT';
@@ -151,6 +176,11 @@ function isLocationEnabled(locName: string, game: 'oot' | 'mm' | undefined, stat
   // TCG room chests and heart piece only exist when small key shuffle for TCG is active
   if (game === 'oot' && TCG_ROOM_RE.test(locName)) {
     return !!state.settings.get('TreasureChestShuffleOOT');
+  }
+  // Collectible shuffle locations: only exist when the corresponding boolean setting is on
+  const boolFilters = game === 'mm' ? MM_BOOL_FILTERS : OOT_BOOL_FILTERS;
+  for (const [re, key] of boolFilters) {
+    if (re.test(locName)) return !!state.settings.get(key);
   }
   return true;
 }

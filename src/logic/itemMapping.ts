@@ -204,6 +204,9 @@ export function trackerItemToLogic(id: string, level: number): ItemGrant[] {
     case 'mm_spell_love':     return [['MM_SPELL_LOVE', 1]];
     case 'mm_stone_of_agony': return [['MM_STONE_OF_AGONY', 1]];
 
+    case 'mm_stick':          return [['MM_STICKS', 1], ['MM_STICK', 1]];
+    case 'mm_nuts':           return [['MM_NUTS', 1],  ['MM_NUTS_5', 1]];
+
     case 'mm_strength':       return [['MM_STRENGTH', level]];
     case 'mm_scale':          return [['MM_SCALE', level]];
 

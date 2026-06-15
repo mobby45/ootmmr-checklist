@@ -422,9 +422,11 @@ const OOTMM_STARTING_ITEM_MAP: Record<string, { id: string; level: number }[]> =
   OOT_SONG_MINUET:      [{ id: 'oot_song_minuet',  level: 1 }],
   OOT_SONG_BOLERO:      [{ id: 'oot_song_bolero',  level: 1 }],
   OOT_SONG_SERENADE:    [{ id: 'oot_song_serenade',level: 1 }],
+  OOT_SONG_TP_WATER:    [{ id: 'oot_song_serenade',level: 1 }], // teleport variant = same song
   OOT_SONG_REQUIEM:     [{ id: 'oot_song_requiem', level: 1 }],
   OOT_SONG_NOCTURNE:    [{ id: 'oot_song_nocturne',level: 1 }],
   OOT_SONG_PRELUDE:     [{ id: 'oot_song_prelude', level: 1 }],
+  OOT_SONG_TP_LIGHT:    [{ id: 'oot_song_prelude', level: 1 }], // teleport variant = same song
   OOT_SONG_SOARING:     [{ id: 'oot_song_soaring', level: 1 }],
   OOT_SONG_HEALING:     [{ id: 'oot_song_healing', level: 1 }],
 
@@ -454,11 +456,11 @@ const OOTMM_STARTING_ITEM_MAP: Record<string, { id: string; level: number }[]> =
   MM_STRENGTH:          [{ id: 'mm_strength',   level: 1 }],
   MM_SCALE:             [{ id: 'mm_scale',      level: 1 }],
   MM_WALLET:            [{ id: 'mm_wallet',     level: 1 }],
-  MM_STICK:             [{ id: 'sticks_oot',    level: 1 }],
-  MM_STICK_10:          [{ id: 'sticks_oot',    level: 1 }],
-  MM_NUTS:              [{ id: 'nuts_oot',      level: 1 }],
-  MM_NUTS_5:            [{ id: 'nuts_oot',      level: 1 }],
-  MM_NUTS_10:           [{ id: 'nuts_oot',      level: 1 }],
+  MM_STICK:             [{ id: 'mm_stick',      level: 1 }],
+  MM_STICK_10:          [{ id: 'mm_stick',      level: 1 }],
+  MM_NUTS:              [{ id: 'mm_nuts',       level: 1 }],
+  MM_NUTS_5:            [{ id: 'mm_nuts',       level: 1 }],
+  MM_NUTS_10:           [{ id: 'mm_nuts',       level: 1 }],
   // MM masks
   MM_MASK_DEKU:         [{ id: 'mm_mask_deku',  level: 1 }],
   MM_MASK_GORON:        [{ id: 'mm_mask_goron', level: 1 }],
@@ -498,6 +500,7 @@ const OOTMM_STARTING_ITEM_MAP: Record<string, { id: string; level: number }[]> =
   MM_SONG_LULLABY:      [{ id: 'mm_song_lullaby',level: 1 }],
   MM_SONG_NOVA:         [{ id: 'mm_song_nova',   level: 1 }],
   MM_SONG_OATH:         [{ id: 'mm_song_oath',   level: 1 }],
+  MM_SONG_ORDER:        [{ id: 'mm_song_oath',   level: 1 }], // OoTMM alias for Oath to Order
   MM_SONG_ELEGY:        [{ id: 'mm_song_elegy',  level: 1 }],
   MM_SONG_ZELDA:        [{ id: 'mm_song_zelda',  level: 1 }],
   MM_SONG_SARIA:        [{ id: 'mm_song_saria',  level: 1 }],
@@ -528,6 +531,7 @@ const OOTMM_STARTING_ITEM_MAP: Record<string, { id: string; level: number }[]> =
   SHARED_BOOTS_HOVER:   [{ id: 'boots_hover',   level: 1 }, { id: 'mm_boots_hover',level:1 }],
   SHARED_STRENGTH:      [{ id: 'strength',      level: 1 }, { id: 'mm_strength',  level: 1 }],
   SHARED_SCALE:         [{ id: 'scale',         level: 1 }, { id: 'mm_scale',     level: 1 }],
+  SHARED_STONE_OF_AGONY:[{ id: 'agony',         level: 1 }, { id: 'mm_stone_of_agony', level: 1 }],
   SHARED_WALLET:        [{ id: 'wallet',        level: 1 }, { id: 'mm_wallet',    level: 1 }],
   SHARED_SONG_SOARING:  [{ id: 'oot_song_soaring',level:1 },{ id: 'mm_song_soaring',level:1}],
   SHARED_SONG_EPONA:    [{ id: 'oot_song_epona',level: 1 }, { id: 'mm_song_epona',level: 1 }],
@@ -657,10 +661,16 @@ export async function importRandomizerSettings(str: string): Promise<{
   }
   // Auto-enable UI toggles derived from multiple OoTMM settings
   const crossGameKeys = [
+    // Shared-pool cross-game songs (appear in both OoT and MM)
     'sharedSongHealing','sharedSongSoaring','sharedSongSonata','sharedSongLullaby','sharedSongNova','sharedSongOath',
     'sharedSongZeldaLullaby','sharedSongSaria','sharedSongMinuet','sharedSongBolero',
     'sharedSongSerenade','sharedSongRequiem','sharedSongNocturne','sharedSongPrelude',
     'crossGameSongElegy',
+    // One-directional: MM songs added to OoT pool (shows OoT cross-game song row)
+    'songHealingOot','songSoaringOot','songAwakeningOot','songGoronOot','songZoraOot','songOrderOot',
+    // One-directional: OoT songs added to MM pool (shows MM cross-game song row)
+    'songZeldaLullabyMm','songSariasMm','songMinuetMm','songBoleroMm',
+    'songSerenadeMm','songRequiemMm','songNocturneMm','songPreludeMm',
   ];
   if (crossGameKeys.some(k => appSettings[k] === true)) {
     appSettings['crossGameSongs'] = true;
@@ -672,7 +682,7 @@ export async function importRandomizerSettings(str: string): Promise<{
   // Keys mapped in KEY_MAP but absent from the hash = OoTMM default = disabled
   // Return them so the caller can delete them from ySettings
   const setAppKeys = new Set(Object.keys(appSettings));
-  const clearedKeys = Object.values(KEY_MAP).filter(k => !setAppKeys.has(k));
+  const clearedKeys = [...new Set(Object.values(KEY_MAP).filter(k => !setAppKeys.has(k)))];
   // Also clear derived keys if their source keys are absent
   if (!('bossKeyOotEnabled' in appSettings)) clearedKeys.push('bossKeyOotEnabled');
   if (!('bossKeyMmEnabled' in appSettings)) clearedKeys.push('bossKeyMmEnabled');
