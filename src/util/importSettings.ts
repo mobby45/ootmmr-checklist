@@ -237,6 +237,8 @@ const KEY_MAP: Record<string, string> = {
   sharedStoneAgony:     'sharedStoneAgony',
   sharedSongElegy:      'sharedSongElegy',
   sharedTriforce:       'sharedTriforce',
+  triforceSharedMulti:  'sharedTriforce',
+  coins:                'coins',
   // Individual song pool extensions (MM songs in OoT)
   songSoaringOot:       'songSoaringOot',
   songHealingOot:       'songHealingOot',

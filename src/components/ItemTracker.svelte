@@ -42,7 +42,15 @@
   // SHARED FILTERING
   // ==========================================
   $: activeSharedIds = new Set(
-    sharedItems.filter(i => !i.settingKey || $settingsStore.get(i.settingKey) === true).map(i => i.id)
+    sharedItems.filter(i => {
+      if (!i.settingKey) return true;
+      if ($settingsStore.get(i.settingKey) === true) return true;
+      // Auto-show triforce items based on goal setting
+      const goal = $settingsStore.get('goal');
+      if (i.id === 'sh_triforce' && goal === 'triforce') return true;
+      if (['sh_triforce_courage','sh_triforce_power','sh_triforce_wisdom'].includes(i.id) && goal === 'triforce3') return true;
+      return false;
+    }).map(i => i.id)
   );
 
   // Items always shown in their game columns — no shared-based hiding
@@ -90,7 +98,7 @@
   // Opt-in settings: item exists only when explicitly enabled — hidden when value !== true.
   // Opt-out settings: item exists by default — hidden only when value === false.
   const OPT_IN_VISIBILITY_KEYS = new Set([
-    'coinsOot', 'elegyOot', 'ocarinaButtonsShuffleOot', 'spinUpgradeOot',
+    'coins', 'elegyOot', 'ocarinaButtonsShuffleOot', 'spinUpgradeOot',
     'skeletonKeyOot', 'platinumTokenOot', 'magicalRupee',
     'ocarinaButtonsShuffleMm', 'platinumTokenMm', 'skeletonKeyMm',
     'transcendentFairy', 'clocks', 'owlShuffleEnabled',
@@ -102,10 +110,10 @@
 
   const itemVisibilityMap: Record<string, string> = {
     // OoT Item Extensions (skip mask_blast/mask_stone: shared IDs with MM Masks)
-    'coin_red':               'coinsOot',
-    'coin_green':             'coinsOot',
-    'coin_blue':              'coinsOot',
-    'coin_yellow':            'coinsOot',
+    'coin_red':               'coins',
+    'coin_green':             'coins',
+    'coin_blue':              'coins',
+    'coin_yellow':            'coins',
     'oot_elegy':              'elegyOot',
     'button_a':               'ocarinaButtonsShuffleOot',
     'button_up':              'ocarinaButtonsShuffleOot',

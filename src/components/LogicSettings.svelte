@@ -64,7 +64,7 @@
     { key: 'magicalRupee',             name: 'Magical Rupee' },
     { key: 'rustyKeysOot',             name: 'Rusty Keys' },
     { key: 'elegyOot',                 name: 'Elegy of Emptiness' },
-    { key: 'coinsOot',                 name: 'Coins' },
+    { key: 'coins',                    name: 'Coins' },
     { key: 'ocarinaButtonsShuffleOot', name: 'Ocarina Buttons' },
     { key: 'skeletonKeyOot',           name: 'Skeleton Key' },
     { key: 'platinumTokenOot',         name: 'Platinum Token' },
