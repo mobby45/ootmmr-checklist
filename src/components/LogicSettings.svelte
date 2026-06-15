@@ -2,7 +2,7 @@
   import type { Readable } from 'svelte/store';
   import type { Map as YMap } from 'yjs';
   import { logicManualSettings, enabledTricks } from '../stores/logicStore';
-  import { LOGIC_SETTINGS_DEFS, SETTING_GROUPS, defaultLogicSettings } from '../data/logicSettingsDef';
+  import { LOGIC_SETTINGS_DEFS, defaultLogicSettings } from '../data/logicSettingsDef';
   import type { LogicSettingDef } from '../data/logicSettingsDef';
   import { TRICKS_DEFS, TRICK_CATEGORIES, tricksByCategory } from '../data/tricksDef';
 
@@ -15,8 +15,39 @@
   /** Readable store over ySettings */
   export let sSettings: Readable<Map<string, any>> | null = null;
 
-  // ─── Sub-tab ──────────────────────────────────────────────────────────────────
-  let activeSubTab: 'logic' | 'oot' | 'mm' | 'shared' = 'logic';
+  // ─── Two-tier navigation ──────────────────────────────────────────────────────
+  type PrimaryTab = 'settings' | 'items' | 'tricks';
+  type SettingsTab = 'main' | 'shuffle' | 'price' | 'events' | 'cross' | 'world' | 'misc';
+  type ItemsTab = 'oot' | 'mm' | 'shared';
+
+  let primaryTab: PrimaryTab = 'settings';
+  let settingsTab: SettingsTab = 'main';
+  let itemsTab: ItemsTab = 'oot';
+
+  const SETTINGS_TABS: { id: SettingsTab; label: string; group: string }[] = [
+    { id: 'main',    label: 'Main',       group: 'Main' },
+    { id: 'shuffle', label: 'Shuffle',    group: 'Shuffle' },
+    { id: 'price',   label: 'Price',      group: 'Price' },
+    { id: 'events',  label: 'Events',     group: 'Events' },
+    { id: 'cross',   label: 'Cross-Game', group: 'Cross-Game' },
+    { id: 'world',   label: 'World',      group: 'World' },
+    { id: 'misc',    label: 'Misc',       group: 'Misc' },
+  ];
+
+  function defsForGroup(group: string): LogicSettingDef[] {
+    return LOGIC_SETTINGS_DEFS.filter(d => d.group === group);
+  }
+
+  function sectionsForGroup(group: string): string[] {
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const d of LOGIC_SETTINGS_DEFS) {
+      if (d.group !== group) continue;
+      const s = d.section ?? '';
+      if (!seen.has(s)) { seen.add(s); out.push(s); }
+    }
+    return out;
+  }
 
   // ─── Item visibility data ─────────────────────────────────────────────────────
   type VItem =
@@ -191,16 +222,8 @@
   }
 
   // ─── Logic settings ───────────────────────────────────────────────────────────
-  // All groups collapsed by default
-  let collapsed = new Set<string>(SETTING_GROUPS);
   let tricksCategoryCollapsed = new Set<string>(['OoT MQ', 'OoT Glitch']);
   let tricksCollapsed = true;
-
-  function toggleGroup(group: string) {
-    collapsed = collapsed.has(group)
-      ? (collapsed.delete(group), new Set(collapsed))
-      : new Set([...collapsed, group]);
-  }
 
   function toggleTricksGroup() { tricksCollapsed = !tricksCollapsed; }
 
@@ -242,15 +265,12 @@
     setVal(key, (e.target as HTMLSelectElement).value);
   }
 
-  function groupDefs(group: string): LogicSettingDef[] {
-    return LOGIC_SETTINGS_DEFS.filter(d => d.group === group);
-  }
-
   $: fromSpoiler = (key: string) => spoilerKeys.has(key);
 
   const defaults = defaultLogicSettings();
-  function isGroupModified(group: string): boolean {
-    return groupDefs(group).some(def => {
+
+  function isTabModified(group: string): boolean {
+    return defsForGroup(group).some(def => {
       const v = get(def.key);
       return v !== undefined && v !== defaults[def.key];
     });
@@ -272,92 +292,198 @@
   function disableAllTricks() { enabledTricks.set(new Set()); }
 </script>
 
-<!-- Sub-tab bar -->
-<div class="subtab-bar">
-  <button type="button" class="subtab" class:subtab-active={activeSubTab === 'logic'}  on:click={() => activeSubTab = 'logic'}>Logic</button>
-  <button type="button" class="subtab" class:subtab-active={activeSubTab === 'oot'}    on:click={() => activeSubTab = 'oot'}>OoT Items</button>
-  <button type="button" class="subtab" class:subtab-active={activeSubTab === 'mm'}     on:click={() => activeSubTab = 'mm'}>MM Items</button>
-  <button type="button" class="subtab" class:subtab-active={activeSubTab === 'shared'} on:click={() => activeSubTab = 'shared'}>Shared Items</button>
+<!-- Primary tab bar -->
+<div class="primary-tab-bar">
+  <button type="button" class="primary-tab" class:primary-tab-active={primaryTab === 'settings'} on:click={() => primaryTab = 'settings'}>Settings</button>
+  <button type="button" class="primary-tab" class:primary-tab-active={primaryTab === 'items'}    on:click={() => primaryTab = 'items'}>Items</button>
+  <button type="button" class="primary-tab" class:primary-tab-active={primaryTab === 'tricks'}   on:click={() => primaryTab = 'tricks'}>
+    Tricks
+    {#if $enabledTricks.size > 0}<span class="tab-count">{$enabledTricks.size}</span>{/if}
+  </button>
 </div>
 
-{#if activeSubTab === 'logic'}
-  {#each SETTING_GROUPS.filter(g => g !== 'Shared Items') as group}
-    {@const isOpen = !collapsed.has(group)}
-    {@const modified = groupDefs(group).some(def => {
-      const v = $logicManualSettings[def.key];
-      return v !== undefined && v !== defaults[def.key];
-    })}
-    <!-- svelte-ignore a11y-click-events-have-key-events -->
-    <!-- svelte-ignore a11y-no-static-element-interactions -->
-    <div class="group-header" on:click={() => toggleGroup(group)}>
-      <span class="group-arrow">{isOpen ? '▼' : '▶'}</span>
-      <span class="ls-group-label">{group}</span>
-      {#if modified}<span class="modified-dot" title="Modified"></span>{/if}
-    </div>
+{#if primaryTab === 'settings'}
+  <!-- Secondary tab bar for settings -->
+  <div class="subtab-bar">
+    {#each SETTINGS_TABS as tab}
+      {@const modified = isTabModified(tab.group)}
+      <button
+        type="button"
+        class="subtab"
+        class:subtab-active={settingsTab === tab.id}
+        on:click={() => settingsTab = tab.id}
+      >
+        {tab.label}
+        {#if modified}<span class="modified-dot-tab"></span>{/if}
+      </button>
+    {/each}
+  </div>
 
-    {#if isOpen}
-      <div class="dropdown-grid">
-        {#each groupDefs(group) as def}
-          {@const spoiler = fromSpoiler(def.key)}
-          {#if def.type === 'bool'}
-            <label class="checkbox-option" class:spoiler-row={spoiler} title={[def.desc, spoiler ? 'Set by spoiler log' : ''].filter(Boolean).join('\n')}>
-              <input
-                type="checkbox"
-                checked={!!get(def.key)}
-                disabled={spoiler}
-                on:change={e => onCheckboxChange(def.key, e)}
-              />
-              {def.label}
-              {#if spoiler}<span class="spoiler-badge">spoiler</span>{/if}
-            </label>
-          {:else if def.type === 'select'}
-            <label class:spoiler-row={spoiler} title={[def.desc, spoiler ? 'Set by spoiler log' : ''].filter(Boolean).join('\n')}>
-              {def.label}
-              {#if spoiler}<span class="spoiler-badge">spoiler</span>{/if}
-              <select
-                class="dropdown-select"
-                value={get(def.key)}
-                disabled={spoiler}
-                on:change={e => onSelectChange(def.key, e)}
-              >
-                {#each def.options ?? [] as opt}
-                  <option value={opt.value}>{opt.label}</option>
-                {/each}
-              </select>
-            </label>
-          {:else if def.type === 'multicheck'}
-            <div class="multicheck-block">
-              <div class="multicheck-title" title={[def.desc, spoiler ? 'Set by spoiler log' : ''].filter(Boolean).join('\n')}>
+  <!-- Settings content for active tab -->
+  {#each SETTINGS_TABS as tab}
+    {#if settingsTab === tab.id}
+      {#each sectionsForGroup(tab.group) as section}
+        {#if section}
+          <div class="section-header">{section}</div>
+        {/if}
+        <div class="dropdown-grid">
+          {#each defsForGroup(tab.group).filter(d => (d.section ?? '') === section) as def}
+            {@const spoiler = fromSpoiler(def.key)}
+            {#if def.type === 'bool'}
+              <label class="checkbox-option" class:spoiler-row={spoiler} title={[def.desc, spoiler ? 'Set by spoiler log' : ''].filter(Boolean).join('\n')}>
+                <input
+                  type="checkbox"
+                  checked={!!get(def.key)}
+                  disabled={spoiler}
+                  on:change={e => onCheckboxChange(def.key, e)}
+                />
                 {def.label}
                 {#if spoiler}<span class="spoiler-badge">spoiler</span>{/if}
+              </label>
+            {:else if def.type === 'select'}
+              <label class:spoiler-row={spoiler} title={[def.desc, spoiler ? 'Set by spoiler log' : ''].filter(Boolean).join('\n')}>
+                {def.label}
+                {#if spoiler}<span class="spoiler-badge">spoiler</span>{/if}
+                <select
+                  class="dropdown-select"
+                  value={get(def.key)}
+                  disabled={spoiler}
+                  on:change={e => onSelectChange(def.key, e)}
+                >
+                  {#each def.options ?? [] as opt}
+                    <option value={opt.value}>{opt.label}</option>
+                  {/each}
+                </select>
+              </label>
+            {:else if def.type === 'multicheck'}
+              <div class="multicheck-block">
+                <div class="multicheck-title" title={[def.desc, spoiler ? 'Set by spoiler log' : ''].filter(Boolean).join('\n')}>
+                  {def.label}
+                  {#if spoiler}<span class="spoiler-badge">spoiler</span>{/if}
+                </div>
+                <div class="multicheck-flags">
+                  {#each def.flags ?? [] as flag}
+                    <label class="checkbox-option" title={spoiler ? 'Set by spoiler log' : ''}>
+                      <input
+                        type="checkbox"
+                        checked={hasFlag(def.key, flag.value)}
+                        disabled={spoiler}
+                        on:change={() => toggleFlag(def.key, flag.value)}
+                      />
+                      {flag.label}
+                    </label>
+                  {/each}
+                </div>
               </div>
-              <div class="multicheck-flags">
-                {#each def.flags ?? [] as flag}
-                  <label class="checkbox-option" title={spoiler ? 'Set by spoiler log' : ''}>
-                    <input
-                      type="checkbox"
-                      checked={hasFlag(def.key, flag.value)}
-                      disabled={spoiler}
-                      on:change={() => toggleFlag(def.key, flag.value)}
-                    />
-                    {flag.label}
-                  </label>
-                {/each}
-              </div>
-            </div>
-          {/if}
-        {/each}
-      </div>
+            {/if}
+          {/each}
+        </div>
+      {/each}
     {/if}
   {/each}
 
-  <!-- svelte-ignore a11y-click-events-have-key-events -->
-  <!-- svelte-ignore a11y-no-static-element-interactions -->
-  <div class="group-header" on:click={toggleTricksGroup}>
-    <span class="group-arrow">{tricksCollapsed ? '▶' : '▼'}</span>
-    <span class="ls-group-label">Tricks</span>
-    {#if $enabledTricks.size > 0}<span class="modified-dot" title="{$enabledTricks.size} enabled"></span>{/if}
-    <div class="tricks-actions" on:click|stopPropagation>
+{:else if primaryTab === 'items'}
+  <!-- Secondary tab bar for items -->
+  <div class="subtab-bar">
+    <button type="button" class="subtab" class:subtab-active={itemsTab === 'oot'}    on:click={() => itemsTab = 'oot'}>OoT Items</button>
+    <button type="button" class="subtab" class:subtab-active={itemsTab === 'mm'}     on:click={() => itemsTab = 'mm'}>MM Items</button>
+    <button type="button" class="subtab" class:subtab-active={itemsTab === 'shared'} on:click={() => itemsTab = 'shared'}>Shared Items</button>
+  </div>
+
+  {#if itemsTab === 'oot'}
+    <p class="settings-hint">Hides inactive OoT items for this seed. Automatically imported from the spoiler log.</p>
+    <div class="dropdown-grid">
+      {#each ootVisibility as item}
+        {#if item.header}
+          <div class="settings-grid-header">{item.header}</div>
+        {:else if item.options}
+          <label class="settings-select-row">
+            <span class="settings-select-name">{item.name}</span>
+            <select
+              class="dropdown-select"
+              value={visGet(item.key) ?? item.options[0].value}
+              on:change={e => setStringSetting(item.key, e.currentTarget.value)}
+            >
+              {#each item.options as opt}
+                <option value={opt.value}>{opt.label}</option>
+              {/each}
+            </select>
+          </label>
+        {:else}
+          <label class="checkbox-option">
+            <input
+              type="checkbox"
+              checked={item.optIn ? visGet(item.key) === true : visGet(item.key) !== false}
+              on:change={() => toggleVisibility(item.key, item.optIn ? visGet(item.key) !== true : visGet(item.key) === false)}
+            />
+            {item.name}
+          </label>
+        {/if}
+      {/each}
+    </div>
+
+  {:else if itemsTab === 'mm'}
+    <p class="settings-hint">Hides inactive MM items for this seed. Automatically imported from the spoiler log.</p>
+    <div class="dropdown-grid">
+      {#each mmVisibility as item}
+        {#if item.header}
+          <div class="settings-grid-header">{item.header}</div>
+        {:else if item.options}
+          <label class="settings-select-row">
+            <span class="settings-select-name">{item.name}</span>
+            <select
+              class="dropdown-select"
+              value={visGet(item.key) ?? item.options[0].value}
+              on:change={e => setStringSetting(item.key, e.currentTarget.value)}
+            >
+              {#each item.options as opt}
+                <option value={opt.value}>{opt.label}</option>
+              {/each}
+            </select>
+          </label>
+        {:else}
+          <label class="checkbox-option">
+            <input
+              type="checkbox"
+              checked={item.optIn ? visGet(item.key) === true : visGet(item.key) !== false}
+              on:change={() => toggleVisibility(item.key, item.optIn ? visGet(item.key) !== true : visGet(item.key) === false)}
+            />
+            {item.name}
+          </label>
+        {/if}
+      {/each}
+    </div>
+
+  {:else if itemsTab === 'shared'}
+    <p class="settings-hint">Enables shared items to appear in the Shared panel.</p>
+    <div class="dropdown-grid">
+      {#each sharedData as item}
+        {#if item.header}
+          <div class="settings-grid-header">{item.header}</div>
+        {:else}
+          <label class="checkbox-option">
+            <input
+              type="checkbox"
+              checked={visGet(item.key) === true}
+              on:change={() => toggleSharedSetting(item.key, visGet(item.key) !== true)}
+            />
+            {item.name}
+          </label>
+        {/if}
+      {/each}
+    </div>
+  {/if}
+
+{:else if primaryTab === 'tricks'}
+  <div class="tricks-top-bar">
+    <!-- svelte-ignore a11y-click-events-have-key-events -->
+    <!-- svelte-ignore a11y-no-static-element-interactions -->
+    <div class="tricks-header" on:click={toggleTricksGroup}>
+      <span class="group-arrow">{tricksCollapsed ? '▶' : '▼'}</span>
+      <span class="ls-group-label">Tricks</span>
+      {#if $enabledTricks.size > 0}<span class="modified-dot" title="{$enabledTricks.size} enabled"></span>{/if}
+    </div>
+    <div class="tricks-actions">
       <button type="button" class="trick-action-btn" on:click={enableAllTricks}>All</button>
       <button type="button" class="trick-action-btn" on:click={disableAllTricks}>None</button>
     </div>
@@ -390,117 +516,99 @@
       {/if}
     {/each}
   {/if}
-
-{:else if activeSubTab === 'oot'}
-  <p class="settings-hint">Hides inactive OoT items for this seed. Automatically imported from the spoiler log.</p>
-  <div class="dropdown-grid">
-    {#each ootVisibility as item}
-      {#if item.header}
-        <div class="settings-grid-header">{item.header}</div>
-      {:else if item.options}
-        <label class="settings-select-row">
-          <span class="settings-select-name">{item.name}</span>
-          <select
-            class="dropdown-select"
-            value={visGet(item.key) ?? item.options[0].value}
-            on:change={e => setStringSetting(item.key, e.currentTarget.value)}
-          >
-            {#each item.options as opt}
-              <option value={opt.value}>{opt.label}</option>
-            {/each}
-          </select>
-        </label>
-      {:else}
-        <label class="checkbox-option">
-          <input
-            type="checkbox"
-            checked={item.optIn ? visGet(item.key) === true : visGet(item.key) !== false}
-            on:change={() => toggleVisibility(item.key, item.optIn ? visGet(item.key) !== true : visGet(item.key) === false)}
-          />
-          {item.name}
-        </label>
-      {/if}
-    {/each}
-  </div>
-
-{:else if activeSubTab === 'mm'}
-  <p class="settings-hint">Hides inactive MM items for this seed. Automatically imported from the spoiler log.</p>
-  <div class="dropdown-grid">
-    {#each mmVisibility as item}
-      {#if item.header}
-        <div class="settings-grid-header">{item.header}</div>
-      {:else if item.options}
-        <label class="settings-select-row">
-          <span class="settings-select-name">{item.name}</span>
-          <select
-            class="dropdown-select"
-            value={visGet(item.key) ?? item.options[0].value}
-            on:change={e => setStringSetting(item.key, e.currentTarget.value)}
-          >
-            {#each item.options as opt}
-              <option value={opt.value}>{opt.label}</option>
-            {/each}
-          </select>
-        </label>
-      {:else}
-        <label class="checkbox-option">
-          <input
-            type="checkbox"
-            checked={item.optIn ? visGet(item.key) === true : visGet(item.key) !== false}
-            on:change={() => toggleVisibility(item.key, item.optIn ? visGet(item.key) !== true : visGet(item.key) === false)}
-          />
-          {item.name}
-        </label>
-      {/if}
-    {/each}
-  </div>
-
-{:else if activeSubTab === 'shared'}
-  <p class="settings-hint">Enables shared items to appear in the Shared panel.</p>
-  <div class="dropdown-grid">
-    {#each sharedData as item}
-      {#if item.header}
-        <div class="settings-grid-header">{item.header}</div>
-      {:else}
-        <label class="checkbox-option">
-          <input
-            type="checkbox"
-            checked={visGet(item.key) === true}
-            on:change={() => toggleSharedSetting(item.key, visGet(item.key) !== true)}
-          />
-          {item.name}
-        </label>
-      {/if}
-    {/each}
-  </div>
-
 {/if}
 
 <style>
-  .subtab-bar {
+  /* ── Primary tab bar ─────────────────────────────────────────────────────── */
+  .primary-tab-bar {
     display: flex;
-    gap: 0.3em;
-    margin-bottom: 0.6em;
-    border-bottom: 1px solid var(--color-border);
-    padding-bottom: 0.4em;
+    gap: 0.2em;
+    margin-bottom: 0.4em;
   }
 
-  .subtab {
-    font-size: 0.75em;
-    font-weight: 600;
-    padding: 0.3em 0.8em;
+  .primary-tab {
+    flex: 1;
+    font-size: 0.8em;
+    font-weight: 700;
+    padding: 0.35em 0.5em;
     border: 1px solid var(--color-border);
-    border-radius: 4px 4px 0 0;
+    border-radius: 4px;
     background: var(--color-bg);
     color: #888;
     cursor: pointer;
     letter-spacing: 0.03em;
+    text-align: center;
+  }
+  .primary-tab:hover { color: var(--color-text); border-color: #999; }
+  .primary-tab.primary-tab-active {
+    color: var(--color-text);
+    border-color: #4a9eff;
+    background: rgba(74, 158, 255, 0.12);
+  }
+
+  .tab-count {
+    display: inline-block;
+    font-size: 0.82em;
+    background: #1a3a5a;
+    color: #4a9eff;
+    border-radius: 3px;
+    padding: 0 4px;
+    margin-left: 4px;
+    font-weight: normal;
+    vertical-align: middle;
+  }
+
+  /* ── Secondary sub-tab bar ───────────────────────────────────────────────── */
+  .subtab-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25em;
+    margin-bottom: 0.5em;
+    border-bottom: 1px solid var(--color-border);
+    padding-bottom: 0.35em;
+  }
+
+  .subtab {
+    font-size: 0.72em;
+    font-weight: 600;
+    padding: 0.25em 0.65em;
+    border: 1px solid var(--color-border);
+    border-radius: 3px 3px 0 0;
+    background: var(--color-bg);
+    color: #888;
+    cursor: pointer;
+    letter-spacing: 0.03em;
+    position: relative;
   }
   .subtab:hover { color: var(--color-text); border-color: #999; }
   .subtab.subtab-active {
     color: var(--color-text);
     border-color: #4a9eff;
     background: rgba(74, 158, 255, 0.08);
+  }
+
+  .modified-dot-tab {
+    display: inline-block;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #4a9eff;
+    margin-left: 4px;
+    vertical-align: middle;
+    flex-shrink: 0;
+  }
+
+  /* ── Section headers within a tab ─────────────────────────────────────────── */
+  .section-header {
+    font-size: 0.72em;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #888;
+    padding: 0.6em 0 0.2em;
+    border-bottom: 1px solid var(--color-border);
+    margin-bottom: 0.2em;
+    margin-top: 0.2em;
   }
 
   .settings-hint {
@@ -539,17 +647,40 @@
     margin-top: 0;
   }
 
-  .group-header {
+  /* ── Tricks section ──────────────────────────────────────────────────────── */
+  .tricks-top-bar {
     display: flex;
     align-items: center;
     gap: 0.4em;
     padding: 0.35em 0.2em;
-    margin-top: 0.5em;
+    margin-top: 0.3em;
     border-bottom: 1px solid var(--color-border);
+  }
+  .tricks-header {
+    display: flex;
+    align-items: center;
+    gap: 0.4em;
+    flex: 1;
     cursor: pointer;
     user-select: none;
   }
-  .group-header:hover { background: rgba(255,255,255,0.04); }
+  .tricks-header:hover { background: rgba(255,255,255,0.04); }
+
+  .tricks-actions {
+    display: flex;
+    gap: 0.4em;
+  }
+
+  .trick-action-btn {
+    font-size: 0.72em;
+    padding: 1px 8px;
+    border: 1px solid var(--color-border);
+    border-radius: 3px;
+    background: var(--color-bg);
+    color: var(--color-text);
+    cursor: pointer;
+  }
+  .trick-action-btn:hover { border-color: #999; }
 
   .group-arrow {
     font-size: 0.6em;
@@ -599,29 +730,13 @@
     padding: 0 4px;
   }
 
-  .tricks-actions {
-    margin-left: auto;
-    display: flex;
-    gap: 0.4em;
-  }
-
-  .trick-action-btn {
-    font-size: 0.72em;
-    padding: 1px 8px;
-    border: 1px solid var(--color-border);
-    border-radius: 3px;
-    background: var(--color-bg);
-    color: var(--color-text);
-    cursor: pointer;
-  }
-  .trick-action-btn:hover { border-color: #999; }
-
+  /* ── Settings grid ────────────────────────────────────────────────────────── */
   .dropdown-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 0.4em 1em;
     margin-bottom: 0.3em;
-    padding: 0.3em 0;
+    padding: 0.2em 0;
   }
   .dropdown-grid.compact {
     grid-template-columns: repeat(4, 1fr);
