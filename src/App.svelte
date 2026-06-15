@@ -2000,7 +2000,19 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     async function openScene(sceneKey: string, subscene = '') {
       scrollPosition = window.scrollY;
       currentGroupName = '';
-      filteredCheckNames = new Set();
+      // Build the set of setting-enabled checks (ignoring hide/logic state).
+      // Using structuredChecks with ignoreHide=true keeps disabled check types
+      // (pots, TC game rooms, shops…) off the map when their shuffle is off.
+      filteredCheckNames = new Set(
+        (structuredChecks ?? []).flatMap(g =>
+          g.checks
+            .filter(c => checkPredicate(g, c, true))
+            .flatMap(c => {
+              const mapped = checkNameMapping[c.name];
+              return mapped ? [c.name, mapped] : [c.name];
+            })
+        )
+      );
       currentMapScene = sceneKey;
       currentSceneData = mapData![sceneKey];
       mapInitialSubscene = subscene;
@@ -2255,11 +2267,11 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     // --- Shops ---
     let matchesShopOOT = true;
     if (check.type === T.CheckType.shop && check.game === T.Game.oot)
-      matchesShopOOT = ($sSettings.get('shopShuffleOot') ?? $sSettings.get('ShopShuffleOOT') ?? 'none') !== 'none';
+      matchesShopOOT = ($sSettings.get('ShopShuffleOOT') ?? 'none') !== 'none';
 
     let matchesShopMM = true;
     if (check.type === T.CheckType.shop && check.game === T.Game.mm)
-      matchesShopMM = ($sSettings.get('shopShuffleMm') ?? $sSettings.get('ShopShuffleMM') ?? 'none') !== 'none';
+      matchesShopMM = ($sSettings.get('ShopShuffleMM') ?? 'none') !== 'none';
 
     // --- Owl Statues ---
     let matchesOwl = true;

@@ -120,10 +120,10 @@ const CRATE_RE = /\bCrate\b/;
 const GRASS_RE = /\bGrass\b/;
 
 function isLocationEnabled(locName: string, game: 'oot' | 'mm' | undefined, state: LogicState): boolean {
-  const suffix = game === 'mm' ? 'Mm' : 'Oot';
-  if (POT_RE.test(locName))   return state.settings.get(`shufflePots${suffix}`)   !== 'none';
-  if (CRATE_RE.test(locName)) return state.settings.get(`shuffleCrates${suffix}`) !== 'none';
-  if (GRASS_RE.test(locName)) return state.settings.get(`shuffleGrass${suffix}`)  !== 'none';
+  const sfx = game === 'mm' ? 'MM' : 'OOT';
+  if (POT_RE.test(locName))   return state.settings.get(`PotShuffle${sfx}`)   !== 'none';
+  if (CRATE_RE.test(locName)) return state.settings.get(`CrateShuffle${sfx}`) !== 'none';
+  if (GRASS_RE.test(locName)) return state.settings.get(`GrassShuffle${sfx}`) !== 'none';
   return true;
 }
 

@@ -124,13 +124,15 @@ export function buildLogicState(
     ocarinaButtonsShuffleMm:  false,
 
     // Collectible shuffles — off by default ('none' = not shuffled, so those checks don't exist)
-    shufflePotsOot:        'none',
-    shuffleCratesOot:      'none',
-    shuffleGrassOot:       'none',
-    shufflePotsMm:         'none',
-    shuffleCratesMm:       'none',
-    shuffleGrassMm:        'none',
-    restoreBrokenActors:   false,
+    // Keys match the tracker/importSettings tracker keys used by checkPredicate and isLocationEnabled.
+    PotShuffleOOT:   'none',
+    CrateShuffleOOT: 'none',
+    GrassShuffleOOT: 'none',
+    PotShuffleMM:    'none',
+    CrateShuffleMM:  'none',
+    GrassShuffleMM:  'none',
+    // Keep OoTMM key for world.json setting(restoreBrokenActors) expressions.
+    restoreBrokenActors: false,
   };
   for (const [k, v] of Object.entries(HIDDEN_DEFAULTS)) {
     if (!settings.has(k)) settings.set(k, v);
