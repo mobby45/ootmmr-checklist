@@ -409,8 +409,9 @@ yKeepalive.observe((event: any) => {
     : new Map<string, string>();
   $: notesEntries = [...($sNotes as Map<string, string>).entries()]
     .map(([id, text]) => ({ id, text, group: checkToGroup.get(id) ?? '' }));
-  $: shopEntries = [...($sShopItems as Map<string, string>).entries()]
-    .map(([id, item]) => ({ id, item, price: ($sShopPrices as Map<string, number>).get(id) ?? null, group: checkToGroup.get(id) ?? '' }));
+  $: shopEntries = trackDep($_checksRevStore, [...($sShopItems as Map<string, string>).entries()]
+    .filter(([id]) => ($sChecks.get(id) ?? T.CheckState.unchecked) !== T.CheckState.checked)
+    .map(([id, item]) => ({ id, item, price: ($sShopPrices as Map<string, number>).get(id) ?? null, group: checkToGroup.get(id) ?? '' })));
 
   function handleShopEditByName(name: string) {
     if (!structuredChecks) { openShopEdit(name, true); return; }

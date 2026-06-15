@@ -660,7 +660,7 @@ export async function importRandomizerSettings(str: string): Promise<{
     'sharedSongHealing','sharedSongSoaring','sharedSongSonata','sharedSongLullaby','sharedSongNova','sharedSongOath',
     'sharedSongZeldaLullaby','sharedSongSaria','sharedSongMinuet','sharedSongBolero',
     'sharedSongSerenade','sharedSongRequiem','sharedSongNocturne','sharedSongPrelude',
-    'sharedSongEpona','sharedSongStorms','sharedSongTime','sharedSongSun','crossGameSongElegy',
+    'crossGameSongElegy',
   ];
   if (crossGameKeys.some(k => appSettings[k] === true)) {
     appSettings['crossGameSongs'] = true;
