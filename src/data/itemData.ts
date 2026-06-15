@@ -707,7 +707,7 @@ export const allTrackerItems: TrackerItem[] = [
   { id: 'sh_stone_of_agony', name: "Stone of Agony", icon: 'item/agony', game: 'shared', category: 'items', maxLevel: 1, settingKey: 'sharedStoneAgony' },
 
   // --- SHARED Triforce ---
-  { id: 'sh_triforce', name: "Triforce", icon: 'reward/triforce_piece', game: 'shared', category: 'misc', maxLevel: 1, settingKey: 'sharedTriforce' },
+  { id: 'sh_triforce', name: "Triforce", icon: 'reward/triforce_piece', game: 'shared', category: 'misc', maxLevel: 999, showCount: true, settingKey: 'sharedTriforce' },
   { id: 'sh_triforce_courage', name: "Triforce of Courage", icon: 'reward/triforce_piece', game: 'shared', category: 'misc', maxLevel: 1, settingKey: 'sharedTriforceCourage' },
   { id: 'sh_triforce_power', name: "Triforce of Power", icon: 'reward/triforce_piece', game: 'shared', category: 'misc', maxLevel: 1, settingKey: 'sharedTriforcePower' },
   { id: 'sh_triforce_wisdom', name: "Triforce of Wisdom", icon: 'reward/triforce_piece', game: 'shared', category: 'misc', maxLevel: 1, settingKey: 'sharedTriforceWisdom' },

@@ -879,7 +879,12 @@
       <!-- Triforce (shown only when triforce items are active via Shared Items settings) -->
       {#if activeSharedIds.has('sh_triforce') || activeSharedIds.has('sh_triforce_courage') || activeSharedIds.has('sh_triforce_power') || activeSharedIds.has('sh_triforce_wisdom')}
       <div class="section">
-        <div class="section-title">Triforce</div>
+        <div class="section-title">
+          Triforce
+          {#if $settingsStore.get('triforceGoal') != null}
+            <span class="triforce-goal">goal: {$settingsStore.get('triforceGoal')} / {$settingsStore.get('triforcePieces') ?? '?'}</span>
+          {/if}
+        </div>
         <div class="row-grid">
           {#each ['sh_triforce', 'sh_triforce_courage', 'sh_triforce_power', 'sh_triforce_wisdom'] as cellId}
             {#if isHidden(cellId, 'shared')}
@@ -1357,6 +1362,12 @@
     display: flex;
     flex-direction: column;
     gap: 2px;
+  }
+
+  .triforce-goal {
+    font-weight: 400;
+    opacity: 0.65;
+    margin-left: 0.4em;
   }
 
   .section-title {
