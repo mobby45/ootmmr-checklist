@@ -821,16 +821,11 @@
     margin-bottom: 0.3em;
     padding: 0.2em 0;
   }
-  .dropdown-grid.compact {
-    grid-template-columns: repeat(4, 1fr);
-    gap: 0.2em 0.8em;
-  }
   @media screen and (max-width: 1024px) {
     .dropdown-grid { grid-template-columns: repeat(2, 1fr); }
-    .dropdown-grid.compact { grid-template-columns: repeat(3, 1fr); }
   }
   @media screen and (max-width: 768px) {
-    .dropdown-grid, .dropdown-grid.compact { grid-template-columns: 1fr; }
+    .dropdown-grid { grid-template-columns: 1fr; }
   }
 
   :global(.dropdown-grid) .dropdown-select,
