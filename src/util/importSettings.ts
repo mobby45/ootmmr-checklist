@@ -620,6 +620,7 @@ export async function importRandomizerSettings(str: string): Promise<{
   appSettings: Record<string, unknown>;
   clearedKeys: string[];
   startingItems: Record<string, number>;
+  tricks: string[];
   unmapped: string[];
   junkLocations: string[];
 }> {
@@ -627,11 +628,13 @@ export async function importRandomizerSettings(str: string): Promise<{
   const appSettings: Record<string, unknown> = {};
   const unmapped: string[] = [];
   const junkLocations: string[] = Array.isArray(raw['junkLocations']) ? (raw['junkLocations'] as string[]) : [];
+  // Extract tricks array before iterating settings
+  const tricks: string[] = Array.isArray(raw['tricks']) ? (raw['tricks'] as string[]) : [];
   // Extract and convert starting items before iterating settings
   const rawStartingItems = raw['startingItems'] as Record<string, number> | undefined;
   const startingItems = rawStartingItems ? mapOotmmStartingItems(rawStartingItems) : {};
   for (const [ootmmKey, value] of Object.entries(raw)) {
-    if (ootmmKey === 'startingItems') continue; // handled separately
+    if (ootmmKey === 'startingItems' || ootmmKey === 'tricks') continue; // handled separately
     const appKey = KEY_MAP[ootmmKey];
     if (appKey) {
       const v = translateValue(ootmmKey, value);
@@ -657,6 +660,7 @@ export async function importRandomizerSettings(str: string): Promise<{
     'sharedSongHealing','sharedSongSoaring','sharedSongSonata','sharedSongLullaby','sharedSongNova','sharedSongOath',
     'sharedSongZeldaLullaby','sharedSongSaria','sharedSongMinuet','sharedSongBolero',
     'sharedSongSerenade','sharedSongRequiem','sharedSongNocturne','sharedSongPrelude',
+    'sharedSongEpona','sharedSongStorms','sharedSongTime','sharedSongSun','crossGameSongElegy',
   ];
   if (crossGameKeys.some(k => appSettings[k] === true)) {
     appSettings['crossGameSongs'] = true;
@@ -674,5 +678,5 @@ export async function importRandomizerSettings(str: string): Promise<{
   if (!('bossKeyMmEnabled' in appSettings)) clearedKeys.push('bossKeyMmEnabled');
   if (!('songEventShuffle' in appSettings)) clearedKeys.push('songEventShuffle');
 
-  return { appSettings, clearedKeys, startingItems, unmapped, junkLocations };
+  return { appSettings, clearedKeys, startingItems, tricks, unmapped, junkLocations };
 }

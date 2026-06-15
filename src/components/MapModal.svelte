@@ -15,6 +15,7 @@ import { allEntrances, findReverseEntrance } from '../data/entranceData';
 import type { EntranceInfo } from '../data/entranceData';
   import { entrancePositions } from '../data/entrancePositions';
   import { YAML_ENTRANCE_IDS } from '../data/yamlEntranceIds';
+  import { showOutOfLogic } from '../stores/logicStore';
 
   const dispatch = createEventDispatcher();
 
@@ -233,7 +234,7 @@ import type { EntranceInfo } from '../data/entranceData';
   $: availableTypes = [...new Set(filteredChecks.map(c => c.type))].sort();
   $: availableTypesSet = new Set(availableTypes);
   $: relevantHiddenCount = [...$hiddenTypesStore].filter(t => availableTypesSet.has(t)).length;
-  let hideOutOfLogic = false;
+  $: hideOutOfLogic = !$showOutOfLogic;
 
   $: displayedChecks = filteredChecks.filter(c => {
     if ($hiddenTypesStore.has(c.type)) return false;
@@ -870,7 +871,7 @@ import type { EntranceInfo } from '../data/entranceData';
           type="button"
           class="age-button"
           class:active={hideOutOfLogic}
-          on:click={() => { hideOutOfLogic = !hideOutOfLogic; }}
+          on:click={() => showOutOfLogic.update(v => !v)}
           title="Hide out-of-logic checks"
         >🔒</button>
       {/if}
@@ -981,6 +982,7 @@ import type { EntranceInfo } from '../data/entranceData';
               on:click|stopPropagation={e => {
                 if (placementMode && selectedPlacementEntrances.length) { placeEntranceAt(e); return; }
                 if (dragCheckedKeys.has(checkKey)) return;
+                clearHoverTimer();
                 toggleCheck(check);
               }}
               on:contextmenu={e => handleMarkerContextMenu(e, check)}

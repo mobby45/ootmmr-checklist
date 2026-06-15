@@ -204,8 +204,16 @@
     const colossalWallets   = $settingsStore.get('colossalWallets')          === true;
     const bottomlessWallets = $settingsStore.get('bottomlessWallets')        === true;
     const notebookShuffled  = $settingsStore.get('menuNotebook')             === true;
-    if (!shortHookshot && !fairyOcarina && progLullaby && !progGFS && !kegStrength3 && !childWallets && !colossalWallets && !bottomlessWallets && !notebookShuffled) return itemById;
+    const chuBehaviorOot    = $settingsStore.get('bombchuBehaviorOot') as string | undefined;
+    const chuBehaviorMm     = $settingsStore.get('bombchuBehaviorMm')  as string | undefined;
+    if (!shortHookshot && !fairyOcarina && progLullaby && !progGFS && !kegStrength3 && !childWallets && !colossalWallets && !bottomlessWallets && !notebookShuffled
+        && chuBehaviorOot !== 'bagSeparate' && chuBehaviorMm !== 'bagSeparate') return itemById;
     const map: typeof itemById = { ...itemById };
+    // Default (bagFirst) = 1 level / 50. bagSeparate = 3 bags with 20/30/40 capacity.
+    if (chuBehaviorOot === 'bagSeparate')
+      map['bombchu']    = { ...itemById['bombchu'],    maxLevel: 3, levelLabels: ['20', '30', '40'] };
+    if (chuBehaviorMm  === 'bagSeparate')
+      map['mm_bombchu'] = { ...itemById['mm_bombchu'], maxLevel: 3, levelLabels: ['20', '30', '40'] };
     if (shortHookshot)
       map['mm_hookshot']     = { ...itemById['mm_hookshot'],     icon: 'item/hookshot',     maxLevel: 2, levelIcons: ['item/hookshot', 'mm/mm_hookshot'] };
     if (fairyOcarina)

@@ -158,5 +158,7 @@ function resolveExitTarget(exit: WorldExit, state: LogicState, graph: WorldGraph
     if (state.erMode) return null;
     return exit.target;
   }
-  return resolveEntranceName(graph, override) ?? exit.target;
+  // If override is set but unresolvable (e.g. cross-game remapping), block BFS in ER mode
+  // rather than falling back to the vanilla target — the entrance is redirected elsewhere.
+  return resolveEntranceName(graph, override) ?? (state.erMode ? null : exit.target);
 }

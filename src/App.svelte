@@ -62,7 +62,7 @@
   import * as T from './data/types';
 
   import CheckGroup from './components/CheckGroup.svelte';
-  import { initLogicStore, logicEnabled, showOutOfLogic, logicAgeFilter, logicResult, logicLoading, logicManualSettings, specialConditionsStore } from './stores/logicStore';
+  import { initLogicStore, logicEnabled, showOutOfLogic, logicAgeFilter, logicResult, logicLoading, logicManualSettings, specialConditionsStore, enabledTricks } from './stores/logicStore';
   import { defaultLogicSettings } from './data/logicSettingsDef';
 
   function ageLogic(checkName: string, result: typeof $logicResult): 'child' | 'adult' | 'both' | 'none' {
@@ -2201,7 +2201,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     }
 
     // --- Gold Skulltulas ---
-    const gsMode = $sSettings.get('goldSkulltulaShuffleOOT') ?? 'all';
+    const gsMode = $sSettings.get('goldSkulltulaShuffleOOT') ?? 'no_shuffle';
     let matchesGS = true;
     if (check.type === T.CheckType.gold_skulltula && check.game === T.Game.oot) {
       const ind = check.scene ? ootDungeons.includes(check.scene) : false;
@@ -2209,6 +2209,16 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
       if (gsMode === 'no_shuffle') matchesGS = showGS;
       else if (gsMode === 'dungeons') matchesGS = ind || (showGS && !ind);
       else if (gsMode === 'overworld') matchesGS = !ind || (showGS && ind);
+    }
+
+    // --- Gerudo Fortress Jail checks ---
+    // Only the main "Gerudo Fortress Jail N" rescue checks are gated — pots/crates/wonder items are always accessible.
+    // single = rescue only 1 carpenter → show Jail 1 only; open = no carpenters → hide all jail checks
+    let matchesGFJail = true;
+    const gfMode = $sSettings.get('gerudoFortress') ?? 'vanilla';
+    if (check.game === T.Game.oot && /\bGerudo Fortress Jail \d\b/.test(check.name)) {
+      if (gfMode === 'open') matchesGFJail = false;
+      else if (gfMode === 'single') matchesGFJail = /\bGerudo Fortress Jail 1\b/.test(check.name);
     }
 
     // --- Tingle Maps ---
@@ -2268,14 +2278,9 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     if (check.type === T.CheckType.cow && check.game === T.Game.mm)
       matchesCowMM = $sSettings.get('CowShuffleMM') ?? false;
 
-    // --- Shops ---
-    let matchesShopOOT = true;
-    if (check.type === T.CheckType.shop && check.game === T.Game.oot)
-      matchesShopOOT = ($sSettings.get('ShopShuffleOOT') ?? 'none') !== 'none';
-
-    let matchesShopMM = true;
-    if (check.type === T.CheckType.shop && check.game === T.Game.mm)
-      matchesShopMM = ($sSettings.get('ShopShuffleMM') ?? 'none') !== 'none';
+    // --- Shops always visible (even unshuffled, they're always physically accessible) ---
+    const matchesShopOOT = true;
+    const matchesShopMM = true;
 
     // --- Owl Statues ---
     let matchesOwl = true;
@@ -2561,6 +2566,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
       matchesOverworld &&
       matchesDungeons &&
       matchesGS &&
+      matchesGFJail &&
       matchesTingle &&
       matchesSR &&
       matchesTC &&
@@ -3216,8 +3222,9 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     randoImportError = '';
     randoImportOk = false;
     try {
-      const { appSettings, startingItems, unmapped, junkLocations } = await importRandomizerSettings(randoImportStr);
+      const { appSettings, startingItems, tricks, unmapped, junkLocations } = await importRandomizerSettings(randoImportStr);
       Object.entries(appSettings).forEach(([k, v]) => ySettings.set(k, v));
+      if (tricks.length > 0) enabledTricks.set(new Set(tricks));
       for (const [itemId, level] of Object.entries(startingItems)) {
         const current = yItems.get(itemId) ?? 0;
         if (current < level) yItems.set(itemId, level);
