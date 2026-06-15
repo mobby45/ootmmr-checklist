@@ -11,7 +11,7 @@
 //   Ageless    → age restrictions removed (Items tab)
 //   Shared Items → rendered in Items > Shared tab
 
-export type SettingType = 'bool' | 'select' | 'multicheck';
+export type SettingType = 'bool' | 'select' | 'multicheck' | 'number';
 
 export interface LogicSettingOption { value: string; label: string }
 
@@ -25,6 +25,8 @@ export interface LogicSettingDef {
   flags?: LogicSettingOption[];
   group: string;
   section?: string;
+  min?: number;
+  max?: number;
 }
 
 export const LOGIC_SETTINGS_DEFS: LogicSettingDef[] = [
@@ -39,6 +41,10 @@ export const LOGIC_SETTINGS_DEFS: LogicSettingDef[] = [
       { value: 'triforce',  label: 'Triforce Hunt' },
       { value: 'triforce3', label: 'Triforce Quest (3 pieces)' },
     ] },
+  { group: 'Main', section: 'Goal', key: 'triforceGoal',   label: 'Triforce Goal',   type: 'number', default: 20, min: 1,
+    desc: 'Triforce Hunt: pieces needed to win.' },
+  { group: 'Main', section: 'Goal', key: 'triforcePieces', label: 'Triforce Pieces', type: 'number', default: 30, min: 1,
+    desc: 'Triforce Hunt: total pieces in the pool.' },
   { group: 'Main', section: 'Goal', key: 'rainbowBridge', label: 'Rainbow Bridge', type: 'select', default: 'vanilla',
     options: [{ value: 'vanilla', label: 'Vanilla' }, { value: 'open', label: 'Open' }, { value: 'medallions', label: 'Medallions' }, { value: 'custom', label: 'Custom' }] },
   { group: 'Main', section: 'Goal', key: 'lacs', label: 'Light Arrow Cutscene', type: 'select', default: 'vanilla',

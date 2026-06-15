@@ -237,6 +237,11 @@
     ySettings.set(key, value);
   }
 
+  function setNumberSetting(key: string, value: number) {
+    if (!ySettings || isNaN(value)) return;
+    ySettings.set(key, value);
+  }
+
   function visGet(key: string): any {
     return sSettings ? ($sSettings as Map<string, any>)?.get(key) : undefined;
   }
@@ -391,6 +396,20 @@
                     <option value={opt.value}>{opt.label}</option>
                   {/each}
                 </select>
+              </label>
+            {:else if def.type === 'number'}
+              <label class:spoiler-row={spoiler} title={[def.desc, spoiler ? 'Set by spoiler log' : ''].filter(Boolean).join('\n')}>
+                {def.label}
+                {#if spoiler}<span class="spoiler-badge">spoiler</span>{/if}
+                <input
+                  class="dropdown-select number-input"
+                  type="number"
+                  min={def.min ?? 1}
+                  max={def.max}
+                  value={visGet(def.key) ?? def.default}
+                  disabled={spoiler}
+                  on:change={e => setNumberSetting(def.key, parseInt((e.target as HTMLInputElement).value, 10))}
+                />
               </label>
             {:else if def.type === 'multicheck'}
               <div class="multicheck-block">
@@ -840,6 +859,7 @@
     cursor: pointer;
     font-size: 0.9em;
   }
+  .number-input { cursor: text; width: 100%; }
   .dropdown-select:hover { border-color: #999; }
   .dropdown-select:focus { outline: none; border-color: #0078e7; }
   .dropdown-select:disabled { opacity: 0.55; cursor: default; }
