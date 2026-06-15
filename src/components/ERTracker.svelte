@@ -215,13 +215,15 @@
 
   function clearValue(id: string) {
     if (isWatchMode) return;
-    // Also clear the reverse if it still points back to this entrance
+    // Also clear reverse(B) → reverse(A) if it still points back
     if (!manualErSettings.erDecoupled) {
-      const val = entranceValues.get(id);
-      const thisName = allEntrances.find(e => e.id === id)?.name;
-      if (val && thisName) {
-        const destId = allEntrances.find(e => e.name === val)?.id;
-        if (destId && entranceValues.get(destId) === thisName) yEntrances.delete(destId);
+      const val     = entranceValues.get(id);
+      const thisEnt = allEntrances.find(e => e.id === id);
+      if (val && thisEnt) {
+        const revB   = findReverseEntranceName(val);
+        const revA   = findReverseEntrance(thisEnt)?.name;
+        const revBId = revB ? allEntrances.find(e => e.name === revB)?.id : undefined;
+        if (revBId && entranceValues.get(revBId) === revA) yEntrances.delete(revBId);
       }
     }
     yEntrances.delete(id);
@@ -396,19 +398,23 @@
                     clearValue(entrance.id);
                   } else {
                     if (!manualErSettings.erDecoupled) {
-                      // If changing an existing connection, clear the old reverse first
+                      // If changing an existing connection, clear the old reverse(B) → reverse(A) first
                       const oldVal = entranceValues.get(entrance.id);
                       if (oldVal && oldVal !== newVal) {
-                        const oldDestId = allEntrances.find(e => e.name === oldVal)?.id;
-                        if (oldDestId && entranceValues.get(oldDestId) === entrance.name)
-                          yEntrances.delete(oldDestId);
+                        const oldRevB = findReverseEntranceName(oldVal);
+                        const revA    = findReverseEntranceName(entrance.name);
+                        const oldRevBId = oldRevB ? allEntrances.find(e => e.name === oldRevB)?.id : undefined;
+                        if (oldRevBId && entranceValues.get(oldRevBId) === revA)
+                          yEntrances.delete(oldRevBId);
                       }
                     }
                     yEntrances.set(entrance.id, newVal);
                     if (!manualErSettings.erDecoupled) {
-                      // B → A: auto-fill the reverse if it has no value yet
-                      const destId = allEntrances.find(e => e.name === newVal)?.id;
-                      if (destId && !entranceValues.get(destId)) yEntrances.set(destId, entrance.name);
+                      // Coupled: auto-fill reverse(B) → reverse(A)
+                      const revB   = findReverseEntranceName(newVal);
+                      const revA   = findReverseEntranceName(entrance.name);
+                      const revBId = revB ? allEntrances.find(e => e.name === revB)?.id : undefined;
+                      if (revBId && revA && !entranceValues.get(revBId)) yEntrances.set(revBId, revA);
                     }
                   }
                 }}
