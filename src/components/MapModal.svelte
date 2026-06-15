@@ -222,7 +222,7 @@ import type { EntranceInfo } from '../data/entranceData';
     hoverTimer = setTimeout(() => {
       showTooltip = true;
       hoveredCheckName = check.name.replace(/^(OOT|MM) /, '');
-    }, 1000);
+    }, 400);
   }
   function clearHoverTimer() {
     if (hoverTimer) { clearTimeout(hoverTimer); hoverTimer = undefined; }
@@ -233,9 +233,12 @@ import type { EntranceInfo } from '../data/entranceData';
   $: availableTypes = [...new Set(filteredChecks.map(c => c.type))].sort();
   $: availableTypesSet = new Set(availableTypes);
   $: relevantHiddenCount = [...$hiddenTypesStore].filter(t => availableTypesSet.has(t)).length;
+  let hideOutOfLogic = false;
+
   $: displayedChecks = filteredChecks.filter(c => {
     if ($hiddenTypesStore.has(c.type)) return false;
     if (hideChecked && (checkStates.get(getCheckKey(c)) ?? T.CheckState.unchecked) === T.CheckState.checked) return false;
+    if (hideOutOfLogic && !isCheckInLogic(getCheckKey(c))) return false;
     return true;
   });
 
@@ -450,7 +453,7 @@ import type { EntranceInfo } from '../data/entranceData';
   }
 
   function isShopOrScrub(check: MapCheck): boolean {
-    return check.type === 'shop' || check.type === 'scrub' ||
+    return check.type === 'shop' || check.type === 'scrub' || check.type === 'deku_scrub' ||
       shopScrubIds.has(check.id) || priceEditIds.has(check.id);
   }
 
@@ -855,6 +858,15 @@ import type { EntranceInfo } from '../data/entranceData';
         {/if}
       </div>
       <span class="controls-sep"></span>
+      {#if logicEnabled}
+        <button
+          type="button"
+          class="age-button"
+          class:active={hideOutOfLogic}
+          on:click={() => { hideOutOfLogic = !hideOutOfLogic; }}
+          title="Hide out-of-logic checks"
+        >🔒</button>
+      {/if}
       {#if showEntrances}
         <button
           type="button"

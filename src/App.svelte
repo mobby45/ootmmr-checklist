@@ -397,7 +397,7 @@ yKeepalive.observe((event: any) => {
 
   $: checkStatesMap = new Map($sChecks) as Map<string, T.CheckState>;
   // Only consider settings as "from spoiler" when a real spoiler is loaded
-  $: spoilerSettingKeys = spoilerSeedInfo ? new Set(($sSettings as Map<string, any>).keys()) : new Set<string>();
+  $: spoilerSettingKeys = new Set(($sSettings as Map<string, any>).keys());
   $: shopItemsMap = new Map($sShopItems) as Map<string, string>;
   $: shopPricesMap = new Map($sShopPrices) as Map<string, number>;
   $: entranceValuesMap = (spoilerFillEntrances && spoilerEntrances)
@@ -1861,6 +1861,8 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
   });
   let showAgeFilter = true;
   let ageFilter: 'child' | 'adult' = 'child';
+  // Keep map modal age filter in sync with the checklist filter (one-way: checklist drives map)
+  $: if ($logicAgeFilter === 'child' || $logicAgeFilter === 'adult') ageFilter = $logicAgeFilter;
   let scrollPosition = 0;
   let erHighlightId: string | null = null;
 

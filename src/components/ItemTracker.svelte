@@ -176,6 +176,11 @@
     'mm_bk_st':               'bossKeyMmEnabled',
   };
 
+  // Coins with 0 count are hidden individually even when the coins setting is on
+  $: zeroCountCoins = new Set(
+    ['coin_red', 'coin_green', 'coin_blue', 'coin_yellow'].filter(id => ($itemStore.get(id) ?? 0) === 0)
+  );
+
   $: disabledItems = new Set([
     ...Object.entries(itemVisibilityMap)
       .filter(([, sk]) => OPT_IN_VISIBILITY_KEYS.has(sk)
@@ -184,6 +189,7 @@
       .map(([id]) => id),
     // hide mm_roomkey from Side Quests when rusty keys MM is on (shown in rusty keys section instead)
     ...($settingsStore.get('rustyKeysMm') === true ? ['mm_roomkey'] : []),
+    ...zeroCountCoins,
   ]);
 
   // Dynamic item overrides based on settings (short hookshot, fairy ocarina, lullaby, GFS, wallets)

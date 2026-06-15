@@ -280,6 +280,10 @@
   }
 
   function get(key: string): any {
+    if (sSettings) {
+      const yVal = ($sSettings as Map<string, any>)?.get(key);
+      if (yVal !== undefined) return yVal;
+    }
     return $logicManualSettings[key];
   }
 

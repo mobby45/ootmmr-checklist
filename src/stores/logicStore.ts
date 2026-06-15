@@ -211,7 +211,10 @@ export function initLogicStore(
     _cachedResolvedSpecial = resolvedSpecial;
 
     const songEventsSnap = ySongEvents ? new Map(ySongEvents.entries()) as Map<string, string> : new Map<string, string>();
-    const shopPricesSnap = yShopPrices ? new Map(yShopPrices.entries()) as Map<string, number> : new Map<string, number>();
+    // Strip "OOT "/"MM " prefix: tracker stores prices with game prefix, world.json uses bare names
+    const shopPricesSnap = yShopPrices
+      ? new Map([...yShopPrices.entries()].map(([k, v]) => [k.replace(/^(OOT|MM) /, ''), v]))
+      : new Map<string, number>();
     const state = buildLogicState(itemsSnap, settingsSnap, erSnap, tricks, erMode, resolvedSpecial, undefined, songEventsSnap, shopPricesSnap);
     try {
       const result = computeReachability(_graph!, state, _macros!);
