@@ -209,6 +209,22 @@ export function buildLogicState(
     items.set('license_MAGIC_BEAN', 10);
   }
 
+  // extraChildSwordsOot + separate mode: the SWORD progressive counter tracks child swords only.
+  // itemMapping emits OOT_SWORD:2 for Master Sword for progressive-mode compat, but in separate
+  // mode with extraChildSwordsOot this counter is exclusively for child swords (Kokiri=1, Razor=2,
+  // Gilded=3). Adult swords use named items (SWORD_MASTER etc.) and must not pollute the counter,
+  // otherwise has(SWORD,1) is satisfied by Master Sword, making child-only checks like Market Grass
+  // accessible when only an adult sword is tracked.
+  if (settings.get('extraChildSwordsOot') && settings.get('progressiveSwordsOot') !== 'progressive') {
+    const kokiri = (items.get('OOT_SWORD_KOKIRI') ?? 0) > 0 ? 1 : 0;
+    items.set('OOT_SWORD', kokiri);
+    // Shared swords: same issue — cap SWORD (shared counter) to child swords only.
+    if (settings.get('sharedSwords')) {
+      const sharedKokiri = (items.get('SWORD_KOKIRI') ?? 0) > 0 ? 1 : 0;
+      items.set('SWORD', sharedKokiri);
+    }
+  }
+
   return {
     items,
     age: 'child', // placeholder — engine overrides this via stateForAge()
