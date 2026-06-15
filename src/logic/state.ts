@@ -80,7 +80,7 @@ export function buildLogicState(
 
     // Bombchu — OoT UI sets bombchuBehaviorOot; MM has no separate UI toggle
     bombchuBehaviorOot:     'bagFirst',
-    bombchuBehaviorMm:      'bagFirst',
+    bombchuBehaviorMm:      'vanilla',   // MM default: no bag required (unlike OoT)
 
     // ER — logic checks setting(x, 'none'); default = no ER
     erBoss:                 'none',
