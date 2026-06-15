@@ -34,8 +34,10 @@ export interface WorldExit {
   /** Target region name in vanilla logic */
   target: string;
   rule: ExprNode;
-  /** True if this exit corresponds to a randomizable entrance */
+  /** OoTMM entrance ID (e.g. OOT_DODONGO_CAVERN) — set by injectEntranceIds at load time */
   entranceId?: string;
+  /** ER setting key that gates this entrance (e.g. erDungeons, erBoss) */
+  erType?: string;
 }
 
 export interface WorldEvent {

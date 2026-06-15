@@ -138,27 +138,39 @@ function canAffordCustomPrice(price: number, state: LogicState): boolean {
 
 // Checks whose world.json rule is "true" but are only in the pool when a shuffle setting is on.
 // OoTMM builds per-seed worlds dynamically; our static world.json includes everything.
-const POT_RE   = /\bPot\b/;
-const CRATE_RE = /\bCrate\b/;
-const GRASS_RE = /\bGrass\b/;
+const POT_RE     = /\bPot\b/;
+const CRATE_RE   = /\bCrate\b/;
+const GRASS_RE   = /\bGrass\b/;
+const TCG_ROOM_RE = /^Treasure Chest Game (Room \d|HP)/;
 
 function isLocationEnabled(locName: string, game: 'oot' | 'mm' | undefined, state: LogicState): boolean {
   const sfx = game === 'mm' ? 'MM' : 'OOT';
   if (POT_RE.test(locName))   return state.settings.get(`PotShuffle${sfx}`)   !== 'none';
   if (CRATE_RE.test(locName)) return state.settings.get(`CrateShuffle${sfx}`) !== 'none';
   if (GRASS_RE.test(locName)) return state.settings.get(`GrassShuffle${sfx}`) !== 'none';
+  // TCG room chests and heart piece only exist when small key shuffle for TCG is active
+  if (game === 'oot' && TCG_ROOM_RE.test(locName)) {
+    return !!state.settings.get('TreasureChestShuffleOOT');
+  }
   return true;
+}
+
+// Returns true when a given ER type (e.g. erDungeons) is actively shuffled.
+// erDungeons defaults to 'none' (via HIDDEN_DEFAULTS), so we must treat 'none' as inactive.
+function isErTypeActive(erType: string, state: LogicState): boolean {
+  const val = state.settings.get(erType);
+  return !!val && val !== 'none';
 }
 
 function resolveExitTarget(exit: WorldExit, state: LogicState, graph: WorldGraph): string | null {
   if (!exit.entranceId) return exit.target;
   const override = state.erOverrides.get(exit.entranceId);
   if (!override) {
-    // ER mode: unmapped shuffled entrances are unknown — block BFS traversal
-    if (state.erMode) return null;
+    // Block BFS only when erMode is active AND the specific ER type for this entrance is on.
+    // This prevents dungeon exits from being blocked when only e.g. erOverworld is active.
+    if (state.erMode && (!exit.erType || isErTypeActive(exit.erType, state))) return null;
     return exit.target;
   }
-  // If override is set but unresolvable (e.g. cross-game remapping), block BFS in ER mode
-  // rather than falling back to the vanilla target — the entrance is redirected elsewhere.
+  // If override is set but unresolvable (e.g. cross-game remapping), block BFS in ER mode.
   return resolveEntranceName(graph, override) ?? (state.erMode ? null : exit.target);
 }

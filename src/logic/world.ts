@@ -2,6 +2,7 @@ import type { WorldGraph, WorldRegion, RawWorld, RawWorldRegion } from './types'
 import type { MacroTable } from './expr/eval';
 import { parseExpr } from './expr/parse';
 import type { ExprNode } from './types';
+import { allEntrances } from '../data/entranceData';
 
 const PARAM_RE = /^(\w[\w\d_]*)\(([^)]+)\)$/;
 
@@ -173,6 +174,27 @@ export async function loadWorld(): Promise<{ graph: WorldGraph; macros: MacroTab
 
   _macros = buildMacroTable(rawMacros);
   _graph  = buildWorldGraph(rawWorld);
+  injectEntranceIds(_graph);
 
   return { graph: _graph, macros: _macros };
+}
+
+// Inject OoTMM entrance IDs onto world.json exits that don't have them.
+// Enables the BFS engine to respect erOverrides for dungeon/boss entrances.
+function injectEntranceIds(graph: WorldGraph): void {
+  for (const entrance of allEntrances) {
+    if (entrance.erType !== 'erDungeons' && entrance.erType !== 'erBoss') continue;
+    const src = resolveEntranceSource(graph, entrance.name);
+    const tgt = resolveEntranceName(graph, entrance.name);
+    if (!src || !tgt) continue;
+    const region = graph.get(src);
+    if (!region) continue;
+    for (const exit of region.exits) {
+      if (exit.target === tgt && !exit.entranceId) {
+        exit.entranceId = entrance.id;
+        exit.erType = entrance.erType;
+        break;
+      }
+    }
+  }
 }
