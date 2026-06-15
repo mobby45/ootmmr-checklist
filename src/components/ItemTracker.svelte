@@ -454,7 +454,8 @@
       return;
     }
     const cur = $itemStore.get(item.id) ?? 0;
-    const next = Math.min(cur + 1, item.maxLevel);
+    const step = item.step ?? 1;
+    const next = Math.min(cur + step, item.maxLevel);
     if (next === 0) yItems.delete(item.id);
     else yItems.set(item.id, next);
     syncCounterpart(item.id, next);
@@ -464,7 +465,8 @@
     e.preventDefault();
     if (isWatchMode || item.maxLevel === 0) return;
     const cur = $itemStore.get(item.id) ?? 0;
-    const prev = Math.max(0, cur - 1);
+    const step = item.step ?? 1;
+    const prev = Math.max(0, cur - step);
     if (prev === 0) yItems.delete(item.id);
     else yItems.set(item.id, prev);
     syncCounterpart(item.id, prev);

@@ -19,6 +19,7 @@ export interface TrackerItem {
   levelLabels?: string[];
   levelIcons?: string[];
   showCount?: boolean;
+  step?: number;
   startUndimmed?: boolean;
   startLabel?: string;
 }
@@ -28,7 +29,7 @@ export const allTrackerItems: TrackerItem[] = [
   // --- OOT items ---
   { id: 'slingshot', name: "Slingshot", icon: 'item/slingshot', game: 'oot', category: 'items', maxLevel: 3, levelLabels: ['30', '40', '50'], showCount: true },
   { id: 'bomb', name: "Bomb Bag", icon: 'item/bomb', game: 'oot', category: 'items', maxLevel: 3, levelLabels: ['20', '30', '40'], showCount: true },
-  { id: 'bombchu', name: "Bombchu", icon: 'item/bombchu', game: 'oot', category: 'items', maxLevel: 5, showCount: true },
+  { id: 'bombchu', name: "Bombchu", icon: 'item/bombchu', game: 'oot', category: 'items', maxLevel: 50, step: 5, showCount: true },
   { id: 'bow', name: "Bow", icon: 'item/bow', game: 'oot', category: 'items', maxLevel: 3, levelLabels: ['30', '40', '50'], showCount: true },
   { id: 'arrow_fire_oot', name: "Fire Arrows", icon: 'arrow/arrow_fire', game: 'oot', category: 'items', maxLevel: 1 },
   { id: 'arrow_ice_oot', name: "Ice Arrows", icon: 'arrow/arrow_ice', game: 'oot', category: 'items', maxLevel: 1 },
@@ -357,7 +358,7 @@ export const allTrackerItems: TrackerItem[] = [
   { id: 'mm_bow', name: "Bow", icon: 'mm/mm_bow', game: 'mm', category: 'items', maxLevel: 3, levelLabels: ['30', '40', '50'], showCount: true },
   { id: 'mm_hookshot', name: "Hookshot", icon: 'mm/mm_hookshot', game: 'mm', category: 'items', maxLevel: 1 },
   { id: 'mm_bomb', name: "Bomb Bag", icon: 'mm/mm_bomb', game: 'mm', category: 'items', maxLevel: 3, levelLabels: ['20', '30', '40'] },
-  { id: 'mm_bombchu', name: "Bombchu", icon: 'mm/mm_bombchu', game: 'mm', category: 'items', maxLevel: 5, showCount: true },
+  { id: 'mm_bombchu', name: "Bombchu", icon: 'mm/mm_bombchu', game: 'mm', category: 'items', maxLevel: 50, step: 5, showCount: true },
   { id: 'mm_lens', name: "Lens of Truth", icon: 'mm/mm_lens', game: 'mm', category: 'items', maxLevel: 1 },
   { id: 'mm_magic', name: "Magic", icon: 'mm/mm_magic1', game: 'mm', category: 'items', maxLevel: 2, levelIcons: ['mm/mm_magic1', 'mm/mm_magic2'] },
   { id: 'mm_arrow_fire', name: "Fire Arrows", icon: 'mm/mm_firearrow', game: 'mm', category: 'items', maxLevel: 1 },
