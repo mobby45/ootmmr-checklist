@@ -519,7 +519,6 @@ import type { EntranceInfo } from '../data/entranceData';
   let showEntranceLabels = false;
   let placementMode = false;
   $: if (!devMode && placementMode) { placementMode = false; selectedPlacementEntrances = []; }
-  let showAllEntrances = false;
   let placementSearch = '';
   let zoneOnly = true;
   let selectedPlacementEntrances: EntranceInfo[] = [];
@@ -630,7 +629,6 @@ import type { EntranceInfo } from '../data/entranceData';
 
   function isEntranceVisible(ent: { erType: string; hideWhenErActive?: string } | undefined, id: string): boolean {
     if (!ent) return true;
-    if (entranceValues.has(id)) return false;
     if (!YAML_ENTRANCE_IDS.has(id)) return true;  // unshuffled: never gated by erSettings
     if (ent.hideWhenErActive) return !erSettings[ent.hideWhenErActive];
     const hasErSettings = Object.keys(erSettings).length > 0;
@@ -649,10 +647,8 @@ import type { EntranceInfo } from '../data/entranceData';
   // Pre-computed entrance positions from entrancePositions.ts (Memych data)
   $: currentPrecomputed = entrancePositions.filter(p => p.renderscene === currentSubscene);
 
-  // In placement mode or showAllEntrances: show all precomputed markers regardless of erSettings
   $: visiblePrecomputed = currentPrecomputed.filter(p => {
-    if (placementMode || showAllEntrances) return true;
-    if (entranceValues.has(p.entranceId)) return false;
+    if (placementMode) return true;
     return isEntranceVisible(allEntrances.find(e => e.id === p.entranceId), p.entranceId);
   });
 
@@ -868,13 +864,6 @@ import type { EntranceInfo } from '../data/entranceData';
           title="Show entrance names"
         >🏷️</button>
       {/if}
-      <button
-        type="button"
-        class="age-button"
-        class:active={showAllEntrances}
-        on:click={() => { showAllEntrances = !showAllEntrances; }}
-        title="Show all entrances"
-      >👁️</button>
       {#if devMode}
       <button
         type="button"
@@ -986,7 +975,7 @@ import type { EntranceInfo } from '../data/entranceData';
               <span class="marker-dot" style="background-color: {color};"></span>
             </button>
           {/each}
-            {#if showAllEntrances || placementMode}
+            {#if placementMode}
             {#each vanillaEntranceMarkers as marker (marker.uid)}
               {@const vx = (marker.x / imageWidth) * 100}
               {@const vy = (marker.y / imageHeight) * 100}
