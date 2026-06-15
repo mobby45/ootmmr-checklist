@@ -708,9 +708,13 @@ import type { EntranceInfo } from '../data/entranceData';
     .flatMap(p => {
       const sources = destToSources.get(p.entranceId);
       const revSources = revToSources.get(p.entranceId);
+      // physicalId = the actual entrance at this map position, used for navigation.
+      // The marker's id shows the source label (displaced entrance name), but clicking
+      // should navigate from the physical location's perspective.
       const mk = (id: string, offset: number) => ({
         uid: 'auto_' + id + '_at_' + p.entranceId,
         id,
+        physicalId: p.entranceId,
         renderscene: p.renderscene,
         x: p.x + offset * 10,
         y: p.y,
@@ -728,6 +732,7 @@ import type { EntranceInfo } from '../data/entranceData';
       return [{
         uid: 'auto_' + p.entranceId + '_' + p.renderscene + '_' + p.x + '_' + p.y,
         id: p.entranceId,
+        physicalId: p.entranceId,
         renderscene: p.renderscene,
         x: p.x,
         y: p.y,
@@ -1030,7 +1035,7 @@ import type { EntranceInfo } from '../data/entranceData';
                 on:pointerdown={e => entrancePointerDown(e, marker)}
                 on:pointermove={entrancePointerMove}
                 on:pointerup={entrancePointerUp}
-                on:click|stopPropagation={() => handleEntranceClick(marker.id)}
+                on:click|stopPropagation={() => handleEntranceClick(marker.physicalId)}
                 on:contextmenu|preventDefault|stopPropagation={e => handleEntranceContextMenu(e, marker.uid, marker.id, true)}
               >
                 <span class="entrance-diamond"></span>
