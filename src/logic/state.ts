@@ -22,6 +22,20 @@ export function buildLogicState(
     settings.set(k, v);
   }
 
+  // importSettings.ts renames some OoTMM keys to tracker keys when storing in ySettings.
+  // world.json setting() rules still use the OoTMM key names, so we bridge them here
+  // before applying HIDDEN_DEFAULTS (so the user's actual value wins over the default).
+  const TRACKER_TO_OOTMM: [string, string][] = [
+    ['BrokenActorsOOT',         'restoreBrokenActors'],
+    ['SkipChildZeldaOOT',       'skipZelda'],
+    ['GanonBKShuffleOOT',       'ganonBossKey'],
+    ['TreasureChestShuffleOOT', 'smallKeyShuffleChestGame'],
+    ['PotShuffleMM',            'shufflePotsMm'],
+  ];
+  for (const [trackerKey, ootmmKey] of TRACKER_TO_OOTMM) {
+    if (settings.has(trackerKey)) settings.set(ootmmKey, settings.get(trackerKey)!);
+  }
+
   // Vanilla defaults for settings used in logic but absent from ySettings when at default.
   // The UI only writes to ySettings when a value differs from its default, so any setting
   // compared against its default string value must be seeded here, otherwise
