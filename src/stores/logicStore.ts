@@ -178,7 +178,6 @@ export function initLogicStore(
     if (!settingsSnap.has('games'))              settingsSnap.set('games', 'ootmm');
     // Standard defaults for settings not in the UI
     if (!settingsSnap.has('shufflePotsMm'))      settingsSnap.set('shufflePotsMm', 'none');
-    if (!settingsSnap.has('bombchuBehaviorMm'))  settingsSnap.set('bombchuBehaviorMm', 'bagFirst');
     // sharedBombchu in logic = sharedBombchuBags in tracker/spoilerMappings
     if (!settingsSnap.has('sharedBombchu') && settingsSnap.has('sharedBombchuBags')) {
       settingsSnap.set('sharedBombchu', settingsSnap.get('sharedBombchuBags'));

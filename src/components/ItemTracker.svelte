@@ -5,7 +5,6 @@
     type TrackerItem
   } from '../data/itemData';
   import { sharedToOot, sharedToMm, ootToShared, mmToShared, directSyncOotToMm, directSyncMmToOot } from '../data/sharedSync';
-  import { logicManualSettings } from '../stores/logicStore';
   import type { Map as YMap } from 'yjs';
   import { readable } from 'svelte/store';
 
@@ -95,6 +94,10 @@
     'skeletonKeyOot', 'platinumTokenOot', 'magicalRupee',
     'ocarinaButtonsShuffleMm', 'platinumTokenMm', 'skeletonKeyMm',
     'transcendentFairy', 'clocks', 'owlShuffleEnabled',
+    // MM OoT Extensions — all opt-in since they require explicit activation
+    'spellFireMm', 'spellWindMm', 'spellLoveMm', 'stoneAgonyMm',
+    'hammerMm', 'strengthMm', 'scalesMm', 'dekuShieldMm',
+    'bootsIronMm', 'bootsHoverMm', 'tunicGoronMm', 'tunicZoraMm',
   ]);
 
   const itemVisibilityMap: Record<string, string> = {
@@ -172,14 +175,15 @@
         : $settingsStore.get(sk) === false)
       .map(([id]) => id),
     // hide mm_roomkey from Side Quests when rusty keys MM is on (shown in rusty keys section instead)
-    ...($logicManualSettings['rustyKeysMm'] ? ['mm_roomkey'] : []),
+    ...($settingsStore.get('rustyKeysMm') === true ? ['mm_roomkey'] : []),
   ]);
 
   // Dynamic item overrides based on settings (short hookshot, fairy ocarina, lullaby, GFS, wallets)
   $: effectiveItemById = (() => {
-    const shortHookshot     = $settingsStore.get('shortHookshotMm')        !== false;
-    const fairyOcarina      = $settingsStore.get('fairyOcarinaMm')          !== false;
-    const progLullaby       = $settingsStore.get('progressiveGoronLullaby')  === 'progressive';
+    const shortHookshot     = $settingsStore.get('shortHookshotMm')          === true;
+    const fairyOcarina      = $settingsStore.get('fairyOcarinaMm')           === true;
+    const progLullaby       = $settingsStore.get('progressiveGoronLullabyMm') === 'intro'
+                           || $settingsStore.get('progressiveGoronLullaby')   === 'progressive';
     const progGFS           = $settingsStore.get('progressiveGFS')           === 'progressive';
     const kegStrength3      = $settingsStore.get('kegStrength3')             === true;
     const childWallets      = $settingsStore.get('childWallets')             === true;
@@ -890,7 +894,7 @@
       {/if}
 
       <!-- Rusty Keys (OoT) -->
-      {#if $logicManualSettings['rustyKeysOot']}
+      {#if $settingsStore.get('rustyKeysOot') === true}
       <div class="section">
         <div class="section-title">Rusty Keys (OoT)</div>
         {#each OOT_RUSTY_KEYS_ROWS as row}
@@ -1147,7 +1151,7 @@
       {/if}
 
       <!-- Rusty Keys (MM) -->
-      {#if $logicManualSettings['rustyKeysMm']}
+      {#if $settingsStore.get('rustyKeysMm') === true}
       <div class="section">
         <div class="section-title">Rusty Keys (MM)</div>
         {#each MM_RUSTY_KEYS_ROWS as row}

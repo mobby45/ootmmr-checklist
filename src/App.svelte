@@ -1388,9 +1388,8 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     if (!junkLocs.length) return;
     ydoc.transact(() => {
       for (const loc of junkLocs) {
-        // Strip game prefix ("OOT "/"MM ") — tracker check names don't have it
-        const name = loc.replace(/^(OOT|MM) /, '');
-        const canonical = SPOILER_ALIASES[name] ?? name;
+        // Check names in yChecks include the game prefix ("OOT "/"MM "), matching CSV column 4
+        const canonical = SPOILER_ALIASES[loc] ?? loc;
         if ((yChecks.get(canonical) ?? T.CheckState.unchecked) === T.CheckState.unchecked) {
           yChecks.set(canonical, T.CheckState.checked);
         }

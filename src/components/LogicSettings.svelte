@@ -4,7 +4,7 @@
   import { logicManualSettings, enabledTricks } from '../stores/logicStore';
   import { LOGIC_SETTINGS_DEFS, defaultLogicSettings } from '../data/logicSettingsDef';
   import type { LogicSettingDef } from '../data/logicSettingsDef';
-  import { TRICKS_DEFS, TRICK_CATEGORIES, tricksByCategory } from '../data/tricksDef';
+  import { TRICKS_DEFS } from '../data/tricksDef';
 
   /** Keys present in the spoiler log — shown read-only */
   export let spoilerKeys: Set<string> = new Set();
@@ -17,12 +17,12 @@
 
   // ─── Two-tier navigation ──────────────────────────────────────────────────────
   type PrimaryTab = 'settings' | 'items' | 'tricks';
-  type SettingsTab = 'main' | 'shuffle' | 'price' | 'events' | 'cross' | 'world' | 'misc';
-  type ItemsTab = 'oot' | 'mm' | 'shared';
+  type SettingsTab = 'main' | 'shuffle' | 'price' | 'events' | 'cross' | 'misc';
+  type ItemsTab = 'progressive' | 'extensions' | 'ageless' | 'shared';
 
   let primaryTab: PrimaryTab = 'settings';
   let settingsTab: SettingsTab = 'main';
-  let itemsTab: ItemsTab = 'oot';
+  let itemsTab: ItemsTab = 'progressive';
 
   const SETTINGS_TABS: { id: SettingsTab; label: string; group: string }[] = [
     { id: 'main',    label: 'Main',       group: 'Main' },
@@ -30,7 +30,6 @@
     { id: 'price',   label: 'Price',      group: 'Price' },
     { id: 'events',  label: 'Events',     group: 'Events' },
     { id: 'cross',   label: 'Cross-Game', group: 'Cross-Game' },
-    { id: 'world',   label: 'World',      group: 'World' },
     { id: 'misc',    label: 'Misc',       group: 'Misc' },
   ];
 
@@ -51,66 +50,87 @@
 
   // ─── Item visibility data ─────────────────────────────────────────────────────
   type VItem =
-    | { header: string; key?: never; name?: never; options?: never; optIn?: never }
-    | { header?: never; key: string; name: string; options?: Array<{ value: string; label: string }>; optIn?: boolean };
+    | { header: string; key?: never; name?: never; options?: never }
+    | { header?: never; key: string; name: string; options?: Array<{ value: string; label: string }> };
 
-  const ootVisibility: VItem[] = [
-    { header: 'Item Extensions' },
-    { key: 'elegyOot',                name: 'Elegy of Emptiness',  optIn: true },
-    { key: 'ocarinaButtonsShuffleOot', name: 'Ocarina Buttons',    optIn: true },
-    { key: 'spinUpgradeOot',          name: 'Spin Upgrade',        optIn: true },
-    { key: 'skeletonKeyOot',          name: 'Skeleton Key',        optIn: true },
-    { key: 'platinumTokenOot',        name: 'Platinum Token',      optIn: true },
-    { key: 'magicalRupee',            name: 'Magical Rupee',       optIn: true },
-    { key: 'gfsOot',                  name: 'Great Fairy Sword',   optIn: true },
-    { key: 'powderKegOot',            name: 'Powder Keg',          optIn: true },
-    { key: 'coinsOot',                name: 'Coins',               optIn: true },
-    { header: 'Progressive Items' },
-    { key: 'progressiveSwordsOot',  name: 'Swords',  options: [{ value: 'separate', label: 'Separate' }, { value: 'progressiveknifebiggoron', label: 'Progressive Knife+Biggoron' }, { value: 'progressive', label: 'Progressive' }] },
-    { key: 'progressiveShieldsOot', name: 'Shields', options: [{ value: 'separate', label: 'Separate' }, { value: 'progressive', label: 'Progressive' }] },
+  // Extensions tab: all items are opt-in (checked = ySettings.get(key) === true)
+  const extensionsData: VItem[] = [
+    { header: 'OoT' },
+    { key: 'gfsOot',                   name: 'Great Fairy Sword' },
+    { key: 'powderKegOot',             name: 'Powder Keg License' },
+    { key: 'spinUpgradeOot',           name: 'Spin Attack Upgrade' },
+    { key: 'stoneMaskOot',             name: 'Stone Mask' },
+    { key: 'blastMaskOot',             name: 'Blast Mask' },
+    { key: 'magicalRupee',             name: 'Magical Rupee' },
+    { key: 'rustyKeysOot',             name: 'Rusty Keys' },
+    { key: 'elegyOot',                 name: 'Elegy of Emptiness' },
+    { key: 'coinsOot',                 name: 'Coins' },
+    { key: 'ocarinaButtonsShuffleOot', name: 'Ocarina Buttons' },
+    { key: 'skeletonKeyOot',           name: 'Skeleton Key' },
+    { key: 'platinumTokenOot',         name: 'Platinum Token' },
+    { header: 'MM' },
+    { key: 'boomerangMm',             name: 'Boomerang' },
+    { key: 'hammerMm',                name: 'Megaton Hammer' },
+    { key: 'scalesMm',                name: 'Scales' },
+    { key: 'strengthMm',              name: 'Strength' },
+    { key: 'tunicGoronMm',            name: 'Goron Tunic' },
+    { key: 'tunicZoraMm',             name: 'Zora Tunic' },
+    { key: 'bootsIronMm',             name: 'Iron Boots' },
+    { key: 'bootsHoverMm',            name: 'Hover Boots' },
+    { key: 'spellFireMm',             name: "Din's Fire" },
+    { key: 'spellWindMm',             name: "Farore's Wind" },
+    { key: 'spellLoveMm',             name: "Nayru's Love" },
+    { key: 'dekuShieldMm',            name: 'Deku Shield' },
+    { key: 'fairyOcarinaMm',          name: 'Fairy Ocarina' },
+    { key: 'stoneAgonyMm',            name: 'Stone of Agony' },
+    { key: 'shortHookshotMm',         name: 'Short Hookshot' },
+    { key: 'rustyKeysMm',             name: 'Rusty Keys' },
+    { key: 'ocarinaButtonsShuffleMm', name: 'Ocarina Buttons' },
+    { key: 'platinumTokenMm',         name: 'Platinum Token' },
+    { key: 'skeletonKeyMm',           name: 'Skeleton Key' },
+    { key: 'transcendentFairy',       name: 'Transcendent Fairy' },
+    { key: 'clocks',                  name: 'Clock Items' },
+    { key: 'menuNotebook',            name: "Bomber's Notebook" },
+    { key: 'owlShuffleEnabled',       name: 'Owl Statues' },
     { header: 'Wallets' },
-    { key: 'childWallets',      name: 'Child Wallet (shuffled)',  optIn: true },
-    { key: 'colossalWallets',   name: 'Colossal Wallet (999◆)',   optIn: true },
-    { key: 'bottomlessWallets', name: 'Bottomless Wallet (9999◆)', optIn: true },
-  ];
-
-  const mmVisibility: VItem[] = [
-    { header: 'OoT Extensions' },
-    { key: 'spellFireMm',  name: "Din's Fire" },
-    { key: 'spellWindMm',  name: "Farore's Wind" },
-    { key: 'spellLoveMm',  name: "Nayru's Love" },
-    { key: 'stoneAgonyMm', name: 'Stone of Agony' },
-    { key: 'hammerMm',     name: 'Hammer' },
-    { key: 'strengthMm',   name: 'Strength' },
-    { key: 'scalesMm',     name: 'Scale' },
-    { key: 'dekuShieldMm', name: 'Deku Shield' },
-    { key: 'bootsIronMm',  name: 'Iron Boots' },
-    { key: 'bootsHoverMm', name: 'Hover Boots' },
-    { key: 'tunicGoronMm', name: 'Goron Tunic' },
-    { key: 'tunicZoraMm',  name: 'Zora Tunic' },
-    { key: 'slingshotMm',  name: 'Slingshot' },
-    { header: 'Item Extensions' },
-    { key: 'ocarinaButtonsShuffleMm', name: 'Ocarina Buttons',           optIn: true },
-    { key: 'platinumTokenMm',         name: 'Platinum Token',            optIn: true },
-    { key: 'skeletonKeyMm',           name: 'Skeleton Key',              optIn: true },
-    { key: 'transcendentFairy',       name: 'Transcendent Fairy',        optIn: true },
-    { key: 'menuNotebook',            name: "Bomber's Notebook (shuffled)", optIn: true },
-    { key: 'clocks',                  name: 'Clock Items',               optIn: true },
-    { key: 'progressiveClocks',       name: 'Progressive Clocks',        optIn: true },
-    { key: 'owlShuffleEnabled',       name: 'Owl Statues',               optIn: true },
-    { key: 'shortHookshotMm',         name: 'Short Hookshot',            optIn: true },
-    { key: 'fairyOcarinaMm',          name: 'Fairy Ocarina',             optIn: true },
-    { key: 'kegStrength3',            name: 'Powder Keg Strength',       optIn: true },
-    { header: 'Progressive Items' },
-    { key: 'progressiveShieldsMm',   name: 'Shields',           options: [{ value: 'separate', label: 'Separate' }, { value: 'progressive', label: 'Progressive' }] },
-    { key: 'progressiveGFS',         name: 'Great Fairy Sword', options: [{ value: 'separate', label: 'Separate' }, { value: 'progressive', label: 'Progressive' }] },
-    { key: 'progressiveGoronLullaby',name: 'Goron Lullaby',     options: [{ value: 'single', label: 'Full Only' }, { value: 'progressive', label: 'Progressive' }] },
+    { key: 'childWallets',      name: 'Child Wallet (shuffled)' },
+    { key: 'colossalWallets',   name: 'Colossal Wallet (999◆)' },
+    { key: 'bottomlessWallets', name: 'Bottomless Wallet (9999◆)' },
+    { header: 'Mechanics' },
+    { key: 'bronzeScale',          name: 'Bronze Scale' },
+    { key: 'blueFireArrows',       name: 'Blue Fire Arrows' },
+    { key: 'iceArrowPlatformsOot', name: 'Ice Arrow Platforms (OoT)' },
+    { key: 'sunlightArrows',       name: 'Sunlight Arrows' },
     { header: 'Bombchu' },
-    { key: 'bombchuBehaviorMm', name: 'Behavior', options: [
+    { key: 'bombchuBehaviorOot', name: 'Behavior (OoT)', options: [
+      { value: 'bagFirst',    label: 'Bag First' },
+      { value: 'bagSeparate', label: 'Bag Separate' },
+      { value: 'bombBag',     label: 'Bomb Bag' },
+      { value: 'free',        label: 'Free' },
+    ]},
+    { key: 'bombchuBehaviorMm', name: 'Behavior (MM)', options: [
       { value: 'vanilla',     label: 'Vanilla (MM)' },
       { value: 'bagFirst',    label: 'Bag (First Pack)' },
       { value: 'bagSeparate', label: 'Bag (Separate Items)' },
     ]},
+    { key: 'kegStrength3', name: 'Keg Strength (3rd Upgrade)' },
+    { header: 'Souls (OoT)' },
+    { key: 'soulsBossOot',   name: 'Boss Souls' },
+    { key: 'soulsEnemyOot',  name: 'Enemy Souls' },
+    { key: 'soulsNpcOot',    name: 'NPC Souls' },
+    { key: 'soulsAnimalOot', name: 'Animal Souls' },
+    { key: 'soulsMiscOot',   name: 'Misc Souls' },
+    { header: 'Souls (MM)' },
+    { key: 'soulsBossMm',   name: 'Boss Souls' },
+    { key: 'soulsEnemyMm',  name: 'Enemy Souls' },
+    { key: 'soulsNpcMm',    name: 'NPC Souls' },
+    { key: 'soulsAnimalMm', name: 'Animal Souls' },
+    { key: 'soulsMiscMm',   name: 'Misc Souls' },
+    { header: 'Shared Souls' },
+    { key: 'sharedSoulsEnemy',  name: 'Enemy Souls' },
+    { key: 'sharedSoulsNpc',    name: 'NPC Souls' },
+    { key: 'sharedSoulsAnimal', name: 'Animal Souls' },
+    { key: 'sharedSoulsMisc',   name: 'Misc Souls' },
   ];
 
   const sharedData: VItem[] = [
@@ -221,16 +241,33 @@
     return sSettings ? ($sSettings as Map<string, any>)?.get(key) : undefined;
   }
 
-  // ─── Logic settings ───────────────────────────────────────────────────────────
-  let tricksCategoryCollapsed = new Set<string>(['OoT MQ', 'OoT Glitch']);
-  let tricksCollapsed = true;
+  // ─── Logic tab state ─────────────────────────────────────────────────────────
+  type LogicTab = 'tricks' | 'glitches' | 'junk';
+  type LogicGame = 'oot' | 'mm';
 
-  function toggleTricksGroup() { tricksCollapsed = !tricksCollapsed; }
+  let logicTab: LogicTab = 'tricks';
+  let logicGame: LogicGame = 'oot';
 
-  function toggleTricksCategory(cat: string) {
-    tricksCategoryCollapsed = tricksCategoryCollapsed.has(cat)
-      ? (tricksCategoryCollapsed.delete(cat), new Set(tricksCategoryCollapsed))
-      : new Set([...tricksCategoryCollapsed, cat]);
+  function tricksForTab(tab: LogicTab, game: LogicGame): typeof TRICKS_DEFS {
+    if (tab === 'tricks') {
+      return game === 'oot'
+        ? TRICKS_DEFS.filter(t => t.category === 'OoT' || t.category === 'OoT MQ')
+        : TRICKS_DEFS.filter(t => t.category === 'MM');
+    }
+    if (tab === 'glitches') {
+      return game === 'oot' ? TRICKS_DEFS.filter(t => t.category === 'OoT Glitch') : [];
+    }
+    return [];
+  }
+
+  function enableAllInView() {
+    const ids = new Set(tricksForTab(logicTab, logicGame).map(t => t.id));
+    enabledTricks.update(s => new Set([...s, ...ids]));
+  }
+
+  function disableAllInView() {
+    const ids = new Set(tricksForTab(logicTab, logicGame).map(t => t.id));
+    enabledTricks.update(s => { const n = new Set(s); ids.forEach(id => n.delete(id)); return n; });
   }
 
   function get(key: string): any {
@@ -385,15 +422,35 @@
 {:else if primaryTab === 'items'}
   <!-- Secondary tab bar for items -->
   <div class="subtab-bar">
-    <button type="button" class="subtab" class:subtab-active={itemsTab === 'oot'}    on:click={() => itemsTab = 'oot'}>OoT Items</button>
-    <button type="button" class="subtab" class:subtab-active={itemsTab === 'mm'}     on:click={() => itemsTab = 'mm'}>MM Items</button>
-    <button type="button" class="subtab" class:subtab-active={itemsTab === 'shared'} on:click={() => itemsTab = 'shared'}>Shared Items</button>
+    <button type="button" class="subtab" class:subtab-active={itemsTab === 'progressive'} on:click={() => itemsTab = 'progressive'}>Progressive</button>
+    <button type="button" class="subtab" class:subtab-active={itemsTab === 'extensions'} on:click={() => itemsTab = 'extensions'}>Extensions</button>
+    <button type="button" class="subtab" class:subtab-active={itemsTab === 'ageless'}    on:click={() => itemsTab = 'ageless'}>Ageless</button>
+    <button type="button" class="subtab" class:subtab-active={itemsTab === 'shared'}     on:click={() => itemsTab = 'shared'}>Shared</button>
   </div>
 
-  {#if itemsTab === 'oot'}
-    <p class="settings-hint">Hides inactive OoT items for this seed. Automatically imported from the spoiler log.</p>
+  {#if itemsTab === 'progressive'}
+    <p class="settings-hint">Progressive item types. Automatically imported from the spoiler log.</p>
     <div class="dropdown-grid">
-      {#each ootVisibility as item}
+      {#each defsForGroup('Progressive') as def}
+        <label class="settings-select-row">
+          <span class="settings-select-name">{def.label}</span>
+          <select
+            class="dropdown-select"
+            value={visGet(def.key) ?? def.default}
+            on:change={e => setStringSetting(def.key, e.currentTarget.value)}
+          >
+            {#each def.options ?? [] as opt}
+              <option value={opt.value}>{opt.label}</option>
+            {/each}
+          </select>
+        </label>
+      {/each}
+    </div>
+
+  {:else if itemsTab === 'extensions'}
+    <p class="settings-hint">Optional items shuffled into the pool. Automatically imported from the spoiler log.</p>
+    <div class="dropdown-grid">
+      {#each extensionsData as item}
         {#if item.header}
           <div class="settings-grid-header">{item.header}</div>
         {:else if item.options}
@@ -413,8 +470,8 @@
           <label class="checkbox-option">
             <input
               type="checkbox"
-              checked={item.optIn ? visGet(item.key) === true : visGet(item.key) !== false}
-              on:change={() => toggleVisibility(item.key, item.optIn ? visGet(item.key) !== true : visGet(item.key) === false)}
+              checked={visGet(item.key) === true}
+              on:change={() => toggleSharedSetting(item.key, visGet(item.key) !== true)}
             />
             {item.name}
           </label>
@@ -422,35 +479,18 @@
       {/each}
     </div>
 
-  {:else if itemsTab === 'mm'}
-    <p class="settings-hint">Hides inactive MM items for this seed. Automatically imported from the spoiler log.</p>
+  {:else if itemsTab === 'ageless'}
+    <p class="settings-hint">Age restrictions removed for these items.</p>
     <div class="dropdown-grid">
-      {#each mmVisibility as item}
-        {#if item.header}
-          <div class="settings-grid-header">{item.header}</div>
-        {:else if item.options}
-          <label class="settings-select-row">
-            <span class="settings-select-name">{item.name}</span>
-            <select
-              class="dropdown-select"
-              value={visGet(item.key) ?? item.options[0].value}
-              on:change={e => setStringSetting(item.key, e.currentTarget.value)}
-            >
-              {#each item.options as opt}
-                <option value={opt.value}>{opt.label}</option>
-              {/each}
-            </select>
-          </label>
-        {:else}
-          <label class="checkbox-option">
-            <input
-              type="checkbox"
-              checked={item.optIn ? visGet(item.key) === true : visGet(item.key) !== false}
-              on:change={() => toggleVisibility(item.key, item.optIn ? visGet(item.key) !== true : visGet(item.key) === false)}
-            />
-            {item.name}
-          </label>
-        {/if}
+      {#each defsForGroup('Ageless') as def}
+        <label class="checkbox-option">
+          <input
+            type="checkbox"
+            checked={visGet(def.key) === true}
+            on:change={() => toggleSharedSetting(def.key, visGet(def.key) !== true)}
+          />
+          {def.label}
+        </label>
       {/each}
     </div>
 
@@ -475,46 +515,66 @@
   {/if}
 
 {:else if primaryTab === 'tricks'}
-  <div class="tricks-top-bar">
-    <!-- svelte-ignore a11y-click-events-have-key-events -->
-    <!-- svelte-ignore a11y-no-static-element-interactions -->
-    <div class="tricks-header" on:click={toggleTricksGroup}>
-      <span class="group-arrow">{tricksCollapsed ? '▶' : '▼'}</span>
-      <span class="ls-group-label">Tricks</span>
-      {#if $enabledTricks.size > 0}<span class="modified-dot" title="{$enabledTricks.size} enabled"></span>{/if}
-    </div>
-    <div class="tricks-actions">
-      <button type="button" class="trick-action-btn" on:click={enableAllTricks}>All</button>
-      <button type="button" class="trick-action-btn" on:click={disableAllTricks}>None</button>
-    </div>
+  <!-- Logic sub-tab bar -->
+  <div class="subtab-bar">
+    <button type="button" class="subtab" class:subtab-active={logicTab === 'tricks'}  on:click={() => logicTab = 'tricks'}>
+      Tricks
+      {#if $enabledTricks.size > 0}<span class="tab-count">{$enabledTricks.size}</span>{/if}
+    </button>
+    <button type="button" class="subtab" class:subtab-active={logicTab === 'glitches'} on:click={() => logicTab = 'glitches'}>Glitches</button>
+    <button type="button" class="subtab" class:subtab-active={logicTab === 'junk'}     on:click={() => logicTab = 'junk'}>Junk Locations</button>
   </div>
 
-  {#if !tricksCollapsed}
-    {#each TRICK_CATEGORIES as cat}
-      {@const catOpen = !tricksCategoryCollapsed.has(cat)}
-      {@const catEnabled = tricksByCategory(cat).filter(t => isTrickEnabled(t.id)).length}
-      <!-- svelte-ignore a11y-click-events-have-key-events -->
-      <!-- svelte-ignore a11y-no-static-element-interactions -->
-      <div class="subgroup-header" on:click={() => toggleTricksCategory(cat)}>
-        <span class="group-arrow small">{catOpen ? '▼' : '▶'}</span>
-        <span>{cat}</span>
-        {#if catEnabled > 0}<span class="cat-count">{catEnabled}</span>{/if}
+  {#if logicTab !== 'junk'}
+    <!-- Game filter + bulk actions -->
+    <div class="logic-toolbar">
+      <div class="logic-game-filter">
+        <button type="button" class="lgame-btn" class:lgame-active={logicGame === 'oot'} on:click={() => logicGame = 'oot'}>Ocarina of Time</button>
+        <button type="button" class="lgame-btn" class:lgame-active={logicGame === 'mm'}  on:click={() => logicGame = 'mm'}>Majora's Mask</button>
       </div>
-      {#if catOpen}
-        <div class="dropdown-grid compact">
-          {#each tricksByCategory(cat) as trick}
-            <label class="checkbox-option">
-              <input
-                type="checkbox"
-                checked={isTrickEnabled(trick.id)}
-                on:change={() => toggleTrick(trick.id)}
-              />
-              {trick.label}
-            </label>
+      <div class="tricks-actions">
+        <button type="button" class="trick-action-btn" on:click={enableAllInView}>Add All</button>
+        <button type="button" class="trick-action-btn" on:click={disableAllInView}>Remove All</button>
+        <button type="button" class="trick-action-btn danger" on:click={disableAllTricks}>Reset</button>
+      </div>
+    </div>
+
+    <!-- Dual panel: Disabled | Enabled -->
+    {@const allTricks   = tricksForTab(logicTab, logicGame)}
+    {@const disabled    = allTricks.filter(t => !isTrickEnabled(t.id))}
+    {@const enabled_    = allTricks.filter(t =>  isTrickEnabled(t.id))}
+    <div class="dual-panel">
+      <div class="trick-panel">
+        <div class="panel-header">Disabled</div>
+        <div class="panel-list">
+          {#each disabled as trick}
+            <!-- svelte-ignore a11y-click-events-have-key-events -->
+            <!-- svelte-ignore a11y-no-static-element-interactions -->
+            <div class="trick-row" on:click={() => toggleTrick(trick.id)}>{trick.label}</div>
           {/each}
+          {#if disabled.length === 0}
+            <div class="panel-empty">All {logicTab} enabled</div>
+          {/if}
         </div>
-      {/if}
-    {/each}
+      </div>
+      <div class="trick-panel enabled-panel">
+        <div class="panel-header">Enabled</div>
+        <div class="panel-list">
+          {#each enabled_ as trick}
+            <!-- svelte-ignore a11y-click-events-have-key-events -->
+            <!-- svelte-ignore a11y-no-static-element-interactions -->
+            <div class="trick-row trick-row-enabled" on:click={() => toggleTrick(trick.id)}>{trick.label}</div>
+          {/each}
+          {#if enabled_.length === 0}
+            <div class="panel-empty">None enabled</div>
+          {/if}
+        </div>
+      </div>
+    </div>
+
+  {:else}
+    <!-- Junk Locations — not yet implemented -->
+    <p class="settings-hint" style="margin-top:1em">Junk Locations: mark checks as logically irrelevant (coming soon).</p>
   {/if}
 {/if}
 
@@ -647,24 +707,37 @@
     margin-top: 0;
   }
 
-  /* ── Tricks section ──────────────────────────────────────────────────────── */
-  .tricks-top-bar {
+  /* ── Logic / Tricks section ─────────────────────────────────────────────── */
+  .logic-toolbar {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 0.4em;
-    padding: 0.35em 0.2em;
-    margin-top: 0.3em;
-    border-bottom: 1px solid var(--color-border);
+    margin-bottom: 0.5em;
+    flex-wrap: wrap;
   }
-  .tricks-header {
+
+  .logic-game-filter {
     display: flex;
-    align-items: center;
-    gap: 0.4em;
-    flex: 1;
+    gap: 0.25em;
+  }
+
+  .lgame-btn {
+    font-size: 0.76em;
+    padding: 0.3em 0.9em;
+    border: 1px solid var(--color-border);
+    border-radius: 3px;
+    background: var(--color-bg);
+    color: #888;
     cursor: pointer;
-    user-select: none;
   }
-  .tricks-header:hover { background: rgba(255,255,255,0.04); }
+  .lgame-btn:hover { color: var(--color-text); border-color: #999; }
+  .lgame-btn.lgame-active {
+    color: var(--color-text);
+    border-color: #4a9eff;
+    background: rgba(74,158,255,0.1);
+    font-weight: 600;
+  }
 
   .tricks-actions {
     display: flex;
@@ -673,7 +746,7 @@
 
   .trick-action-btn {
     font-size: 0.72em;
-    padding: 1px 8px;
+    padding: 2px 8px;
     border: 1px solid var(--color-border);
     border-radius: 3px;
     background: var(--color-bg);
@@ -681,53 +754,63 @@
     cursor: pointer;
   }
   .trick-action-btn:hover { border-color: #999; }
+  .trick-action-btn.danger { border-color: #a33; color: #f88; }
+  .trick-action-btn.danger:hover { border-color: #f55; color: #faa; }
 
-  .group-arrow {
-    font-size: 0.6em;
-    color: #666;
-    min-width: 0.8em;
+  .dual-panel {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5em;
+    min-height: 200px;
   }
-  .group-arrow.small { font-size: 0.55em; }
+  @media screen and (max-width: 640px) {
+    .dual-panel { grid-template-columns: 1fr; }
+  }
 
-  .ls-group-label {
-    font-size: 0.75em;
+  .trick-panel {
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .panel-header {
+    font-size: 0.72em;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
     color: #888;
+    padding: 0.35em 0.6em;
+    border-bottom: 1px solid var(--color-border);
+    background: rgba(255,255,255,0.03);
+    text-align: center;
+  }
+  .enabled-panel .panel-header { color: #4a9eff; }
+
+  .panel-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0.2em 0;
   }
 
-  .modified-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: #4a9eff;
-    flex-shrink: 0;
-  }
-
-  .subgroup-header {
-    display: flex;
-    align-items: center;
-    gap: 0.4em;
-    padding: 0.25em 0.5em;
-    margin-top: 0.3em;
+  .trick-row {
+    font-size: 0.82em;
+    padding: 0.28em 0.7em;
     cursor: pointer;
-    user-select: none;
-    font-size: 0.72em;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: #666;
-    border-radius: 3px;
+    color: var(--color-text);
+    border-radius: 2px;
+    transition: background 0.1s;
   }
-  .subgroup-header:hover { background: rgba(255,255,255,0.04); }
+  .trick-row:hover { background: rgba(255,255,255,0.07); }
+  .trick-row-enabled { color: #7ec8e3; }
+  .trick-row-enabled:hover { background: rgba(74,158,255,0.1); }
 
-  .cat-count {
-    font-size: 0.85em;
-    background: #1a3a5a;
-    color: #4a9eff;
-    border-radius: 3px;
-    padding: 0 4px;
+  .panel-empty {
+    font-size: 0.78em;
+    color: #555;
+    padding: 0.6em 0.7em;
+    font-style: italic;
   }
 
   /* ── Settings grid ────────────────────────────────────────────────────────── */
