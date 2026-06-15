@@ -23182,7 +23182,7 @@
     "locations": [
       {
         "name": "Graveyard ReDead Tomb",
-        "rule": "can_play_sun"
+        "rule": "can_play_sun && can_kill_redead_gibdo"
       }
     ],
     "events": []
