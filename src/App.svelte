@@ -2172,6 +2172,8 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
   // ==========================================
   $: checkPredicate = (group: T.CheckGroup, check: T.Check, ignoreHide = false) => {
     const isDungeon = check.scene ? allDungeons.includes(check.scene) : false;
+    // check.name includes the "OOT "/"MM " prefix; lists use bare names without it
+    const checkName = check.name.replace(/^(OOT|MM) /, '');
 
     // Helper: matches dungeon/overworld/all mode
     const matchMode = (inDungeon: boolean, mode: string) => {
@@ -2438,7 +2440,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
       'MQ Dodongo Cavern Grass Room Before Miniboss',
     ];
     let matchesBroken = true;
-    if (check.game === T.Game.oot && brokenList.includes(check.name))
+    if (check.game === T.Game.oot && brokenList.includes(checkName))
       matchesBroken = $sSettings.get('BrokenActorsOOT') ?? false;
 
     // --- Named check lists (Frogs, Lottery, Mask Trade, Merchants, etc.) ---
@@ -2450,12 +2452,12 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
       'Zora River Frogs Song of Time',
     ];
     let matchesFrogs = true;
-    if (check.game === T.Game.oot && frogList.includes(check.name))
+    if (check.game === T.Game.oot && frogList.includes(checkName))
       matchesFrogs = $sSettings.get('FrogRupeesShuffleOOT') ?? false;
 
     const lotteryList = ['Lottery Prize Night 1', 'Lottery Prize Night 2', 'Lottery Prize Night 3'];
     let matchesLottery = true;
-    if (check.game === T.Game.mm && lotteryList.includes(check.name))
+    if (check.game === T.Game.mm && lotteryList.includes(checkName))
       matchesLottery = $sSettings.get('LotteryShuffleMM') ?? false;
 
     let matchesIcicleOOT = true;
@@ -2477,7 +2479,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
       'Hyrule Field Sell Bunny Mask',
     ];
     let matchesMaskTrade = true;
-    if (check.game === T.Game.oot && maskTradeList.includes(check.name))
+    if (check.game === T.Game.oot && maskTradeList.includes(checkName))
       matchesMaskTrade = $sSettings.get('MaskTradeShuffleOOT') ?? false;
 
     const merchantOOTList = [
@@ -2486,12 +2488,12 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
       'Kakariko Potion Shop Buy Blue Potion',
     ];
     let matchesMerchantOOT = true;
-    if (check.game === T.Game.oot && merchantOOTList.includes(check.name))
+    if (check.game === T.Game.oot && merchantOOTList.includes(checkName))
       matchesMerchantOOT = $sSettings.get('MerchantShuffleOOT') ?? false;
 
     const merchantMMList = ['Milk Bar Purchase Milk', 'Milk Bar Purchase Chateau', 'Gorman Track Milk Purchase'];
     let matchesMerchantMM = true;
-    if (check.game === T.Game.mm && merchantMMList.includes(check.name))
+    if (check.game === T.Game.mm && merchantMMList.includes(checkName))
       matchesMerchantMM = $sSettings.get('MerchantShuffleMM') ?? false;
 
     let matchesFishPond = true;
@@ -2506,7 +2508,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
       'Zora Domain Diving Game Huge Rupee',
     ];
     let matchesDive = true;
-    if (check.game === T.Game.oot && diveList.includes(check.name))
+    if (check.game === T.Game.oot && diveList.includes(checkName))
       matchesDive = $sSettings.get('DiveGameShuffleOOT') ?? false;
 
     let matchesFairyFountainOOT = true;
@@ -2522,11 +2524,11 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
       matchesFairySpot = $sSettings.get('FairySpotShuffleOOT') ?? false;
 
     let matchesEgg = true;
-    if (check.game === T.Game.oot && ['Hatch Chicken', 'Hatch Pocket Cucco'].includes(check.name))
+    if (check.game === T.Game.oot && ['Hatch Chicken', 'Hatch Pocket Cucco'].includes(checkName))
       matchesEgg = $sSettings.get('WeirdPocketEggShuffle') ?? false;
 
     let matchesSkipZelda = true;
-    if (check.game === T.Game.oot && ["Zelda's Letter", "Zelda's Song"].includes(check.name))
+    if (check.game === T.Game.oot && ["Zelda's Letter", "Zelda's Song"].includes(checkName))
       matchesSkipZelda = !($sSettings.get('SkipChildZeldaOOT') ?? false);
 
     // --- Text filter & MQ/Variant/HideChecked ---
@@ -3264,6 +3266,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
           yHints.delete(0, yHints.length);
           yHints.push(data.hints);
         }
+        if (data.songEvents) Object.entries(data.songEvents).forEach(([k, v]) => ySongEvents.set(k, v as string));
       } catch {
         alert('Invalid file!');
       }

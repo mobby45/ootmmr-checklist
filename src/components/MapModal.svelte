@@ -633,10 +633,12 @@ import type { EntranceInfo } from '../data/entranceData';
   function isEntranceVisible(ent: { erType: string; hideWhenErActive?: string } | undefined, id: string): boolean {
     if (!ent) return true;
     if (!YAML_ENTRANCE_IDS.has(id)) return true;  // unshuffled: never gated by erSettings
-    if (ent.hideWhenErActive) return !erSettings[ent.hideWhenErActive];
     const hasErSettings = Object.keys(erSettings).length > 0;
     if (!hasErSettings) return true;
-    return !!erSettings[ent.erType];
+    // Must match erType first, then apply the optional hide-when-active override
+    if (!erSettings[ent.erType]) return false;
+    if (ent.hideWhenErActive) return !erSettings[ent.hideWhenErActive];
+    return true;
   }
 
   function isEntranceUnshuffled(ent: EntranceInfo | undefined): boolean {
