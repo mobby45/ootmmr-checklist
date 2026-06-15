@@ -20,27 +20,27 @@
 
   // ─── Item visibility data ─────────────────────────────────────────────────────
   type VItem =
-    | { header: string; key?: never; name?: never; options?: never }
-    | { header?: never; key: string; name: string; options?: Array<{ value: string; label: string }> };
+    | { header: string; key?: never; name?: never; options?: never; optIn?: never }
+    | { header?: never; key: string; name: string; options?: Array<{ value: string; label: string }>; optIn?: boolean };
 
   const ootVisibility: VItem[] = [
     { header: 'Item Extensions' },
-    { key: 'elegyOot',                name: 'Elegy of Emptiness' },
-    { key: 'ocarinaButtonsShuffleOot', name: 'Ocarina Buttons' },
-    { key: 'spinUpgradeOot',          name: 'Spin Upgrade' },
-    { key: 'skeletonKeyOot',          name: 'Skeleton Key' },
-    { key: 'platinumTokenOot',        name: 'Platinum Token' },
-    { key: 'magicalRupee',            name: 'Magical Rupee' },
-    { key: 'gfsOot',                  name: 'Great Fairy Sword' },
-    { key: 'powderKegOot',            name: 'Powder Keg' },
-    { key: 'coinsOot',                name: 'Coins' },
+    { key: 'elegyOot',                name: 'Elegy of Emptiness',  optIn: true },
+    { key: 'ocarinaButtonsShuffleOot', name: 'Ocarina Buttons',    optIn: true },
+    { key: 'spinUpgradeOot',          name: 'Spin Upgrade',        optIn: true },
+    { key: 'skeletonKeyOot',          name: 'Skeleton Key',        optIn: true },
+    { key: 'platinumTokenOot',        name: 'Platinum Token',      optIn: true },
+    { key: 'magicalRupee',            name: 'Magical Rupee',       optIn: true },
+    { key: 'gfsOot',                  name: 'Great Fairy Sword',   optIn: true },
+    { key: 'powderKegOot',            name: 'Powder Keg',          optIn: true },
+    { key: 'coinsOot',                name: 'Coins',               optIn: true },
     { header: 'Progressive Items' },
     { key: 'progressiveSwordsOot',  name: 'Swords',  options: [{ value: 'separate', label: 'Separate' }, { value: 'progressiveknifebiggoron', label: 'Progressive Knife+Biggoron' }, { value: 'progressive', label: 'Progressive' }] },
     { key: 'progressiveShieldsOot', name: 'Shields', options: [{ value: 'separate', label: 'Separate' }, { value: 'progressive', label: 'Progressive' }] },
     { header: 'Wallets' },
-    { key: 'childWallets',      name: 'Child Wallet (shuffled)' },
-    { key: 'colossalWallets',   name: 'Colossal Wallet (999◆)' },
-    { key: 'bottomlessWallets', name: 'Bottomless Wallet (9999◆)' },
+    { key: 'childWallets',      name: 'Child Wallet (shuffled)',  optIn: true },
+    { key: 'colossalWallets',   name: 'Colossal Wallet (999◆)',   optIn: true },
+    { key: 'bottomlessWallets', name: 'Bottomless Wallet (9999◆)', optIn: true },
   ];
 
   const mmVisibility: VItem[] = [
@@ -59,17 +59,17 @@
     { key: 'tunicZoraMm',  name: 'Zora Tunic' },
     { key: 'slingshotMm',  name: 'Slingshot' },
     { header: 'Item Extensions' },
-    { key: 'ocarinaButtonsShuffleMm', name: 'Ocarina Buttons' },
-    { key: 'platinumTokenMm',         name: 'Platinum Token' },
-    { key: 'skeletonKeyMm',           name: 'Skeleton Key' },
-    { key: 'transcendentFairy',       name: 'Transcendent Fairy' },
-    { key: 'menuNotebook',            name: "Bomber's Notebook (shuffled)" },
-    { key: 'clocks',                  name: 'Clock Items' },
-    { key: 'progressiveClocks',       name: 'Progressive Clocks' },
-    { key: 'owlShuffleEnabled',       name: 'Owl Statues' },
-    { key: 'shortHookshotMm',         name: 'Short Hookshot' },
-    { key: 'fairyOcarinaMm',          name: 'Fairy Ocarina' },
-    { key: 'kegStrength3',            name: 'Powder Keg Strength' },
+    { key: 'ocarinaButtonsShuffleMm', name: 'Ocarina Buttons',           optIn: true },
+    { key: 'platinumTokenMm',         name: 'Platinum Token',            optIn: true },
+    { key: 'skeletonKeyMm',           name: 'Skeleton Key',              optIn: true },
+    { key: 'transcendentFairy',       name: 'Transcendent Fairy',        optIn: true },
+    { key: 'menuNotebook',            name: "Bomber's Notebook (shuffled)", optIn: true },
+    { key: 'clocks',                  name: 'Clock Items',               optIn: true },
+    { key: 'progressiveClocks',       name: 'Progressive Clocks',        optIn: true },
+    { key: 'owlShuffleEnabled',       name: 'Owl Statues',               optIn: true },
+    { key: 'shortHookshotMm',         name: 'Short Hookshot',            optIn: true },
+    { key: 'fairyOcarinaMm',          name: 'Fairy Ocarina',             optIn: true },
+    { key: 'kegStrength3',            name: 'Powder Keg Strength',       optIn: true },
     { header: 'Progressive Items' },
     { key: 'progressiveShieldsMm',   name: 'Shields',           options: [{ value: 'separate', label: 'Separate' }, { value: 'progressive', label: 'Progressive' }] },
     { key: 'progressiveGFS',         name: 'Great Fairy Sword', options: [{ value: 'separate', label: 'Separate' }, { value: 'progressive', label: 'Progressive' }] },
@@ -414,8 +414,8 @@
         <label class="checkbox-option">
           <input
             type="checkbox"
-            checked={visGet(item.key) !== false}
-            on:change={() => toggleVisibility(item.key, visGet(item.key) === false)}
+            checked={item.optIn ? visGet(item.key) === true : visGet(item.key) !== false}
+            on:change={() => toggleVisibility(item.key, item.optIn ? visGet(item.key) !== true : visGet(item.key) === false)}
           />
           {item.name}
         </label>
@@ -446,8 +446,8 @@
         <label class="checkbox-option">
           <input
             type="checkbox"
-            checked={visGet(item.key) !== false}
-            on:change={() => toggleVisibility(item.key, visGet(item.key) === false)}
+            checked={item.optIn ? visGet(item.key) === true : visGet(item.key) !== false}
+            on:change={() => toggleVisibility(item.key, item.optIn ? visGet(item.key) !== true : visGet(item.key) === false)}
           />
           {item.name}
         </label>

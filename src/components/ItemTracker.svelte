@@ -88,7 +88,15 @@
     }
   }
 
-  // Item visibility from spoiler settings (value === false → hide)
+  // Opt-in settings: item exists only when explicitly enabled — hidden when value !== true.
+  // Opt-out settings: item exists by default — hidden only when value === false.
+  const OPT_IN_VISIBILITY_KEYS = new Set([
+    'coinsOot', 'elegyOot', 'ocarinaButtonsShuffleOot', 'spinUpgradeOot',
+    'skeletonKeyOot', 'platinumTokenOot', 'magicalRupee',
+    'ocarinaButtonsShuffleMm', 'platinumTokenMm', 'skeletonKeyMm',
+    'transcendentFairy', 'clocks', 'owlShuffleEnabled',
+  ]);
+
   const itemVisibilityMap: Record<string, string> = {
     // OoT Item Extensions (skip mask_blast/mask_stone: shared IDs with MM Masks)
     'coin_red':               'coinsOot',
@@ -159,7 +167,9 @@
 
   $: disabledItems = new Set([
     ...Object.entries(itemVisibilityMap)
-      .filter(([, sk]) => $settingsStore.get(sk) === false)
+      .filter(([, sk]) => OPT_IN_VISIBILITY_KEYS.has(sk)
+        ? $settingsStore.get(sk) !== true
+        : $settingsStore.get(sk) === false)
       .map(([id]) => id),
     // hide mm_roomkey from Side Quests when rusty keys MM is on (shown in rusty keys section instead)
     ...($logicManualSettings['rustyKeysMm'] ? ['mm_roomkey'] : []),
@@ -362,7 +372,6 @@
         ['mm_clock1','mm_clock4','mm_clock2','mm_clock5','mm_clock3','mm_clock6'],
         ['mm_owl_clock_town','mm_owl_southern_swamp','mm_owl_woodfall','mm_owl_milk_road','mm_owl_mountain_village'],
         ['mm_owl_snowhead','mm_owl_great_bay','mm_owl_zora_cape','mm_owl_ikana_canyon','mm_owl_stone_tower'],
-        ['coin_red','coin_green','coin_blue','coin_yellow'],
       ]
     },
   ];
@@ -852,6 +861,31 @@
             {/each}
           </div>
         {/each}
+      </div>
+      {/if}
+
+      <!-- Triforce (shown only when triforce items are active via Shared Items settings) -->
+      {#if activeSharedIds.has('sh_triforce') || activeSharedIds.has('sh_triforce_courage') || activeSharedIds.has('sh_triforce_power') || activeSharedIds.has('sh_triforce_wisdom')}
+      <div class="section">
+        <div class="section-title">Triforce</div>
+        <div class="row-grid">
+          {#each ['sh_triforce', 'sh_triforce_courage', 'sh_triforce_power', 'sh_triforce_wisdom'] as cellId}
+            {#if isHidden(cellId, 'shared')}
+              <div class="cell-empty"></div>
+            {:else}
+              {@const item = effectiveItemById[cellId]}
+              {#if item}
+                {@const level = $itemStore.get(cellId) ?? 0}
+                {@const badge = getBadge(item, level)}
+                <div class="tracker-item" role="button" tabindex="0" class:obtained={isObtained(item,level)} class:maxed={isMaxed(item,level)}
+                  title="{item.name}" on:click={e=>handleClick(e,item)} on:contextmenu={e=>handleRightClick(e,item)} on:keydown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();handleClick(e,item)}}}>
+                  <img loading="lazy" src={getIconSrc(item,level)} alt={item.name} class="tracker-icon" class:greyed={isGreyed(item,level)} draggable="false"/>
+                  {#if badge}<span class="badge">{badge}</span>{/if}
+                </div>
+              {:else}<div class="cell-empty"></div>{/if}
+            {/if}
+          {/each}
+        </div>
       </div>
       {/if}
 
