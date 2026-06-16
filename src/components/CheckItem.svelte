@@ -1,6 +1,6 @@
 <script lang="ts">
   import * as T from '../data/types';
-  import { createEventDispatcher } from 'svelte';
+  import { createEventDispatcher, onDestroy } from 'svelte';
 
   const dispatch = createEventDispatcher();
 
@@ -29,6 +29,14 @@ export let inLogic: 'child' | 'adult' | 'both' | 'none' | null = null;
 export let rawRule: string = '';
 
 let showRule = false;
+
+function _closeRule() { showRule = false; }
+$: if (showRule) {
+  window.addEventListener('click', _closeRule);
+} else {
+  window.removeEventListener('click', _closeRule);
+}
+onDestroy(() => window.removeEventListener('click', _closeRule));
 
 $: isShopOrScrub = shopTypes.includes(type) || isShop;
 const shopTypes = [T.CheckType.shop, T.CheckType.deku_scrub];
@@ -132,7 +140,6 @@ $: tooltip = [
   }
 </script>
 
-<svelte:window on:click={() => { showRule = false; }} />
 <!-- svelte-ignore a11y-click-events-have-key-events -->
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <button

@@ -1864,7 +1864,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
   let ageFilter: 'child' | 'adult' = 'child';
   // Bidirectional sync: checklist filter ↔ map modal age toggle
   $: if ($logicAgeFilter === 'child' || $logicAgeFilter === 'adult') ageFilter = $logicAgeFilter;
-  $: if (ageFilter !== $logicAgeFilter) logicAgeFilter.set(ageFilter);
+  $: if ($logicAgeFilter !== 'both' && ageFilter !== $logicAgeFilter) logicAgeFilter.set(ageFilter);
   let scrollPosition = 0;
   let erHighlightId: string | null = null;
 
