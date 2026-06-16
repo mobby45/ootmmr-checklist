@@ -134,59 +134,60 @@ $: tooltip = [
 
 <!-- svelte-ignore a11y-click-events-have-key-events -->
 <!-- svelte-ignore a11y-no-static-element-interactions -->
-<span class="check-wrap">
-  <button
-    class="check-item interactable"
-    class:checked
-    class:marked
-    class:woth
-    class:barren
-    class:pinged={!!pingColor}
-    class:highlighted
-    class:spider-house={spiderHouse}
-    class:out-of-logic={inLogic === 'none'}
-    class:logic-child={inLogic === 'child'}
-    class:logic-adult={inLogic === 'adult'}
-    class:compact
-    data-check={checkName}
-    style="{pingColor ? `--ping-color: ${pingColor};` : ''}{typeBg ? `--type-bg: ${typeBg};` : ''}{typeBorder ? `--type-border: ${typeBorder};` : ''}"
-    title={tooltip}
-    on:click|preventDefault={e => dispatch('toggle', { range: e.shiftKey ?? false })}
-    on:contextmenu|preventDefault={handleContextMenu}
-  >
-    <span class:crossed-out={checked}>{@html highlightText(name, filter)}</span>
-    {#if isShopOrScrub}
-      {#if shopItem}
-        <span class="shop-info shop-item">{shopItem}</span>
-      {/if}
-      {#if shopPrice !== null && showPrice}
-        <span class="shop-price" style="color: #00cc44;">({shopPrice} ◆)</span>
-      {/if}
+<button
+  class="check-item interactable"
+  class:checked
+  class:marked
+  class:woth
+  class:barren
+  class:pinged={!!pingColor}
+  class:highlighted
+  class:spider-house={spiderHouse}
+  class:out-of-logic={inLogic === 'none'}
+  class:logic-child={inLogic === 'child'}
+  class:logic-adult={inLogic === 'adult'}
+  class:compact
+  data-check={checkName}
+  style="{pingColor ? `--ping-color: ${pingColor};` : ''}{typeBg ? `--type-bg: ${typeBg};` : ''}{typeBorder ? `--type-border: ${typeBorder};` : ''}"
+  title={tooltip}
+  on:click|preventDefault={e => dispatch('toggle', { range: e.shiftKey ?? false })}
+  on:contextmenu|preventDefault={handleContextMenu}
+>
+  <span class:crossed-out={checked}>{@html highlightText(name, filter)}</span>
+  {#if isShopOrScrub}
+    {#if shopItem}
+      <span class="shop-info shop-item">{shopItem}</span>
     {/if}
-    {#if checked && spoilerItem}
-      <span class="spoiler-item">→ {spoilerItem}</span>
+    {#if shopPrice !== null && showPrice}
+      <span class="shop-price" style="color: #00cc44;">({shopPrice} ◆)</span>
     {/if}
-    {#if note}
-      <span class="shop-info shop-item">✎ {note}</span>
-    {/if}
-    {#if author && (checked || marked)}
-      <span class="author-badge">{author}</span>
-    {/if}
-  </button>
+  {/if}
+  {#if checked && spoilerItem}
+    <span class="spoiler-item">→ {spoilerItem}</span>
+  {/if}
+  {#if note}
+    <span class="shop-info shop-item">✎ {note}</span>
+  {/if}
+  {#if author && (checked || marked)}
+    <span class="author-badge">{author}</span>
+  {/if}
   {#if rawRule}
-    <button class="rule-btn" title="Logic rule" on:click|preventDefault={() => showRule = !showRule}>ⓘ</button>
+    <!-- svelte-ignore a11y-no-static-element-interactions -->
+    <span class="rule-btn" title="Logic rule" on:click|stopPropagation={() => showRule = !showRule}>ⓘ</span>
     {#if showRule}
       <!-- svelte-ignore a11y-no-static-element-interactions -->
       <div class="rule-popup" on:click|stopPropagation={() => {}}>
         <code>{rawRule}</code>
-        <button class="rule-close" on:click|stopPropagation={() => showRule = false}>✕</button>
+        <span class="rule-close" on:click|stopPropagation={() => showRule = false}>✕</span>
       </div>
     {/if}
   {/if}
-</span>
+</button>
 
 <style>
   .check-item {
+    position: relative;
+    overflow: visible;
     border: 1px solid lightblue;
     border-left: 3px solid var(--type-border, lightblue);
     border-radius: 5px;
@@ -287,12 +288,6 @@ $: tooltip = [
     color: inherit;
     border-radius: 2px;
     padding: 0 1px;
-  }
-
-  .check-wrap {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
   }
 
   .rule-btn {
