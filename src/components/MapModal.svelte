@@ -1066,7 +1066,8 @@ import type { EntranceInfo } from '../data/entranceData';
               {@const dy = (pos.y / imageHeight) * 100}
               <button
                 class="subzone-dot"
-                class:subzone-dot-logic={badge.inLogic > 0}
+                class:subzone-dot-logic-all={badge.inLogic === badge.unchecked}
+                class:subzone-dot-logic-some={badge.inLogic > 0 && badge.inLogic < badge.unchecked}
                 style="left:{dx}%;top:{dy}%;"
                 title="{badge.unchecked} check{badge.unchecked > 1 ? 's' : ''}"
                 on:click|stopPropagation={() => handleEntranceClick(pos.entranceId)}
@@ -1122,7 +1123,7 @@ import type { EntranceInfo } from '../data/entranceData';
                 on:contextmenu|preventDefault|stopPropagation={e => handleEntranceContextMenu(e, marker.uid, marker.id, true)}
               >
                 <span class="entrance-diamond"></span>
-                {#if _abadge}<span class="entrance-check-badge" class:badge-logic={_abadge.inLogic > 0}>{_abadge.unchecked}</span>{/if}
+                {#if _abadge}<span class="entrance-check-badge" class:badge-logic-all={_abadge.inLogic === _abadge.unchecked} class:badge-logic-some={_abadge.inLogic > 0 && _abadge.inLogic < _abadge.unchecked}>{_abadge.unchecked}</span>{/if}
                 {#if draggingEntranceUid !== marker.uid}<span class="entrance-lbl">{_lbl}</span>{/if}
               </div>
               {/if}
@@ -1689,7 +1690,8 @@ import type { EntranceInfo } from '../data/entranceData';
     pointer-events: none;
     z-index: 5;
     box-shadow: 0 1px 3px rgba(0,0,0,0.7);
-    &.badge-logic { background: #27ae60; }
+    &.badge-logic-some { background: #e67e22; }
+    &.badge-logic-all  { background: #27ae60; }
   }
 
   .subzone-dot {
@@ -1710,7 +1712,8 @@ import type { EntranceInfo } from '../data/entranceData';
     z-index: 8;
     box-shadow: 0 1px 4px rgba(0,0,0,0.7);
     pointer-events: auto;
-    &.subzone-dot-logic { background: #27ae60; }
+    &.subzone-dot-logic-some { background: #e67e22; }
+    &.subzone-dot-logic-all  { background: #27ae60; }
     &:hover { transform: translate(-50%, -50%) scale(1.25); }
   }
 
