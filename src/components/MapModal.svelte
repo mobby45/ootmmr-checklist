@@ -600,6 +600,46 @@ import type { EntranceInfo } from '../data/entranceData';
   $: currentEntranceMarkers = entranceMarkers.filter(m => m.renderscene === currentSubscene);
   $: placementOverlapCount = currentEntranceMarkers.filter(m => currentPrecomputed.some(p => p.entranceId === m.id)).length;
 
+  // entranceId → destination renderscene (the scene you land in when going through the entrance)
+  $: entranceDestMap = (() => {
+    const m = new Map<string, string>();
+    for (const pos of entrancePositions) {
+      if (pos.targetScene) { m.set(pos.entranceId, pos.targetScene); continue; }
+      const ent = allEntrances.find(e => e.id === pos.entranceId);
+      if (!ent) continue;
+      const rev = findReverseEntrance(ent);
+      if (!rev) continue;
+      const revPos = entrancePositions.find(p => p.entranceId === rev.id);
+      if (revPos) m.set(pos.entranceId, revPos.renderscene);
+    }
+    return m;
+  })();
+
+  // renderscene → unchecked/inLogic check counts (for badge display)
+  $: subSceneCheckCounts = (() => {
+    const m = new Map<string, { unchecked: number; inLogic: number }>();
+    if (!allScenesData) return m;
+    for (const sd of Object.values(allScenesData)) {
+      for (const [rs, sub] of Object.entries(sd.subscenes)) {
+        let unchecked = 0; let inLogic = 0;
+        for (const check of sub.checks) {
+          const key = checkNameMappingReverse[check.name] ?? check.name;
+          if ((checkStates.get(key) ?? T.CheckState.unchecked) === T.CheckState.checked) continue;
+          unchecked++;
+          if (isCheckInLogic(key)) inLogic++;
+        }
+        if (unchecked > 0) m.set(rs, { unchecked, inLogic });
+      }
+    }
+    return m;
+  })();
+
+  function getEntranceBadge(entranceId: string): { unchecked: number; inLogic: number } | null {
+    const dest = entranceDestMap.get(entranceId);
+    if (!dest) return null;
+    return subSceneCheckCounts.get(dest) ?? null;
+  }
+
   function loadDeletedAutoIds(): Set<string> {
     try { return new Set(JSON.parse(localStorage.getItem('deletedAutoMarkers') ?? '[]') as string[]); }
     catch { return new Set(); }
@@ -1006,6 +1046,7 @@ import type { EntranceInfo } from '../data/entranceData';
               {@const vlbl = shortEntranceName(marker.ent)}
               {@const vcol = getEntranceTypeColor(marker.ent.type)}
               <!-- svelte-ignore a11y-no-static-element-interactions -->
+              {@const _vbadge = getEntranceBadge(marker.id)}
               <div
                 class="entrance-marker entrance-marker-unshuffled"
                 style="left:{vx}%;top:{vy}%;--ec:{vcol};--lbl-x:{vx > 80 ? '-90%' : vx > 65 ? '-75%' : vx < 20 ? '-10%' : vx < 35 ? '-25%' : '-50%'};--lbl-below:{vy < 12 ? '1' : '0'};"
@@ -1014,6 +1055,7 @@ import type { EntranceInfo } from '../data/entranceData';
                 on:contextmenu|preventDefault|stopPropagation={e => handleEntranceContextMenu(e, marker.uid, marker.id, true)}
               >
                 <span class="entrance-diamond"></span>
+                {#if _vbadge}<span class="entrance-check-badge" class:badge-logic={_vbadge.inLogic > 0}>{_vbadge.unchecked}</span>{/if}
                 <span class="entrance-lbl">{vlbl}</span>
               </div>
             {/each}
@@ -1029,6 +1071,7 @@ import type { EntranceInfo } from '../data/entranceData';
               {@const _lbl = ent ? shortEntranceName(ent) : marker.id}
               {@const _unshuffled = isEntranceUnshuffled(ent)}
               {#if !_unshuffled}
+              {@const _abadge = getEntranceBadge(marker.physicalId)}
               <!-- svelte-ignore a11y-no-static-element-interactions -->
               <div
                 class="entrance-marker"
@@ -1044,6 +1087,7 @@ import type { EntranceInfo } from '../data/entranceData';
                 on:contextmenu|preventDefault|stopPropagation={e => handleEntranceContextMenu(e, marker.uid, marker.id, true)}
               >
                 <span class="entrance-diamond"></span>
+                {#if _abadge}<span class="entrance-check-badge" class:badge-logic={_abadge.inLogic > 0}>{_abadge.unchecked}</span>{/if}
                 {#if draggingEntranceUid !== marker.uid}<span class="entrance-lbl">{_lbl}</span>{/if}
               </div>
               {/if}
@@ -1058,6 +1102,7 @@ import type { EntranceInfo } from '../data/entranceData';
               {@const ay = (_pos.y / imageHeight) * 100}
               {@const lbl = ent ? shortEntranceName(ent) : marker.id}
               {@const cursorStyle = placementMode ? 'grab' : 'default'}
+              {@const _mbadge = getEntranceBadge(marker.id)}
               <!-- svelte-ignore a11y-no-static-element-interactions -->
               <div
                 class="entrance-marker"
@@ -1073,6 +1118,7 @@ import type { EntranceInfo } from '../data/entranceData';
                 on:contextmenu|preventDefault|stopPropagation={e => handleEntranceContextMenu(e, marker.uid, marker.id, false)}
               >
                 <span class="entrance-diamond"></span>
+                {#if _mbadge}<span class="entrance-check-badge" class:badge-logic={_mbadge.inLogic > 0}>{_mbadge.unchecked}</span>{/if}
                 {#if draggingEntranceUid !== marker.uid}<span class="entrance-lbl">{lbl}</span>{/if}
               </div>
             {/each}
@@ -1591,6 +1637,26 @@ import type { EntranceInfo } from '../data/entranceData';
     transform: rotate(45deg) scale(1.4);
     box-shadow: 0 0 14px var(--ec, #fff), 0 0 24px var(--ec, #fff);
   }
+  .entrance-check-badge {
+    position: absolute;
+    top: -5px;
+    right: -7px;
+    min-width: 14px;
+    height: 14px;
+    padding: 0 3px;
+    border-radius: 7px;
+    background: #e67e22;
+    color: #fff;
+    font-size: 9px;
+    font-weight: bold;
+    line-height: 14px;
+    text-align: center;
+    pointer-events: none;
+    z-index: 5;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.6);
+    &.badge-logic { background: #27ae60; }
+  }
+
   .entrance-lbl {
     display: none;
   }
