@@ -18,6 +18,8 @@
   // Extra ER settings from spoiler log, used to pre-fill sub-type toggles
   export let spoilerExtraEr: Record<string, any> | null = null;
   export let isWatchMode = false;
+  /** entranceId → reachable (true/false), null when logic is disabled */
+  export let entranceReachability: Map<string, boolean> | null = null;
 
   let manualErSettings: ErSettings = JSON.parse(
     localStorage.getItem('erSettings') ?? JSON.stringify(defaultErSettings)
@@ -378,7 +380,11 @@
         {#if !collapsedSections.has(group.erType)}
         {#each group.entrances as entrance (entrance.id)}
           {@const currentValue = getValue(entrance.id)}
+          {@const inLogic = entranceReachability ? (entranceReachability.get(entrance.id) ?? false) : null}
           <div class="er-row" class:filled={!!currentValue} class:er-row-highlighted={entrance.id === highlightedEntranceId} data-eid={entrance.id}>
+            {#if inLogic !== null}
+              <span class="er-logic-dot" class:er-logic-in={inLogic} class:er-logic-out={!inLogic} title={inLogic ? 'Reachable' : 'Out of logic'}></span>
+            {/if}
             <span class="er-game-badge er-game-{entrance.game}">
               {entrance.game.toUpperCase()}
             </span>
@@ -708,6 +714,15 @@
     border-color: rgba(100, 150, 255, 0.3);
     background: rgba(100, 150, 255, 0.05);
   }
+
+  .er-logic-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .er-logic-dot.er-logic-in  { background: #4caf50; }
+  .er-logic-dot.er-logic-out { background: #666; opacity: 0.5; }
 
   .er-game-badge {
     font-size: 0.7em;
