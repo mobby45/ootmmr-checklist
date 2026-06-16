@@ -1039,6 +1039,25 @@ import type { EntranceInfo } from '../data/entranceData';
               <span class="marker-dot" style="background-color: {color};"></span>
             </button>
           {/each}
+
+          <!-- Sub-zone check dots: always visible, independent of ER mode -->
+          {#each ageFilteredPrecomputed as pos (pos.entranceId + '_' + pos.x + '_' + pos.y)}
+            {@const badge = getEntranceBadge(pos.entranceId)}
+            {#if badge}
+              {@const dx = (pos.x / imageWidth) * 100}
+              {@const dy = (pos.y / imageHeight) * 100}
+              <button
+                class="subzone-dot"
+                class:subzone-dot-logic={badge.inLogic > 0}
+                style="left:{dx}%;top:{dy}%;"
+                title="{badge.unchecked} check{badge.unchecked > 1 ? 's' : ''}"
+                on:click|stopPropagation={() => handleEntranceClick(pos.entranceId)}
+                on:mouseenter={e => startEntranceHoverTimer(`${badge.unchecked} check${badge.unchecked > 1 ? 's' : ''}`, e)}
+                on:mouseleave={clearHoverTimer}
+              >{badge.unchecked}</button>
+            {/if}
+          {/each}
+
             {#if placementMode}
             {#each vanillaEntranceMarkers as marker (marker.uid)}
               {@const vx = (marker.x / imageWidth) * 100}
@@ -1046,7 +1065,6 @@ import type { EntranceInfo } from '../data/entranceData';
               {@const vlbl = shortEntranceName(marker.ent)}
               {@const vcol = getEntranceTypeColor(marker.ent.type)}
               <!-- svelte-ignore a11y-no-static-element-interactions -->
-              {@const _vbadge = getEntranceBadge(marker.id)}
               <div
                 class="entrance-marker entrance-marker-unshuffled"
                 style="left:{vx}%;top:{vy}%;--ec:{vcol};--lbl-x:{vx > 80 ? '-90%' : vx > 65 ? '-75%' : vx < 20 ? '-10%' : vx < 35 ? '-25%' : '-50%'};--lbl-below:{vy < 12 ? '1' : '0'};"
@@ -1055,7 +1073,6 @@ import type { EntranceInfo } from '../data/entranceData';
                 on:contextmenu|preventDefault|stopPropagation={e => handleEntranceContextMenu(e, marker.uid, marker.id, true)}
               >
                 <span class="entrance-diamond"></span>
-                {#if _vbadge}<span class="entrance-check-badge" class:badge-logic={_vbadge.inLogic > 0}>{_vbadge.unchecked}</span>{/if}
                 <span class="entrance-lbl">{vlbl}</span>
               </div>
             {/each}
@@ -1071,7 +1088,6 @@ import type { EntranceInfo } from '../data/entranceData';
               {@const _lbl = ent ? shortEntranceName(ent) : marker.id}
               {@const _unshuffled = isEntranceUnshuffled(ent)}
               {#if !_unshuffled}
-              {@const _abadge = getEntranceBadge(marker.physicalId)}
               <!-- svelte-ignore a11y-no-static-element-interactions -->
               <div
                 class="entrance-marker"
@@ -1087,7 +1103,6 @@ import type { EntranceInfo } from '../data/entranceData';
                 on:contextmenu|preventDefault|stopPropagation={e => handleEntranceContextMenu(e, marker.uid, marker.id, true)}
               >
                 <span class="entrance-diamond"></span>
-                {#if _abadge}<span class="entrance-check-badge" class:badge-logic={_abadge.inLogic > 0}>{_abadge.unchecked}</span>{/if}
                 {#if draggingEntranceUid !== marker.uid}<span class="entrance-lbl">{_lbl}</span>{/if}
               </div>
               {/if}
@@ -1102,7 +1117,6 @@ import type { EntranceInfo } from '../data/entranceData';
               {@const ay = (_pos.y / imageHeight) * 100}
               {@const lbl = ent ? shortEntranceName(ent) : marker.id}
               {@const cursorStyle = placementMode ? 'grab' : 'default'}
-              {@const _mbadge = getEntranceBadge(marker.id)}
               <!-- svelte-ignore a11y-no-static-element-interactions -->
               <div
                 class="entrance-marker"
@@ -1118,7 +1132,6 @@ import type { EntranceInfo } from '../data/entranceData';
                 on:contextmenu|preventDefault|stopPropagation={e => handleEntranceContextMenu(e, marker.uid, marker.id, false)}
               >
                 <span class="entrance-diamond"></span>
-                {#if _mbadge}<span class="entrance-check-badge" class:badge-logic={_mbadge.inLogic > 0}>{_mbadge.unchecked}</span>{/if}
                 {#if draggingEntranceUid !== marker.uid}<span class="entrance-lbl">{lbl}</span>{/if}
               </div>
             {/each}
@@ -1637,24 +1650,26 @@ import type { EntranceInfo } from '../data/entranceData';
     transform: rotate(45deg) scale(1.4);
     box-shadow: 0 0 14px var(--ec, #fff), 0 0 24px var(--ec, #fff);
   }
-  .entrance-check-badge {
+  .subzone-dot {
     position: absolute;
-    top: -5px;
-    right: -7px;
-    min-width: 14px;
-    height: 14px;
-    padding: 0 3px;
-    border-radius: 7px;
-    background: #e67e22;
+    transform: translate(-50%, -50%);
+    min-width: 18px;
+    height: 18px;
+    padding: 0 4px;
+    border-radius: 9px;
+    background: #c0392b;
+    border: 1.5px solid rgba(0,0,0,0.6);
     color: #fff;
     font-size: 9px;
     font-weight: bold;
-    line-height: 14px;
+    line-height: 17px;
     text-align: center;
-    pointer-events: none;
-    z-index: 5;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.6);
-    &.badge-logic { background: #27ae60; }
+    cursor: pointer;
+    z-index: 8;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.7);
+    pointer-events: auto;
+    &.subzone-dot-logic { background: #27ae60; }
+    &:hover { transform: translate(-50%, -50%) scale(1.25); }
   }
 
   .entrance-lbl {
