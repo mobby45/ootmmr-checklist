@@ -230,17 +230,8 @@ $: tooltip = [
       background-image: linear-gradient(rgba(200,50,50,0.11), rgba(200,50,50,0.11));
     }
     &.out-of-logic:not(.checked) {
-      isolation: isolate;
+      opacity: 0.38;
       filter: grayscale(0.4);
-      &::after {
-        content: '';
-        position: absolute;
-        inset: 0;
-        background: rgba(0, 0, 0, 0.58);
-        border-radius: inherit;
-        pointer-events: none;
-        z-index: 1;
-      }
     }
     &.logic-child:not(.checked) {
       box-shadow: 0 0 0 1px rgba(90, 176, 255, 0.6);
@@ -308,19 +299,17 @@ $: tooltip = [
   }
 
   .rule-btn {
-    position: relative;
-    z-index: 2;
     flex-shrink: 0;
     margin-left: 2px;
     padding: 2px 4px;
     font-size: 0.8em;
     background: none;
-    border: 1px solid rgba(255,255,255,0.7);
+    border: 1px solid rgba(120, 190, 255, 0.85);
     border-radius: 3px;
-    color: rgba(255,255,255,0.9);
+    color: rgba(160, 210, 255, 1);
     cursor: pointer;
     line-height: 1;
-    &:hover { color: #7eb8ff; border-color: #7eb8ff; }
+    &:hover { color: #9fcfff; border-color: #9fcfff; }
   }
 
   .rule-popup {

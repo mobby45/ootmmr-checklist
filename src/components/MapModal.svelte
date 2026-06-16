@@ -628,7 +628,11 @@ import type { EntranceInfo } from '../data/entranceData';
   })();
 
   // renderscene → unchecked/inLogic check counts
+  // Capture logic props at the IIFE top so Svelte tracks them as reactive dependencies.
   $: subSceneCheckCounts = (() => {
+    const _le = logicEnabled;
+    const _lr = logicResult;
+    const _la = logicAgeFilter;
     const m = new Map<string, { unchecked: number; inLogic: number }>();
     if (!allScenesData) return m;
     for (const sd of Object.values(allScenesData)) {
@@ -638,7 +642,15 @@ import type { EntranceInfo } from '../data/entranceData';
           const key = checkNameMappingReverse[check.name] ?? check.name;
           if ((checkStates.get(key) ?? T.CheckState.unchecked) === T.CheckState.checked) continue;
           unchecked++;
-          if (isCheckInLogic(key)) inLogic++;
+          if (!_le || !_lr) {
+            inLogic++;
+          } else {
+            const n = key.replace(/^(OOT|MM) /, '');
+            const inL = _la === 'child' ? _lr.childChecks.has(n)
+              : _la === 'adult' ? _lr.adultChecks.has(n)
+              : _lr.childChecks.has(n) || _lr.adultChecks.has(n);
+            if (inL) inLogic++;
+          }
         }
         if (unchecked > 0) m.set(rs, { unchecked, inLogic });
       }
