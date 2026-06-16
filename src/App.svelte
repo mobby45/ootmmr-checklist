@@ -396,8 +396,10 @@ yKeepalive.observe((event: any) => {
   }
 
   $: checkStatesMap = new Map($sChecks) as Map<string, T.CheckState>;
-  // Only consider settings as "from spoiler" when a real spoiler is loaded
-  $: spoilerSettingKeys = new Set(($sSettings as Map<string, any>).keys());
+  // Only mark settings as read-only when a real spoiler is loaded
+  $: spoilerSettingKeys = spoilerSeedInfo !== null
+    ? new Set(($sSettings as Map<string, any>).keys())
+    : new Set<string>();
   $: shopItemsMap = new Map($sShopItems) as Map<string, string>;
   $: shopPricesMap = new Map($sShopPrices) as Map<string, number>;
   $: entranceValuesMap = (spoilerFillEntrances && spoilerEntrances)

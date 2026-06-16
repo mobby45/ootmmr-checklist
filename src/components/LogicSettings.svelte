@@ -377,7 +377,7 @@
           <div class="section-header">{section}</div>
         {/if}
         <div class="dropdown-grid">
-          {#each defsForGroup(tab.group).filter(d => (d.section ?? '') === section) as def}
+          {#each defsForGroup(tab.group).filter(d => (d.section ?? '') === section && (!d.showIf || d.showIf(get))) as def}
             {@const spoiler = fromSpoiler(def.key)}
             {#if def.type === 'bool'}
               <label class="checkbox-option" class:spoiler-row={spoiler} title={[def.desc, spoiler ? 'Set by spoiler log' : ''].filter(Boolean).join('\n')}>

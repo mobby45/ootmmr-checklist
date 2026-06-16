@@ -27,6 +27,8 @@ export interface LogicSettingDef {
   section?: string;
   min?: number;
   max?: number;
+  /** Hide this setting unless this returns true */
+  showIf?: (get: (key: string) => any) => boolean;
 }
 
 export const LOGIC_SETTINGS_DEFS: LogicSettingDef[] = [
@@ -42,9 +44,11 @@ export const LOGIC_SETTINGS_DEFS: LogicSettingDef[] = [
       { value: 'triforce3', label: 'Triforce Quest (3 pieces)' },
     ] },
   { group: 'Main', section: 'Goal', key: 'triforceGoal',   label: 'Triforce Goal',   type: 'number', default: 20, min: 1,
-    desc: 'Triforce Hunt: pieces needed to win.' },
+    desc: 'Triforce Hunt: pieces needed to win.',
+    showIf: get => get('goal') === 'triforce' },
   { group: 'Main', section: 'Goal', key: 'triforcePieces', label: 'Triforce Pieces', type: 'number', default: 30, min: 1,
-    desc: 'Triforce Hunt: total pieces in the pool.' },
+    desc: 'Triforce Hunt: total pieces in the pool.',
+    showIf: get => get('goal') === 'triforce' },
   { group: 'Main', section: 'Goal', key: 'rainbowBridge', label: 'Rainbow Bridge', type: 'select', default: 'vanilla',
     options: [{ value: 'vanilla', label: 'Vanilla' }, { value: 'open', label: 'Open' }, { value: 'medallions', label: 'Medallions' }, { value: 'custom', label: 'Custom' }] },
   { group: 'Main', section: 'Goal', key: 'lacs', label: 'Light Arrow Cutscene', type: 'select', default: 'vanilla',
