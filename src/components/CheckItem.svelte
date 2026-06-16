@@ -26,6 +26,9 @@ export let checkName: string = '';
 export let zone: string = '';
 export let filter: string = '';
 export let inLogic: 'child' | 'adult' | 'both' | 'none' | null = null;
+export let rawRule: string = '';
+
+let showRule = false;
 
 $: isShopOrScrub = shopTypes.includes(type) || isShop;
 const shopTypes = [T.CheckType.shop, T.CheckType.deku_scrub];
@@ -131,44 +134,56 @@ $: tooltip = [
 
 <!-- svelte-ignore a11y-click-events-have-key-events -->
 <!-- svelte-ignore a11y-no-static-element-interactions -->
-<button
-  class="check-item interactable"
-  class:checked
-  class:marked
-  class:woth
-  class:barren
-  class:pinged={!!pingColor}
-  class:highlighted
-  class:spider-house={spiderHouse}
-  class:out-of-logic={inLogic === 'none'}
-  class:logic-child={inLogic === 'child'}
-  class:logic-adult={inLogic === 'adult'}
-  class:compact
-  data-check={checkName}
-  style="{pingColor ? `--ping-color: ${pingColor};` : ''}{typeBg ? `--type-bg: ${typeBg};` : ''}{typeBorder ? `--type-border: ${typeBorder};` : ''}"
-  title={tooltip}
-  on:click|preventDefault={e => dispatch('toggle', { range: e.shiftKey ?? false })}
-  on:contextmenu|preventDefault={handleContextMenu}
->
-  <span class:crossed-out={checked}>{@html highlightText(name, filter)}</span>
-  {#if isShopOrScrub}
-    {#if shopItem}
-      <span class="shop-info shop-item">{shopItem}</span>
+<span class="check-wrap">
+  <button
+    class="check-item interactable"
+    class:checked
+    class:marked
+    class:woth
+    class:barren
+    class:pinged={!!pingColor}
+    class:highlighted
+    class:spider-house={spiderHouse}
+    class:out-of-logic={inLogic === 'none'}
+    class:logic-child={inLogic === 'child'}
+    class:logic-adult={inLogic === 'adult'}
+    class:compact
+    data-check={checkName}
+    style="{pingColor ? `--ping-color: ${pingColor};` : ''}{typeBg ? `--type-bg: ${typeBg};` : ''}{typeBorder ? `--type-border: ${typeBorder};` : ''}"
+    title={tooltip}
+    on:click|preventDefault={e => dispatch('toggle', { range: e.shiftKey ?? false })}
+    on:contextmenu|preventDefault={handleContextMenu}
+  >
+    <span class:crossed-out={checked}>{@html highlightText(name, filter)}</span>
+    {#if isShopOrScrub}
+      {#if shopItem}
+        <span class="shop-info shop-item">{shopItem}</span>
+      {/if}
+      {#if shopPrice !== null && showPrice}
+        <span class="shop-price" style="color: #00cc44;">({shopPrice} ◆)</span>
+      {/if}
     {/if}
-    {#if shopPrice !== null && showPrice}
-      <span class="shop-price" style="color: #00cc44;">({shopPrice} ◆)</span>
+    {#if checked && spoilerItem}
+      <span class="spoiler-item">→ {spoilerItem}</span>
+    {/if}
+    {#if note}
+      <span class="shop-info shop-item">✎ {note}</span>
+    {/if}
+    {#if author && (checked || marked)}
+      <span class="author-badge">{author}</span>
+    {/if}
+  </button>
+  {#if rawRule}
+    <button class="rule-btn" title="Logic rule" on:click|preventDefault={() => showRule = !showRule}>ⓘ</button>
+    {#if showRule}
+      <!-- svelte-ignore a11y-no-static-element-interactions -->
+      <div class="rule-popup" on:click|stopPropagation={() => {}}>
+        <code>{rawRule}</code>
+        <button class="rule-close" on:click|stopPropagation={() => showRule = false}>✕</button>
+      </div>
     {/if}
   {/if}
-  {#if checked && spoilerItem}
-    <span class="spoiler-item">→ {spoilerItem}</span>
-  {/if}
-  {#if note}
-    <span class="shop-info shop-item">✎ {note}</span>
-  {/if}
-  {#if author && (checked || marked)}
-    <span class="author-badge">{author}</span>
-  {/if}
-</button>
+</span>
 
 <style>
   .check-item {
@@ -272,6 +287,62 @@ $: tooltip = [
     color: inherit;
     border-radius: 2px;
     padding: 0 1px;
+  }
+
+  .check-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .rule-btn {
+    flex-shrink: 0;
+    margin-left: 2px;
+    padding: 2px 4px;
+    font-size: 0.8em;
+    background: none;
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 3px;
+    color: rgba(255,255,255,0.45);
+    cursor: pointer;
+    line-height: 1;
+    &:hover { color: #7eb8ff; border-color: #7eb8ff; }
+  }
+
+  .rule-popup {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    z-index: 200;
+    background: #1a1f2e;
+    border: 1px solid #4488dd;
+    border-radius: 5px;
+    padding: 8px 10px;
+    min-width: 220px;
+    max-width: 420px;
+    word-break: break-word;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.6);
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+
+    code {
+      font-size: 0.82em;
+      color: #b8d4ff;
+      flex: 1;
+      white-space: pre-wrap;
+    }
+  }
+
+  .rule-close {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    color: rgba(255,255,255,0.4);
+    cursor: pointer;
+    padding: 0 2px;
+    font-size: 0.85em;
+    &:hover { color: #fff; }
   }
 
   .crossed-out {

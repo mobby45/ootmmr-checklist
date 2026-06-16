@@ -88,6 +88,7 @@ function buildWorldGraph(rawRegions: RawWorld): WorldGraph {
       locations: raw.locations.map(l => ({
         name: l.name,
         rule: safeParseExpr(l.rule, `${raw.name} / ${l.name}`),
+        rawRule: l.rule,
       })),
       events: raw.events.map(ev => ({
         name: ev.name,
@@ -154,9 +155,10 @@ export function resolveEntranceSource(graph: WorldGraph, entranceName: string): 
 
 let _graph: WorldGraph | null = null;
 let _macros: MacroTable | null = null;
+let _locationRules: Map<string, string> | null = null;
 
-export async function loadWorld(): Promise<{ graph: WorldGraph; macros: MacroTable }> {
-  if (_graph && _macros) return { graph: _graph, macros: _macros };
+export async function loadWorld(): Promise<{ graph: WorldGraph; macros: MacroTable; locationRules: Map<string, string> }> {
+  if (_graph && _macros && _locationRules) return { graph: _graph, macros: _macros, locationRules: _locationRules };
 
   // Fetch as separate public assets to avoid bloating the JS bundle
   const base = import.meta.env.BASE_URL ?? '/';
@@ -176,7 +178,14 @@ export async function loadWorld(): Promise<{ graph: WorldGraph; macros: MacroTab
   _graph  = buildWorldGraph(rawWorld);
   injectEntranceIds(_graph);
 
-  return { graph: _graph, macros: _macros };
+  _locationRules = new Map<string, string>();
+  for (const region of _graph.values()) {
+    for (const loc of region.locations) {
+      _locationRules.set(loc.name, loc.rawRule);
+    }
+  }
+
+  return { graph: _graph, macros: _macros, locationRules: _locationRules };
 }
 
 // Inject OoTMM entrance IDs onto world.json exits that don't have them.

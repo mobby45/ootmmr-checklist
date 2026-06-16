@@ -62,7 +62,7 @@
   import * as T from './data/types';
 
   import CheckGroup from './components/CheckGroup.svelte';
-  import { initLogicStore, logicEnabled, showOutOfLogic, logicAgeFilter, logicResult, logicLoading, logicManualSettings, specialConditionsStore, enabledTricks } from './stores/logicStore';
+  import { initLogicStore, logicEnabled, showOutOfLogic, logicAgeFilter, logicResult, logicLoading, logicManualSettings, specialConditionsStore, enabledTricks, locationRulesStore } from './stores/logicStore';
   import { defaultLogicSettings } from './data/logicSettingsDef';
 
   function ageLogic(checkName: string, result: typeof $logicResult): 'child' | 'adult' | 'both' | 'none' {
@@ -5081,7 +5081,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
                         spiderHouse={!!check.scene?.startsWith('MM_SPIDER_HOUSE')}
                         checkName={check.name}
                         zone={group.groupName}
-
+                        rawRule={$locationRulesStore.get(check.name) ?? ''}
                         {filter}
                         inLogic={$logicEnabled && $logicResult ? ageLogic(check.name, $logicResult) : null}
                         on:editNote={() => { if (!isWatchMode) handleEditNote(check.name); }}
@@ -5157,6 +5157,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
                     spiderHouse={!!check.scene?.startsWith('MM_SPIDER_HOUSE')}
                     checkName={check.name}
                     zone={group.groupName}
+                    rawRule={$locationRulesStore.get(check.name) ?? ''}
                     {filter}
                     inLogic={$logicEnabled && $logicResult ? ageLogic(check.name, $logicResult) : null}
                     on:editNote={() => { if (!isWatchMode) handleEditNote(check.name); }}

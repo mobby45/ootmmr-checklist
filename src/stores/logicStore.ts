@@ -26,8 +26,9 @@ let _cachedResolvedSpecial: Map<string, boolean> = new Map();
 
 // ─── Public state ─────────────────────────────────────────────────────────────
 
-export const logicEnabled   = writable<boolean>(localStorage.getItem('logicEnabled') === 'true');
-export const showOutOfLogic = writable<boolean>(localStorage.getItem('showOutOfLogic') !== 'false');
+export const logicEnabled     = writable<boolean>(localStorage.getItem('logicEnabled') === 'true');
+export const showOutOfLogic   = writable<boolean>(localStorage.getItem('showOutOfLogic') !== 'false');
+export const locationRulesStore = writable<Map<string, string>>(new Map());
 /** Age filter for the logic view — child, adult, or both */
 export const logicAgeFilter = writable<'child' | 'adult' | 'both'>(
   (localStorage.getItem('logicAgeFilter') as 'child' | 'adult' | 'both') ?? 'both'
@@ -145,8 +146,9 @@ export function initLogicStore(
     if (!_worldReady) {
       logicLoading.set(true);
       try {
-        const { graph, macros } = await loadWorld();
+        const { graph, macros, locationRules } = await loadWorld();
         _graph = graph; _macros = macros; _worldReady = true;
+        locationRulesStore.set(locationRules);
       } catch (e) {
         console.error('[logic] Failed to load world:', e);
         logicLoading.set(false);

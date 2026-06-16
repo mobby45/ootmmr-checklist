@@ -27,6 +27,7 @@ export type ExprNode =
 export interface WorldLocation {
   name: string;
   rule: ExprNode;
+  rawRule: string;
   events?: string[];
 }
 
