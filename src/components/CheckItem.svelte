@@ -230,8 +230,17 @@ $: tooltip = [
       background-image: linear-gradient(rgba(200,50,50,0.11), rgba(200,50,50,0.11));
     }
     &.out-of-logic:not(.checked) {
-      opacity: 0.38;
+      isolation: isolate;
       filter: grayscale(0.4);
+      &::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.58);
+        border-radius: inherit;
+        pointer-events: none;
+        z-index: 1;
+      }
     }
     &.logic-child:not(.checked) {
       box-shadow: 0 0 0 1px rgba(90, 176, 255, 0.6);
@@ -299,14 +308,16 @@ $: tooltip = [
   }
 
   .rule-btn {
+    position: relative;
+    z-index: 2;
     flex-shrink: 0;
     margin-left: 2px;
     padding: 2px 4px;
     font-size: 0.8em;
     background: none;
-    border: 1px solid rgba(255,255,255,0.45);
+    border: 1px solid rgba(255,255,255,0.7);
     border-radius: 3px;
-    color: rgba(255,255,255,0.8);
+    color: rgba(255,255,255,0.9);
     cursor: pointer;
     line-height: 1;
     &:hover { color: #7eb8ff; border-color: #7eb8ff; }

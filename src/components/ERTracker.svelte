@@ -109,6 +109,7 @@
   let gameFilter: GameFilter = 'both';
   let searchFilter = '';
   let showMode: 'all' | 'filled' | 'unfilled' = 'all';
+  let logicFilterOn = false;
   let showHelp = false;
 
   function onClickOutside(e: MouseEvent) {
@@ -155,6 +156,7 @@
     if (searchFilter && !e.name.toLowerCase().includes(searchFilter.toLowerCase())) return false;
     if (showMode === 'filled' && !entranceValues.get(e.id)) return false;
     if (showMode === 'unfilled' && entranceValues.get(e.id)) return false;
+    if (logicFilterOn && entranceReachability && !entranceReachability.get(e.id)) return false;
     return true;
   });
 
@@ -343,6 +345,9 @@
         <button type="button" class="er-mode-btn" class:active={showMode === 'filled'} on:click={() => showMode = 'filled'}>Filled</button>
         <button type="button" class="er-mode-btn" class:active={showMode === 'unfilled'} on:click={() => showMode = 'unfilled'}>Unfilled</button>
       </div>
+      {#if entranceReachability !== null}
+        <button type="button" class="er-mode-btn er-logic-filter-btn" class:active={logicFilterOn} on:click={() => logicFilterOn = !logicFilterOn} title="Show only reachable entrances">In logic</button>
+      {/if}
     </div>
     {#if showHelp}
       <div class="er-help-panel">
@@ -628,6 +633,12 @@
     color: #4da8ff;
   }
   .er-mode-btn:hover:not(.active) { opacity: 0.8; }
+  .er-logic-filter-btn {
+    border: 1px solid rgba(76, 175, 80, 0.4);
+    border-radius: 4px;
+    margin-left: 4px;
+    &.active { background: rgba(76, 175, 80, 0.18); color: #4caf50; }
+  }
 
   .er-stats {
     display: flex;
