@@ -556,6 +556,80 @@ export function mapOotmmStartingItems(startingItems: Record<string, number>): Re
   return result;
 }
 
+// ─── Special conditions derived from hash settings ────────────────────────────
+
+interface SpecialCondition {
+  count: number;
+  stones: boolean; medallions: boolean; remains: boolean;
+  skullsGold: boolean; skullsSwamp: boolean; skullsOcean: boolean;
+  fairiesWF: boolean; fairiesSH: boolean; fairiesGB: boolean; fairiesST: boolean; fairyTown: boolean;
+  masksRegular: boolean; masksTransform: boolean; masksOot: boolean;
+  triforce: boolean; coinsRed: boolean; coinsGreen: boolean; coinsBlue: boolean; coinsYellow: boolean;
+}
+
+function emptyCond(): SpecialCondition {
+  return {
+    count: 0, stones: false, medallions: false, remains: false,
+    skullsGold: false, skullsSwamp: false, skullsOcean: false,
+    fairiesWF: false, fairiesSH: false, fairiesGB: false, fairiesST: false, fairyTown: false,
+    masksRegular: false, masksTransform: false, masksOot: false,
+    triforce: false, coinsRed: false, coinsGreen: false, coinsBlue: false, coinsYellow: false,
+  };
+}
+
+function condTypeFlags(type: string): Partial<SpecialCondition> {
+  switch (type) {
+    case 'medallions': return { medallions: true };
+    case 'stones':     return { stones: true };
+    case 'remains':    return { remains: true };
+    case 'dungeons':   return { medallions: true, stones: true, remains: true };
+    case 'tokens':     return { skullsGold: true };
+    case 'triforce':   return { triforce: true };
+    default:           return {};
+  }
+}
+
+function makeCond(type: string, count: number): SpecialCondition | null {
+  if (!type || type === 'open' || count <= 0) return null;
+  return { ...emptyCond(), count, ...condTypeFlags(type) };
+}
+
+export function deriveSpecialConditions(raw: Record<string, unknown>): Record<string, SpecialCondition> {
+  const out: Record<string, SpecialCondition> = {};
+
+  const bridge = raw['rainbowBridge'] as string ?? '';
+  const bridgeCount = Number(raw['rainbowBridgeCount'] ?? 0);
+  const bridgeCond = makeCond(bridge, bridgeCount);
+  if (bridgeCond) out['BRIDGE'] = bridgeCond;
+
+  const lacs = raw['lacs'] as string ?? '';
+  const lacsCount = Number(raw['lacsCount'] ?? 0);
+  const lacsCond = makeCond(lacs, lacsCount);
+  if (lacsCond) out['LACS'] = lacsCond;
+
+  const ganonBk = raw['ganonBossKey'] as string ?? '';
+  if (ganonBk === 'lacs' && lacsCond) {
+    out['GANON_BK'] = { ...lacsCond };
+  } else if (ganonBk && ganonBk !== 'removed' && ganonBk !== 'vanilla' && ganonBk !== 'anywhere') {
+    const ganonCount = Number(raw['ganonBossKeyCount'] ?? 0);
+    const ganonType  = raw['ganonBossKeyType'] as string ?? ganonBk;
+    const ganonCond  = makeCond(ganonType, ganonCount);
+    if (ganonCond) out['GANON_BK'] = ganonCond;
+  }
+
+  const moon = raw['moon'] as string ?? '';
+  const moonCount = Number(raw['moonCount'] ?? 0);
+  const moonCond = makeCond(moon, moonCount);
+  if (moonCond) out['MOON'] = moonCond;
+
+  const majora = raw['majora'] as string ?? '';
+  const majoraCount = Number(raw['majoraCount'] ?? 0);
+  const majoraCond = makeCond(majora, majoraCount);
+  if (majoraCond) out['MAJORA'] = majoraCond;
+
+  return out;
+}
+
 // Multicheck settings whose value is an array of flags → join with spaces
 const MULTICHECK_KEYS = new Set(['openDungeonsOot', 'openDungeonsMm', 'clearStateDungeonsMm', 'ganonTrials']);
 
@@ -628,6 +702,7 @@ export async function importRandomizerSettings(str: string): Promise<{
   tricks: string[];
   unmapped: string[];
   junkLocations: string[];
+  derivedConditions: Record<string, SpecialCondition>;
 }> {
   const raw = await decodeRandomizerSettings(str);
   const appSettings: Record<string, unknown> = {};
@@ -689,5 +764,6 @@ export async function importRandomizerSettings(str: string): Promise<{
   if (!('bossKeyMmEnabled' in appSettings)) clearedKeys.push('bossKeyMmEnabled');
   if (!('songEventShuffle' in appSettings)) clearedKeys.push('songEventShuffle');
 
-  return { appSettings, clearedKeys, startingItems, tricks, unmapped, junkLocations };
+  const derivedConditions = deriveSpecialConditions(raw);
+  return { appSettings, clearedKeys, startingItems, tricks, unmapped, junkLocations, derivedConditions };
 }

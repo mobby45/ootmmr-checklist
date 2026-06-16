@@ -221,6 +221,17 @@ export function trackerItemToLogic(id: string, level: number): ItemGrant[] {
     case 'mm_pictograph':     return [['MM_PICTOGRAPH_BOX', 1]];
     case 'mm_logic_access':   return [['MM_LOGIC_ACCESS', 1]];
     case 'mm_fairysword':     return [['MM_GREAT_FAIRY_SWORD', 1]];
+
+    // MM trade/quest items
+    case 'mm_tear':           return [['MOON_TEAR', 1]];
+    case 'mm_deed1':          return [['DEED_LAND', 1]];
+    case 'mm_deed2':          return [['DEED_SWAMP', 1]];
+    case 'mm_deed3':          return [['DEED_MOUNTAIN', 1]];
+    case 'mm_deed4':          return [['DEED_OCEAN', 1]];
+    case 'mm_roomkey':        return [['ROOM_KEY', 1]];
+    case 'mm_pendant':        return [['PENDANT_OF_MEMORIES', 1]];
+    case 'mm_letter':         return [['LETTER_TO_KAFEI', 1]];
+    case 'mm_delivery':       return [['LETTER_TO_MAMA', 1]];
     // Clock items for MM clock randomization (clocks setting).
     // macros.json ordering: CLOCK1=Day1, CLOCK2=Night1, CLOCK3=Day2, CLOCK4=Night2, CLOCK5=Day3, CLOCK6=Night3
     // Tracker ordering (itemData.ts):  mm_clock1=Day1, mm_clock2=Day2, mm_clock3=Day3,

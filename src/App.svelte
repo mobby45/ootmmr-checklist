@@ -2173,6 +2173,10 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
   // Returns true if a check should be visible given current settings.
   // Each shuffle setting independently controls a subset of checks.
   // ==========================================
+  // Reactive item snapshots for checkPredicate (must reference $_itemsRevStore to stay in sync)
+  $: _hasMmSongOfTime = ($_itemsRevStore, (yItems.get('mm_song_time') ?? 0) > 0 || (yItems.get('sh_song_time') ?? 0) > 0);
+  $: _hasMmWallet     = ($_itemsRevStore, (yItems.get('mm_wallet') ?? 0) > 0 || (yItems.get('shared_wallet') ?? 0) > 0);
+
   $: checkPredicate = (group: T.CheckGroup, check: T.Check, ignoreHide = false) => {
     const isDungeon = check.scene ? allDungeons.includes(check.scene) : false;
     // check.name includes the "OOT "/"MM " prefix; lists use bare names without it
@@ -2280,9 +2284,9 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     if (check.type === T.CheckType.cow && check.game === T.Game.mm)
       matchesCowMM = $sSettings.get('CowShuffleMM') ?? false;
 
-    // --- Shops always visible (even unshuffled, they're always physically accessible) ---
+    // --- Shops: OoT always visible; MM requires at least 1 wallet item tracked ---
     const matchesShopOOT = true;
-    const matchesShopMM = true;
+    const matchesShopMM = check.type !== T.CheckType.shop || check.game !== T.Game.mm || _hasMmWallet;
 
     // --- Owl Statues ---
     let matchesOwl = true;
@@ -2539,6 +2543,15 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     if (check.game === T.Game.oot && ["Zelda's Letter", "Zelda's Song"].includes(checkName))
       matchesSkipZelda = !($sSettings.get('SkipChildZeldaOOT') ?? false);
 
+    // --- MM Song of Time gate: hide all MM checks until Song of Time is tracked ---
+    // Exceptions: Clock Tower Roof (accessible as Deku Scrub) and Initial Song of Healing
+    let matchesMmSongOfTime = true;
+    if (check.game === T.Game.mm && !_hasMmSongOfTime) {
+      const isClockTowerRoof   = check.scene === 'MM_CLOCK_TOWER_ROOFTOP';
+      const isInitialSoH       = check.id === 'SONG_HEALING' && check.scene === 'MM_CLOCK_TOWN_SOUTH';
+      matchesMmSongOfTime = isClockTowerRoof || isInitialSoH;
+    }
+
     // --- Text filter & MQ/Variant/HideChecked ---
     const lf = filter.toLowerCase();
     const gamePrefix = check.game === T.Game.oot ? 'oot ' : check.game === T.Game.mm ? 'mm ' : '';
@@ -2627,7 +2640,8 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
       matchesFairyFountainMM &&
       matchesFairySpot &&
       matchesEgg &&
-      matchesSkipZelda;
+      matchesSkipZelda &&
+      matchesMmSongOfTime;
 
     return (
       matchesFilter &&
@@ -3224,7 +3238,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     randoImportError = '';
     randoImportOk = false;
     try {
-      const { appSettings, clearedKeys, startingItems, tricks, unmapped, junkLocations } = await importRandomizerSettings(randoImportStr);
+      const { appSettings, clearedKeys, startingItems, tricks, unmapped, junkLocations, derivedConditions } = await importRandomizerSettings(randoImportStr);
       Object.entries(appSettings).forEach(([k, v]) => ySettings.set(k, v));
       for (const k of clearedKeys) ySettings.delete(k);
       const validTricks = tricks.filter(id => _validTrickIds.has(id));
@@ -3234,6 +3248,14 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
         if (current < level) yItems.set(itemId, level);
       }
       applyJunkLocations(junkLocations);
+      if (Object.keys(derivedConditions).length > 0) {
+        const merged = { ...manualConditions };
+        for (const [name, cond] of Object.entries(derivedConditions)) {
+          if (CONDITION_NAMES.includes(name as any)) merged[name as ConditionName] = cond as SpecialCondition;
+        }
+        manualConditions = merged;
+        localStorage.setItem('manualConditions', JSON.stringify(merged));
+      }
       randoImportOk = true;
       randoImportStr = '';
       if (unmapped.length) console.info('Unmapped settings:', unmapped);

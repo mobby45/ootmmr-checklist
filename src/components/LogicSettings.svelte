@@ -347,11 +347,10 @@
           <span class="settings-select-name">{def.label}</span>
           <select
             class="dropdown-select"
-            value={visGet(def.key) ?? def.default}
             on:change={e => setStringSetting(def.key, e.currentTarget.value)}
           >
             {#each def.options ?? [] as opt}
-              <option value={opt.value}>{opt.label}</option>
+              <option value={opt.value} selected={opt.value === (visGet(def.key) ?? def.default)}>{opt.label}</option>
             {/each}
           </select>
         </label>
@@ -369,11 +368,10 @@
             <span class="settings-select-name">{item.name}</span>
             <select
               class="dropdown-select"
-              value={visGet(item.key) ?? item.options[0].value}
               on:change={e => setStringSetting(item.key, e.currentTarget.value)}
             >
               {#each item.options as opt}
-                <option value={opt.value}>{opt.label}</option>
+                <option value={opt.value} selected={opt.value === (visGet(item.key) ?? item.options[0].value)}>{opt.label}</option>
               {/each}
             </select>
           </label>
@@ -514,12 +512,11 @@
             {#if spoiler}<span class="spoiler-badge">spoiler</span>{/if}
             <select
               class="dropdown-select"
-              value={get(def.key)}
               disabled={spoiler}
               on:change={e => onSelectChange(def.key, e)}
             >
               {#each def.options ?? [] as opt}
-                <option value={opt.value}>{opt.label}</option>
+                <option value={opt.value} selected={opt.value === (get(def.key) ?? def.default)}>{opt.label}</option>
               {/each}
             </select>
           </label>

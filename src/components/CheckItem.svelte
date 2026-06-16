@@ -304,9 +304,9 @@ $: tooltip = [
     padding: 2px 4px;
     font-size: 0.8em;
     background: none;
-    border: 1px solid rgba(255,255,255,0.2);
+    border: 1px solid rgba(255,255,255,0.45);
     border-radius: 3px;
-    color: rgba(255,255,255,0.45);
+    color: rgba(255,255,255,0.8);
     cursor: pointer;
     line-height: 1;
     &:hover { color: #7eb8ff; border-color: #7eb8ff; }
