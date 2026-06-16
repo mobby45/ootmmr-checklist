@@ -56,13 +56,14 @@ export function computeReachability(
   enqueue(GLOBAL, 'child');
   enqueue(GLOBAL, 'adult');
 
-  // BFS — repeat until stable (new events can unlock new exits for either age).
-  // Use an index pointer instead of shift() — Array.shift() is O(n) and causes
-  // severe slowdowns when the queue grows large (800+ regions × 2 ages).
-  let changed = true;
+  // BFS — repeat full passes until no new events are discovered.
+  // New regions are enqueued directly and picked up in the current pass (no restart needed).
+  // New checks never affect reachability (no restart needed).
+  // Only new events can unlock exits in already-processed regions, requiring a full restart.
+  let eventFound = true;
   let qi = 0;
-  while (changed) {
-    changed = false;
+  while (eventFound) {
+    eventFound = false;
 
     while (qi < queue.length) {
       const { regionName, age } = queue[qi++];
@@ -71,18 +72,17 @@ export function computeReachability(
 
       const s = stateForAge(state, age, events, region.game);
 
-      // Evaluate exits
+      // Evaluate exits — new regions go into the queue and are processed this pass
       for (const exit of region.exits) {
         const target = resolveExitTarget(exit, state, graph);
         if (!target) continue;
         if (reachedByAge[age].has(target)) continue;
         if (evalExpr(exit.rule, s, macros)) {
           enqueue(target, age);
-          changed = true;
         }
       }
 
-      // Collect checks per age
+      // Collect checks — does not affect region propagation, no restart needed
       for (const loc of region.locations) {
         if (checksByAge[age].has(loc.name)) continue;
         if (!isLocationEnabled(loc.name, region.game, state)) continue;
@@ -90,22 +90,22 @@ export function computeReachability(
         if (customPrice !== undefined && !canAffordCustomPrice(customPrice, s)) continue;
         if (evalExpr(loc.rule, s, macros)) {
           checksByAge[age].add(loc.name);
-          changed = true;
         }
       }
 
-      // Collect events (shared across ages)
+      // Collect events — shared across ages; a new event may unlock exits in
+      // already-processed regions, so we must restart the full scan after this pass.
       for (const ev of region.events) {
         if (events.has(ev.name)) continue;
         if (evalExpr(ev.rule, s, macros)) {
           events.add(ev.name);
-          changed = true;
+          eventFound = true;
         }
       }
     }
 
-    // Re-scan all reached regions when new events or regions were added
-    if (changed) {
+    // Restart only when new events were found (may unlock exits in already-visited regions)
+    if (eventFound) {
       queue.length = 0;
       qi = 0;
       for (const age of ['child', 'adult'] as Age[]) {
