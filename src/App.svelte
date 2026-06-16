@@ -5081,7 +5081,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
                         spiderHouse={!!check.scene?.startsWith('MM_SPIDER_HOUSE')}
                         checkName={check.name}
                         zone={group.groupName}
-                        rawRule={$locationRulesStore.get(check.name) ?? ''}
+                        rawRule={$locationRulesStore.get(check.name.replace(/^(?:OOT|MM) /, '')) ?? ''}
                         {filter}
                         inLogic={$logicEnabled && $logicResult ? ageLogic(check.name, $logicResult) : null}
                         on:editNote={() => { if (!isWatchMode) handleEditNote(check.name); }}
@@ -5157,7 +5157,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
                     spiderHouse={!!check.scene?.startsWith('MM_SPIDER_HOUSE')}
                     checkName={check.name}
                     zone={group.groupName}
-                    rawRule={$locationRulesStore.get(check.name) ?? ''}
+                    rawRule={$locationRulesStore.get(check.name.replace(/^(?:OOT|MM) /, '')) ?? ''}
                     {filter}
                     inLogic={$logicEnabled && $logicResult ? ageLogic(check.name, $logicResult) : null}
                     on:editNote={() => { if (!isWatchMode) handleEditNote(check.name); }}
