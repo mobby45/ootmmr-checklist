@@ -1861,10 +1861,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     return scene ? [scene] : [];
   });
   let showAgeFilter = true;
-  let ageFilter: 'child' | 'adult' = 'child';
-  // Bidirectional sync: checklist filter ↔ map modal age toggle
-  $: if ($logicAgeFilter === 'child' || $logicAgeFilter === 'adult') ageFilter = $logicAgeFilter;
-  $: if ($logicAgeFilter !== 'both' && ageFilter !== $logicAgeFilter) logicAgeFilter.set(ageFilter);
+  // Map modal age filter is driven directly by logicAgeFilter store (no local variable needed)
   let scrollPosition = 0;
   let erHighlightId: string | null = null;
 
@@ -2706,8 +2703,8 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
         accessible = group.checks.filter(c => {
           if (yChecks.get(c.name) === T.CheckState.checked) return false;
           const n = c.name.replace(/^(OOT|MM) /, '');
-          if (ageFilter === 'child') return lr.childChecks.has(n);
-          if (ageFilter === 'adult') return lr.adultChecks.has(n);
+          if ($logicAgeFilter === 'child') return lr.childChecks.has(n);
+          if ($logicAgeFilter === 'adult') return lr.adultChecks.has(n);
           return lr.childChecks.has(n) || lr.adultChecks.has(n);
         }).length;
       }
@@ -5209,10 +5206,11 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
         mqSettings={$sMqSettings}
         variantSettings={$sVariantSettings}
         bind:showAgeFilter
-        bind:ageFilter
+        ageFilter={$logicAgeFilter}
         logicEnabled={$logicEnabled}
         logicResult={$logicResult}
         logicAgeFilter={$logicAgeFilter}
+        on:changeAge={e => logicAgeFilter.set(e.detail)}
         on:close={() => { showMapModal = false; mapInitialSubscene = ''; }}
         on:toggleCheck={handleMapToggle}
         on:changeScene={e => {

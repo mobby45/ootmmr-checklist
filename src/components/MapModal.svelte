@@ -29,7 +29,7 @@ import type { EntranceInfo } from '../data/entranceData';
   export let filteredCheckNames: Set<string> = new Set();
   export let checkNameMappingReverse: Record<string, string> = {};
   export let showAgeFilter = true;
-  export let ageFilter: 'child' | 'adult' = 'child';
+  export let ageFilter: 'child' | 'adult' | 'both' = 'child';
   export let shopItems: Map<string, string> = new Map();
   export let shopPrices: Map<string, number> = new Map();
   export let shopScrubIds: Set<string> = new Set();
@@ -328,6 +328,7 @@ import type { EntranceInfo } from '../data/entranceData';
         const matchesAge =
           sceneData.game !== 'oot' ||
           !check.context ||
+          ageFilter === 'both' ||
           check.context.toLowerCase() === ageFilter ||
           check.context.toLowerCase() === 'all';
 
@@ -397,7 +398,7 @@ import type { EntranceInfo } from '../data/entranceData';
 
     if (targetId) {
       const allPos = entrancePositions.filter(p => p.entranceId === targetId);
-      const pos = allPos.find(p => !p.ageFilter || p.ageFilter === ageFilter) ?? allPos[0];
+      const pos = allPos.find(p => !p.ageFilter || ageFilter === 'both' || p.ageFilter === ageFilter) ?? allPos[0];
       if (!pos) return;
       const target = pos.renderscene;
       if (sceneData.subscenes[target]) { currentSubscene = target; return; }
@@ -658,8 +659,8 @@ import type { EntranceInfo } from '../data/entranceData';
     return isEntranceVisible(allEntrances.find(e => e.id === p.entranceId), p.entranceId);
   });
 
-  function filterByAge(items: typeof visiblePrecomputed, age: 'child' | 'adult', game: string) {
-    return items.filter(p => !p.ageFilter || game !== 'oot' || p.ageFilter === age);
+  function filterByAge(items: typeof visiblePrecomputed, age: 'child' | 'adult' | 'both', game: string) {
+    return items.filter(p => !p.ageFilter || game !== 'oot' || age === 'both' || p.ageFilter === age);
   }
 
   $: ageFilteredPrecomputed = filterByAge(visiblePrecomputed, ageFilter, sceneData.game)
@@ -830,10 +831,13 @@ import type { EntranceInfo } from '../data/entranceData';
 
     <div class="filter-controls">
       {#if sceneData.game === 'oot' && showAgeFilter}
-        <button type="button" class="age-button" class:active={ageFilter === 'child'} on:click={() => (ageFilter = 'child')}>
+        <button type="button" class="age-button" class:active={ageFilter === 'both'} on:click={() => dispatch('changeAge', 'both')}>
+          👶🧑 Both
+        </button>
+        <button type="button" class="age-button" class:active={ageFilter === 'child'} on:click={() => dispatch('changeAge', 'child')}>
           👶 Child
         </button>
-        <button type="button" class="age-button" class:active={ageFilter === 'adult'} on:click={() => (ageFilter = 'adult')}>
+        <button type="button" class="age-button" class:active={ageFilter === 'adult'} on:click={() => dispatch('changeAge', 'adult')}>
           👨 Adult
         </button>
         <span class="controls-sep"></span>
@@ -865,7 +869,6 @@ import type { EntranceInfo } from '../data/entranceData';
           </div>
         {/if}
       </div>
-      <span class="controls-sep"></span>
       {#if logicEnabled}
         <button
           type="button"
