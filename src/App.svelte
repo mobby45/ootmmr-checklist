@@ -386,6 +386,10 @@ yKeepalive.observe((event: any) => {
   const sEntrances = readableMap(yEntrances);
   const sNotes = readableMap(yNotes);
 
+  // ?noLogic in URL forces logic off (emergency escape hatch when logic causes a freeze)
+  if (new URLSearchParams(window.location.search).has('noLogic')) {
+    logicEnabled.set(false);
+  }
   initLogicStore(yItems, ySettings, yEntrances, _itemsRevStore, sSettings, sEntrances, ySongEvents, yShopPrices);
 
   // Sync all logic manual settings to ySettings so the OBS overlay can read them
