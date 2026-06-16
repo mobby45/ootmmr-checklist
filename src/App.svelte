@@ -64,6 +64,8 @@
   import CheckGroup from './components/CheckGroup.svelte';
   import { initLogicStore, logicEnabled, showOutOfLogic, logicAgeFilter, logicResult, logicLoading, logicManualSettings, specialConditionsStore, enabledTricks, locationRulesStore } from './stores/logicStore';
   import { defaultLogicSettings } from './data/logicSettingsDef';
+  import { TRICKS_DEFS } from './data/tricksDef';
+  const _validTrickIds = new Set(TRICKS_DEFS.map(t => t.id));
 
   function ageLogic(checkName: string, result: typeof $logicResult): 'child' | 'adult' | 'both' | 'none' {
     const n = checkName.replace(/^(OOT|MM) /, '');
@@ -3225,7 +3227,8 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
       const { appSettings, clearedKeys, startingItems, tricks, unmapped, junkLocations } = await importRandomizerSettings(randoImportStr);
       Object.entries(appSettings).forEach(([k, v]) => ySettings.set(k, v));
       for (const k of clearedKeys) ySettings.delete(k);
-      if (tricks.length > 0) enabledTricks.set(new Set(tricks));
+      const validTricks = tricks.filter(id => _validTrickIds.has(id));
+      if (validTricks.length > 0) enabledTricks.set(new Set(validTricks));
       for (const [itemId, level] of Object.entries(startingItems)) {
         const current = yItems.get(itemId) ?? 0;
         if (current < level) yItems.set(itemId, level);
@@ -3462,7 +3465,24 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     localStorage.setItem('theme', theme);
   }
 
-  let activeTab: 'oot' | 'mm' | 'other' | 'logic' | 'conditions' = 'oot';
+  type PrimaryTabId = 'settings' | 'items' | 'logic' | 'conditions';
+  type SettingsSubTabId = 'main' | 'shuffle' | 'price' | 'events' | 'cross' | 'world' | 'misc';
+  let activeTab: PrimaryTabId = 'settings';
+  let settingsSubTab: SettingsSubTabId = 'main';
+
+  const SETTINGS_SUB_TABS: { id: SettingsSubTabId; label: string; group: string }[] = [
+    { id: 'main',    label: 'Main',       group: 'Main' },
+    { id: 'shuffle', label: 'Shuffle',    group: 'Shuffle' },
+    { id: 'price',   label: 'Price',      group: 'Price' },
+    { id: 'events',  label: 'Events',     group: 'Events' },
+    { id: 'cross',   label: 'Cross-Game', group: 'Cross-Game' },
+    { id: 'world',   label: 'World',      group: 'World' },
+    { id: 'misc',    label: 'Misc',       group: 'Misc' },
+  ];
+
+  $: activeGroup = activeTab === 'items'  ? 'Items'
+    : activeTab === 'logic' ? 'Tricks'
+    : SETTINGS_SUB_TABS.find(t => t.id === settingsSubTab)?.group ?? 'Main';
 
   const CONDITION_NAMES = ['BRIDGE', 'MOON', 'LACS', 'GANON_BK', 'MAJORA'] as const;
   type ConditionName = typeof CONDITION_NAMES[number];
@@ -3599,10 +3619,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
   }
 
   // ==========================================
-  // GAME SETTINGS OPTIONS
-  // Each entry drives both the UI control and the setting ID used in checkPredicate
-  // ==========================================
-  const ootOptions = [
+  const _ootOptionsRemoved = [
     {
       type: 'dropdown',
       id: 'goldSkulltulaShuffleOOT',
@@ -4699,104 +4716,28 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
         <summary><strong class="interactable">Game / Logic Settings</strong></summary>
         <div style="margin-top: 0.8em">
           <div class="tabs">
-            <button type="button" class="tab-button" class:active={activeTab === 'oot'} on:click={() => (activeTab = 'oot')}
-              >OoT Shuffle Settings</button
-            >
-            <button type="button" class="tab-button" class:active={activeTab === 'mm'} on:click={() => (activeTab = 'mm')}
-              >MM Shuffle Settings</button
-            >
-            <button type="button" class="tab-button" class:active={activeTab === 'other'} on:click={() => (activeTab = 'other')}
-              >Other Settings</button
-            >
-            <button type="button" class="tab-button" class:active={activeTab === 'logic'} on:click={() => (activeTab = 'logic')}
-              >Logic Settings</button
-            >
-            <button type="button" class="tab-button" class:active={activeTab === 'conditions'} on:click={() => (activeTab = 'conditions')}
-              >Conditions</button
-            >
+            <button type="button" class="tab-button" class:active={activeTab === 'settings'}   on:click={() => (activeTab = 'settings')}  >Settings</button>
+            <button type="button" class="tab-button" class:active={activeTab === 'items'}      on:click={() => (activeTab = 'items')}     >Items</button>
+            <button type="button" class="tab-button" class:active={activeTab === 'logic'}      on:click={() => (activeTab = 'logic')}     >Logic{#if $enabledTricks.size > 0}<span class="tab-badge">{$enabledTricks.size}</span>{/if}</button>
+            <button type="button" class="tab-button" class:active={activeTab === 'conditions'} on:click={() => (activeTab = 'conditions')}>Conditions</button>
           </div>
+          {#if activeTab === 'settings'}
+            <div class="settings-subtab-bar">
+              {#each SETTINGS_SUB_TABS as sub}
+                <button type="button" class="settings-subtab" class:active={settingsSubTab === sub.id} on:click={() => (settingsSubTab = sub.id)}>{sub.label}</button>
+              {/each}
+            </div>
+          {/if}
             {#if isWatchMode}
               <p class="readonly-notice">Settings are read-only in watch mode</p>
             {/if}
             <form class="pure-form pure-form-stacked" class:watch-disabled={isWatchMode}>
               <fieldset>
-                {#if activeTab === 'oot'}
-                  <div class="dropdown-grid">
-                    {#each ootOptions as option}
-                      {#if option.type === 'dropdown'}
-                        <label>
-                          {option.label}
-                          <select
-                            value={$sSettings.get(option.id) ?? option.default}
-                            on:change={e => { if (isWatchMode) return; ySettings.set(option.id, selectValue(e)); }}
-                            class="dropdown-select"
-                            disabled={isWatchMode}
-                          >
-                            {#each option.options ?? [] as opt}<option value={opt.value}>{opt.label}</option>{/each}
-                          </select>
-                        </label>
-                      {:else if option.type === 'checkbox'}
-                        <label class="checkbox-option">
-                          <input
-                            type="checkbox"
-                            checked={$sSettings.get(option.id) ?? false}
-                            on:change|preventDefault={() => { if (isWatchMode) return; toggleYmap(ySettings, option.id); }}
-                            disabled={isWatchMode}
-                          />
-                          {option.label}
-                        </label>
-                      {/if}
-                    {/each}
-                  </div>
-                {:else if activeTab === 'mm'}
-                  <div class="dropdown-grid">
-                    {#each mmOptions as option}
-                      {#if option.type === 'dropdown'}
-                        <label>
-                          {option.label}
-                          <select
-                            value={$sSettings.get(option.id) ?? option.default}
-                            on:change={e => { if (isWatchMode) return; ySettings.set(option.id, selectValue(e)); }}
-                            class="dropdown-select"
-                            disabled={isWatchMode}
-                          >
-                            {#each option.options ?? [] as opt}<option value={opt.value}>{opt.label}</option>{/each}
-                          </select>
-                        </label>
-                      {:else if option.type === 'checkbox'}
-                        <label class="checkbox-option">
-                          <input
-                            type="checkbox"
-                            checked={$sSettings.get(option.id) ?? false}
-                            on:change|preventDefault={() => { if (isWatchMode) return; toggleYmap(ySettings, option.id); }}
-                            disabled={isWatchMode}
-                          />
-                          {option.label}
-                        </label>
-                      {/if}
-                    {/each}
-                  </div>
-                {:else if activeTab === 'other'}
-                  <div class="dropdown-grid">
-                    {#each otherOptions as option}
-                      {#if option.type === 'checkbox'}
-                        <label class="checkbox-option">
-                          <input
-                            type="checkbox"
-                            checked={$sSettings.get(option.id) ?? false}
-                            on:change|preventDefault={() => { if (isWatchMode) return; toggleYmap(ySettings, option.id); }}
-                            disabled={isWatchMode}
-                          />
-                          {option.label}
-                        </label>
-                      {/if}
-                    {/each}
-                  </div>
-                {:else if activeTab === 'logic'}
+                {#if activeTab !== 'conditions'}
                   <div style="padding: 4px 0;">
-                    <LogicSettings spoilerKeys={spoilerSettingKeys} {ySettings} {sSettings} />
+                    <LogicSettings {activeGroup} spoilerKeys={spoilerSettingKeys} {ySettings} {sSettings} />
                   </div>
-                {:else if activeTab === 'conditions'}
+                {:else}
                   <div class="conditions-editor">
                     {#if specialConditionEntries.length > 0 && spoilerSpecialConditions}
                       <p class="conditions-spoiler-note">Conditions loaded from spoiler — pre-filled fields are read only.</p>
@@ -5798,6 +5739,45 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     color: #0078e7;
     border-bottom-color: #0078e7;
     font-weight: 600;
+  }
+
+  .tab-badge {
+    display: inline-block;
+    font-size: 0.75em;
+    background: #1a3a5a;
+    color: #4a9eff;
+    border-radius: 3px;
+    padding: 0 4px;
+    margin-left: 4px;
+    font-weight: normal;
+    vertical-align: middle;
+  }
+
+  .settings-subtab-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.2em;
+    padding: 0.35em 0 0.35em;
+    border-bottom: 1px solid var(--color-border);
+    margin-bottom: 0.4em;
+  }
+
+  .settings-subtab {
+    font-size: 0.78em;
+    font-weight: 600;
+    padding: 0.2em 0.7em;
+    border: 1px solid var(--color-border);
+    border-radius: 3px;
+    background: var(--color-bg);
+    color: #888;
+    cursor: pointer;
+    letter-spacing: 0.02em;
+  }
+  .settings-subtab:hover { color: var(--color-text); border-color: #999; }
+  .settings-subtab.active {
+    color: var(--color-text);
+    border-color: #4a9eff;
+    background: rgba(74, 158, 255, 0.1);
   }
 
   .conditions-editor { display: flex; flex-direction: column; gap: 0.5em; padding: 4px 0; }

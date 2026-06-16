@@ -156,16 +156,25 @@ const OOT_BOOL_FILTERS: [RegExp, string][] = [
   [/\bWonder Item\b/,      'WonderShuffleOOT'],
   [/\bButterfly \d/,       'ButterflyShuffleOOT'],
   [/\bRed Boulder\b/,      'RedBoulderShuffleOOT'],
+  [/\bHive \d/,            'HivesShuffleOOT'],
+  [/\bFrogs /,             'FrogRupeesShuffleOOT'],
+  [/\bIcicle\b/,           'IciclesShuffleOOT'],
+  [/\bRed Ice\b/,          'RedIceShuffleOOT'],
 ];
 const MM_BOOL_FILTERS: [RegExp, string][] = [
   [/\bRock \d/,            'RockShuffleMM'],
   [/\bTree \d/,            'TreeShuffleMM'],
+  [/\bBush \d/,            'BushShuffleMM'],
   [/\bRupee \d/,           'RupeeShuffleMM'],
   [/\bHeart (?!Container)/, 'HeartsShuffleMM'],
   [/\bWonder Item\b/,      'WonderShuffleMM'],
   [/\bButterfly \d/,       'ButterflyShuffleMM'],
   [/\bSnowball\b/,         'SnowballShuffleMM'],
   [/\bBarrel\b/,           'BarrelsShuffleMM'],
+  [/\bHive\b|\bBeehive\b/, 'HivesShuffleMM'],
+  [/\bLottery\b/,          'LotteryShuffleMM'],
+  [/\bIcicle\b/,           'IciclesShuffleMM'],
+  [/\bRed Boulder\b/,      'RedBoulderShuffleMM'],
 ];
 
 function isLocationEnabled(locName: string, game: 'oot' | 'mm' | undefined, state: LogicState): boolean {

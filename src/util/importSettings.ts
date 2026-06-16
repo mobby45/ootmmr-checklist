@@ -82,6 +82,7 @@ const KEY_MAP: Record<string, string> = {
   openMoon:               'openMoon',
   majoraChild:            'majoraChild',
   bossWarpPads:           'bossWarpPads',
+  jpLayouts:              'jpLayouts',
   // Win condition
   goal:                   'goal',
   // Special logic (select/bool)

@@ -15,23 +15,11 @@
   /** Readable store over ySettings */
   export let sSettings: Readable<Map<string, any>> | null = null;
 
-  // ─── Two-tier navigation ──────────────────────────────────────────────────────
-  type PrimaryTab = 'settings' | 'items' | 'tricks';
-  type SettingsTab = 'main' | 'shuffle' | 'price' | 'events' | 'cross' | 'misc';
+  /** Which content group to render — driven by App.svelte top-level tab bar */
+  export let activeGroup: string = 'Main';
+
   type ItemsTab = 'progressive' | 'extensions' | 'ageless' | 'shared';
-
-  let primaryTab: PrimaryTab = 'settings';
-  let settingsTab: SettingsTab = 'main';
   let itemsTab: ItemsTab = 'progressive';
-
-  const SETTINGS_TABS: { id: SettingsTab; label: string; group: string }[] = [
-    { id: 'main',    label: 'Main',       group: 'Main' },
-    { id: 'shuffle', label: 'Shuffle',    group: 'Shuffle' },
-    { id: 'price',   label: 'Price',      group: 'Price' },
-    { id: 'events',  label: 'Events',     group: 'Events' },
-    { id: 'cross',   label: 'Cross-Game', group: 'Cross-Game' },
-    { id: 'misc',    label: 'Misc',       group: 'Misc' },
-  ];
 
   function defsForGroup(group: string): LogicSettingDef[] {
     return LOGIC_SETTINGS_DEFS.filter(d => d.group === group);
@@ -342,117 +330,13 @@
   function disableAllTricks() { enabledTricks.set(new Set()); }
 </script>
 
-<!-- Primary tab bar -->
-<div class="primary-tab-bar">
-  <button type="button" class="primary-tab" class:primary-tab-active={primaryTab === 'settings'} on:click={() => primaryTab = 'settings'}>Settings</button>
-  <button type="button" class="primary-tab" class:primary-tab-active={primaryTab === 'items'}    on:click={() => primaryTab = 'items'}>Items</button>
-  <button type="button" class="primary-tab" class:primary-tab-active={primaryTab === 'tricks'}   on:click={() => primaryTab = 'tricks'}>
-    Tricks
-    {#if $enabledTricks.size > 0}<span class="tab-count">{$enabledTricks.size}</span>{/if}
-  </button>
-</div>
-
-{#if primaryTab === 'settings'}
-  <!-- Secondary tab bar for settings -->
-  <div class="subtab-bar">
-    {#each SETTINGS_TABS as tab}
-      {@const modified = isTabModified(tab.group)}
-      <button
-        type="button"
-        class="subtab"
-        class:subtab-active={settingsTab === tab.id}
-        on:click={() => settingsTab = tab.id}
-      >
-        {tab.label}
-        {#if modified}<span class="modified-dot-tab"></span>{/if}
-      </button>
-    {/each}
-  </div>
-
-  <!-- Settings content for active tab -->
-  {#each SETTINGS_TABS as tab}
-    {#if settingsTab === tab.id}
-      {#each sectionsForGroup(tab.group) as section}
-        {#if section}
-          <div class="section-header">{section}</div>
-        {/if}
-        <div class="dropdown-grid">
-          {#each defsForGroup(tab.group).filter(d => (d.section ?? '') === section && (!d.showIf || d.showIf(get))) as def}
-            {@const spoiler = fromSpoiler(def.key)}
-            {#if def.type === 'bool'}
-              <label class="checkbox-option" class:spoiler-row={spoiler} title={[def.desc, spoiler ? 'Set by spoiler log' : ''].filter(Boolean).join('\n')}>
-                <input
-                  type="checkbox"
-                  checked={!!get(def.key)}
-                  disabled={spoiler}
-                  on:change={e => onCheckboxChange(def.key, e)}
-                />
-                {def.label}
-                {#if spoiler}<span class="spoiler-badge">spoiler</span>{/if}
-              </label>
-            {:else if def.type === 'select'}
-              <label class:spoiler-row={spoiler} title={[def.desc, spoiler ? 'Set by spoiler log' : ''].filter(Boolean).join('\n')}>
-                {def.label}
-                {#if spoiler}<span class="spoiler-badge">spoiler</span>{/if}
-                <select
-                  class="dropdown-select"
-                  value={get(def.key)}
-                  disabled={spoiler}
-                  on:change={e => onSelectChange(def.key, e)}
-                >
-                  {#each def.options ?? [] as opt}
-                    <option value={opt.value}>{opt.label}</option>
-                  {/each}
-                </select>
-              </label>
-            {:else if def.type === 'number'}
-              <label class:spoiler-row={spoiler} title={[def.desc, spoiler ? 'Set by spoiler log' : ''].filter(Boolean).join('\n')}>
-                {def.label}
-                {#if spoiler}<span class="spoiler-badge">spoiler</span>{/if}
-                <input
-                  class="dropdown-select number-input"
-                  type="number"
-                  min={def.min ?? 1}
-                  max={def.max}
-                  value={visGet(def.key) ?? def.default}
-                  disabled={spoiler}
-                  on:change={e => onNumberChange(def.key, e)}
-                />
-              </label>
-            {:else if def.type === 'multicheck'}
-              <div class="multicheck-block">
-                <div class="multicheck-title" title={[def.desc, spoiler ? 'Set by spoiler log' : ''].filter(Boolean).join('\n')}>
-                  {def.label}
-                  {#if spoiler}<span class="spoiler-badge">spoiler</span>{/if}
-                </div>
-                <div class="multicheck-flags">
-                  {#each def.flags ?? [] as flag}
-                    <label class="checkbox-option" title={spoiler ? 'Set by spoiler log' : ''}>
-                      <input
-                        type="checkbox"
-                        checked={hasFlag(def.key, flag.value)}
-                        disabled={spoiler}
-                        on:change={() => toggleFlag(def.key, flag.value)}
-                      />
-                      {flag.label}
-                    </label>
-                  {/each}
-                </div>
-              </div>
-            {/if}
-          {/each}
-        </div>
-      {/each}
-    {/if}
-  {/each}
-
-{:else if primaryTab === 'items'}
-  <!-- Secondary tab bar for items -->
+{#if activeGroup === 'Items'}
+  <!-- Secondary tab bar for items (order matches generator: Progressive / Shared / Extensions / Ageless) -->
   <div class="subtab-bar">
     <button type="button" class="subtab" class:subtab-active={itemsTab === 'progressive'} on:click={() => itemsTab = 'progressive'}>Progressive</button>
+    <button type="button" class="subtab" class:subtab-active={itemsTab === 'shared'}     on:click={() => itemsTab = 'shared'}>Shared</button>
     <button type="button" class="subtab" class:subtab-active={itemsTab === 'extensions'} on:click={() => itemsTab = 'extensions'}>Extensions</button>
     <button type="button" class="subtab" class:subtab-active={itemsTab === 'ageless'}    on:click={() => itemsTab = 'ageless'}>Ageless</button>
-    <button type="button" class="subtab" class:subtab-active={itemsTab === 'shared'}     on:click={() => itemsTab = 'shared'}>Shared</button>
   </div>
 
   {#if itemsTab === 'progressive'}
@@ -541,7 +425,7 @@
     </div>
   {/if}
 
-{:else if primaryTab === 'tricks'}
+{:else if activeGroup === 'Tricks'}
   <!-- Logic sub-tab bar -->
   <div class="subtab-bar">
     <button type="button" class="subtab" class:subtab-active={logicTab === 'tricks'}  on:click={() => logicTab = 'tricks'}>
@@ -568,8 +452,8 @@
 
     <!-- Dual panel: Disabled | Enabled -->
     {@const allTricks   = tricksForTab(logicTab, logicGame)}
-    {@const disabled    = allTricks.filter(t => !isTrickEnabled(t.id))}
-    {@const enabled_    = allTricks.filter(t =>  isTrickEnabled(t.id))}
+    {@const disabled    = allTricks.filter(t => !$enabledTricks.has(t.id))}
+    {@const enabled_    = allTricks.filter(t =>  $enabledTricks.has(t.id))}
     <div class="dual-panel">
       <div class="trick-panel">
         <div class="panel-header">Disabled</div>
@@ -603,49 +487,84 @@
     <!-- Junk Locations — not yet implemented -->
     <p class="settings-hint" style="margin-top:1em">Junk Locations: mark checks as logically irrelevant (coming soon).</p>
   {/if}
+
+{:else}
+  <!-- Settings content for the active group (Main / Shuffle / Price / Events / Cross-Game / Misc) -->
+  {#each sectionsForGroup(activeGroup) as section}
+    {#if section}
+      <div class="section-header">{section}</div>
+    {/if}
+    <div class="dropdown-grid">
+      {#each defsForGroup(activeGroup).filter(d => (d.section ?? '') === section && (!d.showIf || d.showIf(get))) as def}
+        {@const spoiler = fromSpoiler(def.key)}
+        {#if def.type === 'bool'}
+          <label class="checkbox-option" class:spoiler-row={spoiler} title={[def.desc, spoiler ? 'Set by spoiler log' : ''].filter(Boolean).join('\n')}>
+            <input
+              type="checkbox"
+              checked={!!get(def.key)}
+              disabled={spoiler}
+              on:change={e => onCheckboxChange(def.key, e)}
+            />
+            {def.label}
+            {#if spoiler}<span class="spoiler-badge">spoiler</span>{/if}
+          </label>
+        {:else if def.type === 'select'}
+          <label class:spoiler-row={spoiler} title={[def.desc, spoiler ? 'Set by spoiler log' : ''].filter(Boolean).join('\n')}>
+            {def.label}
+            {#if spoiler}<span class="spoiler-badge">spoiler</span>{/if}
+            <select
+              class="dropdown-select"
+              value={get(def.key)}
+              disabled={spoiler}
+              on:change={e => onSelectChange(def.key, e)}
+            >
+              {#each def.options ?? [] as opt}
+                <option value={opt.value}>{opt.label}</option>
+              {/each}
+            </select>
+          </label>
+        {:else if def.type === 'number'}
+          <label class:spoiler-row={spoiler} title={[def.desc, spoiler ? 'Set by spoiler log' : ''].filter(Boolean).join('\n')}>
+            {def.label}
+            {#if spoiler}<span class="spoiler-badge">spoiler</span>{/if}
+            <input
+              class="dropdown-select number-input"
+              type="number"
+              min={def.min ?? 1}
+              max={def.max}
+              value={visGet(def.key) ?? def.default}
+              disabled={spoiler}
+              on:change={e => onNumberChange(def.key, e)}
+            />
+          </label>
+        {:else if def.type === 'multicheck'}
+          <div class="multicheck-block">
+            <div class="multicheck-title" title={[def.desc, spoiler ? 'Set by spoiler log' : ''].filter(Boolean).join('\n')}>
+              {def.label}
+              {#if spoiler}<span class="spoiler-badge">spoiler</span>{/if}
+            </div>
+            <div class="multicheck-flags">
+              {#each def.flags ?? [] as flag}
+                <label class="checkbox-option" title={spoiler ? 'Set by spoiler log' : ''}>
+                  <input
+                    type="checkbox"
+                    checked={hasFlag(def.key, flag.value)}
+                    disabled={spoiler}
+                    on:change={() => toggleFlag(def.key, flag.value)}
+                  />
+                  {flag.label}
+                </label>
+              {/each}
+            </div>
+          </div>
+        {/if}
+      {/each}
+    </div>
+  {/each}
 {/if}
 
 <style>
-  /* ── Primary tab bar ─────────────────────────────────────────────────────── */
-  .primary-tab-bar {
-    display: flex;
-    gap: 0.2em;
-    margin-bottom: 0.4em;
-  }
-
-  .primary-tab {
-    flex: 1;
-    font-size: 0.8em;
-    font-weight: 700;
-    padding: 0.35em 0.5em;
-    border: 1px solid var(--color-border);
-    border-radius: 4px;
-    background: var(--color-bg);
-    color: #888;
-    cursor: pointer;
-    letter-spacing: 0.03em;
-    text-align: center;
-  }
-  .primary-tab:hover { color: var(--color-text); border-color: #999; }
-  .primary-tab.primary-tab-active {
-    color: var(--color-text);
-    border-color: #4a9eff;
-    background: rgba(74, 158, 255, 0.12);
-  }
-
-  .tab-count {
-    display: inline-block;
-    font-size: 0.82em;
-    background: #1a3a5a;
-    color: #4a9eff;
-    border-radius: 3px;
-    padding: 0 4px;
-    margin-left: 4px;
-    font-weight: normal;
-    vertical-align: middle;
-  }
-
-  /* ── Secondary sub-tab bar ───────────────────────────────────────────────── */
+  /* ── Sub-tab bar (Items / Tricks internal navigation) ───────────────────── */
   .subtab-bar {
     display: flex;
     flex-wrap: wrap;
@@ -672,17 +591,6 @@
     color: var(--color-text);
     border-color: #4a9eff;
     background: rgba(74, 158, 255, 0.08);
-  }
-
-  .modified-dot-tab {
-    display: inline-block;
-    width: 5px;
-    height: 5px;
-    border-radius: 50%;
-    background: #4a9eff;
-    margin-left: 4px;
-    vertical-align: middle;
-    flex-shrink: 0;
   }
 
   /* ── Section headers within a tab ─────────────────────────────────────────── */

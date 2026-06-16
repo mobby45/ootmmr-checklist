@@ -9,6 +9,7 @@ import type { MacroTable } from '../logic/expr/eval';
 import type { WorldGraph } from '../logic/types';
 import { defaultLogicSettings } from '../data/logicSettingsDef';
 import type { SpecialConditionsMap } from '../util/spoilerParser';
+import { TRICKS_DEFS } from '../data/tricksDef';
 
 // ─── Shared world data (loaded once) ─────────────────────────────────────────
 
@@ -96,9 +97,10 @@ export const logicManualSettings = writable<Record<string, any>>(
 );
 
 /** Enabled logic tricks — persisted locally, never synced (player-specific skill level) */
-export const enabledTricks = writable<Set<string>>(
-  new Set(JSON.parse(localStorage.getItem('enabledTricks') ?? '[]') as string[])
-);
+const _validTrickIds = new Set(TRICKS_DEFS.map(t => t.id));
+const _storedTricks = (JSON.parse(localStorage.getItem('enabledTricks') ?? '[]') as string[])
+  .filter(id => _validTrickIds.has(id));
+export const enabledTricks = writable<Set<string>>(new Set(_storedTricks));
 
 logicEnabled.subscribe(v => localStorage.setItem('logicEnabled', String(v)));
 showOutOfLogic.subscribe(v => localStorage.setItem('showOutOfLogic', String(v)));
