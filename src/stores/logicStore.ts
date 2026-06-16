@@ -113,6 +113,9 @@ enabledTricks.subscribe(v => localStorage.setItem('enabledTricks', JSON.stringif
 export const logicResult  = writable<ReachabilityResult | null>(null);
 export const logicLoading = writable<boolean>(false);
 
+/** Maps entranceId → source region name in the world graph (populated on first loadWorld call) */
+export const entranceSourceMapStore = writable<Map<string, string>>(new Map());
+
 // ─── ER active settings (written by ERTracker, read by logic engine) ──────────
 /** Active ER type flags — mirrors ERTracker's activeErSettings so the logic engine sees them. */
 export const erActiveSettingsStore = writable<Record<string, boolean>>({});
@@ -148,9 +151,10 @@ export function initLogicStore(
     if (!_worldReady) {
       logicLoading.set(true);
       try {
-        const { graph, macros, locationRules } = await loadWorld();
+        const { graph, macros, locationRules, entranceSourceMap } = await loadWorld();
         _graph = graph; _macros = macros; _worldReady = true;
         locationRulesStore.set(locationRules);
+        entranceSourceMapStore.set(entranceSourceMap);
       } catch (e) {
         console.error('[logic] Failed to load world:', e);
         logicLoading.set(false);
@@ -221,19 +225,14 @@ export function initLogicStore(
       : new Map<string, number>();
     const state = buildLogicState(itemsSnap, settingsSnap, erSnap, tricks, erMode, resolvedSpecial, undefined, songEventsSnap, shopPricesSnap);
     try {
-      const t0 = performance.now();
       const result = computeReachability(_graph!, state, _macros!);
-      console.log('[logic] BFS done in ' + Math.round(performance.now() - t0) + 'ms — regions:' + result.regions.size + ' checks:' + (result.childChecks.size + result.adultChecks.size));
       logicResult.set(result);
     } catch (e) {
       console.error('[logic] reachability error:', e);
     }
   }
 
-  let _recomputeCallCount = 0;
   function scheduleRecompute() {
-    _recomputeCallCount++;
-    console.log('[logic] scheduleRecompute #' + _recomputeCallCount);
     if (debounceTimer) clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => recompute(get(logicEnabled)), 150);
   }

@@ -62,7 +62,7 @@
   import * as T from './data/types';
 
   import CheckGroup from './components/CheckGroup.svelte';
-  import { initLogicStore, logicEnabled, showOutOfLogic, logicAgeFilter, logicResult, logicLoading, logicManualSettings, specialConditionsStore, enabledTricks, locationRulesStore } from './stores/logicStore';
+  import { initLogicStore, logicEnabled, showOutOfLogic, logicAgeFilter, logicResult, logicLoading, logicManualSettings, specialConditionsStore, enabledTricks, locationRulesStore, entranceSourceMapStore } from './stores/logicStore';
   import { defaultLogicSettings } from './data/logicSettingsDef';
   import { TRICKS_DEFS } from './data/tricksDef';
   const _validTrickIds = new Set(TRICKS_DEFS.map(t => t.id));
@@ -412,6 +412,11 @@ yKeepalive.observe((event: any) => {
     ? new Map(Object.entries(spoilerEntrances)) as Map<string, string>
     : new Map($sEntrances) as Map<string, string>;
   $: erSettingsForMap = activeErSettings as unknown as Record<string, boolean>;
+  $: entranceReachability = ($logicEnabled && $logicResult && $entranceSourceMapStore.size > 0)
+    ? new Map<string, boolean>(
+        [...$entranceSourceMapStore.entries()].map(([id, src]) => [id, $logicResult!.regions.has(src)])
+      )
+    : null;
   $: checkToGroup = structuredChecks
     ? new Map(structuredChecks.flatMap(g => g.checks.map(c => [c.name, g.groupName])))
     : new Map<string, string>();
@@ -4697,7 +4702,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
           <button type="button" class="er-tab" class:active={erTab === 'pathfinder'} on:click={() => erTab = 'pathfinder'} role="tab">Pathfinder</button>
         </div>
         {#if erTab === 'tracker'}
-          <ERTracker {yEntrances} entranceValues={entranceValuesMap} {spoilerErSettings} {spoilerExtraEr} isWatchMode={isWatchMode || spoilerFillEntrances} bind:activeErSettings={activeErSettings} highlightedEntranceId={erHighlightId}
+          <ERTracker {yEntrances} entranceValues={entranceValuesMap} {spoilerErSettings} {spoilerExtraEr} isWatchMode={isWatchMode || spoilerFillEntrances} bind:activeErSettings={activeErSettings} highlightedEntranceId={erHighlightId} {entranceReachability}
             on:openMapForEntrance={e => openMapForEntrance(e.detail.entranceId)}
           />
         {:else}
