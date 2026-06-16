@@ -56,13 +56,16 @@ export function computeReachability(
   enqueue(GLOBAL, 'child');
   enqueue(GLOBAL, 'adult');
 
-  // BFS — repeat until stable (new events can unlock new exits for either age)
+  // BFS — repeat until stable (new events can unlock new exits for either age).
+  // Use an index pointer instead of shift() — Array.shift() is O(n) and causes
+  // severe slowdowns when the queue grows large (800+ regions × 2 ages).
   let changed = true;
+  let qi = 0;
   while (changed) {
     changed = false;
 
-    while (queue.length > 0) {
-      const { regionName, age } = queue.shift()!;
+    while (qi < queue.length) {
+      const { regionName, age } = queue[qi++];
       const region = graph.get(regionName);
       if (!region) continue;
 
@@ -101,8 +104,10 @@ export function computeReachability(
       }
     }
 
-    // Re-scan all reached regions when new events fire
+    // Re-scan all reached regions when new events or regions were added
     if (changed) {
+      queue.length = 0;
+      qi = 0;
       for (const age of ['child', 'adult'] as Age[]) {
         for (const regionName of reachedByAge[age]) {
           queue.push({ regionName, age });
