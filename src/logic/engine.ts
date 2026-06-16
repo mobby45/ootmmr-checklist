@@ -177,6 +177,10 @@ function isLocationEnabled(locName: string, game: 'oot' | 'mm' | undefined, stat
   if (game === 'oot' && TCG_ROOM_RE.test(locName)) {
     return !!state.settings.get('TreasureChestShuffleOOT');
   }
+  // Master Sword pedestal is only a randomized check when shuffleMasterSword is on
+  if (locName === 'Temple of Time Master Sword') {
+    return !!state.settings.get('shuffleMasterSword');
+  }
   // Collectible shuffle locations: only exist when the corresponding boolean setting is on
   const boolFilters = game === 'mm' ? MM_BOOL_FILTERS : OOT_BOOL_FILTERS;
   for (const [re, key] of boolFilters) {
