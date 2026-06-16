@@ -221,14 +221,19 @@ export function initLogicStore(
       : new Map<string, number>();
     const state = buildLogicState(itemsSnap, settingsSnap, erSnap, tricks, erMode, resolvedSpecial, undefined, songEventsSnap, shopPricesSnap);
     try {
+      const t0 = performance.now();
       const result = computeReachability(_graph!, state, _macros!);
+      console.debug('[logic] BFS done in ' + Math.round(performance.now() - t0) + 'ms — regions:' + result.regions.size + ' checks:' + (result.childChecks.size + result.adultChecks.size));
       logicResult.set(result);
     } catch (e) {
       console.error('[logic] reachability error:', e);
     }
   }
 
+  let _recomputeCallCount = 0;
   function scheduleRecompute() {
+    _recomputeCallCount++;
+    console.debug('[logic] scheduleRecompute #' + _recomputeCallCount);
     if (debounceTimer) clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => recompute(get(logicEnabled)), 150);
   }
