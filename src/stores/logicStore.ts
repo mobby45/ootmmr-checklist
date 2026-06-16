@@ -223,7 +223,7 @@ export function initLogicStore(
     try {
       const t0 = performance.now();
       const result = computeReachability(_graph!, state, _macros!);
-      console.debug('[logic] BFS done in ' + Math.round(performance.now() - t0) + 'ms — regions:' + result.regions.size + ' checks:' + (result.childChecks.size + result.adultChecks.size));
+      console.log('[logic] BFS done in ' + Math.round(performance.now() - t0) + 'ms — regions:' + result.regions.size + ' checks:' + (result.childChecks.size + result.adultChecks.size));
       logicResult.set(result);
     } catch (e) {
       console.error('[logic] reachability error:', e);
@@ -233,7 +233,7 @@ export function initLogicStore(
   let _recomputeCallCount = 0;
   function scheduleRecompute() {
     _recomputeCallCount++;
-    console.debug('[logic] scheduleRecompute #' + _recomputeCallCount);
+    console.log('[logic] scheduleRecompute #' + _recomputeCallCount);
     if (debounceTimer) clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => recompute(get(logicEnabled)), 150);
   }
