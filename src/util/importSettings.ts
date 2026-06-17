@@ -437,8 +437,8 @@ const OOTMM_STARTING_ITEM_MAP: Record<string, { id: string; level: number }[]> =
   MM_BOMBCHU:           [{ id: 'mm_bombchu',    level: 1 }],
   MM_HOOKSHOT:          [{ id: 'mm_hookshot',   level: 1 }],
   MM_LENS:              [{ id: 'mm_lens',       level: 1 }],
-  MM_POWDER_KEG:        [{ id: 'mm_powder_keg', level: 1 }],
-  MM_PICTOGRAPH:        [{ id: 'mm_pictograph', level: 1 }],
+  MM_POWDER_KEG:        [{ id: 'mm_keg',       level: 1 }],
+  MM_PICTOGRAPH:        [{ id: 'mm_pictobox',  level: 1 }],
   MM_ARROW_FIRE:        [{ id: 'mm_arrow_fire', level: 1 }],
   MM_ARROW_ICE:         [{ id: 'mm_arrow_ice',  level: 1 }],
   MM_ARROW_LIGHT:       [{ id: 'mm_arrow_light',level: 1 }],
@@ -450,8 +450,8 @@ const OOTMM_STARTING_ITEM_MAP: Record<string, { id: string; level: number }[]> =
   MM_SWORD_GILDED:      [{ id: 'mm_sword',      level: 3 }],
   // MM equipment
   MM_OCARINA:           [{ id: 'mm_ocarina',    level: 1 }],
-  MM_SHIELD_HERO:       [{ id: 'mm_shield_hero',level: 1 }],
-  MM_SHIELD_ZORA:       [{ id: 'mm_shield_zora',level: 1 }],
+  MM_SHIELD_HERO:       [{ id: 'mm_shield',     level: 1 }],
+  MM_SHIELD_ZORA:       [{ id: 'mm_shield_zora',level: 1 }], // no tracker UI item — logic-only
   MM_BOOTS_IRON:        [{ id: 'mm_boots_iron', level: 1 }],
   MM_BOOTS_HOVER:       [{ id: 'mm_boots_hover',level: 1 }],
   MM_STRENGTH:          [{ id: 'mm_strength',   level: 1 }],
@@ -462,35 +462,35 @@ const OOTMM_STARTING_ITEM_MAP: Record<string, { id: string; level: number }[]> =
   MM_NUTS:              [{ id: 'mm_nuts',       level: 1 }],
   MM_NUTS_5:            [{ id: 'mm_nuts',       level: 1 }],
   MM_NUTS_10:           [{ id: 'mm_nuts',       level: 1 }],
-  // MM masks
-  MM_MASK_DEKU:         [{ id: 'mm_mask_deku',  level: 1 }],
-  MM_MASK_GORON:        [{ id: 'mm_mask_goron', level: 1 }],
-  MM_MASK_ZORA:         [{ id: 'mm_mask_zora',  level: 1 }],
-  MM_MASK_FIERCE_DEITY: [{ id: 'mm_mask_fierce_deity', level: 1 }],
-  MM_MASK_BUNNY:        [{ id: 'mm_mask_bunny', level: 1 }],
-  MM_MASK_TRUTH:        [{ id: 'mm_mask_truth', level: 1 }],
-  MM_MASK_KAFEI:        [{ id: 'mm_mask_kafei', level: 1 }],
-  MM_MASK_KEATON:       [{ id: 'mm_mask_keaton',level: 1 }],
-  MM_MASK_ROMANI:       [{ id: 'mm_mask_romani',level: 1 }],
-  MM_MASK_CAPTAIN:      [{ id: 'mm_mask_captain',level:1 }],
-  MM_MASK_GIANT:        [{ id: 'mm_mask_giant', level: 1 }],
-  MM_MASK_BLAST:        [{ id: 'mm_mask_blast', level: 1 }],
-  MM_MASK_STONE:        [{ id: 'mm_mask_stone', level: 1 }],
-  MM_MASK_GREAT_FAIRY:  [{ id: 'mm_mask_great_fairy', level: 1 }],
-  MM_MASK_DON_GERO:     [{ id: 'mm_mask_don_gero', level: 1 }],
-  MM_MASK_KAMARO:       [{ id: 'mm_mask_kamaro',level: 1 }],
-  MM_MASK_GIBDO:        [{ id: 'mm_mask_gibdo', level: 1 }],
-  MM_MASK_CIRCUS:       [{ id: 'mm_mask_circus',level: 1 }],
-  MM_MASK_POSTMAN:      [{ id: 'mm_mask_postman',level:1 }],
-  MM_MASK_COUPLE:       [{ id: 'mm_mask_couple',level: 1 }],
-  MM_MASK_ALL_NIGHT:    [{ id: 'mm_mask_all_night', level: 1 }],
-  MM_MASK_SCENTS:       [{ id: 'mm_mask_scents',level: 1 }],
-  MM_MASK_BREMEN:       [{ id: 'mm_mask_bremen',level: 1 }],
-  // MM rewards
-  MM_REMAINS_ODOLWA:    [{ id: 'mm_remains_odolwa',   level: 1 }],
-  MM_REMAINS_GOHT:      [{ id: 'mm_remains_goht',     level: 1 }],
-  MM_REMAINS_GYORG:     [{ id: 'mm_remains_gyorg',    level: 1 }],
-  MM_REMAINS_TWINMOLD:  [{ id: 'mm_remains_twinmold', level: 1 }],
+  // MM masks — IDs must match tracker itemData.ts (mask_*, NOT mm_mask_*)
+  MM_MASK_DEKU:         [{ id: 'mask_deku',         level: 1 }],
+  MM_MASK_GORON:        [{ id: 'mask_goron',        level: 1 }],
+  MM_MASK_ZORA:         [{ id: 'mask_zora',         level: 1 }],
+  MM_MASK_FIERCE_DEITY: [{ id: 'mask_fierce_deity', level: 1 }],
+  MM_MASK_BUNNY:        [{ id: 'mask_bunny',        level: 1 }],
+  MM_MASK_TRUTH:        [{ id: 'mask_truth_mm',     level: 1 }],
+  MM_MASK_KAFEI:        [{ id: 'mask_kafei',        level: 1 }],
+  MM_MASK_KEATON:       [{ id: 'mask_keaton',       level: 1 }],
+  MM_MASK_ROMANI:       [{ id: 'mask_romani',       level: 1 }],
+  MM_MASK_CAPTAIN:      [{ id: 'mask_captain_hat',  level: 1 }],
+  MM_MASK_GIANT:        [{ id: 'mask_giant',        level: 1 }],
+  MM_MASK_BLAST:        [{ id: 'mask_blast',        level: 1 }],
+  MM_MASK_STONE:        [{ id: 'mask_stone',        level: 1 }],
+  MM_MASK_GREAT_FAIRY:  [{ id: 'mask_great_fairy',  level: 1 }],
+  MM_MASK_DON_GERO:     [{ id: 'mask_don_gero',     level: 1 }],
+  MM_MASK_KAMARO:       [{ id: 'mask_kamaro',       level: 1 }],
+  MM_MASK_GIBDO:        [{ id: 'mask_gibdo',        level: 1 }],
+  MM_MASK_CIRCUS:       [{ id: 'mask_circus_leader',level: 1 }],
+  MM_MASK_POSTMAN:      [{ id: 'mask_postman',      level: 1 }],
+  MM_MASK_COUPLE:       [{ id: 'mask_couple',       level: 1 }],
+  MM_MASK_ALL_NIGHT:    [{ id: 'mask_all_night',    level: 1 }],
+  MM_MASK_SCENTS:       [{ id: 'mask_scents',       level: 1 }],
+  MM_MASK_BREMEN:       [{ id: 'mask_bremen',       level: 1 }],
+  // MM rewards — IDs must match tracker itemData.ts (remains_*, NOT mm_remains_*)
+  MM_REMAINS_ODOLWA:    [{ id: 'remains_odolwa',   level: 1 }],
+  MM_REMAINS_GOHT:      [{ id: 'remains_goht',     level: 1 }],
+  MM_REMAINS_GYORG:     [{ id: 'remains_gyorg',    level: 1 }],
+  MM_REMAINS_TWINMOLD:  [{ id: 'remains_twinmold', level: 1 }],
   // MM songs
   MM_SONG_TIME:         [{ id: 'mm_song_time',   level: 1 }],
   MM_SONG_EPONA:        [{ id: 'mm_song_epona',  level: 1 }],
@@ -768,14 +768,20 @@ export async function importRandomizerSettings(str: string): Promise<{
   // OoTMM hash may provide pre-computed specialConds with coin flags (coinsRed, coinsBlue, etc.)
   // that deriveSpecialConditions can't infer from 'custom' bridge/lacs types.
   // Merge them in, skipping conditions that are truly empty (count=0, no flags set).
+  // OoTMM uses non-standard keys (MOON_MOON_WARP, MOON_CRS) → map to tracker canonical names.
+  const SPECIAL_COND_KEY_MAP: Record<string, string> = {
+    MOON_MOON_WARP: 'MOON',
+    MOON_CRS: 'MOON',
+  };
   if (raw['specialConds']) {
     const _hasFlags = (c: Record<string, unknown>): boolean => {
       if ((c.count as number) > 0) return true;
       return Object.entries(c).some(([k, v]) => k !== 'count' && v === true);
     };
     for (const [name, cond] of Object.entries(raw['specialConds'] as Record<string, object>)) {
-      if (!derivedConditions[name] && _hasFlags(cond as Record<string, unknown>)) {
-        derivedConditions[name] = cond as SpecialCondition;
+      const mappedName = SPECIAL_COND_KEY_MAP[name] ?? name;
+      if (!derivedConditions[mappedName] && _hasFlags(cond as Record<string, unknown>)) {
+        derivedConditions[mappedName] = cond as SpecialCondition;
       }
     }
   }
