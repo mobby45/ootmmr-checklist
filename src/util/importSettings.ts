@@ -767,9 +767,21 @@ export async function importRandomizerSettings(str: string): Promise<{
   const derivedConditions = deriveSpecialConditions(raw);
   // OoTMM hash may provide pre-computed specialConds with coin flags (coinsRed, coinsBlue, etc.)
   // that deriveSpecialConditions can't infer from 'custom' bridge/lacs types.
+  // Only apply when the base setting is actually active (e.g. rainbowBridge !== 'open')
+  // to avoid importing conditions for disabled goals.
   if (raw['specialConds']) {
+    const _condSettingActive = (name: string): boolean => {
+      const t = raw[name === 'GANON_BK' ? 'ganonBossKey' : ({
+        BRIDGE: 'rainbowBridge', LACS: 'lacs', MOON: 'moon', MAJORA: 'majora',
+      } as Record<string, string>)[name]] as string | undefined;
+      if (!t) return false;
+      if (name === 'GANON_BK') return t !== 'removed' && t !== 'vanilla' && t !== 'anywhere';
+      return t !== 'open';
+    };
     for (const [name, cond] of Object.entries(raw['specialConds'] as Record<string, object>)) {
-      if (!derivedConditions[name]) derivedConditions[name] = cond as SpecialCondition;
+      if (!derivedConditions[name] && _condSettingActive(name)) {
+        derivedConditions[name] = cond as SpecialCondition;
+      }
     }
   }
   return { appSettings, clearedKeys, startingItems, tricks, unmapped, junkLocations, derivedConditions };
