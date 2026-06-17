@@ -765,5 +765,12 @@ export async function importRandomizerSettings(str: string): Promise<{
   if (!('songEventShuffle' in appSettings)) clearedKeys.push('songEventShuffle');
 
   const derivedConditions = deriveSpecialConditions(raw);
+  // OoTMM hash may provide pre-computed specialConds with coin flags (coinsRed, coinsBlue, etc.)
+  // that deriveSpecialConditions can't infer from 'custom' bridge/lacs types.
+  if (raw['specialConds']) {
+    for (const [name, cond] of Object.entries(raw['specialConds'] as Record<string, object>)) {
+      if (!derivedConditions[name]) derivedConditions[name] = cond as SpecialCondition;
+    }
+  }
   return { appSettings, clearedKeys, startingItems, tricks, unmapped, junkLocations, derivedConditions };
 }
