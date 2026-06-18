@@ -201,11 +201,17 @@ function buildEntranceSourceMap(graph: WorldGraph): Map<string, string> {
   return result;
 }
 
+// ER types whose exits should be blocked by BFS when they are active and unassigned.
+// One-ways, wallmasters, spawns and alterLw are excluded: they use different mechanics.
+const ER_BLOCKABLE_TYPES = new Set([
+  'erDungeons', 'erBoss', 'erGrottos', 'erIndoors', 'erOverworld',
+]);
+
 // Inject OoTMM entrance IDs onto world.json exits that don't have them.
-// Enables the BFS engine to respect erOverrides for dungeon/boss entrances.
+// Enables the BFS engine to respect erOverrides when a shuffleable ER type is active.
 function injectEntranceIds(graph: WorldGraph): void {
   for (const entrance of allEntrances) {
-    if (entrance.erType !== 'erDungeons' && entrance.erType !== 'erBoss') continue;
+    if (!ER_BLOCKABLE_TYPES.has(entrance.erType)) continue;
     const src = resolveEntranceSource(graph, entrance.name);
     const tgt = resolveEntranceName(graph, entrance.name);
     if (!src || !tgt) continue;

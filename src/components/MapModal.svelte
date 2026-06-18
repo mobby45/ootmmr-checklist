@@ -1074,18 +1074,23 @@ import type { EntranceInfo } from '../data/entranceData';
             {@const erActiveForPos = posEnt ? !!erSettings[posEnt.erType] : false}
             {@const badge = !erActiveForPos ? getEntranceBadge(pos.entranceId) : null}
             {#if badge}
-              {@const dx = (pos.x / imageWidth) * 100}
-              {@const dy = (pos.y / imageHeight) * 100}
-              <button
-                class="subzone-dot"
-                class:subzone-dot-logic-all={badge.inLogic === badge.unchecked}
-                class:subzone-dot-logic-some={badge.inLogic > 0 && badge.inLogic < badge.unchecked}
-                style="left:{dx}%;top:{dy}%;"
-                title="{badge.unchecked} check{badge.unchecked > 1 ? 's' : ''}"
-                on:click|stopPropagation={() => handleEntranceClick(pos.entranceId)}
-                on:mouseenter={e => startEntranceHoverTimer(`${badge.unchecked} check${badge.unchecked > 1 ? 's' : ''}`, e)}
-                on:mouseleave={clearHoverTimer}
-              >{badge.unchecked}</button>
+              {@const dotCount = (logicEnabled && logicResult)
+                ? ($showOutOfLogic ? badge.unchecked : badge.inLogic)
+                : badge.unchecked}
+              {#if dotCount > 0}
+                {@const dx = (pos.x / imageWidth) * 100}
+                {@const dy = (pos.y / imageHeight) * 100}
+                <button
+                  class="subzone-dot"
+                  class:subzone-dot-logic-all={!logicEnabled || !logicResult || badge.inLogic === badge.unchecked}
+                  class:subzone-dot-logic-some={logicEnabled && !!logicResult && badge.inLogic > 0 && badge.inLogic < badge.unchecked}
+                  style="left:{dx}%;top:{dy}%;"
+                  title="{dotCount} check{dotCount > 1 ? 's' : ''}"
+                  on:click|stopPropagation={() => handleEntranceClick(pos.entranceId)}
+                  on:mouseenter={e => startEntranceHoverTimer(`${dotCount} check${dotCount > 1 ? 's' : ''}`, e)}
+                  on:mouseleave={clearHoverTimer}
+                >{dotCount}</button>
+              {/if}
             {/if}
           {/each}
 
