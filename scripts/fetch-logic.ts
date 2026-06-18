@@ -191,6 +191,9 @@ async function main() {
   // to avoid clobbering it.  Track renamed base names for world-file rewriting.
   const renamedMmFunctions = new Set<string>(); // function macros: "name(" → "name_mm("
   const renamedMmConstants = new Set<string>(); // constant macros: "name" → "name_mm"
+  // All keys that originated from MM macro files (renamed or not) — their bodies
+  // must be rewritten to call the _mm variants of any renamed macros/constants.
+  const mmOriginKeys = new Set<string>();
 
   for (const file of mmMacroFiles) {
     process.stdout.write(`  Macros MM:  ${path.basename(file)}…`);
@@ -203,20 +206,22 @@ async function main() {
         const parenIdx = key.indexOf('(');
         if (parenIdx !== -1) {
           // Function macro conflict: store under _mm suffix so both definitions coexist.
-          // key is like "rusty_key(x)" → store as "rusty_key_mm(x)"
           const mmKey = key.replace('(', '_mm(');
           allMacros[mmKey] = value;
+          mmOriginKeys.add(mmKey);
           const baseName = key.substring(0, parenIdx);
           renamedMmFunctions.add(baseName);
           renamed++;
         } else {
           // Constant macro conflict: store MM version as key_mm, keep OoT version as-is.
           allMacros[`${key}_mm`] = value;
+          mmOriginKeys.add(`${key}_mm`);
           renamedMmConstants.add(key);
           renamed++;
         }
       } else {
         allMacros[key] = value;
+        mmOriginKeys.add(key);
       }
     }
 
@@ -230,13 +235,12 @@ async function main() {
     console.log(`  → MM constant substitutions: ${[...renamedMmConstants].map(n => `${n}→${n}_mm`).join(', ')}`);
   }
 
-  // Rewrite bodies of stored MM macros so they reference renamed constants/functions.
-  // Only keys that are themselves MM-versioned (end in _mm or contain _mm() ) need rewriting.
-  // OoT macro bodies must never be touched, even if their name is in renamedMmConstants.
-  for (const key of Object.keys(allMacros)) {
-    if (key.endsWith('_mm') || key.includes('_mm(')) {
-      allMacros[key] = applyMmMacroRenaming(allMacros[key], renamedMmFunctions, renamedMmConstants);
-    }
+  // Rewrite bodies of ALL MM-origin macros so they reference renamed constants/functions.
+  // Previously only _mm-keyed macros were rewritten, leaving non-conflicting MM macros
+  // with bodies that still reference the OoT versions of renamed macros.
+  // OoT macro bodies are never touched (only mmOriginKeys are rewritten).
+  for (const key of mmOriginKeys) {
+    allMacros[key] = applyMmMacroRenaming(allMacros[key], renamedMmFunctions, renamedMmConstants);
   }
 
   // 3. Fetch & parse world files

@@ -18176,7 +18176,7 @@
       },
       {
         "name": "Spirit Temple Silver Gauntlets",
-        "rule": "small_keys_spirit(4) && has_explosives && (can_play_time || can_play_emptiness) && is_child && soul_iron_knuckle && (has_weapon || can_use_sticks) && has_lens"
+        "rule": "small_keys_spirit(4) && has_bombchu && (can_play_time || can_play_emptiness) && is_child && soul_iron_knuckle && (has_weapon || can_use_sticks) && has_lens"
       },
       {
         "name": "MQ Spirit Temple SR Lobby Rock Right",
@@ -45245,7 +45245,7 @@
     "locations": [
       {
         "name": "Ghost Hut HP",
-        "rule": "soul_poe_collector && soul_poe && (has_arrows_mm || can_hookshot_short || can_use_deku_bubble) && can_use_wallet(1) && is_valley_cursed"
+        "rule": "soul_poe_collector && soul_poe && (has_arrows_mm || can_hookshot_short || can_use_slingshot_mm || can_use_deku_bubble) && can_use_wallet(1) && is_valley_cursed"
       }
     ],
     "events": []
