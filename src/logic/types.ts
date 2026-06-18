@@ -83,6 +83,12 @@ export interface LogicState {
   songEvents: Map<string, string>;
   /** Manually entered prices for shop checks (check name → rupee cost) */
   shopPrices: Map<string, number>;
+  /**
+   * Bitmask of accessible MM time periods: bit 0=Day1, 1=Night1, 2=Day2, 3=Night2, 4=Day3, 5=Night3.
+   * Starts at 0x3F (all periods) when clocks are off, or from clock-item-derived periods when on.
+   * Narrowed by the BFS as time-gated exits constrain which periods can reach each region.
+   */
+  timeMask: number;
 }
 
 // ─── BFS Result ──────────────────────────────────────────────────────────────

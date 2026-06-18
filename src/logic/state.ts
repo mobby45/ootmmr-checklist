@@ -235,5 +235,6 @@ export function buildLogicState(
     resolvedSpecial,
     songEvents: ySongEventsSnapshot,
     shopPrices: yShopPricesSnapshot,
+    timeMask: 0x3F, // placeholder — engine overrides this per-region during BFS
   };
 }

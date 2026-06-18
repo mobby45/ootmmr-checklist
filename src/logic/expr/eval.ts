@@ -210,16 +210,8 @@ export function evalExpr(node: ExprNode, state: LogicState, macros: MacroTable):
       return true;
 
     case 'mm_time': {
-      // When clock randomization is off, all time windows are always accessible
-      if (!state.settings.get('clocks')) return true;
-      // Map the query type to [lo, hi] period indices in MM_PERIODS.
-      // between(a,b): player needs access to any period in [a..b].
-      // before(x):   player can be before x → any period up to and including x's period.
-      // after(x):    player can be after x  → any period from x's period to Night3.
-      // at(x):       exact time point        → only x's period.
-      // Use startsWith(p + '_') to guard against any future prefix collision (e.g. DAY10_).
-      // clock_* macros (not is_*) are used to avoid infinite recursion — is_night1 calls
-      // raw_between which would re-enter this handler.
+      // Map the condition type to [lo, hi] indices into MM_PERIODS.
+      // Use startsWith(p + '_') to guard against prefix collisions (e.g. DAY10_).
       let lo: number, hi: number;
       if (node.type === 'between') {
         lo = MM_PERIODS.findIndex(p => node.start.startsWith(p + '_'));
@@ -239,12 +231,16 @@ export function evalExpr(node: ExprNode, state: LogicState, macros: MacroTable):
       } else {
         return true;
       }
-      for (let i = lo; i <= hi; i++) {
-        const m = macros.get('clock_' + MM_PERIODS[i].toLowerCase());
-        if (!m || typeof m === 'function') continue;
-        if (evalExpr(m, state, macros)) return true;
-      }
-      return false;
+      // Build a bitmask for the periods this condition accepts, then check
+      // whether any period currently available to the player (state.timeMask) overlaps.
+      // state.timeMask is propagated by the BFS engine: it starts at 0x3F (all periods)
+      // when clocks are off, or at clock-item-derived periods when clocks are on, and is
+      // narrowed as time-gated exits constrain which periods can reach each region.
+      // This prevents mutually-exclusive time conditions (e.g. after(DAY3) to enter a region
+      // but before(NIGHT1) for a check inside) from both evaluating to true simultaneously.
+      let condMask = 0;
+      for (let i = lo; i <= hi; i++) condMask |= (1 << i);
+      return (state.timeMask & condMask) !== 0;
     }
 
     case 'flag_on': {

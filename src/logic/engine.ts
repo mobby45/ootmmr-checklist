@@ -1,18 +1,62 @@
-import type { WorldGraph, WorldExit, LogicState, ReachabilityResult } from './types';
+import type { WorldGraph, WorldExit, LogicState, ReachabilityResult, ExprNode } from './types';
 import type { MacroTable } from './expr/eval';
 import { evalExpr } from './expr/eval';
 import { resolveEntranceName, resolveEntranceSource } from './world';
 
 type Age = 'child' | 'adult';
 
-// Spawn regions by age (from _system.yml)
+// MM period bitmask: bit 0=Day1, 1=Night1, 2=Day2, 3=Night2, 4=Day3, 5=Night3
+const ALL_PERIODS = 0x3F;
+// Period names for computing initial timeMask from clock macros (matches MM_PERIODS in eval.ts)
+const PERIOD_NAMES = ['day1', 'night1', 'day2', 'night2', 'day3', 'night3'] as const;
+
 const OOT_SPAWN = "Link's House";
 const MM_SPAWN  = 'Clock Town South';
 const GLOBAL    = 'GLOBAL';
 
-// Build an age- and game-specific state copy
-function stateForAge(base: LogicState, age: Age, events: Set<string>, game?: 'oot' | 'mm'): LogicState {
-  return { ...base, age, events, currentGame: game };
+function stateForAge(base: LogicState, age: Age, events: Set<string>, timeMask: number, game?: 'oot' | 'mm'): LogicState {
+  return { ...base, age, events, timeMask, currentGame: game };
+}
+
+// Compute the starting timeMask from the player's clock items.
+// With clocks off, all 6 periods are always accessible.
+// With clocks on, evaluate each clock_* macro against the player's items to determine
+// which periods they can reach. Day1 is always included (starting period of every cycle).
+function computeInitialTimeMask(baseState: LogicState, macros: MacroTable): number {
+  if (!baseState.settings.get('clocks')) return ALL_PERIODS;
+  // Use a temporary state with ALL_PERIODS so clock_* macros (which are pure item checks,
+  // no mm_time dependency) evaluate correctly without circular issues.
+  const tempState: LogicState = { ...baseState, timeMask: ALL_PERIODS };
+  let mask = 0;
+  for (let i = 0; i < 6; i++) {
+    const m = macros.get('clock_' + PERIOD_NAMES[i]);
+    if (m && typeof m !== 'function' && evalExpr(m, tempState, macros)) {
+      mask |= (1 << i);
+    }
+  }
+  // Day1 (bit 0) is always accessible — players begin every cycle on Day1.
+  return mask | 1;
+}
+
+// For each period bit set in sourceTimeMask, evaluate the exit rule independently.
+// Returns a bitmask of the periods that can successfully traverse this exit.
+// This correctly handles time-gated ORs: e.g. `after(DAY3) || can_use_keg` with no keg
+// will only let Day3/Night3 bits through, not Day1 (even though the full mask would pass).
+function computeExitTimeMask(
+  rule: ExprNode,
+  sourceTimeMask: number,
+  baseState: LogicState,
+  macros: MacroTable,
+): number {
+  let destMask = 0;
+  for (let bit = 0; bit < 6; bit++) {
+    const periodBit = 1 << bit;
+    if (!(sourceTimeMask & periodBit)) continue;
+    if (evalExpr(rule, { ...baseState, timeMask: periodBit }, macros)) {
+      destMask |= periodBit;
+    }
+  }
+  return destMask;
 }
 
 export function computeReachability(
@@ -20,45 +64,52 @@ export function computeReachability(
   state: LogicState,
   macros: MacroTable,
 ): ReachabilityResult {
-  const reachedByAge: Record<Age, Set<string>> = { child: new Set(), adult: new Set() };
+  // Per-age accumulated timeMasks: region name → bitmask of accessible MM periods.
+  // A region is "reached" by an age if its entry exists here (with any non-zero mask).
+  const reachedTimeMask: Record<Age, Map<string, number>> = {
+    child: new Map(),
+    adult: new Map(),
+  };
   const checksByAge: Record<Age, Set<string>> = { child: new Set(), adult: new Set() };
-  // Shared event pool — events are world-state, not age-specific
   const events = new Set<string>(state.events);
 
-  const queue: { regionName: string; age: Age }[] = [];
+  const initialTimeMask = computeInitialTimeMask(state, macros);
+  const queue: { regionName: string; age: Age; timeMask: number }[] = [];
 
-  function enqueue(regionName: string, age: Age) {
+  // Enqueue a region with a timeMask. Only the bits not yet in the region's accumulated
+  // mask are actually enqueued — prevents re-processing periods already explored.
+  function enqueue(regionName: string, age: Age, timeMask: number) {
     if (!graph.has(regionName)) return;
-    if (reachedByAge[age].has(regionName)) return;
-    reachedByAge[age].add(regionName);
-    queue.push({ regionName, age });
+    const current = reachedTimeMask[age].get(regionName) ?? 0;
+    const newBits = timeMask & ~current;
+    if (newBits === 0) return;
+    reachedTimeMask[age].set(regionName, current | timeMask);
+    queue.push({ regionName, age, timeMask: newBits });
   }
 
+  // Seed spawn regions
   if (state.erMode) {
-    // ER active: OoT spawn comes from assigned destinations (or nothing if unassigned)
     if (state.settings.get('erSpawns')) {
       const childDest = state.erOverrides.get('OOT_SPAWN_CHILD');
       const adultDest = state.erOverrides.get('OOT_SPAWN_ADULT');
-      // Spawns place the player OUTSIDE the linked entrance (in the source region, not the destination)
-      if (childDest) { const r = resolveEntranceSource(graph, childDest); if (r) enqueue(r, 'child'); }
-      if (adultDest) { const r = resolveEntranceSource(graph, adultDest); if (r) enqueue(r, 'adult'); }
+      if (childDest) { const r = resolveEntranceSource(graph, childDest); if (r) enqueue(r, 'child', initialTimeMask); }
+      if (adultDest) { const r = resolveEntranceSource(graph, adultDest); if (r) enqueue(r, 'adult', initialTimeMask); }
     } else {
-      enqueue(OOT_SPAWN, 'child');
-      enqueue(OOT_SPAWN, 'adult');
+      enqueue(OOT_SPAWN, 'child', initialTimeMask);
+      enqueue(OOT_SPAWN, 'adult', initialTimeMask);
     }
-    // MM is never seeded directly in ER mode — it must be reached via cross-game exits from OoT
+    // MM is never seeded directly in ER mode — must be reached via cross-game exits from OoT
   } else {
-    enqueue(OOT_SPAWN, 'child');
-    enqueue(OOT_SPAWN, 'adult');
-    enqueue(MM_SPAWN,  'child');
-    enqueue(MM_SPAWN,  'adult');
+    enqueue(OOT_SPAWN, 'child', initialTimeMask);
+    enqueue(OOT_SPAWN, 'adult', initialTimeMask);
+    enqueue(MM_SPAWN,  'child', initialTimeMask);
+    enqueue(MM_SPAWN,  'adult', initialTimeMask);
   }
-  enqueue(GLOBAL, 'child');
-  enqueue(GLOBAL, 'adult');
+  enqueue(GLOBAL, 'child', initialTimeMask);
+  enqueue(GLOBAL, 'adult', initialTimeMask);
 
   // BFS — repeat full passes until no new events are discovered.
-  // New regions are enqueued directly and picked up in the current pass (no restart needed).
-  // New checks never affect reachability (no restart needed).
+  // New regions/timeMask-bits are enqueued directly within the current pass.
   // Only new events can unlock exits in already-processed regions, requiring a full restart.
   let eventFound = true;
   let qi = 0;
@@ -66,58 +117,68 @@ export function computeReachability(
     eventFound = false;
 
     while (qi < queue.length) {
-      const { regionName, age } = queue[qi++];
+      const { regionName, age, timeMask } = queue[qi++];
       const region = graph.get(regionName);
       if (!region) continue;
 
-      const s = stateForAge(state, age, events, region.game);
+      // Base state for this region/age/events (timeMask overridden per-use below)
+      const baseS = stateForAge(state, age, events, 0, region.game);
 
-      // Evaluate exits — new regions go into the queue and are processed this pass
+      // Evaluate exits using only the new timeMask bits (timeMask = newBits from enqueue).
+      // computeExitTimeMask evaluates per-period to determine which periods flow through.
       for (const exit of region.exits) {
         const target = resolveExitTarget(exit, state, graph);
         if (!target) continue;
-        if (reachedByAge[age].has(target)) continue;
-        if (evalExpr(exit.rule, s, macros)) {
-          enqueue(target, age);
-        }
+        const destTimeMask = computeExitTimeMask(exit.rule, timeMask, baseS, macros);
+        if (destTimeMask !== 0) enqueue(target, age, destTimeMask);
       }
 
-      // Collect checks — does not affect region propagation, no restart needed
+      // Evaluate checks and events with the FULL accumulated timeMask for this region,
+      // so a check is considered in-logic if it's doable in ANY period the region is reachable.
+      const fullTimeMask = reachedTimeMask[age].get(regionName) ?? timeMask;
+      const sCheck = { ...baseS, timeMask: fullTimeMask };
+
       for (const loc of region.locations) {
         if (checksByAge[age].has(loc.name)) continue;
         if (!isLocationEnabled(loc.name, region.game, state)) continue;
         const customPrice = state.shopPrices.get(loc.name);
-        if (customPrice !== undefined && !canAffordCustomPrice(customPrice, s)) continue;
-        if (evalExpr(loc.rule, s, macros)) {
-          checksByAge[age].add(loc.name);
-        }
+        if (customPrice !== undefined && !canAffordCustomPrice(customPrice, sCheck)) continue;
+        if (evalExpr(loc.rule, sCheck, macros)) checksByAge[age].add(loc.name);
       }
 
-      // Collect events — shared across ages; a new event may unlock exits in
-      // already-processed regions, so we must restart the full scan after this pass.
       for (const ev of region.events) {
         if (events.has(ev.name)) continue;
-        if (evalExpr(ev.rule, s, macros)) {
+        if (evalExpr(ev.rule, sCheck, macros)) {
           events.add(ev.name);
           eventFound = true;
         }
       }
     }
 
-    // Restart only when new events were found (may unlock exits in already-visited regions)
+    // Restart: re-push all reached regions with their accumulated timeMasks so that
+    // exits blocked by missing events can now be re-evaluated. enqueue() deduplication
+    // ensures destinations only gain genuinely new period bits.
     if (eventFound) {
       queue.length = 0;
       qi = 0;
       for (const age of ['child', 'adult'] as Age[]) {
-        for (const regionName of reachedByAge[age]) {
-          queue.push({ regionName, age });
+        for (const [regionName, mask] of reachedTimeMask[age]) {
+          queue.push({ regionName, age, timeMask: mask });
         }
       }
     }
   }
 
-  const reachedRegions = new Set([...reachedByAge.child, ...reachedByAge.adult]);
-  return { regions: reachedRegions, childRegions: reachedByAge.child, adultRegions: reachedByAge.adult, childChecks: checksByAge.child, adultChecks: checksByAge.adult, events };
+  const childRegions = new Set(reachedTimeMask.child.keys());
+  const adultRegions = new Set(reachedTimeMask.adult.keys());
+  return {
+    regions: new Set([...childRegions, ...adultRegions]),
+    childRegions,
+    adultRegions,
+    childChecks: checksByAge.child,
+    adultChecks: checksByAge.adult,
+    events,
+  };
 }
 
 // Returns true if the player's wallet can cover the given rupee cost.
