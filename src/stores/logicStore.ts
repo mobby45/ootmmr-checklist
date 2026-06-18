@@ -115,6 +115,8 @@ export const logicLoading = writable<boolean>(false);
 
 /** Maps entranceId → source region name in the world graph (populated on first loadWorld call) */
 export const entranceSourceMapStore = writable<Map<string, string>>(new Map());
+/** Maps entranceId → vanilla destination region name in the world graph (populated on first loadWorld call) */
+export const entranceDestMapStore   = writable<Map<string, string>>(new Map());
 
 // ─── ER active settings (written by ERTracker, read by logic engine) ──────────
 /** Active ER type flags — mirrors ERTracker's activeErSettings so the logic engine sees them. */
@@ -151,10 +153,11 @@ export function initLogicStore(
     if (!_worldReady) {
       logicLoading.set(true);
       try {
-        const { graph, macros, locationRules, entranceSourceMap } = await loadWorld();
+        const { graph, macros, locationRules, entranceSourceMap, entranceDestMap } = await loadWorld();
         _graph = graph; _macros = macros; _worldReady = true;
         locationRulesStore.set(locationRules);
         entranceSourceMapStore.set(entranceSourceMap);
+        entranceDestMapStore.set(entranceDestMap);
       } catch (e) {
         console.error('[logic] Failed to load world:', e);
         logicLoading.set(false);

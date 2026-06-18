@@ -62,7 +62,7 @@
   import * as T from './data/types';
 
   import CheckGroup from './components/CheckGroup.svelte';
-  import { initLogicStore, logicEnabled, showOutOfLogic, logicAgeFilter, logicResult, logicLoading, logicManualSettings, specialConditionsStore, enabledTricks, locationRulesStore, entranceSourceMapStore } from './stores/logicStore';
+  import { initLogicStore, logicEnabled, showOutOfLogic, logicAgeFilter, logicResult, logicLoading, logicManualSettings, specialConditionsStore, enabledTricks, locationRulesStore, entranceSourceMapStore, entranceDestMapStore } from './stores/logicStore';
   import { defaultLogicSettings } from './data/logicSettingsDef';
   import { TRICKS_DEFS } from './data/tricksDef';
   const _validTrickIds = new Set(TRICKS_DEFS.map(t => t.id));
@@ -412,10 +412,28 @@ yKeepalive.observe((event: any) => {
     ? new Map(Object.entries(spoilerEntrances)) as Map<string, string>
     : new Map($sEntrances) as Map<string, string>;
   $: erSettingsForMap = activeErSettings as unknown as Record<string, boolean>;
-  $: entranceReachability = ($logicEnabled && $logicResult && $entranceSourceMapStore.size > 0)
-    ? new Map<string, boolean>(
-        [...$entranceSourceMapStore.entries()].map(([id, src]) => [id, $logicResult!.regions.has(src)])
-      )
+  // Entrance reachability: age-aware, hybrid source/destination logic.
+  // ER active → source-based (can you reach the entrance location to assign/explore it?).
+  // ER off    → destination-based (can you actually get through the entrance into the content?).
+  // In both cases, the age filter narrows to child-only or adult-only regions.
+  $: entranceReachability = ($logicEnabled && $logicResult)
+    ? new Map<string, boolean>((() => {
+        const lr = $logicResult!;
+        const ageRegs = $logicAgeFilter === 'child' ? lr.childRegions
+          : $logicAgeFilter === 'adult' ? lr.adultRegions
+          : lr.regions;
+        const result: [string, boolean][] = [];
+        if (erIsActive) {
+          for (const [id, src] of $entranceSourceMapStore) {
+            result.push([id, ageRegs.has(src)]);
+          }
+        } else {
+          for (const [id, dest] of $entranceDestMapStore) {
+            result.push([id, ageRegs.has(dest)]);
+          }
+        }
+        return result;
+      })())
     : null;
   $: checkToGroup = structuredChecks
     ? new Map(structuredChecks.flatMap(g => g.checks.map(c => [c.name, g.groupName])))

@@ -157,9 +157,10 @@ let _graph: WorldGraph | null = null;
 let _macros: MacroTable | null = null;
 let _locationRules: Map<string, string> | null = null;
 let _entranceSourceMap: Map<string, string> | null = null;
+let _entranceDestMap: Map<string, string> | null = null;
 
-export async function loadWorld(): Promise<{ graph: WorldGraph; macros: MacroTable; locationRules: Map<string, string>; entranceSourceMap: Map<string, string> }> {
-  if (_graph && _macros && _locationRules && _entranceSourceMap) return { graph: _graph, macros: _macros, locationRules: _locationRules, entranceSourceMap: _entranceSourceMap };
+export async function loadWorld(): Promise<{ graph: WorldGraph; macros: MacroTable; locationRules: Map<string, string>; entranceSourceMap: Map<string, string>; entranceDestMap: Map<string, string> }> {
+  if (_graph && _macros && _locationRules && _entranceSourceMap && _entranceDestMap) return { graph: _graph, macros: _macros, locationRules: _locationRules, entranceSourceMap: _entranceSourceMap, entranceDestMap: _entranceDestMap };
 
   // Fetch as separate public assets to avoid bloating the JS bundle
   const base = import.meta.env.BASE_URL ?? '/';
@@ -187,8 +188,9 @@ export async function loadWorld(): Promise<{ graph: WorldGraph; macros: MacroTab
   }
 
   _entranceSourceMap = buildEntranceSourceMap(_graph);
+  _entranceDestMap   = buildEntranceDestMap(_graph);
 
-  return { graph: _graph, macros: _macros, locationRules: _locationRules, entranceSourceMap: _entranceSourceMap };
+  return { graph: _graph, macros: _macros, locationRules: _locationRules, entranceSourceMap: _entranceSourceMap, entranceDestMap: _entranceDestMap };
 }
 
 // Maps each entrance ID to the name of its source region in the world graph.
@@ -197,6 +199,16 @@ function buildEntranceSourceMap(graph: WorldGraph): Map<string, string> {
   for (const entrance of allEntrances) {
     const src = resolveEntranceSource(graph, entrance.name);
     if (src) result.set(entrance.id, src);
+  }
+  return result;
+}
+
+// Maps each entrance ID to the name of the destination region it leads into (vanilla).
+function buildEntranceDestMap(graph: WorldGraph): Map<string, string> {
+  const result = new Map<string, string>();
+  for (const entrance of allEntrances) {
+    const dest = resolveEntranceName(graph, entrance.name);
+    if (dest) result.set(entrance.id, dest);
   }
   return result;
 }

@@ -117,7 +117,7 @@ export function computeReachability(
   }
 
   const reachedRegions = new Set([...reachedByAge.child, ...reachedByAge.adult]);
-  return { regions: reachedRegions, childChecks: checksByAge.child, adultChecks: checksByAge.adult, events };
+  return { regions: reachedRegions, childRegions: reachedByAge.child, adultRegions: reachedByAge.adult, childChecks: checksByAge.child, adultChecks: checksByAge.adult, events };
 }
 
 // Returns true if the player's wallet can cover the given rupee cost.

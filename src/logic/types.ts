@@ -90,6 +90,10 @@ export interface LogicState {
 export interface ReachabilityResult {
   /** Set of reachable region names (union of both ages) */
   regions: Set<string>;
+  /** Regions reachable as child only */
+  childRegions: Set<string>;
+  /** Regions reachable as adult only */
+  adultRegions: Set<string>;
   /** Checks reachable as child */
   childChecks: Set<string>;
   /** Checks reachable as adult */

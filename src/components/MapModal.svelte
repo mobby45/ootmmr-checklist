@@ -1072,7 +1072,7 @@ import type { EntranceInfo } from '../data/entranceData';
           {#each ageFilteredPrecomputed as pos (pos.entranceId + '_' + pos.x + '_' + pos.y)}
             {@const posEnt = allEntrances.find(e => e.id === pos.entranceId)}
             {@const erActiveForPos = posEnt ? !!erSettings[posEnt.erType] : false}
-            {@const badge = !erActiveForPos ? getEntranceBadge(pos.entranceId) : null}
+            {@const badge = getEntranceBadge(pos.entranceId, erActiveForPos)}
             {#if badge}
               {@const dotCount = (logicEnabled && logicResult)
                 ? ($showOutOfLogic ? badge.unchecked : badge.inLogic)
