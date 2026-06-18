@@ -94,8 +94,56 @@ const MM_CLEARED_EVENTS: Record<string, string[]> = {
   MM_REGION_OCEAN_CLEARED:  ['BOSS_GYORG',    'CLEAR_STATE_GREAT_BAY'],
   MM_REGION_VALLEY_CLEARED: ['BOSS_TWINMOLD', 'CLEAR_STATE_IKANA'],
 };
-// Period order matches macros.json: CLOCK1=Day1, CLOCK2=Night1, CLOCK3=Day2, CLOCK4=Night2, CLOCK5=Day3, CLOCK6=Night3
-const MM_PERIODS = ['DAY1', 'NIGHT1', 'DAY2', 'NIGHT2', 'DAY3', 'NIGHT3'] as const;
+// Exact 46-slice list from OoTMM packages/logic/src/expr/data.ts.
+// Slices 0-31 map to mmTime bits 0-31; slices 32-45 map to mmTime2 bits 0-13.
+export const MM_TIME_SLICES = [
+  'DAY1_AM_06_00',   // 0
+  'DAY1_AM_07_00',   // 1
+  'DAY1_AM_08_00',   // 2
+  'DAY1_AM_10_00',   // 3
+  'DAY1_PM_01_45',   // 4
+  'DAY1_PM_03_00',   // 5
+  'DAY1_PM_04_00',   // 6
+  'NIGHT1_PM_06_00', // 7
+  'NIGHT1_PM_08_00', // 8
+  'NIGHT1_PM_09_00', // 9
+  'NIGHT1_PM_10_00', // 10
+  'NIGHT1_PM_11_00', // 11
+  'NIGHT1_AM_12_00', // 12
+  'NIGHT1_AM_02_30', // 13
+  'NIGHT1_AM_04_00', // 14
+  'NIGHT1_AM_05_00', // 15
+  'DAY2_AM_06_00',   // 16
+  'DAY2_AM_07_00',   // 17
+  'DAY2_AM_08_00',   // 18
+  'DAY2_AM_10_00',   // 19
+  'DAY2_AM_11_30',   // 20
+  'DAY2_PM_02_00',   // 21
+  'DAY2_PM_04_00',   // 22
+  'NIGHT2_PM_06_00', // 23
+  'NIGHT2_PM_08_00', // 24
+  'NIGHT2_PM_09_00', // 25
+  'NIGHT2_PM_10_00', // 26
+  'NIGHT2_PM_11_00', // 27
+  'NIGHT2_AM_12_00', // 28
+  'NIGHT2_AM_04_00', // 29
+  'NIGHT2_AM_05_00', // 30
+  'NIGHT2_AM_05_30', // 31
+  'DAY3_AM_06_00',   // 32
+  'DAY3_AM_07_00',   // 33
+  'DAY3_AM_08_00',   // 34
+  'DAY3_AM_10_00',   // 35
+  'DAY3_AM_11_30',   // 36
+  'DAY3_PM_01_00',   // 37
+  'NIGHT3_PM_06_00', // 38
+  'NIGHT3_PM_08_00', // 39
+  'NIGHT3_PM_09_00', // 40
+  'NIGHT3_PM_10_00', // 41
+  'NIGHT3_PM_11_00', // 42
+  'NIGHT3_AM_12_00', // 43
+  'NIGHT3_AM_04_00', // 44
+  'NIGHT3_AM_05_00', // 45
+] as const;
 
 const MM_CURSED_FLAGS = new Set([
   'MM_REGION_NORTH_CURSED', 'MM_REGION_SWAMP_CURSED',
@@ -210,37 +258,41 @@ export function evalExpr(node: ExprNode, state: LogicState, macros: MacroTable):
       return true;
 
     case 'mm_time': {
-      // Map the condition type to [lo, hi] indices into MM_PERIODS.
-      // Use startsWith(p + '_') to guard against prefix collisions (e.g. DAY10_).
+      // Find the slice range [lo, hi) matching OoTMM's exact semantics:
+      //   before(X)        → slices [0, X)
+      //   after(X)         → slices [X, 46)
+      //   at(X)            → slices [X, X+1)
+      //   between(X, Y)    → slices [X, Y)
       let lo: number, hi: number;
-      if (node.type === 'between') {
-        lo = MM_PERIODS.findIndex(p => node.start.startsWith(p + '_'));
-        hi = MM_PERIODS.findIndex(p => node.end.startsWith(p + '_'));
-        if (lo === -1 || hi === -1) return true;
-      } else if (node.type === 'before') {
+      if (node.type === 'before') {
         lo = 0;
-        hi = MM_PERIODS.findIndex(p => node.start.startsWith(p + '_'));
+        hi = MM_TIME_SLICES.indexOf(node.start as typeof MM_TIME_SLICES[number]);
         if (hi === -1) return true;
       } else if (node.type === 'after') {
-        lo = MM_PERIODS.findIndex(p => node.start.startsWith(p + '_'));
-        hi = MM_PERIODS.length - 1;
+        lo = MM_TIME_SLICES.indexOf(node.start as typeof MM_TIME_SLICES[number]);
+        hi = MM_TIME_SLICES.length;
         if (lo === -1) return true;
       } else if (node.type === 'at') {
-        lo = hi = MM_PERIODS.findIndex(p => node.start.startsWith(p + '_'));
+        lo = MM_TIME_SLICES.indexOf(node.start as typeof MM_TIME_SLICES[number]);
+        hi = lo + 1;
         if (lo === -1) return true;
+      } else if (node.type === 'between') {
+        lo = MM_TIME_SLICES.indexOf(node.start as typeof MM_TIME_SLICES[number]);
+        hi = MM_TIME_SLICES.indexOf(node.end as typeof MM_TIME_SLICES[number]);
+        if (lo === -1 || hi === -1) return true;
       } else {
         return true;
       }
-      // Build a bitmask for the periods this condition accepts, then check
-      // whether any period currently available to the player (state.timeMask) overlaps.
-      // state.timeMask is propagated by the BFS engine: it starts at 0x3F (all periods)
-      // when clocks are off, or at clock-item-derived periods when clocks are on, and is
-      // narrowed as time-gated exits constrain which periods can reach each region.
-      // This prevents mutually-exclusive time conditions (e.g. after(DAY3) to enter a region
-      // but before(NIGHT1) for a check inside) from both evaluating to true simultaneously.
-      let condMask = 0;
-      for (let i = lo; i <= hi; i++) condMask |= (1 << i);
-      return (state.timeMask & condMask) !== 0;
+      // Build two 32-bit masks (slices 0-31 → condLo, slices 32-45 → condHi)
+      // and check if the player's current time (mmTime/mmTime2, per-region from BFS)
+      // overlaps. This prevents mutually-exclusive time conditions (e.g. after(DAY3) to
+      // enter a region but before(NIGHT1) for a check inside) from both being true.
+      let condLo = 0, condHi = 0;
+      for (let i = lo; i < hi; i++) {
+        if (i < 32) condLo |= (1 << i);
+        else        condHi |= (1 << (i - 32));
+      }
+      return ((state.mmTime & condLo) | (state.mmTime2 & condHi)) !== 0;
     }
 
     case 'flag_on': {

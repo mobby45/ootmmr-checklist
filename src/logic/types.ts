@@ -84,11 +84,13 @@ export interface LogicState {
   /** Manually entered prices for shop checks (check name → rupee cost) */
   shopPrices: Map<string, number>;
   /**
-   * Bitmask of accessible MM time periods: bit 0=Day1, 1=Night1, 2=Day2, 3=Night2, 4=Day3, 5=Night3.
-   * Starts at 0x3F (all periods) when clocks are off, or from clock-item-derived periods when on.
-   * Narrowed by the BFS as time-gated exits constrain which periods can reach each region.
+   * OoTMM-faithful 46-slice MM time bitmasks.
+   * mmTime covers slices 0-31 (Day1 AM 6:00 … Night2 AM 5:30).
+   * mmTime2 covers slices 32-45 (Day3 AM 6:00 … Night3 AM 5:00), using bits 0-13.
+   * Propagated per-region by the BFS via stay=null expansion and per-slice exit evaluation.
    */
-  timeMask: number;
+  mmTime: number;
+  mmTime2: number;
 }
 
 // ─── BFS Result ──────────────────────────────────────────────────────────────
