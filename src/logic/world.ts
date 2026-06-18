@@ -111,13 +111,34 @@ function buildWorldGraph(rawRegions: RawWorld): WorldGraph {
   return graph;
 }
 
+// Entrance names in entranceData.ts sometimes use region labels that don't exactly match
+// world.json region names (OoTMM YAML inconsistencies). This table maps the label used
+// in the entrance name → the actual world.json region name.
+const REGION_NAME_OVERRIDES: Record<string, string> = {
+  // OoT: the shortcut between Lake Hylia and Zora Domain is called
+  // "Lake Hylia Near Shortcut" in world.json, not "Lake Hylia Shortcut".
+  'Lake Hylia Shortcut':                 'Lake Hylia Near Shortcut',
+  // OoT: Dog Lady's house apostrophe differs between entrance name and world.json.
+  "Dog Lady's House":                    'Dog Lady House',
+  // MM: Mayor's Office is a sub-room of Mayor's Residence in world.json.
+  "Mayor's Office":                      "Mayor's Residence Office",
+  // MM: Stock Pot Inn roof entry is listed as "Clock Town East Stock Pot Inn Roof"
+  // in the entrance name but world.json calls it simply "Stock Pot Inn Roof".
+  'Clock Town East Stock Pot Inn Roof':  'Stock Pot Inn Roof',
+  // MM: Great Bay Coast cow grotto area uses the abbreviated form "GBC Near Cow Grotto".
+  'Great Bay Coast Near Cow Grotto':     'GBC Near Cow Grotto',
+  // MM: Mountain Village Winter is the same world.json region as Mountain Village
+  // (season state is handled by logic rules, not separate regions).
+  'Mountain Village Winter':             'Mountain Village',
+};
+
 // Resolve an OoTMM entrance name to the world region it leads into (destination side).
 // e.g. "OOT Kokiri Forest to OOT Deku Tree" → "Deku Tree Lobby" (or closest match)
 export function resolveEntranceName(graph: WorldGraph, entranceName: string): string | null {
   // Parse: extract destination part after "to OOT " or "to MM "
   const m = entranceName.match(/ to (?:OOT|MM) (.+)$/);
   if (!m) return null;
-  const dest = m[1].trim();
+  const dest = REGION_NAME_OVERRIDES[m[1].trim()] ?? m[1].trim();
 
   // Try to find a region whose name starts with dest or contains it
   for (const regionName of graph.keys()) {
@@ -138,7 +159,7 @@ export function resolveEntranceName(graph: WorldGraph, entranceName: string): st
 export function resolveEntranceSource(graph: WorldGraph, entranceName: string): string | null {
   const m = entranceName.match(/^(?:OOT|MM) (.+?) to (?:OOT|MM) /);
   if (!m) return null;
-  const src = m[1].trim();
+  const src = REGION_NAME_OVERRIDES[m[1].trim()] ?? m[1].trim();
   for (const regionName of graph.keys()) {
     if (regionName === src) return regionName;
   }
