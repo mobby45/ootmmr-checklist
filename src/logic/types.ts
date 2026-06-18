@@ -106,6 +106,8 @@ export interface ReachabilityResult {
   childChecks: Set<string>;
   /** Checks reachable as adult */
   adultChecks: Set<string>;
+  /** Checks disabled by type settings (e.g. pots off) — should not appear on map */
+  disabledChecks: Set<string>;
   /** Set of achieved event names */
   events: Set<string>;
 }

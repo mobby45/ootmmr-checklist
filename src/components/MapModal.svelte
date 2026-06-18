@@ -39,7 +39,7 @@ import type { EntranceInfo } from '../data/entranceData';
   export let initialSubscene: string = '';
   export let devMode = false;
   export let logicEnabled: boolean = false;
-  export let logicResult: { childChecks: Set<string>; adultChecks: Set<string> } | null = null;
+  export let logicResult: { childChecks: Set<string>; adultChecks: Set<string>; disabledChecks: Set<string> } | null = null;
   export let logicAgeFilter: 'child' | 'adult' | 'both' = 'both';
 
   function isCheckInLogic(checkKey: string): boolean {
@@ -239,6 +239,10 @@ import type { EntranceInfo } from '../data/entranceData';
   $: displayedChecks = filteredChecks.filter(c => {
     if ($hiddenTypesStore.has(c.type)) return false;
     if (hideChecked && (checkStates.get(getCheckKey(c)) ?? T.CheckState.unchecked) === T.CheckState.checked) return false;
+    if (logicEnabled && logicResult) {
+      const n = (getCheckKey(c)).replace(/^(OOT|MM) /, '');
+      if (logicResult.disabledChecks.has(n) && !logicResult.childChecks.has(n) && !logicResult.adultChecks.has(n)) return false;
+    }
     if (hideOutOfLogic && !isCheckInLogic(getCheckKey(c))) return false;
     return true;
   });
@@ -641,6 +645,10 @@ import type { EntranceInfo } from '../data/entranceData';
         for (const check of sub.checks) {
           const key = checkNameMappingReverse[check.name] ?? check.name;
           if ((checkStates.get(key) ?? T.CheckState.unchecked) === T.CheckState.checked) continue;
+          if (_le && _lr) {
+            const n = key.replace(/^(OOT|MM) /, '');
+            if (_lr.disabledChecks.has(n) && !_lr.childChecks.has(n) && !_lr.adultChecks.has(n)) continue;
+          }
           unchecked++;
           if (!_le || !_lr) {
             inLogic++;
@@ -701,8 +709,8 @@ import type { EntranceInfo } from '../data/entranceData';
   })();
 
   function isEntranceVisible(ent: { erType: string; hideWhenErActive?: string } | undefined, id: string): boolean {
-    if (!ent) return true;
-    if (!YAML_ENTRANCE_IDS.has(id)) return true;  // unshuffled: never gated by erSettings
+    if (!ent) return false;
+    if (!YAML_ENTRANCE_IDS.has(id)) return false;  // unshuffled: only shown in placement mode
     const hasErSettings = Object.keys(erSettings).length > 0;
     if (!hasErSettings) return true;
     // Must match erType first, then apply the optional hide-when-active override
@@ -734,8 +742,27 @@ import type { EntranceInfo } from '../data/entranceData';
   $: ageFilteredPrecomputed = filterByAge(visiblePrecomputed, ageFilter, sceneData.game)
     .filter(p => !p.mqOnly || (mqSettings.get(p.mqOnly) ?? false))
     .filter(p => !p.vanillaOnly || !(mqSettings.get(p.vanillaOnly) ?? false))
-    .filter(p => !p.jpOnly || (variantSettings.get(p.jpOnly) ?? 0) === 1)
-    .filter(p => !p.usOnly || (variantSettings.get(p.usOnly) ?? 0) === 0);
+
+
+  // All precomputed positions for the current subscene (no ER visibility filter) — used for sub-zone check dots.
+  // Only show dots for positions whose destination is a non-current subscene of this same scene
+  // (i.e. leads INTO a house/grotto/shop, not OUT to an overworld area or back to a parent).
+  $: allAgeFilteredPrecomputed = (() => {
+    const subscenes = sceneData.subscenes ?? {};
+    const firstSubscene = Object.keys(subscenes)[0];
+    // Only render dots when on the main (first) subscene — leaf subscenes have no sub-zones to show
+    if (currentSubscene !== firstSubscene) return [];
+    return filterByAge(currentPrecomputed, ageFilter, sceneData.game)
+      .filter(p => !p.mqOnly || (mqSettings.get(p.mqOnly) ?? false))
+      .filter(p => !p.vanillaOnly || !(mqSettings.get(p.vanillaOnly) ?? false))
+      .filter(p => !p.jpOnly || (variantSettings.get(p.jpOnly) ?? 0) === 1)
+      .filter(p => !p.usOnly || (variantSettings.get(p.usOnly) ?? 0) === 0)
+      .filter(p => {
+        const dest = entranceDestMap.get(p.entranceId);
+        // Only include if destination is a different subscene of this scene (not overworld exits)
+        return !!dest && dest !== currentSubscene && dest in subscenes;
+      });
+  })();
 
 
 
@@ -795,8 +822,14 @@ import type { EntranceInfo } from '../data/entranceData';
         return sources.map((srcId, i) => mk(srcId, i));
       }
       if (revSources?.length) {
-        // Interior exit: connection known via reverse → show source markers only
-        return revSources.map((srcId, i) => mk(srcId, i));
+        // Interior exit: at rev(B), the label should show rev(A) — the coupled return path name.
+        // Showing srcId (A's name "X → Y") here is misleading; rev(A) ("Y → X") matches what
+        // the player sees as they exit back out.
+        return revSources.map((srcId, i) => {
+          const srcEnt = allEntrances.find(e => e.id === srcId);
+          const revSrc = srcEnt ? findReverseEntrance(srcEnt) : undefined;
+          return mk(revSrc?.id ?? srcId, i);
+        });
       }
       // Unknown connection — show own vanilla marker
       return [{
@@ -1068,11 +1101,9 @@ import type { EntranceInfo } from '../data/entranceData';
             </button>
           {/each}
 
-          <!-- Sub-zone check dots: visible only when ER is off for that entrance type -->
-          {#each ageFilteredPrecomputed as pos (pos.entranceId + '_' + pos.x + '_' + pos.y)}
-            {@const posEnt = allEntrances.find(e => e.id === pos.entranceId)}
-            {@const erActiveForPos = posEnt ? !!erSettings[posEnt.erType] : false}
-            {@const badge = getEntranceBadge(pos.entranceId, erActiveForPos)}
+          <!-- Sub-zone check dots: always shown for all precomputed positions (shuffled or not) -->
+          {#each allAgeFilteredPrecomputed as pos (pos.entranceId + '_' + pos.x + '_' + pos.y)}
+            {@const badge = getEntranceBadge(pos.entranceId, false)}
             {#if badge}
               {@const dotCount = (logicEnabled && logicResult)
                 ? ($showOutOfLogic ? badge.unchecked : badge.inLogic)
@@ -1692,17 +1723,17 @@ import type { EntranceInfo } from '../data/entranceData';
   }
   .entrance-check-badge {
     position: absolute;
-    top: -6px;
-    right: -8px;
-    min-width: 13px;
-    height: 13px;
-    padding: 0 2px;
-    border-radius: 7px;
+    top: -8px;
+    right: -10px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 4px;
+    border-radius: 9px;
     background: #c0392b;
     color: #fff;
-    font-size: 8px;
+    font-size: 10px;
     font-weight: bold;
-    line-height: 13px;
+    line-height: 18px;
     text-align: center;
     pointer-events: none;
     z-index: 5;

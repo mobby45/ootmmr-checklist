@@ -11,7 +11,7 @@ const MASK_MM_TIME  = 0xFFFFFFFF;
 const MASK_MM_TIME2 = (1 << (MM_TIME_SLICES.length - 32)) - 1; // 0x3FFF
 
 const OOT_SPAWN = "Link's House";
-const MM_SPAWN  = 'Clock Town South';
+const MM_SPAWN        = 'Clock Town South';
 const GLOBAL    = 'GLOBAL';
 
 function stateForAge(
@@ -81,6 +81,7 @@ export function computeReachability(
     adult: new Map(),
   };
   const checksByAge: Record<Age, Set<string>> = { child: new Set(), adult: new Set() };
+  const disabledChecks = new Set<string>();
   const events = new Set<string>(state.events);
 
   const queue: { regionName: string; age: Age; mmTime: number; mmTime2: number }[] = [];
@@ -152,7 +153,7 @@ export function computeReachability(
 
       for (const loc of region.locations) {
         if (checksByAge[age].has(loc.name)) continue;
-        if (!isLocationEnabled(loc.name, region.game, state)) continue;
+        if (!isLocationEnabled(loc.name, region.game, state)) { disabledChecks.add(loc.name); continue; }
         const customPrice = state.shopPrices.get(loc.name);
         if (customPrice !== undefined && !canAffordCustomPrice(customPrice, sCheck)) continue;
         if (evalExpr(loc.rule, sCheck, macros)) checksByAge[age].add(loc.name);
@@ -188,6 +189,7 @@ export function computeReachability(
     adultRegions,
     childChecks: checksByAge.child,
     adultChecks: checksByAge.adult,
+    disabledChecks,
     events,
   };
 }
