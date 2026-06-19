@@ -31251,7 +31251,7 @@
       },
       {
         "target": "Ancient Castle of Ikana Interior North 2",
-        "rule": "has(MASK_DEKU) || short_hook_anywhere || (can_use_nayru && is_tall)"
+        "rule": "has(MASK_DEKU) || short_hook_anywhere || (can_use_nayru_mm && is_tall)"
       }
     ],
     "locations": [
@@ -32373,11 +32373,11 @@
       },
       {
         "target": "Great Bay Temple Map Room",
-        "rule": "underwater_walking || hookshot_anywhere || (trick(MM_GBT_CENTRAL_GEYSER) && ((can_use_fire_arrows && can_use_ice_arrows) || can_use_din || can_use_farore || can_use_nayru))"
+        "rule": "underwater_walking || hookshot_anywhere || (trick(MM_GBT_CENTRAL_GEYSER) && ((can_use_fire_arrows && can_use_ice_arrows) || can_use_din_mm || can_use_farore_mm || can_use_nayru_mm))"
       },
       {
         "target": "Great Bay Temple Red Pipe 1",
-        "rule": "underwater_walking || (trick(MM_GBT_CENTRAL_GEYSER) && ((can_use_fire_arrows && can_use_ice_arrows) || can_use_din || can_use_farore || can_use_nayru))"
+        "rule": "underwater_walking || (trick(MM_GBT_CENTRAL_GEYSER) && ((can_use_fire_arrows && can_use_ice_arrows) || can_use_din_mm || can_use_farore_mm || can_use_nayru_mm))"
       },
       {
         "target": "Great Bay Temple Green Pipe 1",
@@ -32385,11 +32385,11 @@
       },
       {
         "target": "Great Bay Temple Compass Room",
-        "rule": "(underwater_walking || hookshot_anywhere || (trick(MM_GBT_CENTRAL_GEYSER) && ((can_use_fire_arrows && can_use_ice_arrows) || can_use_din || can_use_farore || can_use_nayru))) && event(GB_WATER_WHEEL)"
+        "rule": "(underwater_walking || hookshot_anywhere || (trick(MM_GBT_CENTRAL_GEYSER) && ((can_use_fire_arrows && can_use_ice_arrows) || can_use_din_mm || can_use_farore_mm || can_use_nayru_mm))) && event(GB_WATER_WHEEL)"
       },
       {
         "target": "Great Bay Temple Pre-Boss",
-        "rule": "(underwater_walking || (trick(MM_GBT_CENTRAL_GEYSER) && ((can_use_fire_arrows && can_use_ice_arrows) || can_use_din || can_use_farore || can_use_nayru))) && event(GB_WATER_WHEEL)"
+        "rule": "(underwater_walking || (trick(MM_GBT_CENTRAL_GEYSER) && ((can_use_fire_arrows && can_use_ice_arrows) || can_use_din_mm || can_use_farore_mm || can_use_nayru_mm))) && event(GB_WATER_WHEEL)"
       },
       {
         "target": "WARP_SONGS",
@@ -36478,7 +36478,7 @@
       },
       {
         "target": "Snowhead Temple Dinolfos Room",
-        "rule": "can_use_fire_short_range || trick_sht_hot_water_er || (trick_sht_hot_water && can_use_farore)"
+        "rule": "can_use_fire_short_range || trick_sht_hot_water_er || (trick_sht_hot_water && can_use_farore_mm)"
       },
       {
         "target": "WARP_SONGS",
@@ -38787,7 +38787,7 @@
       },
       {
         "target": "Woodfall Temple Main Water Room Ledge",
-        "rule": "has(MASK_DEKU) || has_bombs || has_mask_goron || event(WOODFALL_TEMPLE_MAIN_FLOWER) || can_use_ice_arrows || (can_use_nayru && can_swim) || has_hover_boots || can_hookshot_short"
+        "rule": "has(MASK_DEKU) || has_bombs || has_mask_goron || event(WOODFALL_TEMPLE_MAIN_FLOWER) || can_use_ice_arrows || (can_use_nayru_mm && can_swim) || has_hover_boots || can_hookshot_short"
       },
       {
         "target": "Woodfall Temple Maze",
@@ -38989,7 +38989,7 @@
       },
       {
         "target": "Woodfall Temple Water Room Lower Ledge",
-        "rule": "has(MASK_DEKU) || short_hook_anywhere || can_use_ice_arrows || event(WOODFALL_TEMPLE_MAIN_FLOWER) || has_bombs || has_hover_boots || (can_use_nayru && can_swim) || (has_arrows && (has_mask_goron || (enter_woodfall_temple_water && can_enter_water && is_child)))"
+        "rule": "has(MASK_DEKU) || short_hook_anywhere || can_use_ice_arrows || event(WOODFALL_TEMPLE_MAIN_FLOWER) || has_bombs || has_hover_boots || (can_use_nayru_mm && can_swim) || (has_arrows && (has_mask_goron || (enter_woodfall_temple_water && can_enter_water && is_child)))"
       },
       {
         "target": "Woodfall Temple Water Room Upper Ledge",
@@ -39281,7 +39281,7 @@
     "exits": [
       {
         "target": "Woodfall Temple Main Entrance Ledge",
-        "rule": "has(MASK_DEKU) || short_hook_anywhere || can_use_ice_arrows || event(WOODFALL_TEMPLE_MAIN_FLOWER) || has_hover_boots || has_bombs || has_mask_goron || (can_use_nayru && can_swim) || (event(WOODFALL_TEMPLE_MAIN_CHEST) && can_hookshot)"
+        "rule": "has(MASK_DEKU) || short_hook_anywhere || can_use_ice_arrows || event(WOODFALL_TEMPLE_MAIN_FLOWER) || has_hover_boots || has_bombs || has_mask_goron || (can_use_nayru_mm && can_swim) || (event(WOODFALL_TEMPLE_MAIN_CHEST) && can_hookshot)"
       },
       {
         "target": "Woodfall Temple Main Water Room Ledge",
@@ -39293,7 +39293,7 @@
       },
       {
         "target": "Woodfall Temple Pre-Boss Main Ledge",
-        "rule": "has_arrows || can_use_din"
+        "rule": "has_arrows || can_use_din_mm"
       },
       {
         "target": "Woodfall Temple Water Room Upper Ledge",
@@ -39425,7 +39425,7 @@
     "exits": [
       {
         "target": "Woodfall Temple Water Room Lower Ledge",
-        "rule": "has_bombs || has_mask_goron || event(WOODFALL_TEMPLE_MAIN_FLOWER) || has_hover_boots || hookshot_anywhere || can_use_ice_arrows || (can_use_nayru && can_swim)"
+        "rule": "has_bombs || has_mask_goron || event(WOODFALL_TEMPLE_MAIN_FLOWER) || has_hover_boots || hookshot_anywhere || can_use_ice_arrows || (can_use_nayru_mm && can_swim)"
       },
       {
         "target": "Woodfall Temple Water Room Map Ledge",
@@ -41911,7 +41911,7 @@
       },
       {
         "target": "Near Deku Shrine",
-        "rule": "(is_swamp_cleared && can_swim) || (can_use_nayru && (has_mask_zora || (is_adult && (has_arrows || can_hookshot_short || can_use_din)))) || (has_hover_boots && (has_arrows || can_hookshot_short || can_use_din))"
+        "rule": "(is_swamp_cleared && can_swim) || (can_use_nayru_mm && (has_mask_zora || (is_adult && (has_arrows || can_hookshot_short || can_use_din_mm)))) || (has_hover_boots && (has_arrows || can_hookshot_short || can_use_din_mm))"
       },
       {
         "target": "Deku Palace Main",
@@ -41919,7 +41919,7 @@
       },
       {
         "target": "Deku Palace Upper",
-        "rule": "(((is_swamp_cleared || can_use_nayru) && can_swim) || has(MASK_DEKU)) && can_use_beans"
+        "rule": "(((is_swamp_cleared || can_use_nayru_mm) && can_swim) || has(MASK_DEKU)) && can_use_beans"
       }
     ],
     "locations": [
@@ -42368,7 +42368,7 @@
       },
       {
         "target": "Deku Palace Front",
-        "rule": "has(MASK_DEKU) || ((is_swamp_cleared || can_use_nayru) && can_swim) || short_hook_anywhere || has_hover_boots"
+        "rule": "has(MASK_DEKU) || ((is_swamp_cleared || can_use_nayru_mm) && can_swim) || short_hook_anywhere || has_hover_boots"
       },
       {
         "target": "Swamp Canopy Front",
@@ -42388,7 +42388,7 @@
       },
       {
         "target": "Deku Palace Front",
-        "rule": "((is_swamp_cleared || can_use_nayru) && can_swim) || has(MASK_DEKU) || has_hover_boots"
+        "rule": "((is_swamp_cleared || can_use_nayru_mm) && can_swim) || has(MASK_DEKU) || has_hover_boots"
       },
       {
         "target": "Deku Shrine",
@@ -48887,7 +48887,7 @@
       },
       {
         "target": "Swamp Back",
-        "rule": "is_tall || (can_swim && can_use_nayru) || (has_mask_goron && has(MASK_DEKU)) || (is_swamp_cleared && (can_swim_or_sink || has_mask_goron))"
+        "rule": "is_tall || (can_swim && can_use_nayru_mm) || (has_mask_goron && has(MASK_DEKU)) || (is_swamp_cleared && (can_swim_or_sink || has_mask_goron))"
       }
     ],
     "locations": [],
@@ -48907,7 +48907,7 @@
       },
       {
         "target": "Near Swamp Spider House",
-        "rule": "is_tall || (can_swim && (is_swamp_cleared || can_use_nayru)) || (has_mask_goron && has(MASK_DEKU))"
+        "rule": "is_tall || (can_swim && (is_swamp_cleared || can_use_nayru_mm)) || (has_mask_goron && has(MASK_DEKU))"
       },
       {
         "target": "Near Swamp Grotto",
@@ -49536,7 +49536,7 @@
       },
       {
         "target": "Swamp Water Near Deku Palace",
-        "rule": "is_swamp_cleared || is_tall || has_iron_boots || can_use_nayru"
+        "rule": "is_swamp_cleared || is_tall || has_iron_boots || can_use_nayru_mm"
       },
       {
         "target": "Swamp Back",
@@ -49576,7 +49576,7 @@
       },
       {
         "target": "Swamp Water Near Spider House",
-        "rule": "is_tall || has_iron_boots || is_swamp_cleared || can_use_nayru"
+        "rule": "is_tall || has_iron_boots || is_swamp_cleared || can_use_nayru_mm"
       },
       {
         "target": "Woodfall",
@@ -50078,7 +50078,7 @@
       },
       {
         "target": "Behind Large Icicles",
-        "rule": "has_arrows || (has_hot_water_distance && has(OWL_CLOCK_TOWN)) || has_hot_water_farore || has_hot_water_er || short_hook_anywhere || can_use_din"
+        "rule": "has_arrows || (has_hot_water_distance && has(OWL_CLOCK_TOWN)) || has_hot_water_farore || has_hot_water_er || short_hook_anywhere || can_use_din_mm"
       },
       {
         "target": "Milk Road",
@@ -52285,7 +52285,7 @@
       },
       {
         "target": "Termina Field",
-        "rule": "has_arrows || (has_hot_water_distance && has(OWL_MOUNTAIN_VILLAGE)) || has_hot_water_farore || has_hot_water_mtn || has_hot_water_er || short_hook_anywhere || can_use_din"
+        "rule": "has_arrows || (has_hot_water_distance && has(OWL_MOUNTAIN_VILLAGE)) || has_hot_water_farore || has_hot_water_mtn || has_hot_water_er || short_hook_anywhere || can_use_din_mm"
       },
       {
         "target": "Mountain Village Path Lower",
@@ -52993,7 +52993,7 @@
       },
       {
         "target": "Woodfall Near Fairy Fountain",
-        "rule": "(is_swamp_cleared || can_use_nayru) && short_hook_anywhere"
+        "rule": "(is_swamp_cleared || can_use_nayru_mm) && short_hook_anywhere"
       }
     ],
     "locations": [
@@ -53059,7 +53059,7 @@
       },
       {
         "target": "Woodfall",
-        "rule": "is_swamp_cleared || can_use_nayru"
+        "rule": "is_swamp_cleared || can_use_nayru_mm"
       }
     ],
     "locations": [],
@@ -53075,7 +53075,7 @@
       },
       {
         "target": "Woodfall",
-        "rule": "(has(MASK_DEKU) && soul_deku_scrub) || is_swamp_cleared || hookshot_anywhere || can_use_nayru"
+        "rule": "(has(MASK_DEKU) && soul_deku_scrub) || is_swamp_cleared || hookshot_anywhere || can_use_nayru_mm"
       },
       {
         "target": "Woodfall Near Fairy Fountain",
@@ -53113,7 +53113,7 @@
       },
       {
         "target": "Woodfall",
-        "rule": "(has(MASK_DEKU) && (soul_deku_scrub || is_swamp_cleared)) || is_swamp_cleared || hookshot_anywhere || can_use_nayru"
+        "rule": "(has(MASK_DEKU) && (soul_deku_scrub || is_swamp_cleared)) || is_swamp_cleared || hookshot_anywhere || can_use_nayru_mm"
       },
       {
         "target": "Woodfall Shrine",
@@ -53502,7 +53502,7 @@
       },
       {
         "target": "Zora Cape Peninsula",
-        "rule": "(can_swim && (underwater_walking || can_use_nayru || trick(MM_ZORA_HALL_HUMAN))) || (can_use_ice_arrows && has_chateau)"
+        "rule": "(can_swim && (underwater_walking || can_use_nayru_mm || trick(MM_ZORA_HALL_HUMAN))) || (can_use_ice_arrows && has_chateau)"
       },
       {
         "target": "Zora Cape Water Void",
@@ -53921,7 +53921,7 @@
       },
       {
         "target": "Zora Cape",
-        "rule": "(can_swim && (underwater_walking || can_use_nayru || trick(MM_ZORA_HALL_HUMAN))) || (can_use_ice_arrows && has_chateau)"
+        "rule": "(can_swim && (underwater_walking || can_use_nayru_mm || trick(MM_ZORA_HALL_HUMAN))) || (can_use_ice_arrows && has_chateau)"
       },
       {
         "target": "Great Bay Temple",
