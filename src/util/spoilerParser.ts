@@ -396,11 +396,14 @@ export function parseSpoilerLog(text: string): SpoilerData {
 
   // Store sub-type / extra ER settings in general settings record
   const extraErSettings = [
+    // Top-level ER modes (select values — logic checks setting('erBoss', 'none') etc.)
+    'erBoss', 'erDungeons', 'erGrottos', 'erIndoors', 'erMixed', 'erOneWays', 'erWallmasters',
+    'erOverworld', 'erRegions',
     'erSelfLoops', 'erNoPolarity', 'erDecoupled',
     'erMajorDungeons', 'erMinorDungeons', 'erGanonCastle', 'erGanonTower', 'erMoon',
     'erSpiderHouses', 'erPirateFortress', 'erBeneathWell', 'erIkanaCastle', 'erSecretShrine',
     'erIndoorsMajor', 'erIndoorsExtra', 'erIndoorsGameLinks',
-    'erRegions', 'erRegionsExtra', 'erRegionsShortcuts', 'erPiratesWorld',
+    'erRegionsExtra', 'erRegionsShortcuts', 'erPiratesWorld',
     'erSpawns', 'erWarps',
     'erMixedDungeons', 'erMixedGrottos', 'erMixedIndoors', 'erMixedRegions', 'erMixedOverworld',
     'erOneWaysMajor', 'erOneWaysIkana', 'erOneWaysSongs', 'erOneWaysStatues',

@@ -703,18 +703,6 @@
 
   .hint-text { flex: 1; color: var(--color-text); white-space: pre-wrap; word-break: break-word; }
 
-  .non-req-row { display: flex; align-items: center; gap: 0.4em; }
-  .game-btns { display: flex; gap: 0.2em; flex-shrink: 0; }
-  .game-btn {
-    padding: 2px 7px; border: 1px solid var(--color-border); border-radius: 3px;
-    background: transparent; color: var(--color-text); cursor: pointer; font-size: 0.8em; opacity: 0.5;
-  }
-  .game-btn.active { opacity: 1; background: var(--color-border); font-weight: bold; }
-  .item-select {
-    flex: 1; padding: 3px 5px; border: 1px solid var(--color-border); border-radius: 4px;
-    background: var(--color-bg); color: var(--color-text); font-size: 0.85em;
-  }
-  .non-req-game-tag { font-size: 0.8em; opacity: 0.7; font-weight: bold; }
 
   .del-btn {
     flex-shrink: 0;

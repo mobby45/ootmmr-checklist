@@ -15,7 +15,8 @@ export function buildLogicState(
   ySongEventsSnapshot: Map<string, string> = new Map(),
   yShopPricesSnapshot: Map<string, number> = new Map(),
 ): LogicState {
-  const items = prebuiltItems ?? buildItemsMap(yItemsSnapshot);
+  const notesMode = ySettingsSnapshot.get('songShuffle') === 'notes';
+  const items = prebuiltItems ?? buildItemsMap(yItemsSnapshot, notesMode);
 
   // Settings: flatten the Yjs settings map
   const settings = new Map<string, string | boolean | number>();
@@ -122,6 +123,9 @@ export function buildLogicState(
     priceOotMerchants:      'vanilla',
     priceMmShops:           'vanilla',
     priceMmTingle:          'vanilla',
+
+    // Song shuffle — 'normal' means complete songs, 'notes' means individual notes
+    songShuffle:            'normal',
 
     // Boolean settings used directly in eval — explicit false avoids relying on undefined → falsy
     bottomlessWallets:      false,

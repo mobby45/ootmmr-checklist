@@ -703,7 +703,7 @@
       },
       {
         "target": "Deku Tree Lobby",
-        "rule": "true"
+        "rule": "is_child || setting(openDungeonsOot, dekuTreeAdult)"
       }
     ],
     "locations": [],
@@ -1605,7 +1605,7 @@
       },
       {
         "target": "Fire Temple Pre-Boss",
-        "rule": "true"
+        "rule": "has_tunic_goron_strict"
       }
     ],
     "locations": [],
@@ -2720,27 +2720,27 @@
       },
       {
         "target": "Ganon Castle Forest",
-        "rule": "true"
+        "rule": "is_adult"
       },
       {
         "target": "Ganon Castle Fire",
-        "rule": "true"
+        "rule": "is_adult"
       },
       {
         "target": "Ganon Castle Water",
-        "rule": "true"
+        "rule": "is_adult"
       },
       {
         "target": "Ganon Castle Spirit",
-        "rule": "true"
+        "rule": "is_adult"
       },
       {
         "target": "Ganon Castle Shadow",
-        "rule": "true"
+        "rule": "is_adult"
       },
       {
         "target": "Ganon Castle Stairs",
-        "rule": "true"
+        "rule": "is_adult"
       },
       {
         "target": "Ganon Castle Fairy Fountain",
@@ -5155,7 +5155,7 @@
       },
       {
         "target": "Jabu-Jabu Elevator",
-        "rule": "has_ranged_weapon || has_explosives"
+        "rule": "is_child && (has_ranged_weapon || has_explosives)"
       }
     ],
     "locations": [],
@@ -6986,7 +6986,7 @@
       },
       {
         "target": "Water Temple Main",
-        "rule": "can_swim || (hookshot_anywhere && has_iron_boots)"
+        "rule": "has_iron_boots && (can_swim || hookshot_anywhere)"
       }
     ],
     "locations": [],
@@ -8000,7 +8000,7 @@
     "exits": [
       {
         "target": "Bottom of the Well Before Dead Hand",
-        "rule": "soul_enemy(SOUL_ENEMY_DEAD_HAND) && (has_weapon || (can_use_sticks && trick(OOT_DEAD_HAND_STICKS)))"
+        "rule": "soul_enemy(SOUL_ENEMY_DEAD_HAND) && (can_use_sword || (can_use_sticks && trick(OOT_DEAD_HAND_STICKS)))"
       }
     ],
     "locations": [
@@ -8102,7 +8102,7 @@
       },
       {
         "target": "MQ Deku Tree Lobby",
-        "rule": "true"
+        "rule": "is_child || setting(openDungeonsOot, dekuTreeAdult)"
       }
     ],
     "locations": [],
@@ -10155,7 +10155,7 @@
       },
       {
         "target": "Fire Temple Entrance",
-        "rule": "true"
+        "rule": "has_tunic_goron_strict"
       }
     ],
     "locations": [],
@@ -13130,7 +13130,7 @@
       },
       {
         "target": "Ganon Castle Main Room",
-        "rule": "event(MQ_GANON_OPEN_MAIN)"
+        "rule": "is_adult && event(MQ_GANON_OPEN_MAIN)"
       }
     ],
     "locations": [],
@@ -18761,7 +18761,7 @@
       },
       {
         "target": "Water Temple Entrance",
-        "rule": "can_swim || (hookshot_anywhere && has_iron_boots)"
+        "rule": "has_iron_boots && (can_swim || hookshot_anywhere)"
       }
     ],
     "locations": [],

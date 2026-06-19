@@ -341,12 +341,20 @@ const KEY_MAP: Record<string, string> = {
   erOneWaysAnywhere:    'erOneWaysAnywhere',
   // Stray fairy count per dungeon (OoTMM key is strayFairyRewardCount, tracker uses STRAY_FAIRY_COUNT)
   strayFairyRewardCount: 'STRAY_FAIRY_COUNT',
+  // Song shuffle mode
+  songShuffle:       'songShuffle',
   // Price settings
   priceOotShops:     'priceOotShops',
   priceOotScrubs:    'priceOotScrubs',
   priceOotMerchants: 'priceOotMerchants',
   priceMmShops:      'priceMmShops',
   priceMmTingle:     'priceMmTingle',
+  // Item pool / logic level
+  itemPool:          'itemPool',
+  logic:             'logic',
+  // Ocarina button shuffle
+  ocarinaButtonsShuffleOot: 'ocarinaButtonsShuffleOot',
+  ocarinaButtonsShuffleMm:  'ocarinaButtonsShuffleMm',
 };
 
 // Maps OoTMM generator item IDs (used in startingItems) to tracker item IDs + levels.
@@ -430,6 +438,26 @@ const OOTMM_STARTING_ITEM_MAP: Record<string, { id: string; level: number }[]> =
   OOT_SONG_TP_LIGHT:    [{ id: 'oot_song_prelude', level: 1 }], // teleport variant = same song
   OOT_SONG_SOARING:     [{ id: 'oot_song_soaring', level: 1 }],
   OOT_SONG_HEALING:     [{ id: 'oot_song_healing', level: 1 }],
+  // OoT song notes (songShuffle=notes) — level -1: use count as tracker level
+  OOT_SONG_NOTE_ZELDA:     [{ id: 'oot_song_zelda',    level: -1 }],
+  OOT_SONG_NOTE_EPONA:     [{ id: 'oot_song_epona',    level: -1 }],
+  OOT_SONG_NOTE_SARIA:     [{ id: 'oot_song_saria',    level: -1 }],
+  OOT_SONG_NOTE_SUN:       [{ id: 'oot_song_sun',      level: -1 }],
+  OOT_SONG_NOTE_TIME:      [{ id: 'oot_song_time',     level: -1 }],
+  OOT_SONG_NOTE_STORMS:    [{ id: 'oot_song_storms',   level: -1 }],
+  OOT_SONG_NOTE_TP_FOREST: [{ id: 'oot_song_minuet',   level: -1 }],
+  OOT_SONG_NOTE_TP_FIRE:   [{ id: 'oot_song_bolero',   level: -1 }],
+  OOT_SONG_NOTE_TP_WATER:  [{ id: 'oot_song_serenade', level: -1 }],
+  OOT_SONG_NOTE_TP_SPIRIT: [{ id: 'oot_song_requiem',  level: -1 }],
+  OOT_SONG_NOTE_TP_SHADOW: [{ id: 'oot_song_nocturne', level: -1 }],
+  OOT_SONG_NOTE_TP_LIGHT:  [{ id: 'oot_song_prelude',  level: -1 }],
+  OOT_SONG_NOTE_EMPTINESS: [{ id: 'oot_elegy',          level: -1 }],
+  OOT_SONG_NOTE_HEALING:   [{ id: 'oot_song_healing',   level: -1 }],
+  OOT_SONG_NOTE_SOARING:   [{ id: 'oot_song_soaring',   level: -1 }],
+  OOT_SONG_NOTE_AWAKENING: [{ id: 'oot_song_sonata',    level: -1 }],
+  OOT_SONG_NOTE_GORON:     [{ id: 'oot_song_lullaby',   level: -1 }],
+  OOT_SONG_NOTE_ZORA:      [{ id: 'oot_song_nova',      level: -1 }],
+  OOT_SONG_NOTE_ORDER:     [{ id: 'oot_song_oath',      level: -1 }],
 
   // ─── MM weapons ────────────────────────────────────────────────────────────
   MM_BOW:               [{ id: 'mm_bow',        level: 1 }],
@@ -512,6 +540,26 @@ const OOTMM_STARTING_ITEM_MAP: Record<string, { id: string; level: number }[]> =
   MM_SONG_REQUIEM:      [{ id: 'mm_song_requiem',level: 1 }],
   MM_SONG_NOCTURNE:     [{ id: 'mm_song_nocturne',level:1 }],
   MM_SONG_PRELUDE:      [{ id: 'mm_song_prelude',level: 1 }],
+  // MM song notes (songShuffle=notes) — level -1: use count as tracker level
+  MM_SONG_NOTE_TIME:      [{ id: 'mm_song_time',     level: -1 }],
+  MM_SONG_NOTE_EPONA:     [{ id: 'mm_song_epona',    level: -1 }],
+  MM_SONG_NOTE_SOARING:   [{ id: 'mm_song_soaring',  level: -1 }],
+  MM_SONG_NOTE_HEALING:   [{ id: 'mm_song_healing',  level: -1 }],
+  MM_SONG_NOTE_STORMS:    [{ id: 'mm_song_storms',   level: -1 }],
+  MM_SONG_NOTE_AWAKENING: [{ id: 'mm_song_sonata',   level: -1 }],
+  MM_SONG_NOTE_GORON:     [{ id: 'mm_song_lullaby',  level: -1 }],
+  MM_SONG_NOTE_ZORA:      [{ id: 'mm_song_nova',     level: -1 }],
+  MM_SONG_NOTE_ORDER:     [{ id: 'mm_song_oath',     level: -1 }],
+  MM_SONG_NOTE_EMPTINESS: [{ id: 'mm_song_elegy',    level: -1 }],
+  MM_SONG_NOTE_ZELDA:     [{ id: 'mm_song_zelda',    level: -1 }],
+  MM_SONG_NOTE_SARIA:     [{ id: 'mm_song_saria',    level: -1 }],
+  MM_SONG_NOTE_SUN:       [{ id: 'mm_song_sun',      level: -1 }],
+  MM_SONG_NOTE_TP_FOREST: [{ id: 'mm_song_minuet',   level: -1 }],
+  MM_SONG_NOTE_TP_FIRE:   [{ id: 'mm_song_bolero',   level: -1 }],
+  MM_SONG_NOTE_TP_WATER:  [{ id: 'mm_song_serenade', level: -1 }],
+  MM_SONG_NOTE_TP_SPIRIT: [{ id: 'mm_song_requiem',  level: -1 }],
+  MM_SONG_NOTE_TP_SHADOW: [{ id: 'mm_song_nocturne', level: -1 }],
+  MM_SONG_NOTE_TP_LIGHT:  [{ id: 'mm_song_prelude',  level: -1 }],
 
   // ─── Shared items → apply to both OoT and MM tracker items ─────────────────
   SHARED_BOW:           [{ id: 'bow',           level: 1 }, { id: 'mm_bow',       level: 1 }],
@@ -539,6 +587,26 @@ const OOTMM_STARTING_ITEM_MAP: Record<string, { id: string; level: number }[]> =
   SHARED_SONG_TIME:     [{ id: 'oot_song_time', level: 1 }, { id: 'mm_song_time', level: 1 }],
   SHARED_SONG_STORMS:   [{ id: 'oot_song_storms',level:1 }, { id: 'mm_song_storms',level:1 }],
   SHARED_SONG_SUN:      [{ id: 'oot_song_sun',  level: 1 }, { id: 'mm_song_sun',  level: 1 }],
+  // Shared song notes (songShuffle=notes) — level -1: use count as tracker level
+  SHARED_SONG_NOTE_ZELDA:     [{ id: 'sh_song_zelda',    level: -1 }],
+  SHARED_SONG_NOTE_EPONA:     [{ id: 'sh_song_epona',    level: -1 }],
+  SHARED_SONG_NOTE_SARIA:     [{ id: 'sh_song_saria',    level: -1 }],
+  SHARED_SONG_NOTE_SUN:       [{ id: 'sh_song_sun',      level: -1 }],
+  SHARED_SONG_NOTE_TIME:      [{ id: 'sh_song_time',     level: -1 }],
+  SHARED_SONG_NOTE_STORMS:    [{ id: 'sh_song_storms',   level: -1 }],
+  SHARED_SONG_NOTE_EMPTINESS: [{ id: 'sh_song_elegy',    level: -1 }],
+  SHARED_SONG_NOTE_HEALING:   [{ id: 'sh_song_healing',  level: -1 }],
+  SHARED_SONG_NOTE_SOARING:   [{ id: 'sh_song_soaring',  level: -1 }],
+  SHARED_SONG_NOTE_AWAKENING: [{ id: 'sh_song_sonata',   level: -1 }],
+  SHARED_SONG_NOTE_GORON:     [{ id: 'sh_song_lullaby',  level: -1 }],
+  SHARED_SONG_NOTE_ZORA:      [{ id: 'sh_song_nova',     level: -1 }],
+  SHARED_SONG_NOTE_ORDER:     [{ id: 'sh_song_oath',     level: -1 }],
+  SHARED_SONG_NOTE_TP_FOREST: [{ id: 'sh_song_minuet',   level: -1 }],
+  SHARED_SONG_NOTE_TP_FIRE:   [{ id: 'sh_song_bolero',   level: -1 }],
+  SHARED_SONG_NOTE_TP_WATER:  [{ id: 'sh_song_serenade', level: -1 }],
+  SHARED_SONG_NOTE_TP_SPIRIT: [{ id: 'sh_song_requiem',  level: -1 }],
+  SHARED_SONG_NOTE_TP_SHADOW: [{ id: 'sh_song_nocturne', level: -1 }],
+  SHARED_SONG_NOTE_TP_LIGHT:  [{ id: 'sh_song_prelude',  level: -1 }],
   SHARED_SWORD:         [{ id: 'sword_kokiri',  level: 1 }, { id: 'mm_sword',     level: 1 }],
 };
 

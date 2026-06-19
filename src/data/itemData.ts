@@ -22,6 +22,8 @@ export interface TrackerItem {
   step?: number;
   startUndimmed?: boolean;
   startLabel?: string;
+  /** Number of individual notes required to complete this song in songShuffle=notes mode */
+  noteCount?: number;
 }
 
 export const allTrackerItems: TrackerItem[] = [
@@ -73,27 +75,27 @@ export const allTrackerItems: TrackerItem[] = [
   { id: 'bottle_3', name: "Bottle 3", icon: 'bottle/bottle', game: 'oot', category: 'bottles', maxLevel: 1 },
 
   // --- OOT songs ---
-  { id: 'oot_song_zelda', name: "Zelda's Lullaby", icon: 'song/song_zelda', game: 'oot', category: 'songs', maxLevel: 1 },
-  { id: 'oot_song_epona', name: "Epona's Song", icon: 'song/song_epona', game: 'oot', category: 'songs', maxLevel: 1 },
-  { id: 'oot_song_saria', name: "Saria's Song", icon: 'song/song_saria', game: 'oot', category: 'songs', maxLevel: 1 },
-  { id: 'oot_song_sun', name: "Sun's Song", icon: 'song/song_sun', game: 'oot', category: 'songs', maxLevel: 1 },
-  { id: 'oot_song_time', name: "Song of Time", icon: 'song/song_time', game: 'oot', category: 'songs', maxLevel: 1 },
-  { id: 'oot_song_storms', name: "Song of Storms", icon: 'song/song_storms', game: 'oot', category: 'songs', maxLevel: 1 },
-  { id: 'oot_song_minuet', name: "Minuet of Forest", icon: 'song/song_minuet', game: 'oot', category: 'songs', maxLevel: 1 },
-  { id: 'oot_song_bolero', name: "Bolero of Fire", icon: 'song/song_bolero', game: 'oot', category: 'songs', maxLevel: 1 },
-  { id: 'oot_song_serenade', name: "Serenade of Water", icon: 'song/song_serenade', game: 'oot', category: 'songs', maxLevel: 1 },
-  { id: 'oot_song_requiem', name: "Requiem of Spirit", icon: 'song/song_requiem', game: 'oot', category: 'songs', maxLevel: 1 },
-  { id: 'oot_song_nocturne', name: "Nocturne of Shadow", icon: 'song/song_nocturne', game: 'oot', category: 'songs', maxLevel: 1 },
-  { id: 'oot_song_prelude', name: "Prelude of Light", icon: 'song/song_prelude', game: 'oot', category: 'songs', maxLevel: 1 },
-  { id: 'oot_elegy', name: "Elegy of Emptiness", icon: 'mm/mm_elegy', game: 'oot', category: 'songs', maxLevel: 1 },
+  { id: 'oot_song_zelda', name: "Zelda's Lullaby", icon: 'song/song_zelda', game: 'oot', category: 'songs', maxLevel: 1, noteCount: 6 },
+  { id: 'oot_song_epona', name: "Epona's Song", icon: 'song/song_epona', game: 'oot', category: 'songs', maxLevel: 1, noteCount: 6 },
+  { id: 'oot_song_saria', name: "Saria's Song", icon: 'song/song_saria', game: 'oot', category: 'songs', maxLevel: 1, noteCount: 6 },
+  { id: 'oot_song_sun', name: "Sun's Song", icon: 'song/song_sun', game: 'oot', category: 'songs', maxLevel: 1, noteCount: 6 },
+  { id: 'oot_song_time', name: "Song of Time", icon: 'song/song_time', game: 'oot', category: 'songs', maxLevel: 1, noteCount: 6 },
+  { id: 'oot_song_storms', name: "Song of Storms", icon: 'song/song_storms', game: 'oot', category: 'songs', maxLevel: 1, noteCount: 6 },
+  { id: 'oot_song_minuet', name: "Minuet of Forest", icon: 'song/song_minuet', game: 'oot', category: 'songs', maxLevel: 1, noteCount: 6 },
+  { id: 'oot_song_bolero', name: "Bolero of Fire", icon: 'song/song_bolero', game: 'oot', category: 'songs', maxLevel: 1, noteCount: 8 },
+  { id: 'oot_song_serenade', name: "Serenade of Water", icon: 'song/song_serenade', game: 'oot', category: 'songs', maxLevel: 1, noteCount: 5 },
+  { id: 'oot_song_requiem', name: "Requiem of Spirit", icon: 'song/song_requiem', game: 'oot', category: 'songs', maxLevel: 1, noteCount: 6 },
+  { id: 'oot_song_nocturne', name: "Nocturne of Shadow", icon: 'song/song_nocturne', game: 'oot', category: 'songs', maxLevel: 1, noteCount: 7 },
+  { id: 'oot_song_prelude', name: "Prelude of Light", icon: 'song/song_prelude', game: 'oot', category: 'songs', maxLevel: 1, noteCount: 6 },
+  { id: 'oot_elegy', name: "Elegy of Emptiness", icon: 'mm/mm_elegy', game: 'oot', category: 'songs', maxLevel: 1, noteCount: 7 },
 
   // --- OOT cross-game songs (MM songs obtainable in OoT pool — requires crossGameSongs setting) ---
-  { id: 'oot_song_healing', name: "Song of Healing", icon: 'mm/mm_healing', game: 'oot', category: 'songs', maxLevel: 1 },
-  { id: 'oot_song_soaring', name: "Song of Soaring", icon: 'mm/mm_soaring', game: 'oot', category: 'songs', maxLevel: 1 },
-  { id: 'oot_song_sonata', name: "Sonata of Awakening", icon: 'mm/mm_sonata', game: 'oot', category: 'songs', maxLevel: 1 },
-  { id: 'oot_song_lullaby', name: "Goron's Lullaby", icon: 'mm/mm_half_lullaby', game: 'oot', category: 'songs', maxLevel: 2, levelIcons: ['mm/mm_half_lullaby', 'mm/mm_lullaby'] },
-  { id: 'oot_song_nova', name: "New Wave Bossa Nova", icon: 'mm/mm_bossanova', game: 'oot', category: 'songs', maxLevel: 1 },
-  { id: 'oot_song_oath', name: "Oath to Order", icon: 'mm/mm_oath', game: 'oot', category: 'songs', maxLevel: 1 },
+  { id: 'oot_song_healing', name: "Song of Healing", icon: 'mm/mm_healing', game: 'oot', category: 'songs', maxLevel: 1, noteCount: 6 },
+  { id: 'oot_song_soaring', name: "Song of Soaring", icon: 'mm/mm_soaring', game: 'oot', category: 'songs', maxLevel: 1, noteCount: 6 },
+  { id: 'oot_song_sonata', name: "Sonata of Awakening", icon: 'mm/mm_sonata', game: 'oot', category: 'songs', maxLevel: 1, noteCount: 7 },
+  { id: 'oot_song_lullaby', name: "Goron's Lullaby", icon: 'mm/mm_half_lullaby', game: 'oot', category: 'songs', maxLevel: 2, levelIcons: ['mm/mm_half_lullaby', 'mm/mm_lullaby'], noteCount: 8 },
+  { id: 'oot_song_nova', name: "New Wave Bossa Nova", icon: 'mm/mm_bossanova', game: 'oot', category: 'songs', maxLevel: 1, noteCount: 7 },
+  { id: 'oot_song_oath', name: "Oath to Order", icon: 'mm/mm_oath', game: 'oot', category: 'songs', maxLevel: 1, noteCount: 6 },
 
   //Label Dungeons
   { id: 'label_forest', name: "Forest Temple", icon: 'label/label_forest', game: 'oot', category: 'label', maxLevel: 0 },
@@ -420,27 +422,27 @@ export const allTrackerItems: TrackerItem[] = [
   { id: 'mm_dust', name: "Bottle of Gold Dust", icon: 'mm/mm_dust', game: 'mm', category: 'bottles', maxLevel: 1 },
 
   // --- MM songs ---
-  { id: 'mm_song_time', name: "Song of Time", icon: 'mm/mm_songoftime', game: 'mm', category: 'songs', maxLevel: 1 },
-  { id: 'mm_song_epona', name: "Epona's Song", icon: 'mm/mm_epona', game: 'mm', category: 'songs', maxLevel: 1 },
-  { id: 'mm_song_storms', name: "Song of Storms", icon: 'mm/mm_songofstorms', game: 'mm', category: 'songs', maxLevel: 1 },
-  { id: 'mm_song_sun', name: "Sun's Song", icon: 'song/song_sun', game: 'mm', category: 'songs', maxLevel: 1 },
-  { id: 'mm_song_healing', name: "Song of Healing", icon: 'mm/mm_healing', game: 'mm', category: 'songs', maxLevel: 1 },
-  { id: 'mm_song_soaring', name: "Song of Soaring", icon: 'mm/mm_soaring', game: 'mm', category: 'songs', maxLevel: 1 },
-  { id: 'mm_song_sonata', name: "Sonata of Awakening", icon: 'mm/mm_sonata', game: 'mm', category: 'songs', maxLevel: 1 },
-  { id: 'mm_song_lullaby', name: "Goron's Lullaby", icon: 'mm/mm_half_lullaby', game: 'mm', category: 'songs', maxLevel: 2, levelIcons: ['mm/mm_half_lullaby', 'mm/mm_lullaby'] },
-  { id: 'mm_song_nova', name: "New Wave Bossa Nova", icon: 'mm/mm_bossanova', game: 'mm', category: 'songs', maxLevel: 1 },
-  { id: 'mm_song_elegy', name: "Elegy of Emptiness", icon: 'mm/mm_elegy', game: 'mm', category: 'songs', maxLevel: 1 },
-  { id: 'mm_song_oath', name: "Oath to Order", icon: 'mm/mm_oath', game: 'mm', category: 'songs', maxLevel: 1 },
+  { id: 'mm_song_time', name: "Song of Time", icon: 'mm/mm_songoftime', game: 'mm', category: 'songs', maxLevel: 1, noteCount: 6 },
+  { id: 'mm_song_epona', name: "Epona's Song", icon: 'mm/mm_epona', game: 'mm', category: 'songs', maxLevel: 1, noteCount: 6 },
+  { id: 'mm_song_storms', name: "Song of Storms", icon: 'mm/mm_songofstorms', game: 'mm', category: 'songs', maxLevel: 1, noteCount: 6 },
+  { id: 'mm_song_sun', name: "Sun's Song", icon: 'song/song_sun', game: 'mm', category: 'songs', maxLevel: 1, noteCount: 6 },
+  { id: 'mm_song_healing', name: "Song of Healing", icon: 'mm/mm_healing', game: 'mm', category: 'songs', maxLevel: 1, noteCount: 6 },
+  { id: 'mm_song_soaring', name: "Song of Soaring", icon: 'mm/mm_soaring', game: 'mm', category: 'songs', maxLevel: 1, noteCount: 6 },
+  { id: 'mm_song_sonata', name: "Sonata of Awakening", icon: 'mm/mm_sonata', game: 'mm', category: 'songs', maxLevel: 1, noteCount: 7 },
+  { id: 'mm_song_lullaby', name: "Goron's Lullaby", icon: 'mm/mm_half_lullaby', game: 'mm', category: 'songs', maxLevel: 2, levelIcons: ['mm/mm_half_lullaby', 'mm/mm_lullaby'], noteCount: 8 },
+  { id: 'mm_song_nova', name: "New Wave Bossa Nova", icon: 'mm/mm_bossanova', game: 'mm', category: 'songs', maxLevel: 1, noteCount: 7 },
+  { id: 'mm_song_elegy', name: "Elegy of Emptiness", icon: 'mm/mm_elegy', game: 'mm', category: 'songs', maxLevel: 1, noteCount: 7 },
+  { id: 'mm_song_oath', name: "Oath to Order", icon: 'mm/mm_oath', game: 'mm', category: 'songs', maxLevel: 1, noteCount: 6 },
 
   // --- MM cross-game songs (OoT songs obtainable in MM pool — requires crossGameSongs setting) ---
-  { id: 'mm_song_zelda', name: "Zelda's Lullaby", icon: 'song/song_zelda', game: 'mm', category: 'songs', maxLevel: 1 },
-  { id: 'mm_song_saria', name: "Saria's Song", icon: 'song/song_saria', game: 'mm', category: 'songs', maxLevel: 1 },
-  { id: 'mm_song_minuet', name: "Minuet of Forest", icon: 'song/song_minuet', game: 'mm', category: 'songs', maxLevel: 1 },
-  { id: 'mm_song_bolero', name: "Bolero of Fire", icon: 'song/song_bolero', game: 'mm', category: 'songs', maxLevel: 1 },
-  { id: 'mm_song_serenade', name: "Serenade of Water", icon: 'song/song_serenade', game: 'mm', category: 'songs', maxLevel: 1 },
-  { id: 'mm_song_requiem', name: "Requiem of Spirit", icon: 'song/song_requiem', game: 'mm', category: 'songs', maxLevel: 1 },
-  { id: 'mm_song_nocturne', name: "Nocturne of Shadow", icon: 'song/song_nocturne', game: 'mm', category: 'songs', maxLevel: 1 },
-  { id: 'mm_song_prelude', name: "Prelude of Light", icon: 'song/song_prelude', game: 'mm', category: 'songs', maxLevel: 1 },
+  { id: 'mm_song_zelda', name: "Zelda's Lullaby", icon: 'song/song_zelda', game: 'mm', category: 'songs', maxLevel: 1, noteCount: 6 },
+  { id: 'mm_song_saria', name: "Saria's Song", icon: 'song/song_saria', game: 'mm', category: 'songs', maxLevel: 1, noteCount: 6 },
+  { id: 'mm_song_minuet', name: "Minuet of Forest", icon: 'song/song_minuet', game: 'mm', category: 'songs', maxLevel: 1, noteCount: 6 },
+  { id: 'mm_song_bolero', name: "Bolero of Fire", icon: 'song/song_bolero', game: 'mm', category: 'songs', maxLevel: 1, noteCount: 8 },
+  { id: 'mm_song_serenade', name: "Serenade of Water", icon: 'song/song_serenade', game: 'mm', category: 'songs', maxLevel: 1, noteCount: 5 },
+  { id: 'mm_song_requiem', name: "Requiem of Spirit", icon: 'song/song_requiem', game: 'mm', category: 'songs', maxLevel: 1, noteCount: 6 },
+  { id: 'mm_song_nocturne', name: "Nocturne of Shadow", icon: 'song/song_nocturne', game: 'mm', category: 'songs', maxLevel: 1, noteCount: 7 },
+  { id: 'mm_song_prelude', name: "Prelude of Light", icon: 'song/song_prelude', game: 'mm', category: 'songs', maxLevel: 1, noteCount: 6 },
 
   // --- MM transformation masks ---
   { id: 'mask_deku', name: "Deku Mask", icon: 'mm/mm_deku', game: 'mm', category: 'masks', maxLevel: 1 },
@@ -673,29 +675,29 @@ export const allTrackerItems: TrackerItem[] = [
   { id: 'sh_mask_stone', name: "Stone Mask", icon: 'mm/mm_stone', game: 'shared', category: 'masks', maxLevel: 1, settingKey: 'sharedMaskStone' },
   { id: 'sh_mask_bunny', name: "Bunny Hood", icon: 'mm/mm_bunny', game: 'shared', category: 'masks', maxLevel: 1, settingKey: 'sharedMaskBunny' },
   { id: 'sh_mask_truth', name: "Mask of Truth", icon: 'mm/mm_maskoftruth', game: 'shared', category: 'masks', maxLevel: 1, settingKey: 'sharedMaskTruth' },
-  { id: 'sh_song_epona',  name: "Epona's Song",      icon: 'song/song_epona',  game: 'shared', category: 'songs', maxLevel: 1, settingKey: 'sharedSongEpona' },
-  { id: 'sh_song_storms', name: "Song of Storms",    icon: 'song/song_storms', game: 'shared', category: 'songs', maxLevel: 1, settingKey: 'sharedSongStorms' },
-  { id: 'sh_song_time',   name: "Song of Time",      icon: 'song/song_time',   game: 'shared', category: 'songs', maxLevel: 1, settingKey: 'sharedSongTime' },
-  { id: 'sh_song_sun',    name: "Sun's Song",        icon: 'song/song_sun',    game: 'shared', category: 'songs', maxLevel: 1, settingKey: 'sharedSongSun' },
-  { id: 'sh_song_elegy',  name: "Elegy of Emptiness", icon: 'mm/mm_elegy',   game: 'shared', category: 'songs', maxLevel: 1, settingKey: 'sharedSongElegy' },
+  { id: 'sh_song_epona',  name: "Epona's Song",      icon: 'song/song_epona',  game: 'shared', category: 'songs', maxLevel: 1, settingKey: 'sharedSongEpona',  noteCount: 6 },
+  { id: 'sh_song_storms', name: "Song of Storms",    icon: 'song/song_storms', game: 'shared', category: 'songs', maxLevel: 1, settingKey: 'sharedSongStorms', noteCount: 6 },
+  { id: 'sh_song_time',   name: "Song of Time",      icon: 'song/song_time',   game: 'shared', category: 'songs', maxLevel: 1, settingKey: 'sharedSongTime',   noteCount: 6 },
+  { id: 'sh_song_sun',    name: "Sun's Song",        icon: 'song/song_sun',    game: 'shared', category: 'songs', maxLevel: 1, settingKey: 'sharedSongSun',    noteCount: 6 },
+  { id: 'sh_song_elegy',  name: "Elegy of Emptiness", icon: 'mm/mm_elegy',   game: 'shared', category: 'songs', maxLevel: 1, settingKey: 'sharedSongElegy',  noteCount: 7 },
 
   // --- SHARED cross-game songs (MM songs obtainable in OoT pool) ---
-  { id: 'sh_song_healing', name: "Song of Healing",     icon: 'mm/mm_healing',      game: 'shared', category: 'songs', maxLevel: 1, settingKey: 'sharedSongHealing' },
-  { id: 'sh_song_soaring', name: "Song of Soaring",     icon: 'mm/mm_soaring',      game: 'shared', category: 'songs', maxLevel: 1, settingKey: 'sharedSongSoaring' },
-  { id: 'sh_song_sonata',  name: "Sonata of Awakening", icon: 'mm/mm_sonata',        game: 'shared', category: 'songs', maxLevel: 1, settingKey: 'sharedSongSonata' },
-  { id: 'sh_song_lullaby', name: "Goron's Lullaby",     icon: 'mm/mm_half_lullaby',  game: 'shared', category: 'songs', maxLevel: 2, levelIcons: ['mm/mm_half_lullaby', 'mm/mm_lullaby'], settingKey: 'sharedSongLullaby' },
-  { id: 'sh_song_nova',    name: "New Wave Bossa Nova", icon: 'mm/mm_bossanova',     game: 'shared', category: 'songs', maxLevel: 1, settingKey: 'sharedSongNova' },
-  { id: 'sh_song_oath',    name: "Oath to Order",       icon: 'mm/mm_oath',          game: 'shared', category: 'songs', maxLevel: 1, settingKey: 'sharedSongOath' },
+  { id: 'sh_song_healing', name: "Song of Healing",     icon: 'mm/mm_healing',      game: 'shared', category: 'songs', maxLevel: 1, settingKey: 'sharedSongHealing', noteCount: 6 },
+  { id: 'sh_song_soaring', name: "Song of Soaring",     icon: 'mm/mm_soaring',      game: 'shared', category: 'songs', maxLevel: 1, settingKey: 'sharedSongSoaring', noteCount: 6 },
+  { id: 'sh_song_sonata',  name: "Sonata of Awakening", icon: 'mm/mm_sonata',        game: 'shared', category: 'songs', maxLevel: 1, settingKey: 'sharedSongSonata',  noteCount: 7 },
+  { id: 'sh_song_lullaby', name: "Goron's Lullaby",     icon: 'mm/mm_half_lullaby',  game: 'shared', category: 'songs', maxLevel: 2, levelIcons: ['mm/mm_half_lullaby', 'mm/mm_lullaby'], settingKey: 'sharedSongLullaby', noteCount: 8 },
+  { id: 'sh_song_nova',    name: "New Wave Bossa Nova", icon: 'mm/mm_bossanova',     game: 'shared', category: 'songs', maxLevel: 1, settingKey: 'sharedSongNova',    noteCount: 7 },
+  { id: 'sh_song_oath',    name: "Oath to Order",       icon: 'mm/mm_oath',          game: 'shared', category: 'songs', maxLevel: 1, settingKey: 'sharedSongOath',    noteCount: 6 },
 
   // --- SHARED cross-game songs (OoT songs obtainable in MM pool) ---
-  { id: 'sh_song_zelda',    name: "Zelda's Lullaby",   icon: 'song/song_zelda',    game: 'shared', category: 'songs', maxLevel: 1, settingKey: 'sharedSongZeldaLullaby' },
-  { id: 'sh_song_saria',    name: "Saria's Song",      icon: 'song/song_saria',    game: 'shared', category: 'songs', maxLevel: 1, settingKey: 'sharedSongSaria' },
-  { id: 'sh_song_minuet',   name: "Minuet of Forest",  icon: 'song/song_minuet',   game: 'shared', category: 'songs', maxLevel: 1, settingKey: 'sharedSongMinuet' },
-  { id: 'sh_song_bolero',   name: "Bolero of Fire",    icon: 'song/song_bolero',   game: 'shared', category: 'songs', maxLevel: 1, settingKey: 'sharedSongBolero' },
-  { id: 'sh_song_serenade', name: "Serenade of Water", icon: 'song/song_serenade', game: 'shared', category: 'songs', maxLevel: 1, settingKey: 'sharedSongSerenade' },
-  { id: 'sh_song_requiem',  name: "Requiem of Spirit", icon: 'song/song_requiem',  game: 'shared', category: 'songs', maxLevel: 1, settingKey: 'sharedSongRequiem' },
-  { id: 'sh_song_nocturne', name: "Nocturne of Shadow", icon: 'song/song_nocturne', game: 'shared', category: 'songs', maxLevel: 1, settingKey: 'sharedSongNocturne' },
-  { id: 'sh_song_prelude',  name: "Prelude of Light",  icon: 'song/song_prelude',  game: 'shared', category: 'songs', maxLevel: 1, settingKey: 'sharedSongPrelude' },
+  { id: 'sh_song_zelda',    name: "Zelda's Lullaby",   icon: 'song/song_zelda',    game: 'shared', category: 'songs', maxLevel: 1, settingKey: 'sharedSongZeldaLullaby', noteCount: 6 },
+  { id: 'sh_song_saria',    name: "Saria's Song",      icon: 'song/song_saria',    game: 'shared', category: 'songs', maxLevel: 1, settingKey: 'sharedSongSaria',         noteCount: 6 },
+  { id: 'sh_song_minuet',   name: "Minuet of Forest",  icon: 'song/song_minuet',   game: 'shared', category: 'songs', maxLevel: 1, settingKey: 'sharedSongMinuet',        noteCount: 6 },
+  { id: 'sh_song_bolero',   name: "Bolero of Fire",    icon: 'song/song_bolero',   game: 'shared', category: 'songs', maxLevel: 1, settingKey: 'sharedSongBolero',        noteCount: 8 },
+  { id: 'sh_song_serenade', name: "Serenade of Water", icon: 'song/song_serenade', game: 'shared', category: 'songs', maxLevel: 1, settingKey: 'sharedSongSerenade',      noteCount: 5 },
+  { id: 'sh_song_requiem',  name: "Requiem of Spirit", icon: 'song/song_requiem',  game: 'shared', category: 'songs', maxLevel: 1, settingKey: 'sharedSongRequiem',       noteCount: 6 },
+  { id: 'sh_song_nocturne', name: "Nocturne of Shadow", icon: 'song/song_nocturne', game: 'shared', category: 'songs', maxLevel: 1, settingKey: 'sharedSongNocturne',     noteCount: 7 },
+  { id: 'sh_song_prelude',  name: "Prelude of Light",  icon: 'song/song_prelude',  game: 'shared', category: 'songs', maxLevel: 1, settingKey: 'sharedSongPrelude',       noteCount: 6 },
 
   // --- SHARED bottles ---
   { id: 'sh_bottle_ruto', name: "Ruto's Letter", icon: 'bottle/bottle_letter', game: 'shared', category: 'bottles', maxLevel: 1, settingKey: 'sharedBottleRuto' },

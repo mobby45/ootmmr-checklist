@@ -207,8 +207,9 @@
     const chuBehaviorOot    = $settingsStore.get('bombchuBehaviorOot') as string | undefined;
     const chuBehaviorMm     = $settingsStore.get('bombchuBehaviorMm')  as string | undefined;
     const bronzeScale       = $settingsStore.get('bronzeScale')        === true;
+    const songNotesMode     = $settingsStore.get('songShuffle')        === 'notes';
     if (!shortHookshot && !fairyOcarina && progLullaby && !progGFS && !kegStrength3 && !childWallets && !colossalWallets && !bottomlessWallets && !notebookShuffled
-        && chuBehaviorOot !== 'bagSeparate' && chuBehaviorMm !== 'bagSeparate' && !bronzeScale) return itemById;
+        && chuBehaviorOot !== 'bagSeparate' && chuBehaviorMm !== 'bagSeparate' && !bronzeScale && !songNotesMode) return itemById;
     const map: typeof itemById = { ...itemById };
     // Default (bagFirst) = 1 level / 50. bagSeparate = 3 bags with 20/30/40 capacity.
     if (chuBehaviorOot === 'bagSeparate')
@@ -241,6 +242,14 @@
         ...(childWallets ? { startUndimmed: false } : {}),
         ...(newLevel > 3 ? { maxLevel: newLevel, levelIcons: icons, levelLabels: labels as string[] } : {}),
       };
+    }
+    // In notes mode: songs become note counters tracked up to noteCount
+    if (songNotesMode) {
+      for (const [id, item] of Object.entries(map)) {
+        if (item.category === 'songs' && item.noteCount) {
+          map[id] = { ...item, maxLevel: item.noteCount, showCount: true, levelIcons: undefined, levelLabels: undefined };
+        }
+      }
     }
     return map;
   })();

@@ -231,6 +231,7 @@ import type { EntranceInfo } from '../data/entranceData';
     hoveredCheckName = '';
   }
 
+
   $: availableTypes = [...new Set(filteredChecks.map(c => c.type))].sort();
   $: availableTypesSet = new Set(availableTypes);
   $: relevantHiddenCount = [...$hiddenTypesStore].filter(t => availableTypesSet.has(t)).length;

@@ -112,6 +112,44 @@ export const settingsMap: Record<string, string> = {
   shuffleMasterSword:       'shuffleMasterSword',
   shuffleGerudoCard:        'shuffleGerudoCard',
   shuffleOcarinasOot:       'shuffleOcarinasOot',
+  songShuffle:              'songShuffle',
+  // Age / access settings (select)
+  ageChange:                'ageChange',
+  beneathWell:              'beneathWell',
+  moon:                     'moon',
+  moonCrash:                'moonCrash',
+  openMaskShop:             'openMaskShop',
+  alterLostWoodsExits:      'alterLostWoodsExits',
+  regionState:              'regionState',
+  openMoon:                 'openMoon',
+  majoraChild:              'majoraChild',
+  bossWarpPads:             'bossWarpPads',
+  jpLayouts:                'jpLayouts',
+  lacs:                     'lacs',
+  freeScarecrowOot:         'freeScarecrowOot',
+  freeScarecrowMm:          'freeScarecrowMm',
+  swordlessAdult:           'swordlessAdult',
+  timeTravelSword:          'timeTravelSword',
+  iceArrowPlatformsOot:     'iceArrowPlatformsOot',
+  openDungeonsOot:          'openDungeonsOot',
+  openDungeonsMm:           'openDungeonsMm',
+  clearStateDungeonsMm:     'clearStateDungeonsMm',
+  ganonTrials:              'ganonTrials',
+  // Price settings
+  priceOotShops:            'priceOotShops',
+  priceOotScrubs:           'priceOotScrubs',
+  priceOotMerchants:        'priceOotMerchants',
+  priceMmShops:             'priceMmShops',
+  priceMmTingle:            'priceMmTingle',
+  // Stray fairy count
+  strayFairyRewardCount:    'STRAY_FAIRY_COUNT',
+  // Item pool extensions
+  slingshotMm:              'slingshotMm',
+  menuNotebook:             'menuNotebook',
+  rustyKeysOot:             'rustyKeysOot',
+  rustyKeysMm:              'rustyKeysMm',
+  // Fix: elegy uses different key names in hash vs spoiler
+  elegyOot:                 'crossGameSongElegy',
 };
 
 // Value transformations for settings whose raw spoiler value differs from the tracker value
@@ -145,7 +183,8 @@ export const valueMap: Record<string, Record<string, any>> = {
 // Keys parsed as raw booleans (not via settingsMap, stored under their original name)
 export const directBoolKeys = new Set([
   'skeletonKeyOot', 'skeletonKeyMm', 'magicalRupee', 'platinumTokenOot', 'platinumTokenMm',
-  'transcendentFairy', 'clocks', 'blastMaskOot', 'stoneMaskOot', 'elegyOot',
+  'transcendentFairy', 'clocks', 'blastMaskOot', 'stoneMaskOot',
+  // elegyOot moved to settingsMap → crossGameSongElegy (key name differs between hash and spoiler)
   'ocarinaButtonsShuffleOot', 'ocarinaButtonsShuffleMm', 'spinUpgradeOot', 'stoneAgonyMm',
   'spellFireMm', 'spellWindMm', 'spellLoveMm', 'bootsIronMm', 'bootsHoverMm',
   'tunicGoronMm', 'tunicZoraMm', 'scalesMm', 'strengthMm', 'hammerMm', 'dekuShieldMm',
@@ -168,4 +207,8 @@ export const directBoolKeys = new Set([
   'songZeldaLullabyMm', 'songSariasMm', 'sunSongMm',
   'songMinuetMm', 'songBoleroMm', 'songSerenadeMm',
   'songRequiemMm', 'songNocturneMm', 'songPreludeMm',
+  // Ageless item settings
+  'agelessSwords', 'agelessHookshot', 'agelessBoots', 'agelessBow', 'agelessBoomerang',
+  'agelessStrength', 'agelessShields', 'agelessHammer', 'agelessTunics', 'agelessSlingshot',
+  'agelessSticks', 'agelessSoaring', 'agelessGFS', 'agelessChildTrade',
 ]);

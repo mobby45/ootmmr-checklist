@@ -6,7 +6,7 @@
 
 export type ItemGrant = [id: string, count: number];
 
-export function trackerItemToLogic(id: string, level: number): ItemGrant[] {
+export function trackerItemToLogic(id: string, level: number, notesMode = false): ItemGrant[] {
   if (level <= 0) return [];
   switch (id) {
     // ─── OoT swords ──────────────────────────────────────────────────────────
@@ -119,53 +119,57 @@ export function trackerItemToLogic(id: string, level: number): ItemGrant[] {
     case 'medal_spirit':      return [['OOT_MEDALLION_SPIRIT', 1], ['OOT_MEDALLION', 1]];
     case 'medal_light':       return [['OOT_MEDALLION_LIGHT', 1],  ['OOT_MEDALLION', 1]];
 
-    // OoT songs — logic macros check SONG_* (no game prefix); has_song_zelda/epona/... all use bare names
-    case 'oot_song_zelda':    return [['SONG_ZELDA', 1]];
-    case 'oot_song_epona':    return [['SONG_EPONA', 1]];
-    case 'oot_song_saria':    return [['SONG_SARIA', 1]];
-    case 'oot_song_sun':      return [['SONG_SUN', 1]];
-    case 'oot_song_time':     return [['SONG_TIME', 1]];
-    case 'oot_song_storms':   return [['SONG_STORMS', 1]];
-    case 'oot_song_minuet':   return [['SONG_TP_FOREST', 1]];
-    case 'oot_song_bolero':   return [['SONG_TP_FIRE', 1]];
-    case 'oot_song_serenade': return [['SONG_TP_WATER', 1]];
-    case 'oot_song_requiem':  return [['SONG_TP_SPIRIT', 1]];
-    case 'oot_song_nocturne': return [['SONG_TP_SHADOW', 1]];
-    case 'oot_song_prelude':  return [['SONG_TP_LIGHT', 1]];
-    case 'oot_elegy':         return [['SONG_EMPTINESS', 1]];
+    // OoT songs — in notes mode each level = one note found; otherwise binary has/hasn't
+    case 'oot_song_zelda':    return notesMode ? [['SONG_NOTE_ZELDA', level]]     : [['SONG_ZELDA', 1]];
+    case 'oot_song_epona':    return notesMode ? [['SONG_NOTE_EPONA', level]]     : [['SONG_EPONA', 1]];
+    case 'oot_song_saria':    return notesMode ? [['SONG_NOTE_SARIA', level]]     : [['SONG_SARIA', 1]];
+    case 'oot_song_sun':      return notesMode ? [['SONG_NOTE_SUN', level]]       : [['SONG_SUN', 1]];
+    case 'oot_song_time':     return notesMode ? [['SONG_NOTE_TIME', level]]      : [['SONG_TIME', 1]];
+    case 'oot_song_storms':   return notesMode ? [['SONG_NOTE_STORMS', level]]    : [['SONG_STORMS', 1]];
+    case 'oot_song_minuet':   return notesMode ? [['SONG_NOTE_TP_FOREST', level]] : [['SONG_TP_FOREST', 1]];
+    case 'oot_song_bolero':   return notesMode ? [['SONG_NOTE_TP_FIRE', level]]   : [['SONG_TP_FIRE', 1]];
+    case 'oot_song_serenade': return notesMode ? [['SONG_NOTE_TP_WATER', level]]  : [['SONG_TP_WATER', 1]];
+    case 'oot_song_requiem':  return notesMode ? [['SONG_NOTE_TP_SPIRIT', level]] : [['SONG_TP_SPIRIT', 1]];
+    case 'oot_song_nocturne': return notesMode ? [['SONG_NOTE_TP_SHADOW', level]] : [['SONG_TP_SHADOW', 1]];
+    case 'oot_song_prelude':  return notesMode ? [['SONG_NOTE_TP_LIGHT', level]]  : [['SONG_TP_LIGHT', 1]];
+    case 'oot_elegy':         return notesMode ? [['SONG_NOTE_EMPTINESS', level]]  : [['SONG_EMPTINESS', 1]];
     // MM songs placed in OoT pool via extension
-    case 'oot_song_healing':  return [['SONG_HEALING', 1]];
-    case 'oot_song_soaring':  return [['SONG_SOARING', 1]];
-    case 'oot_song_sonata':   return [['SONG_AWAKENING', 1]];
-    case 'oot_song_lullaby':  return level === 2 ? [['SONG_GORON_HALF', 1], ['SONG_GORON', 1]] : [['SONG_GORON_HALF', 1]];
-    case 'oot_song_nova':     return [['SONG_ZORA', 1]];
-    case 'oot_song_oath':     return [['SONG_ORDER', 1]];
+    case 'oot_song_healing':  return notesMode ? [['SONG_NOTE_HEALING', level]]   : [['SONG_HEALING', 1]];
+    case 'oot_song_soaring':  return notesMode ? [['SONG_NOTE_SOARING', level]]   : [['SONG_SOARING', 1]];
+    case 'oot_song_sonata':   return notesMode ? [['SONG_NOTE_AWAKENING', level]]  : [['SONG_AWAKENING', 1]];
+    case 'oot_song_lullaby':
+      if (notesMode) return [['SONG_NOTE_GORON', level]];
+      return level === 2 ? [['SONG_GORON_HALF', 1], ['SONG_GORON', 1]] : [['SONG_GORON_HALF', 1]];
+    case 'oot_song_nova':     return notesMode ? [['SONG_NOTE_ZORA', level]]      : [['SONG_ZORA', 1]];
+    case 'oot_song_oath':     return notesMode ? [['SONG_NOTE_ORDER', level]]     : [['SONG_ORDER', 1]];
 
     // Skulltula
     case 'skulltula_token':   return [['OOT_GS_TOKEN', level]];
 
     // ─── MM items ────────────────────────────────────────────────────────────
     case 'mm_ocarina':        return [['OCARINA', 1]];
-    // MM songs — logic macros check SONG_* (no game prefix); same base names as OoT songs
-    case 'mm_song_healing':   return [['SONG_HEALING', 1]];
-    case 'mm_song_soaring':   return [['SONG_SOARING', 1]];
-    case 'mm_song_storms':    return [['SONG_STORMS', 1]];
-    case 'mm_song_sonata':    return [['SONG_AWAKENING', 1]];
-    case 'mm_song_lullaby':   return level === 2 ? [['SONG_GORON_HALF', 1], ['SONG_GORON', 1]] : [['SONG_GORON_HALF', 1]];
-    case 'mm_song_nova':      return [['SONG_ZORA', 1]];
-    case 'mm_song_oath':      return [['SONG_ORDER', 1]];
-    case 'mm_song_elegy':     return [['SONG_EMPTINESS', 1]];
-    case 'mm_song_time':      return [['SONG_TIME', 1]];
-    case 'mm_song_epona':     return [['SONG_EPONA', 1]];
-    case 'mm_song_saria':     return [['SONG_SARIA', 1]];
-    case 'mm_song_zelda':     return [['SONG_ZELDA', 1]];
-    case 'mm_song_minuet':    return [['SONG_TP_FOREST', 1]];
-    case 'mm_song_bolero':    return [['SONG_TP_FIRE', 1]];
-    case 'mm_song_serenade':  return [['SONG_TP_WATER', 1]];
-    case 'mm_song_requiem':   return [['SONG_TP_SPIRIT', 1]];
-    case 'mm_song_nocturne':  return [['SONG_TP_SHADOW', 1]];
-    case 'mm_song_prelude':   return [['SONG_TP_LIGHT', 1]];
-    case 'mm_song_sun':       return [['SONG_SUN', 1]];
+    // MM songs — in notes mode each level = one note found; otherwise binary has/hasn't
+    case 'mm_song_healing':   return notesMode ? [['SONG_NOTE_HEALING', level]]   : [['SONG_HEALING', 1]];
+    case 'mm_song_soaring':   return notesMode ? [['SONG_NOTE_SOARING', level]]   : [['SONG_SOARING', 1]];
+    case 'mm_song_storms':    return notesMode ? [['SONG_NOTE_STORMS', level]]    : [['SONG_STORMS', 1]];
+    case 'mm_song_sonata':    return notesMode ? [['SONG_NOTE_AWAKENING', level]]  : [['SONG_AWAKENING', 1]];
+    case 'mm_song_lullaby':
+      if (notesMode) return [['SONG_NOTE_GORON', level]];
+      return level === 2 ? [['SONG_GORON_HALF', 1], ['SONG_GORON', 1]] : [['SONG_GORON_HALF', 1]];
+    case 'mm_song_nova':      return notesMode ? [['SONG_NOTE_ZORA', level]]      : [['SONG_ZORA', 1]];
+    case 'mm_song_oath':      return notesMode ? [['SONG_NOTE_ORDER', level]]     : [['SONG_ORDER', 1]];
+    case 'mm_song_elegy':     return notesMode ? [['SONG_NOTE_EMPTINESS', level]]  : [['SONG_EMPTINESS', 1]];
+    case 'mm_song_time':      return notesMode ? [['SONG_NOTE_TIME', level]]      : [['SONG_TIME', 1]];
+    case 'mm_song_epona':     return notesMode ? [['SONG_NOTE_EPONA', level]]     : [['SONG_EPONA', 1]];
+    case 'mm_song_saria':     return notesMode ? [['SONG_NOTE_SARIA', level]]     : [['SONG_SARIA', 1]];
+    case 'mm_song_zelda':     return notesMode ? [['SONG_NOTE_ZELDA', level]]     : [['SONG_ZELDA', 1]];
+    case 'mm_song_minuet':    return notesMode ? [['SONG_NOTE_TP_FOREST', level]] : [['SONG_TP_FOREST', 1]];
+    case 'mm_song_bolero':    return notesMode ? [['SONG_NOTE_TP_FIRE', level]]   : [['SONG_TP_FIRE', 1]];
+    case 'mm_song_serenade':  return notesMode ? [['SONG_NOTE_TP_WATER', level]]  : [['SONG_TP_WATER', 1]];
+    case 'mm_song_requiem':   return notesMode ? [['SONG_NOTE_TP_SPIRIT', level]] : [['SONG_TP_SPIRIT', 1]];
+    case 'mm_song_nocturne':  return notesMode ? [['SONG_NOTE_TP_SHADOW', level]] : [['SONG_TP_SHADOW', 1]];
+    case 'mm_song_prelude':   return notesMode ? [['SONG_NOTE_TP_LIGHT', level]]  : [['SONG_TP_LIGHT', 1]];
+    case 'mm_song_sun':       return notesMode ? [['SONG_NOTE_SUN', level]]       : [['SONG_SUN', 1]];
 
     case 'mm_bow':            return [['MM_BOW', 1]];
     case 'mm_bomb':           return [['MM_BOMB_BAG', 1]];
@@ -328,26 +332,28 @@ export function trackerItemToLogic(id: string, level: number): ItemGrant[] {
     case 'remains_twinmold':
     case 'mm_remains_twinmold': return [['MM_REMAINS_TWINMOLD', 1], ['MM_REMAINS', 1]];
 
-    // Shared songs — SHARED_SONG_* keys satisfy both OoT and MM checks
-    case 'sh_song_epona':    return [['SHARED_SONG_EPONA', 1]];
-    case 'sh_song_storms':   return [['SHARED_SONG_STORMS', 1]];
-    case 'sh_song_time':     return [['SHARED_SONG_TIME', 1]];
-    case 'sh_song_sun':      return [['SHARED_SONG_SUN', 1]];
-    case 'sh_song_elegy':    return [['SHARED_SONG_EMPTINESS', 1]];
-    case 'sh_song_healing':  return [['SHARED_SONG_HEALING', 1]];
-    case 'sh_song_soaring':  return [['SHARED_SONG_SOARING', 1]];
-    case 'sh_song_sonata':   return [['SHARED_SONG_AWAKENING', 1]];
-    case 'sh_song_lullaby':  return level === 2 ? [['SHARED_SONG_GORON_HALF', 1], ['SHARED_SONG_GORON', 1]] : [['SHARED_SONG_GORON_HALF', 1]];
-    case 'sh_song_nova':     return [['SHARED_SONG_ZORA', 1]];
-    case 'sh_song_oath':     return [['SHARED_SONG_ORDER', 1]];
-    case 'sh_song_zelda':    return [['SHARED_SONG_ZELDA', 1]];
-    case 'sh_song_saria':    return [['SHARED_SONG_SARIA', 1]];
-    case 'sh_song_minuet':   return [['SHARED_SONG_TP_FOREST', 1]];
-    case 'sh_song_bolero':   return [['SHARED_SONG_TP_FIRE', 1]];
-    case 'sh_song_serenade': return [['SHARED_SONG_TP_WATER', 1]];
-    case 'sh_song_requiem':  return [['SHARED_SONG_TP_SPIRIT', 1]];
-    case 'sh_song_nocturne': return [['SHARED_SONG_TP_SHADOW', 1]];
-    case 'sh_song_prelude':  return [['SHARED_SONG_TP_LIGHT', 1]];
+    // Shared songs — in notes mode use SHARED_SONG_NOTE_* so both OoT and MM checks are satisfied
+    case 'sh_song_epona':    return notesMode ? [['SHARED_SONG_NOTE_EPONA', level]]     : [['SHARED_SONG_EPONA', 1]];
+    case 'sh_song_storms':   return notesMode ? [['SHARED_SONG_NOTE_STORMS', level]]    : [['SHARED_SONG_STORMS', 1]];
+    case 'sh_song_time':     return notesMode ? [['SHARED_SONG_NOTE_TIME', level]]      : [['SHARED_SONG_TIME', 1]];
+    case 'sh_song_sun':      return notesMode ? [['SHARED_SONG_NOTE_SUN', level]]       : [['SHARED_SONG_SUN', 1]];
+    case 'sh_song_elegy':    return notesMode ? [['SHARED_SONG_NOTE_EMPTINESS', level]]  : [['SHARED_SONG_EMPTINESS', 1]];
+    case 'sh_song_healing':  return notesMode ? [['SHARED_SONG_NOTE_HEALING', level]]   : [['SHARED_SONG_HEALING', 1]];
+    case 'sh_song_soaring':  return notesMode ? [['SHARED_SONG_NOTE_SOARING', level]]   : [['SHARED_SONG_SOARING', 1]];
+    case 'sh_song_sonata':   return notesMode ? [['SHARED_SONG_NOTE_AWAKENING', level]]  : [['SHARED_SONG_AWAKENING', 1]];
+    case 'sh_song_lullaby':
+      if (notesMode) return [['SHARED_SONG_NOTE_GORON', level]];
+      return level === 2 ? [['SHARED_SONG_GORON_HALF', 1], ['SHARED_SONG_GORON', 1]] : [['SHARED_SONG_GORON_HALF', 1]];
+    case 'sh_song_nova':     return notesMode ? [['SHARED_SONG_NOTE_ZORA', level]]      : [['SHARED_SONG_ZORA', 1]];
+    case 'sh_song_oath':     return notesMode ? [['SHARED_SONG_NOTE_ORDER', level]]     : [['SHARED_SONG_ORDER', 1]];
+    case 'sh_song_zelda':    return notesMode ? [['SHARED_SONG_NOTE_ZELDA', level]]     : [['SHARED_SONG_ZELDA', 1]];
+    case 'sh_song_saria':    return notesMode ? [['SHARED_SONG_NOTE_SARIA', level]]     : [['SHARED_SONG_SARIA', 1]];
+    case 'sh_song_minuet':   return notesMode ? [['SHARED_SONG_NOTE_TP_FOREST', level]] : [['SHARED_SONG_TP_FOREST', 1]];
+    case 'sh_song_bolero':   return notesMode ? [['SHARED_SONG_NOTE_TP_FIRE', level]]   : [['SHARED_SONG_TP_FIRE', 1]];
+    case 'sh_song_serenade': return notesMode ? [['SHARED_SONG_NOTE_TP_WATER', level]]  : [['SHARED_SONG_TP_WATER', 1]];
+    case 'sh_song_requiem':  return notesMode ? [['SHARED_SONG_NOTE_TP_SPIRIT', level]] : [['SHARED_SONG_TP_SPIRIT', 1]];
+    case 'sh_song_nocturne': return notesMode ? [['SHARED_SONG_NOTE_TP_SHADOW', level]] : [['SHARED_SONG_TP_SHADOW', 1]];
+    case 'sh_song_prelude':  return notesMode ? [['SHARED_SONG_NOTE_TP_LIGHT', level]]  : [['SHARED_SONG_TP_LIGHT', 1]];
 
     // Shared items (cross-game) — use SHARED_ keys where macros check them explicitly;
     // plain keys are used as fallback by the game-prefixed eval for truly shared items.
@@ -452,7 +458,7 @@ export function trackerItemToLogic(id: string, level: number): ItemGrant[] {
 }
 
 // Build the full items Map from a yItems snapshot
-export function buildItemsMap(yItemsSnapshot: Map<string, number>): Map<string, number> {
+export function buildItemsMap(yItemsSnapshot: Map<string, number>, notesMode = false): Map<string, number> {
   const result = new Map<string, number>();
 
   function add(id: string, count: number) {
@@ -460,7 +466,7 @@ export function buildItemsMap(yItemsSnapshot: Map<string, number>): Map<string, 
   }
 
   for (const [trackerId, level] of yItemsSnapshot) {
-    for (const [ootmmId, count] of trackerItemToLogic(trackerId, level)) {
+    for (const [ootmmId, count] of trackerItemToLogic(trackerId, level, notesMode)) {
       add(ootmmId, count);
     }
   }
