@@ -17758,7 +17758,7 @@
       },
       {
         "target": "Shadow Temple Area Above Shortcut Enclosure",
-        "rule": "scarecrow_longshot || longshot_anywhere"
+        "rule": "hookshot_anywhere || scarecrow_longshot"
       }
     ],
     "locations": [],
@@ -33702,7 +33702,7 @@
       },
       {
         "target": "Moon Trial Link Rest 3",
-        "rule": "soul_iron_knuckle && (has_weapon || has_mask_goron || has_bombs || has_bombchu || (has_mask_blast && masks(5))) && ((has_bombchu && has_arrows) || short_hook_anywhere)"
+        "rule": "soul_iron_knuckle && (has_weapon || has_mask_goron || has_bombs || has_bombchu || (has_mask_blast && masks(5))) && ((has_bombchu && (has_arrows || can_use_slingshot)) || short_hook_anywhere)"
       }
     ],
     "locations": [
@@ -38959,7 +38959,7 @@
       },
       {
         "target": "Woodfall Temple Water Room Boss Key Ledge",
-        "rule": "(has_arrows && has(MASK_DEKU)) || (short_hook_anywhere && (event(WOODFALL_TEMPLE_MAIN_FLOWER) || has_bombs || has_mask_goron)) || hookshot_anywhere"
+        "rule": "(has(MASK_DEKU) && (has_arrows || can_use_slingshot)) || (short_hook_anywhere && (event(WOODFALL_TEMPLE_MAIN_FLOWER) || has_bombs || has_mask_goron)) || hookshot_anywhere"
       },
       {
         "target": "WARP_SONGS",
@@ -38997,7 +38997,7 @@
       },
       {
         "target": "Woodfall Temple Water Room Boss Key Ledge",
-        "rule": "(has_arrows && has(MASK_DEKU)) || (short_hook_anywhere && (event(WOODFALL_TEMPLE_MAIN_FLOWER) || has_bombs || has_mask_goron)) || hookshot_anywhere"
+        "rule": "(has(MASK_DEKU) && (has_arrows || can_use_slingshot)) || (short_hook_anywhere && (event(WOODFALL_TEMPLE_MAIN_FLOWER) || has_bombs || has_mask_goron)) || hookshot_anywhere"
       },
       {
         "target": "WARP_SONGS",
@@ -39356,7 +39356,7 @@
       },
       {
         "target": "Woodfall Temple Water Room Boss Key Ledge",
-        "rule": "(has_arrows && has(MASK_DEKU)) || (short_hook_anywhere && (event(WOODFALL_TEMPLE_MAIN_FLOWER) || has_bombs || has_mask_goron)) || hookshot_anywhere"
+        "rule": "(has(MASK_DEKU) && (has_arrows || can_use_slingshot)) || (short_hook_anywhere && (event(WOODFALL_TEMPLE_MAIN_FLOWER) || has_bombs || has_mask_goron)) || hookshot_anywhere"
       },
       {
         "target": "WARP_SONGS",
