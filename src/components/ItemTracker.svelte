@@ -259,6 +259,14 @@
   // Chaque section : { title, rows: string[][] }
   // ==========================================
 
+  const OOT_SILVER_RUPEE_ROWS: string[][] = [
+    ['oot_sr_dc', 'oot_sr_ic_block', 'oot_sr_ic_scythe'],
+    ['oot_sr_gtg_lava', 'oot_sr_gtg_slopes', 'oot_sr_gtg_water'],
+    ['oot_sr_shadow_blades', 'oot_sr_shadow_pit', 'oot_sr_shadow_scythe', 'oot_sr_shadow_spikes'],
+    ['oot_sr_spirit_adult', 'oot_sr_spirit_boulders', 'oot_sr_spirit_child', 'oot_sr_spirit_lobby', 'oot_sr_spirit_sun'],
+    ['oot_sr_ganon_fire', 'oot_sr_ganon_forest', 'oot_sr_ganon_light', 'oot_sr_ganon_shadow', 'oot_sr_ganon_spirit', 'oot_sr_ganon_water'],
+  ];
+
   const OOT_RUSTY_KEYS_ROWS: string[][] = [
     ['oot_rk_laboratory','oot_rk_fishing_pond','oot_rk_ranch_house','oot_rk_ranch_house_room','oot_rk_ranch_stable','oot_rk_silo'],
     ['oot_rk_windmill','oot_rk_impa_house','oot_rk_skulltula_house','oot_rk_carpenter_house','oot_rk_granny_potion_shop','oot_rk_graveyard'],
@@ -933,6 +941,29 @@
             {/if}
           {/each}
         </div>
+      </div>
+      {/if}
+
+      <!-- Silver Rupees (OoT) -->
+      {#if ($settingsStore.get('SilverRupeeShuffleOOT') ?? 'vanilla') !== 'vanilla'}
+      <div class="section">
+        <div class="section-title">Silver Rupees</div>
+        {#each OOT_SILVER_RUPEE_ROWS as row}
+          <div class="row-grid">
+            {#each row as cellId}
+              {@const item = effectiveItemById[cellId]}
+              {#if item}
+                {@const level = $itemStore.get(cellId) ?? 0}
+                {@const badge = getBadge(item, level)}
+                <div class="tracker-item" role="button" tabindex="0" class:obtained={isObtained(item,level)} class:maxed={isMaxed(item,level)}
+                  title="{item.name}" on:click={e=>handleClick(e,item)} on:contextmenu={e=>handleRightClick(e,item)} on:keydown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();handleClick(e,item)}}}>
+                  <img loading="lazy" src={getIconSrc(item,level)} alt={item.name} class="tracker-icon" class:greyed={isGreyed(item,level)} draggable="false"/>
+                  {#if badge}<span class="badge">{badge}</span>{/if}
+                </div>
+              {/if}
+            {/each}
+          </div>
+        {/each}
       </div>
       {/if}
 

@@ -434,6 +434,29 @@ export function trackerItemToLogic(id: string, level: number, notesMode = false)
     case 'shared_shield_mirror': return [['SHIELD_MIRROR', 1], ['SHIELD', 3]];
     case 'sh_spin_upgrade':      return [['SHARED_SPIN_UPGRADE', 1]];
 
+    // ─── OoT silver rupees (countable — emit level as count) ─────────────────
+    case 'oot_sr_dc':              return [['OOT_RUPEE_SILVER_DC',             level]];
+    case 'oot_sr_ic_block':        return [['OOT_RUPEE_SILVER_IC_BLOCK',       level]];
+    case 'oot_sr_ic_scythe':       return [['OOT_RUPEE_SILVER_IC_SCYTHE',      level]];
+    case 'oot_sr_gtg_lava':        return [['OOT_RUPEE_SILVER_GTG_LAVA',       level]];
+    case 'oot_sr_gtg_slopes':      return [['OOT_RUPEE_SILVER_GTG_SLOPES',     level]];
+    case 'oot_sr_gtg_water':       return [['OOT_RUPEE_SILVER_GTG_WATER',      level]];
+    case 'oot_sr_shadow_blades':   return [['OOT_RUPEE_SILVER_SHADOW_BLADES',  level]];
+    case 'oot_sr_shadow_pit':      return [['OOT_RUPEE_SILVER_SHADOW_PIT',     level]];
+    case 'oot_sr_shadow_scythe':   return [['OOT_RUPEE_SILVER_SHADOW_SCYTHE',  level]];
+    case 'oot_sr_shadow_spikes':   return [['OOT_RUPEE_SILVER_SHADOW_SPIKES',  level]];
+    case 'oot_sr_spirit_adult':    return [['OOT_RUPEE_SILVER_SPIRIT_ADULT',   level]];
+    case 'oot_sr_spirit_boulders': return [['OOT_RUPEE_SILVER_SPIRIT_BOULDERS',level]];
+    case 'oot_sr_spirit_child':    return [['OOT_RUPEE_SILVER_SPIRIT_CHILD',   level]];
+    case 'oot_sr_spirit_lobby':    return [['OOT_RUPEE_SILVER_SPIRIT_LOBBY',   level]];
+    case 'oot_sr_spirit_sun':      return [['OOT_RUPEE_SILVER_SPIRIT_SUN',     level]];
+    case 'oot_sr_ganon_fire':      return [['OOT_RUPEE_SILVER_GANON_FIRE',     level]];
+    case 'oot_sr_ganon_forest':    return [['OOT_RUPEE_SILVER_GANON_FOREST',   level]];
+    case 'oot_sr_ganon_light':     return [['OOT_RUPEE_SILVER_GANON_LIGHT',    level]];
+    case 'oot_sr_ganon_shadow':    return [['OOT_RUPEE_SILVER_GANON_SHADOW',   level]];
+    case 'oot_sr_ganon_spirit':    return [['OOT_RUPEE_SILVER_GANON_SPIRIT',   level]];
+    case 'oot_sr_ganon_water':     return [['OOT_RUPEE_SILVER_GANON_WATER',    level]];
+
     // ─── OoT pond fish (pondFishShuffle) ─────────────────────────────────────
     case 'oot_child_fish':  return [['CHILD_FISH',  level]];
     case 'oot_child_loach': return [['CHILD_LOACH', level]];
