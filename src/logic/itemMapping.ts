@@ -509,7 +509,20 @@ export function trackerItemToLogic(id: string, level: number, notesMode = false)
     case 'mm_rk_ranch_house_room':        return [['RUSTY_KEY_RANCH_HOUSE_ROOM', 1]];
     case 'mm_rk_treasure_chest_game':     return [['RUSTY_KEY_TREASURE_CHEST_GAME', 1]];
 
-    default: return [];
+    default: {
+      // Souls: oot_oot_soul_* → SOUL_* (unprefixed — macros use them without game prefix)
+      //        mm_soul_*      → SOUL_* (same pool, cross-game via soul_boss/soul_enemy macros)
+      // Known spelling fix: itemData writes 'dinalfos', logic writes 'DINOLFOS'.
+      if (id.startsWith('oot_oot_soul_')) {
+        const raw = id.slice('oot_oot_'.length).toUpperCase().replace('DINALFOS', 'DINOLFOS');
+        return [[raw, 1]];
+      }
+      if (id.startsWith('mm_soul_')) {
+        const raw = id.slice('mm_'.length).toUpperCase().replace('DINALFOS', 'DINOLFOS');
+        return [[raw, 1]];
+      }
+      return [];
+    }
   }
 }
 
