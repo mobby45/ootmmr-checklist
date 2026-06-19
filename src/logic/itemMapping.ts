@@ -93,6 +93,25 @@ export function trackerItemToLogic(id: string, level: number, notesMode = false)
     case 'scarecrow_oot': return [['OOT_SCARECROW', 1]];
     case 'key_skeleton':  return [['OOT_SKELETON_KEY', 1]];
 
+    // OoT dungeon boss keys
+    case 'oot_bk_forest': return [['OOT_BOSS_KEY_FOREST', 1]];
+    case 'oot_bk_fire':   return [['OOT_BOSS_KEY_FIRE', 1]];
+    case 'oot_bk_water':  return [['OOT_BOSS_KEY_WATER', 1]];
+    case 'oot_bk_shadow': return [['OOT_BOSS_KEY_SHADOW', 1]];
+    case 'oot_bk_spirit': return [['OOT_BOSS_KEY_SPIRIT', 1]];
+    case 'oot_bk_ganon':  return [['OOT_BOSS_KEY_GANON', 1]];
+
+    // OoT dungeon small keys (countable — emit level as count)
+    case 'forest_sk': return [['OOT_SMALL_KEY_FOREST', level]];
+    case 'fire_sk':   return [['OOT_SMALL_KEY_FIRE',   level]];
+    case 'water_sk':  return [['OOT_SMALL_KEY_WATER',  level]];
+    case 'spirit_sk': return [['OOT_SMALL_KEY_SPIRIT', level]];
+    case 'shadow_sk': return [['OOT_SMALL_KEY_SHADOW', level]];
+    case 'gc_sk':     return [['OOT_SMALL_KEY_GANON',  level]];
+    case 'gtg_sk':    return [['OOT_SMALL_KEY_GTG',    level]];
+    case 'th_sk':     return [['OOT_SMALL_KEY_GF',     level]];
+    case 'botw_sk':   return [['OOT_SMALL_KEY_BOTW',   level]];
+
     // OoT trade items
     case 'trade_c_egg':       return [['OOT_WEIRD_EGG', 1]];
     case 'trade_c_cucco':     return [['OOT_CUCCO', 1]];
@@ -145,6 +164,12 @@ export function trackerItemToLogic(id: string, level: number, notesMode = false)
 
     // Skulltula
     case 'skulltula_token':   return [['OOT_GS_TOKEN', level]];
+
+    // OoT collectibles with logic impact
+    case 'skulltula_platinum':
+    case 'oot_platinum_token': return [['OOT_PLATINUM_TOKEN', 1]];
+    case 'oot_rupee_magical':  return [['RUPEE_MAGICAL', 1]];
+    case 'oot_spin_upgrade':   return [['OOT_SPIN_UPGRADE', 1]];
 
     // ─── MM items ────────────────────────────────────────────────────────────
     case 'mm_ocarina':        return [['OCARINA', 1]];
@@ -226,6 +251,36 @@ export function trackerItemToLogic(id: string, level: number, notesMode = false)
     case 'mm_pictograph':     return [['MM_PICTOGRAPH_BOX', 1]];
     case 'mm_logic_access':   return [['MM_LOGIC_ACCESS', 1]];
     case 'mm_fairysword':     return [['MM_GREAT_FAIRY_SWORD', 1]];
+    case 'mm_skeleton_key':   return [['MM_SKELETON_KEY', 1]];
+
+    // MM dungeon boss keys
+    case 'mm_bk_wf': return [['MM_BOSS_KEY_WF', 1]];
+    case 'mm_bk_sh': return [['MM_BOSS_KEY_SH', 1]];
+    case 'mm_bk_gb': return [['MM_BOSS_KEY_GB', 1]];
+    case 'mm_bk_st': return [['MM_BOSS_KEY_ST', 1]];
+
+    // MM dungeon small keys (countable — emit level as count)
+    case 'mm_sk_wf': return [['MM_SMALL_KEY_WF', level]];
+    case 'mm_sk_sh': return [['MM_SMALL_KEY_SH', level]];
+    case 'mm_sk_gb': return [['MM_SMALL_KEY_GB', level]];
+    case 'mm_sk_st': return [['MM_SMALL_KEY_ST', level]];
+
+    // MM collectibles with logic impact
+    case 'skulltula_platinum_mm': return [['MM_PLATINUM_TOKEN', 1]];
+    case 'mm_spin_upgrade':       return [['MM_SPIN_UPGRADE', 1]];
+    case 'mm_transcendent_fairy': return [['TRANSCENDENT_FAIRY', 1]];
+
+    // MM owl statues
+    case 'mm_owl_clock_town':       return [['MM_OWL_CLOCK_TOWN', 1]];
+    case 'mm_owl_southern_swamp':   return [['MM_OWL_SOUTHERN_SWAMP', 1]];
+    case 'mm_owl_woodfall':         return [['MM_OWL_WOODFALL', 1]];
+    case 'mm_owl_milk_road':        return [['MM_OWL_MILK_ROAD', 1]];
+    case 'mm_owl_mountain_village': return [['MM_OWL_MOUNTAIN_VILLAGE', 1]];
+    case 'mm_owl_snowhead':         return [['MM_OWL_SNOWHEAD', 1]];
+    case 'mm_owl_great_bay':        return [['MM_OWL_GREAT_BAY', 1]];
+    case 'mm_owl_zora_cape':        return [['MM_OWL_ZORA_CAPE', 1]];
+    case 'mm_owl_ikana_canyon':     return [['MM_OWL_IKANA_CANYON', 1]];
+    case 'mm_owl_stone_tower':      return [['MM_OWL_STONE_TOWER', 1]];
 
     // MM trade/quest items
     case 'mm_tear':           return [['MOON_TEAR', 1]];
@@ -377,6 +432,7 @@ export function trackerItemToLogic(id: string, level: number, notesMode = false)
       if (level === 2) return [['SWORD_MASTER', 1], ['SWORD', 2]];
       return              [['SWORD_BIGGORON', 1], ['SWORD', 3]];
     case 'shared_shield_mirror': return [['SHIELD_MIRROR', 1], ['SHIELD', 3]];
+    case 'sh_spin_upgrade':      return [['SHARED_SPIN_UPGRADE', 1]];
 
     // ─── OoT pond fish (pondFishShuffle) ─────────────────────────────────────
     case 'oot_child_fish':  return [['CHILD_FISH',  level]];
