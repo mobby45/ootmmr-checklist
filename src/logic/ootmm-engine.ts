@@ -295,6 +295,14 @@ function extractResult(
   const childRegions = new Set([...childAreas.keys()].map(stripPrefix));
   const adultRegions = new Set([...adultAreas.keys()].map(stripPrefix));
 
+  // DEBUG: log child reachability for ER diagnosis
+  const DEBUG_AREAS = ['OOT SPAWN CHILD', 'OOT Kokiri Forest', 'OOT Kokiri Forest Near Deku Tree'];
+  for (const a of DEBUG_AREAS) {
+    console.log(`[ER debug] child has "${a}": ${childAreas.has(a)}, adult has "${a}": ${adultAreas.has(a)}`);
+  }
+  console.log('[ER debug] childRegions has "Kokiri Forest Near Deku Tree":', childRegions.has('Kokiri Forest Near Deku Tree'));
+  console.log('[ER debug] items given:', JSON.stringify([...logicState.items.entries()].filter(([,v]) => v > 0).map(([k,v]) => `${k}:${v}`)));
+
   return {
     regions: new Set([...childRegions, ...adultRegions]),
     childRegions,
