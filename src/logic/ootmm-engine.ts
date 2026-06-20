@@ -53,13 +53,11 @@ for (const e of allEntrances) {
 
 // ─── Settings conversion ───────────────────────────────────────────────────────
 
-// Settings hash used for caching the built OoTMM World per unique settings combo.
-// We serialize only the keys that affect world structure (anything that exprSetting()
-// or logicPassWorld reads). We use the full settings Map but only include recognised
-// OoTMM keys (tracker-specific keys like PotShuffleOOT are not in makeSettings and
-// are silently ignored by applyBaseSettings, so they don't affect caching).
-function settingsKey(settings: Map<string, any>): string {
-  return JSON.stringify([...settings.entries()].sort((a, b) => a[0].localeCompare(b[0])));
+// Settings hash for world caching — computed from the parsed OoTMM Settings object
+// (after makeSettings) so that tracker-specific display settings (PotShuffleOOT,
+// ShopShuffleMM, etc.) that don't affect World structure never invalidate the cache.
+function settingsKey(ootmmSettings: Settings): string {
+  return JSON.stringify(Object.entries(ootmmSettings as unknown as Record<string, unknown>).sort((a, b) => a[0].localeCompare(b[0])));
 }
 
 export function toOotmmSettings(settings: Map<string, any>): Settings {
@@ -227,8 +225,8 @@ function ootmmLocToTracker(ootmmLoc: string): string {
 export async function computeReachabilityOotmm(
   logicState: LogicState,
 ): Promise<ReachabilityResult> {
-  const sKey = settingsKey(logicState.settings);
   const ootmmSettings = toOotmmSettings(logicState.settings);
+  const sKey = settingsKey(ootmmSettings);
   const baseWorlds = await buildOotmmWorld(ootmmSettings, sKey);
 
   // Apply tracker world patches (SPAWN exits + MM bridge), then ER overrides on top.
