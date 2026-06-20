@@ -821,13 +821,24 @@ import type { EntranceInfo } from '../data/entranceData';
         _auto: true as const,
       });
       if (sources?.length) {
-        // Primary displacement: source known → show source markers only
+        // Primary displacement: if the physical entrance itself is also mapped, prefer showing
+        // WHERE IT LEADS (outgoing destination) over who came here (incoming source).
+        // e.g. at Ocean Spider House exit mapped→GTG: show "GTG → Gerudo Fortress", not "Spirit Temple → Desert Colossus Spirit Exit"
+        const physDestName = entranceValues.get(p.entranceId);
+        if (physDestName) {
+          const physDestEnt = allEntrances.find(e => e.name === physDestName);
+          if (physDestEnt) return [mk(physDestEnt.id, 0)];
+        }
         return sources.map((srcId, i) => mk(srcId, i));
       }
       if (revSources?.length) {
-        // Interior exit: at rev(B), the label should show rev(A) — the coupled return path name.
-        // Showing srcId (A's name "X → Y") here is misleading; rev(A) ("Y → X") matches what
-        // the player sees as they exit back out.
+        // Secondary (coupled return): show the PHYSICAL REVERSE of this entrance position
+        // so the player sees the return-exit label, not the reverse of the triggering source.
+        // e.g. at GTG entrance (rev of GTG-exit): show "GTG → Gerudo Fortress", not "Great Bay → Ocean Spider House"
+        const physEnt = allEntrances.find(e => e.id === p.entranceId);
+        const physRev = physEnt ? findReverseEntrance(physEnt) : undefined;
+        if (physRev) return [mk(physRev.id, 0)];
+        // Fallback: rev(srcId)
         return revSources.map((srcId, i) => {
           const srcEnt = allEntrances.find(e => e.id === srcId);
           const revSrc = srcEnt ? findReverseEntrance(srcEnt) : undefined;
