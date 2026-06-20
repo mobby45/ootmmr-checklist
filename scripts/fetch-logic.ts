@@ -1,13 +1,13 @@
 #!/usr/bin/env node
-// Build script: fetches OoTMM world + macro YAML files from GitHub and compiles
-// them into public/logic/world.json + public/logic/macros.json.
+// Build script: reads OoTMM world + macro YAML files from the local OoTMM submodule
+// (OoTMM/data/) and compiles them into public/logic/world.json + public/logic/macros.json.
 //
 // When OoT and MM define the same macro name with different bodies (e.g.
 // rusty_key(x)), the MM version is stored under the _mm suffix (rusty_key_mm(x))
 // and all MM world-file rules are rewritten to call the suffixed name.
 //
 // Run: npx tsx scripts/fetch-logic.ts
-// Or add to package.json scripts: "logic": "tsx scripts/fetch-logic.ts"
+// Or:  npm run logic
 
 import * as fs from 'fs';
 import * as path from 'path';
@@ -17,30 +17,25 @@ import { parse as parseYaml } from 'yaml';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 const OUT_DIR = path.join(ROOT, 'public', 'logic');
+const OOTMM_DATA = path.join(ROOT, 'OoTMM', 'data');
 
-const OOTMM_RAW = 'https://raw.githubusercontent.com/OoTMM/OoTMM/master';
-const OOTMM_API = 'https://api.github.com/repos/OoTMM/OoTMM/git/trees/master?recursive=1';
+// ─── Local file helpers ───────────────────────────────────────────────────────
 
-// ─── GitHub helpers ───────────────────────────────────────────────────────────
-
-async function fetchText(url: string): Promise<string> {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`HTTP ${res.status} ${url}`);
-  return res.text();
+function globYml(dir: string): string[] {
+  const results: string[] = [];
+  function walk(current: string) {
+    for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+      const full = path.join(current, entry.name);
+      if (entry.isDirectory()) walk(full);
+      else if (entry.name.endsWith('.yml')) results.push(full);
+    }
+  }
+  walk(dir);
+  return results.sort();
 }
 
-async function fetchJson(url: string): Promise<any> {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`HTTP ${res.status} ${url}`);
-  return res.json();
-}
-
-async function listRepoFiles(prefix: string): Promise<string[]> {
-  console.log('Fetching repo tree…');
-  const tree = await fetchJson(OOTMM_API);
-  return (tree.tree as { path: string }[])
-    .map(f => f.path)
-    .filter(p => p.startsWith(prefix) && p.endsWith('.yml'));
+function readFile(filePath: string): string {
+  return fs.readFileSync(filePath, 'utf8');
 }
 
 // ─── YAML world file parsing ──────────────────────────────────────────────────
@@ -150,19 +145,24 @@ function parseMacroFile(yaml: string): Record<string, string> {
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
-async function main() {
+function main() {
+  if (!fs.existsSync(OOTMM_DATA)) {
+    console.error(`OoTMM submodule not found at ${OOTMM_DATA}`);
+    console.error('Run: git submodule update --init');
+    process.exit(1);
+  }
+
   fs.mkdirSync(OUT_DIR, { recursive: true });
 
-  // 1. List files
-  const allFiles   = await listRepoFiles('data/world/');
-  const ootFiles   = allFiles.filter(p => p.startsWith('data/world/oot/'));
-  const mmFiles    = allFiles.filter(p => p.startsWith('data/world/mm/'));
-  const macroFiles = await listRepoFiles('data/macros/');
+  // 1. List files from local submodule
+  const ootFiles   = globYml(path.join(OOTMM_DATA, 'world', 'oot'));
+  const mmFiles    = globYml(path.join(OOTMM_DATA, 'world', 'mm'));
+  const macroFiles = globYml(path.join(OOTMM_DATA, 'macros'));
 
   // Separate OoT vs MM macro files by filename convention (_oot / _mm).
   // Files matching neither are treated as shared and loaded for both.
-  const ootMacroFiles   = macroFiles.filter(p => path.basename(p).includes('_oot'));
-  const mmMacroFiles    = macroFiles.filter(p => path.basename(p).includes('_mm'));
+  const ootMacroFiles    = macroFiles.filter(p => path.basename(p).includes('_oot'));
+  const mmMacroFiles     = macroFiles.filter(p => path.basename(p).includes('_mm'));
   const sharedMacroFiles = macroFiles.filter(
     p => !ootMacroFiles.includes(p) && !mmMacroFiles.includes(p)
   );
@@ -180,7 +180,7 @@ async function main() {
   // Load shared + OoT macros
   for (const file of [...sharedMacroFiles, ...ootMacroFiles]) {
     process.stdout.write(`  Macros OoT: ${path.basename(file)}…`);
-    const yaml = await fetchText(`${OOTMM_RAW}/${file}`);
+    const yaml = readFile(file);
     const m = parseMacroFile(yaml);
     Object.assign(ootMacros, m);
     Object.assign(allMacros, m);
@@ -197,7 +197,7 @@ async function main() {
 
   for (const file of mmMacroFiles) {
     process.stdout.write(`  Macros MM:  ${path.basename(file)}…`);
-    const yaml = await fetchText(`${OOTMM_RAW}/${file}`);
+    const yaml = readFile(file);
     const m = parseMacroFile(yaml);
     let renamed = 0;
 
@@ -243,12 +243,12 @@ async function main() {
     allMacros[key] = applyMmMacroRenaming(allMacros[key], renamedMmFunctions, renamedMmConstants);
   }
 
-  // 3. Fetch & parse world files
+  // 3. Parse world files
   const allRegions: any[] = [];
 
   for (const file of ootFiles) {
     process.stdout.write(`  OoT: ${path.basename(file)}…`);
-    const yaml = await fetchText(`${OOTMM_RAW}/${file}`);
+    const yaml = readFile(file);
     const regions = parseWorldFile(yaml, 'oot');
     allRegions.push(...regions);
     console.log(` ${regions.length} regions`);
@@ -256,7 +256,7 @@ async function main() {
 
   for (const file of mmFiles) {
     process.stdout.write(`  MM:  ${path.basename(file)}…`);
-    const yaml = await fetchText(`${OOTMM_RAW}/${file}`);
+    const yaml = readFile(file);
     const regions = parseWorldFile(yaml, 'mm', renamedMmFunctions, renamedMmConstants);
     allRegions.push(...regions);
     console.log(` ${regions.length} regions`);
@@ -273,4 +273,4 @@ async function main() {
   console.log(`Wrote ${Object.keys(allMacros).length} macros → ${macrosOut}`);
 }
 
-main().catch(e => { console.error(e); process.exit(1); });
+main();

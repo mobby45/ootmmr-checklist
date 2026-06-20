@@ -1,0 +1,3 @@
+[submodule "OoTMM"]
+	path = OoTMM
+	url = https://github.com/OoTMM/OoTMM.git

@@ -50116,6 +50116,18 @@
       {
         "name": "Astral Observatory Moon Tear",
         "rule": "event(TEAR_TELESCOPE)"
+      },
+      {
+        "name": "Termina Field Soil Observatory Item 1",
+        "rule": "has_bugs"
+      },
+      {
+        "name": "Termina Field Soil Observatory Item 2",
+        "rule": "has_bugs"
+      },
+      {
+        "name": "Termina Field Soil Observatory Item 3",
+        "rule": "has_bugs"
       }
     ],
     "events": [
@@ -51281,18 +51293,6 @@
       },
       {
         "name": "Termina Field Soil Tree Stump",
-        "rule": "has_bugs"
-      },
-      {
-        "name": "Termina Field Soil Observatory Item 1",
-        "rule": "has_bugs"
-      },
-      {
-        "name": "Termina Field Soil Observatory Item 2",
-        "rule": "has_bugs"
-      },
-      {
-        "name": "Termina Field Soil Observatory Item 3",
         "rule": "has_bugs"
       },
       {
