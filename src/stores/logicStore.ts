@@ -3,27 +3,15 @@ import type { Map as YMap } from 'yjs';
 import { loadWorld } from '../logic/world';
 import { buildLogicState } from '../logic/state';
 import { buildItemsMap } from '../logic/itemMapping';
-import { computeReachability } from '../logic/engine';
+import { computeReachabilityOotmm } from '../logic/ootmm-engine';
 import type { ReachabilityResult } from '../logic/types';
-import type { MacroTable } from '../logic/expr/eval';
-import type { WorldGraph } from '../logic/types';
 import { defaultLogicSettings } from '../data/logicSettingsDef';
 import type { SpecialConditionsMap } from '../util/spoilerParser';
 import { TRICKS_DEFS } from '../data/tricksDef';
 
 // ─── Shared world data (loaded once) ─────────────────────────────────────────
 
-let _worldReady = false;
-let _graph: WorldGraph | null = null;
-let _macros: MacroTable | null = null;
-
-// Cached snapshots from the last recompute
-let _cachedItemsSnap: Map<string, number> = new Map();
-let _cachedSettingsSnap: Map<string, any> = new Map();
-let _cachedErSnap: Map<string, string> = new Map();
-let _cachedTricks: Set<string> = new Set();
-let _cachedErMode = false;
-let _cachedResolvedSpecial: Map<string, boolean> = new Map();
+let _entranceMapsReady = false;
 
 // ─── Public state ─────────────────────────────────────────────────────────────
 
@@ -150,11 +138,11 @@ export function initLogicStore(
   async function recompute(enabled: boolean) {
     if (!enabled) { logicResult.set(null); return; }
 
-    if (!_worldReady) {
+    if (!_entranceMapsReady) {
       logicLoading.set(true);
       try {
-        const { graph, macros, locationRules, entranceSourceMap, entranceDestMap } = await loadWorld();
-        _graph = graph; _macros = macros; _worldReady = true;
+        const { locationRules, entranceSourceMap, entranceDestMap } = await loadWorld();
+        _entranceMapsReady = true;
         locationRulesStore.set(locationRules);
         entranceSourceMapStore.set(entranceSourceMap);
         entranceDestMapStore.set(entranceDestMap);
@@ -187,6 +175,9 @@ export function initLogicStore(
     if (!settingsSnap.has('erWarps'))            settingsSnap.set('erWarps', 'none');
     // Always OoT+MM combined mode — gates cross-game song warps in world.json
     if (!settingsSnap.has('games'))              settingsSnap.set('games', 'ootmm');
+    // ageChange default is 'none' in OoTMM but that blocks TIME_TRAVEL_AT_WILL entirely.
+    // 'always' lets the Pathfinder propagate adult into child areas once ToT is reachable.
+    if (!settingsSnap.has('ageChange'))          settingsSnap.set('ageChange', 'always');
     // Standard defaults for settings not in the UI
     if (!settingsSnap.has('shufflePotsMm'))      settingsSnap.set('shufflePotsMm', 'none');
     // sharedBombchu in logic = sharedBombchuBags in tracker/spoilerMappings
@@ -214,13 +205,6 @@ export function initLogicStore(
     const specials = get(specialConditionsStore);
     const resolvedSpecial = specials ? resolveSpecialConditions(specials, itemsSnap) : new Map<string, boolean>();
 
-    _cachedItemsSnap = itemsSnap;
-    _cachedSettingsSnap = settingsSnap;
-    _cachedErSnap = erSnap;
-    _cachedTricks = tricks;
-    _cachedErMode = erMode;
-    _cachedResolvedSpecial = resolvedSpecial;
-
     const songEventsSnap = ySongEvents ? new Map(ySongEvents.entries()) as Map<string, string> : new Map<string, string>();
     // Strip "OOT "/"MM " prefix: tracker stores prices with game prefix, world.json uses bare names
     const shopPricesSnap = yShopPrices
@@ -228,7 +212,7 @@ export function initLogicStore(
       : new Map<string, number>();
     const state = buildLogicState(itemsSnap, settingsSnap, erSnap, tricks, erMode, resolvedSpecial, undefined, songEventsSnap, shopPricesSnap);
     try {
-      const result = computeReachability(_graph!, state, _macros!);
+      const result = await computeReachabilityOotmm(state);
       logicResult.set(result);
     } catch (e) {
       console.error('[logic] reachability error:', e);

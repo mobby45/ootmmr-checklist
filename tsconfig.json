@@ -13,7 +13,13 @@
          */
         "allowJs": true,
         "checkJs": false,
-        "isolatedModules": true
+        "isolatedModules": true,
+        "paths": {
+            "@ootmm/core": ["./OoTMM/packages/core/src"],
+            "@ootmm/core/*": ["./OoTMM/packages/core/src/*"],
+            "@ootmm/logic": ["./OoTMM/packages/logic/src"],
+            "@ootmm/logic/*": ["./OoTMM/packages/logic/src/*"]
+        }
     },
     "include": ["src/**/*.ts", "src/**/*.js", "src/**/*.svelte"],
     "references": [{ "path": "./tsconfig.node.json" }]

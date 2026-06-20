@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
+import path from 'path';
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -15,6 +16,16 @@ export default defineConfig({
           }
         }),
     ],
+    resolve: {
+        alias: {
+            '@ootmm/core': path.resolve('./OoTMM/packages/core/src'),
+            '@ootmm/logic': path.resolve('./OoTMM/packages/logic/src'),
+        },
+    },
+    optimizeDeps: {
+        include: ['lodash-es'],
+        exclude: ['@ootmm/core', '@ootmm/logic'],
+    },
     base: '/ootmmr-checklist/',
     build: {
         rollupOptions: {

@@ -138,29 +138,29 @@ export function trackerItemToLogic(id: string, level: number, notesMode = false)
     case 'medal_spirit':      return [['OOT_MEDALLION_SPIRIT', 1], ['OOT_MEDALLION', 1]];
     case 'medal_light':       return [['OOT_MEDALLION_LIGHT', 1],  ['OOT_MEDALLION', 1]];
 
-    // OoT songs — in notes mode each level = one note found; otherwise binary has/hasn't
-    case 'oot_song_zelda':    return notesMode ? [['SONG_NOTE_ZELDA', level]]     : [['SONG_ZELDA', 1]];
-    case 'oot_song_epona':    return notesMode ? [['SONG_NOTE_EPONA', level]]     : [['SONG_EPONA', 1]];
-    case 'oot_song_saria':    return notesMode ? [['SONG_NOTE_SARIA', level]]     : [['SONG_SARIA', 1]];
-    case 'oot_song_sun':      return notesMode ? [['SONG_NOTE_SUN', level]]       : [['SONG_SUN', 1]];
-    case 'oot_song_time':     return notesMode ? [['SONG_NOTE_TIME', level]]      : [['SONG_TIME', 1]];
-    case 'oot_song_storms':   return notesMode ? [['SONG_NOTE_STORMS', level]]    : [['SONG_STORMS', 1]];
-    case 'oot_song_minuet':   return notesMode ? [['SONG_NOTE_TP_FOREST', level]] : [['SONG_TP_FOREST', 1]];
-    case 'oot_song_bolero':   return notesMode ? [['SONG_NOTE_TP_FIRE', level]]   : [['SONG_TP_FIRE', 1]];
-    case 'oot_song_serenade': return notesMode ? [['SONG_NOTE_TP_WATER', level]]  : [['SONG_TP_WATER', 1]];
-    case 'oot_song_requiem':  return notesMode ? [['SONG_NOTE_TP_SPIRIT', level]] : [['SONG_TP_SPIRIT', 1]];
-    case 'oot_song_nocturne': return notesMode ? [['SONG_NOTE_TP_SHADOW', level]] : [['SONG_TP_SHADOW', 1]];
-    case 'oot_song_prelude':  return notesMode ? [['SONG_NOTE_TP_LIGHT', level]]  : [['SONG_TP_LIGHT', 1]];
-    case 'oot_elegy':         return notesMode ? [['SONG_NOTE_EMPTINESS', level]]  : [['SONG_EMPTINESS', 1]];
-    // MM songs placed in OoT pool via extension
-    case 'oot_song_healing':  return notesMode ? [['SONG_NOTE_HEALING', level]]   : [['SONG_HEALING', 1]];
-    case 'oot_song_soaring':  return notesMode ? [['SONG_NOTE_SOARING', level]]   : [['SONG_SOARING', 1]];
-    case 'oot_song_sonata':   return notesMode ? [['SONG_NOTE_AWAKENING', level]]  : [['SONG_AWAKENING', 1]];
+    // OoT songs — game-prefixed so they only satisfy OoT logic (not MM and vice-versa)
+    case 'oot_song_zelda':    return notesMode ? [['OOT_SONG_NOTE_ZELDA', level]]     : [['OOT_SONG_ZELDA', 1]];
+    case 'oot_song_epona':    return notesMode ? [['OOT_SONG_NOTE_EPONA', level]]     : [['OOT_SONG_EPONA', 1]];
+    case 'oot_song_saria':    return notesMode ? [['OOT_SONG_NOTE_SARIA', level]]     : [['OOT_SONG_SARIA', 1]];
+    case 'oot_song_sun':      return notesMode ? [['OOT_SONG_NOTE_SUN', level]]       : [['OOT_SONG_SUN', 1]];
+    case 'oot_song_time':     return notesMode ? [['OOT_SONG_NOTE_TIME', level]]      : [['OOT_SONG_TIME', 1]];
+    case 'oot_song_storms':   return notesMode ? [['OOT_SONG_NOTE_STORMS', level]]    : [['OOT_SONG_STORMS', 1]];
+    case 'oot_song_minuet':   return notesMode ? [['OOT_SONG_NOTE_TP_FOREST', level]] : [['OOT_SONG_TP_FOREST', 1]];
+    case 'oot_song_bolero':   return notesMode ? [['OOT_SONG_NOTE_TP_FIRE', level]]   : [['OOT_SONG_TP_FIRE', 1]];
+    case 'oot_song_serenade': return notesMode ? [['OOT_SONG_NOTE_TP_WATER', level]]  : [['OOT_SONG_TP_WATER', 1]];
+    case 'oot_song_requiem':  return notesMode ? [['OOT_SONG_NOTE_TP_SPIRIT', level]] : [['OOT_SONG_TP_SPIRIT', 1]];
+    case 'oot_song_nocturne': return notesMode ? [['OOT_SONG_NOTE_TP_SHADOW', level]] : [['OOT_SONG_TP_SHADOW', 1]];
+    case 'oot_song_prelude':  return notesMode ? [['OOT_SONG_NOTE_TP_LIGHT', level]]  : [['OOT_SONG_TP_LIGHT', 1]];
+    case 'oot_elegy':         return notesMode ? [['OOT_SONG_NOTE_EMPTINESS', level]]  : [['OOT_SONG_EMPTINESS', 1]];
+    // MM-origin songs placed in OoT's item pool — satisfy both games since the song is physically obtained
+    case 'oot_song_healing':  return notesMode ? [['OOT_SONG_NOTE_HEALING', level], ['MM_SONG_NOTE_HEALING', level]]   : [['OOT_SONG_HEALING', 1], ['MM_SONG_HEALING', 1]];
+    case 'oot_song_soaring':  return notesMode ? [['OOT_SONG_NOTE_SOARING', level], ['MM_SONG_NOTE_SOARING', level]]   : [['OOT_SONG_SOARING', 1], ['MM_SONG_SOARING', 1]];
+    case 'oot_song_sonata':   return notesMode ? [['OOT_SONG_NOTE_AWAKENING', level], ['MM_SONG_NOTE_AWAKENING', level]] : [['OOT_SONG_AWAKENING', 1], ['MM_SONG_AWAKENING', 1]];
     case 'oot_song_lullaby':
-      if (notesMode) return [['SONG_NOTE_GORON', level]];
-      return level === 2 ? [['SONG_GORON_HALF', 1], ['SONG_GORON', 1]] : [['SONG_GORON_HALF', 1]];
-    case 'oot_song_nova':     return notesMode ? [['SONG_NOTE_ZORA', level]]      : [['SONG_ZORA', 1]];
-    case 'oot_song_oath':     return notesMode ? [['SONG_NOTE_ORDER', level]]     : [['SONG_ORDER', 1]];
+      if (notesMode) return [['OOT_SONG_NOTE_GORON', level], ['MM_SONG_NOTE_GORON', level]];
+      return level === 2 ? [['OOT_SONG_GORON_HALF', 1], ['OOT_SONG_GORON', 1], ['MM_SONG_GORON_HALF', 1], ['MM_SONG_GORON', 1]] : [['OOT_SONG_GORON_HALF', 1], ['MM_SONG_GORON_HALF', 1]];
+    case 'oot_song_nova':     return notesMode ? [['OOT_SONG_NOTE_ZORA', level], ['MM_SONG_NOTE_ZORA', level]]      : [['OOT_SONG_ZORA', 1], ['MM_SONG_ZORA', 1]];
+    case 'oot_song_oath':     return notesMode ? [['OOT_SONG_NOTE_ORDER', level], ['MM_SONG_NOTE_ORDER', level]]     : [['OOT_SONG_ORDER', 1], ['MM_SONG_ORDER', 1]];
 
     // Skulltula
     case 'skulltula_token':   return [['OOT_GS_TOKEN', level]];
@@ -173,28 +173,28 @@ export function trackerItemToLogic(id: string, level: number, notesMode = false)
 
     // ─── MM items ────────────────────────────────────────────────────────────
     case 'mm_ocarina':        return [['OCARINA', 1]];
-    // MM songs — in notes mode each level = one note found; otherwise binary has/hasn't
-    case 'mm_song_healing':   return notesMode ? [['SONG_NOTE_HEALING', level]]   : [['SONG_HEALING', 1]];
-    case 'mm_song_soaring':   return notesMode ? [['SONG_NOTE_SOARING', level]]   : [['SONG_SOARING', 1]];
-    case 'mm_song_storms':    return notesMode ? [['SONG_NOTE_STORMS', level]]    : [['SONG_STORMS', 1]];
-    case 'mm_song_sonata':    return notesMode ? [['SONG_NOTE_AWAKENING', level]]  : [['SONG_AWAKENING', 1]];
+    // MM songs — game-prefixed so they only satisfy MM logic (not OoT and vice-versa)
+    case 'mm_song_healing':   return notesMode ? [['MM_SONG_NOTE_HEALING', level]]   : [['MM_SONG_HEALING', 1]];
+    case 'mm_song_soaring':   return notesMode ? [['MM_SONG_NOTE_SOARING', level]]   : [['MM_SONG_SOARING', 1]];
+    case 'mm_song_storms':    return notesMode ? [['MM_SONG_NOTE_STORMS', level]]    : [['MM_SONG_STORMS', 1]];
+    case 'mm_song_sonata':    return notesMode ? [['MM_SONG_NOTE_AWAKENING', level]]  : [['MM_SONG_AWAKENING', 1]];
     case 'mm_song_lullaby':
-      if (notesMode) return [['SONG_NOTE_GORON', level]];
-      return level === 2 ? [['SONG_GORON_HALF', 1], ['SONG_GORON', 1]] : [['SONG_GORON_HALF', 1]];
-    case 'mm_song_nova':      return notesMode ? [['SONG_NOTE_ZORA', level]]      : [['SONG_ZORA', 1]];
-    case 'mm_song_oath':      return notesMode ? [['SONG_NOTE_ORDER', level]]     : [['SONG_ORDER', 1]];
-    case 'mm_song_elegy':     return notesMode ? [['SONG_NOTE_EMPTINESS', level]]  : [['SONG_EMPTINESS', 1]];
-    case 'mm_song_time':      return notesMode ? [['SONG_NOTE_TIME', level]]      : [['SONG_TIME', 1]];
-    case 'mm_song_epona':     return notesMode ? [['SONG_NOTE_EPONA', level]]     : [['SONG_EPONA', 1]];
-    case 'mm_song_saria':     return notesMode ? [['SONG_NOTE_SARIA', level]]     : [['SONG_SARIA', 1]];
-    case 'mm_song_zelda':     return notesMode ? [['SONG_NOTE_ZELDA', level]]     : [['SONG_ZELDA', 1]];
-    case 'mm_song_minuet':    return notesMode ? [['SONG_NOTE_TP_FOREST', level]] : [['SONG_TP_FOREST', 1]];
-    case 'mm_song_bolero':    return notesMode ? [['SONG_NOTE_TP_FIRE', level]]   : [['SONG_TP_FIRE', 1]];
-    case 'mm_song_serenade':  return notesMode ? [['SONG_NOTE_TP_WATER', level]]  : [['SONG_TP_WATER', 1]];
-    case 'mm_song_requiem':   return notesMode ? [['SONG_NOTE_TP_SPIRIT', level]] : [['SONG_TP_SPIRIT', 1]];
-    case 'mm_song_nocturne':  return notesMode ? [['SONG_NOTE_TP_SHADOW', level]] : [['SONG_TP_SHADOW', 1]];
-    case 'mm_song_prelude':   return notesMode ? [['SONG_NOTE_TP_LIGHT', level]]  : [['SONG_TP_LIGHT', 1]];
-    case 'mm_song_sun':       return notesMode ? [['SONG_NOTE_SUN', level]]       : [['SONG_SUN', 1]];
+      if (notesMode) return [['MM_SONG_NOTE_GORON', level]];
+      return level === 2 ? [['MM_SONG_GORON_HALF', 1], ['MM_SONG_GORON', 1]] : [['MM_SONG_GORON_HALF', 1]];
+    case 'mm_song_nova':      return notesMode ? [['MM_SONG_NOTE_ZORA', level]]      : [['MM_SONG_ZORA', 1]];
+    case 'mm_song_oath':      return notesMode ? [['MM_SONG_NOTE_ORDER', level]]     : [['MM_SONG_ORDER', 1]];
+    case 'mm_song_elegy':     return notesMode ? [['MM_SONG_NOTE_EMPTINESS', level]]  : [['MM_SONG_EMPTINESS', 1]];
+    case 'mm_song_time':      return notesMode ? [['MM_SONG_NOTE_TIME', level]]      : [['MM_SONG_TIME', 1]];
+    case 'mm_song_epona':     return notesMode ? [['MM_SONG_NOTE_EPONA', level]]     : [['MM_SONG_EPONA', 1]];
+    case 'mm_song_saria':     return notesMode ? [['MM_SONG_NOTE_SARIA', level]]     : [['MM_SONG_SARIA', 1]];
+    case 'mm_song_zelda':     return notesMode ? [['MM_SONG_NOTE_ZELDA', level]]     : [['MM_SONG_ZELDA', 1]];
+    case 'mm_song_minuet':    return notesMode ? [['MM_SONG_NOTE_TP_FOREST', level]] : [['MM_SONG_TP_FOREST', 1]];
+    case 'mm_song_bolero':    return notesMode ? [['MM_SONG_NOTE_TP_FIRE', level]]   : [['MM_SONG_TP_FIRE', 1]];
+    case 'mm_song_serenade':  return notesMode ? [['MM_SONG_NOTE_TP_WATER', level]]  : [['MM_SONG_TP_WATER', 1]];
+    case 'mm_song_requiem':   return notesMode ? [['MM_SONG_NOTE_TP_SPIRIT', level]] : [['MM_SONG_TP_SPIRIT', 1]];
+    case 'mm_song_nocturne':  return notesMode ? [['MM_SONG_NOTE_TP_SHADOW', level]] : [['MM_SONG_TP_SHADOW', 1]];
+    case 'mm_song_prelude':   return notesMode ? [['MM_SONG_NOTE_TP_LIGHT', level]]  : [['MM_SONG_TP_LIGHT', 1]];
+    case 'mm_song_sun':       return notesMode ? [['MM_SONG_NOTE_SUN', level]]       : [['MM_SONG_SUN', 1]];
 
     case 'mm_bow':            return [['MM_BOW', 1]];
     case 'mm_bomb':           return [['MM_BOMB_BAG', 1]];

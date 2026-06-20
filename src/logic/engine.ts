@@ -248,7 +248,7 @@ const MM_BOOL_FILTERS: [RegExp, string][] = [
   [/\bRed Boulder\b/,      'RedBoulderShuffleMM'],
 ];
 
-function isLocationEnabled(locName: string, game: 'oot' | 'mm' | undefined, state: LogicState): boolean {
+export function isLocationEnabled(locName: string, game: 'oot' | 'mm' | undefined, state: LogicState): boolean {
   const sfx = game === 'mm' ? 'MM' : 'OOT';
   if (POT_RE.test(locName))   return state.settings.get(`PotShuffle${sfx}`)   !== 'none';
   if (CRATE_RE.test(locName)) return state.settings.get(`CrateShuffle${sfx}`) !== 'none';
