@@ -26,6 +26,7 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci --legacy-peer-deps
+      - run: npx tsx OoTMM/packages/core/build/index.ts
       - run: mkdir -p src/data/dist
       - run: npm run process-data
       - run: npm run build
