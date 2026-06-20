@@ -134,6 +134,7 @@ export function initLogicStore(
   yShopPrices?: YMap<number>,
 ) {
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+  let pendingDelay = 150;
 
   async function recompute(enabled: boolean) {
     if (!enabled) { logicResult.set(null); return; }
@@ -219,21 +220,24 @@ export function initLogicStore(
     }
   }
 
-  function scheduleRecompute() {
+  function scheduleRecompute(delay = 150) {
     if (debounceTimer) clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(() => recompute(get(logicEnabled)), 150);
+    pendingDelay = Math.max(pendingDelay, delay);
+    debounceTimer = setTimeout(() => { pendingDelay = 150; recompute(get(logicEnabled)); }, pendingDelay);
   }
 
-  itemsRev.subscribe(() => scheduleRecompute());
-  settingsStore.subscribe(() => scheduleRecompute());
-  entrancesStore.subscribe(() => scheduleRecompute());
-  logicEnabled.subscribe(() => scheduleRecompute());
-  logicManualSettings.subscribe(() => scheduleRecompute());
-  erActiveSettingsStore.subscribe(() => scheduleRecompute());
-  enabledTricks.subscribe(() => scheduleRecompute());
-  specialConditionsStore.subscribe(() => scheduleRecompute());
-  if (ySongEvents) ySongEvents.observe(() => scheduleRecompute());
-  if (yShopPrices) yShopPrices.observe(() => scheduleRecompute());
+  // Items/entrances: fast (150ms) — world is cached, only Pathfinder reruns
+  itemsRev.subscribe(() => scheduleRecompute(150));
+  entrancesStore.subscribe(() => scheduleRecompute(150));
+  if (ySongEvents) ySongEvents.observe(() => scheduleRecompute(150));
+  if (yShopPrices) yShopPrices.observe(() => scheduleRecompute(150));
+  // Settings: slow (600ms) — may trigger a world rebuild via logicPassWorld
+  settingsStore.subscribe(() => scheduleRecompute(600));
+  logicManualSettings.subscribe(() => scheduleRecompute(600));
+  erActiveSettingsStore.subscribe(() => scheduleRecompute(600));
+  enabledTricks.subscribe(() => scheduleRecompute(600));
+  specialConditionsStore.subscribe(() => scheduleRecompute(600));
+  logicEnabled.subscribe(() => scheduleRecompute(150));
   // age filter change does not require recompute — just re-reads the result
 }
 
