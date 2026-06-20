@@ -638,6 +638,7 @@ import type { EntranceInfo } from '../data/entranceData';
     const _le = logicEnabled;
     const _lr = logicResult;
     const _la = logicAgeFilter;
+    const _fcn = filteredCheckNames;
     const m = new Map<string, { unchecked: number; inLogic: number }>();
     if (!allScenesData) return m;
     for (const sd of Object.values(allScenesData)) {
@@ -646,6 +647,7 @@ import type { EntranceInfo } from '../data/entranceData';
         for (const check of sub.checks) {
           const key = checkNameMappingReverse[check.name] ?? check.name;
           if ((checkStates.get(key) ?? T.CheckState.unchecked) === T.CheckState.checked) continue;
+          if (_fcn.size > 0 && !_fcn.has(check.name) && !_fcn.has(key)) continue;
           if (_le && _lr) {
             const n = key.replace(/^(OOT|MM) /, '');
             if (_lr.disabledChecks.has(n) && !_lr.childChecks.has(n) && !_lr.adultChecks.has(n)) continue;
@@ -1153,7 +1155,8 @@ import type { EntranceInfo } from '../data/entranceData';
               {@const _pos = _dp ? _dp : marker}
               {@const __ax = (_pos.x / imageWidth) * 100}
               {@const __ay = (_pos.y / imageHeight) * 100}
-              {@const _lbl = ent ? shortEntranceName(ent) : marker.id}
+              {@const _isMapped = marker.id !== marker.physicalId}
+              {@const _lbl = _isMapped ? (ent ? shortEntranceName(ent) : marker.id) : '?'}
               {@const _unshuffled = isEntranceUnshuffled(ent)}
               {#if !_unshuffled}
               {@const _abadge = getEntranceBadge(marker.physicalId, true)}
@@ -1162,8 +1165,9 @@ import type { EntranceInfo } from '../data/entranceData';
                 class="entrance-marker"
                 class:entrance-marker-dragging={draggingEntranceUid === marker.uid}
                 class:entrance-marker-unshuffled={_unshuffled}
+                class:entrance-marker-unmapped={!_isMapped}
                 style="left:{__ax}%;top:{__ay}%;--ec:{col};--lbl-x:{__ax > 70 ? '-80%' : __ax < 30 ? '-20%' : '-50%'};"
-                on:mouseenter={e => startEntranceHoverTimer(_lbl, e)}
+                on:mouseenter={e => startEntranceHoverTimer(_isMapped ? _lbl : (ent ? shortEntranceName(ent) : marker.id), e)}
                 on:mouseleave={clearHoverTimer}
                 on:pointerdown={e => entrancePointerDown(e, marker)}
                 on:pointermove={entrancePointerMove}
@@ -1707,6 +1711,18 @@ import type { EntranceInfo } from '../data/entranceData';
     box-shadow: none;
   }
   .entrance-marker-unshuffled:hover .entrance-diamond {
+    box-shadow: none;
+  }
+
+  .entrance-marker-unmapped {
+    opacity: 0.5;
+  }
+  .entrance-marker-unmapped .entrance-diamond {
+    --ec: #888;
+    border-style: dashed;
+    box-shadow: none;
+  }
+  .entrance-marker-unmapped:hover .entrance-diamond {
     box-shadow: none;
   }
 
