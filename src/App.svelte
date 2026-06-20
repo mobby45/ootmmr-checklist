@@ -1958,8 +1958,8 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     'Woodfall Temple': ['MM_TEMPLE_WOODFALL'],
     'Snowhead Temple': ['MM_TEMPLE_SNOWHEAD'],
     'Great Bay Temple': ['MM_TEMPLE_GREAT_BAY'],
-    'Stone Tower Temple': ['MM_TEMPLE_STONE_TOWER', 'MM_TEMPLE_STONE_TOWER_INVERTED'],
-    'Stone Tower Temple Inverted': ['MM_TEMPLE_STONE_TOWER_INVERTED', 'MM_TEMPLE_STONE_TOWER'],
+    'Stone Tower Temple': ['MM_TEMPLE_STONE_TOWER'],
+    'Stone Tower Temple Inverted': ['MM_TEMPLE_STONE_TOWER_INVERTED'],
     'The Moon': ['MM_MOON'],
   };
 
