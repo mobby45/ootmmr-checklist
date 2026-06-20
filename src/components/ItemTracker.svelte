@@ -10,6 +10,7 @@
 
   export let yItems: YMap<number>;
   export let ySettings: YMap<any>;
+  export let yMqSettings: YMap<boolean> | null = null;
   export let roomName: string | null = null;
   export let isWatchMode = false;
 
@@ -36,6 +37,13 @@
     const update = () => set(new Map(ySettings.entries()));
     update(); ySettings.observe(update);
     return () => ySettings.unobserve(update);
+  });
+
+  const mqStore = readable(new Map<string, boolean>(), set => {
+    if (!yMqSettings) return;
+    const update = () => set(new Map(yMqSettings!.entries()));
+    update(); yMqSettings.observe(update);
+    return () => yMqSettings!.unobserve(update);
   });
 
   // ==========================================
@@ -243,6 +251,12 @@
         ...(newLevel > 3 ? { maxLevel: newLevel, levelIcons: icons, levelLabels: labels as string[] } : {}),
       };
     }
+    // GTG Lava silver rupees: vanilla needs 5, MQ needs 6
+    if ($mqStore.get('Gerudo Training Grounds') === true)
+      map['oot_sr_gtg_lava'] = { ...map['oot_sr_gtg_lava'], maxLevel: 6 };
+    else
+      map['oot_sr_gtg_lava'] = { ...map['oot_sr_gtg_lava'], maxLevel: 5 };
+
     // In notes mode: songs become note counters tracked up to noteCount
     if (songNotesMode) {
       for (const [id, item] of Object.entries(map)) {

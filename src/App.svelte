@@ -4731,7 +4731,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
       <!-- Item Tracker -->
       <details style="margin-top: 0.8em" id="item-tracker-details" bind:open={secItem} on:toggle={() => localStorage.setItem('sec_item', String(secItem))}>
         <summary><strong class="interactable">Item Tracker</strong></summary>
-          <ItemTracker {yItems} {ySettings} {roomName} isWatchMode={isWatchMode} />
+          <ItemTracker {yItems} {ySettings} {yMqSettings} {roomName} isWatchMode={isWatchMode} />
       </details>
 
       <!-- Hint Tracker -->
