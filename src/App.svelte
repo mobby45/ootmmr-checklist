@@ -2311,9 +2311,10 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     if (check.type === T.CheckType.cow && check.game === T.Game.mm)
       matchesCowMM = $sSettings.get('CowShuffleMM') ?? false;
 
-    // --- Shops: OoT always visible; MM requires at least 1 wallet item tracked ---
+    // --- Shops: OoT always visible; MM visible when shuffle is enabled or wallet is tracked ---
     const matchesShopOOT = true;
-    const matchesShopMM = check.type !== T.CheckType.shop || check.game !== T.Game.mm || _hasMmWallet;
+    const _mmShopEnabled = ($sSettings.get('ShopShuffleMM') ?? 'none') !== 'none';
+    const matchesShopMM = check.type !== T.CheckType.shop || check.game !== T.Game.mm || _mmShopEnabled || _hasMmWallet;
 
     // --- Owl Statues ---
     let matchesOwl = true;

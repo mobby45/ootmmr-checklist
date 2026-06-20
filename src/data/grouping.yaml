@@ -240,6 +240,10 @@ mm:
     - [ '^Clock Town', '' ]
     scenes:
     - LAUNDRY_POOL
+    checks:
+    - ^Kafei Hideout Owner Reward 1
+    - ^Kafei Hideout Owner Reward 2
+    - ^Kafei Hideout Pendant of Memories
   North Clock Town:
     replacements:
     - [ '^Clock Town', '' ]
@@ -278,6 +282,8 @@ mm:
     - POST_OFFICE
     - SWORDSMAN_SCHOOL
     - LOTTERY
+    exclude:
+    - ^Kafei Hideout
   Termina Field:
     scenes:
     - TERMINA_FIELD
