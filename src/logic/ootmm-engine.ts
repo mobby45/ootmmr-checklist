@@ -91,11 +91,11 @@ const _shopPriceSlots = new Map<string, number>(
 
 function injectShopPrices(world: World, shopPrices: Map<string, number> | undefined): World {
   const prices = [...world.prices];
-  // Default all tracked slots to 0 (always affordable) so shops appear in logic
-  // before actual prices are entered from the spoiler log. Vanilla prices are wrong
-  // in a randomized game and can block MM shop groups when they exceed child wallet.
+  // Default untracked slots to 1 (cheapest non-free tier) so shops require at least
+  // the minimum wallet but aren't gated by vanilla prices in a randomized game.
+  // Using 0 would trigger price(range, id, 0)=true, bypassing wallet checks entirely.
   for (const slot of _shopPriceSlots.values()) {
-    prices[slot] = 0;
+    prices[slot] = 1;
   }
   if (shopPrices && shopPrices.size > 0) {
     for (const [name, price] of shopPrices) {
