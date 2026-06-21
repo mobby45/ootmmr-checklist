@@ -442,6 +442,38 @@ function extractResult(
     entranceReachability.set(id, accessible);
   }
 
+  // Post-filter: remove checks the player can't afford based on user-entered prices.
+  // The Pathfinder only gates wallet via world.prices for OOT_SHOPS/MM_SHOPS ranges;
+  // scrubs (OOT_SCRUBS), Tingle maps (MM_TINGLE) and merchants (OOT_MERCHANTS) use
+  // vanilla prices from world.prices which don't reflect the actual randomized prices.
+  // Applying the filter here covers all ranges uniformly.
+  if (logicState.shopPrices.size > 0) {
+    const items    = logicState.items;
+    const lSettings = logicState.settings;
+    const childW   = !!lSettings.get('childWallets');
+    const colossal = !!lSettings.get('colossalWallets');
+    const bottomless = !!lSettings.get('bottomlessWallets');
+    const wallets  = Math.max(
+      items.get('OOT_WALLET') ?? 0,
+      items.get('MM_WALLET')  ?? 0,
+      items.get('WALLET')     ?? 0,
+    );
+    const hasWallet = (n: number) => wallets >= (childW ? n : n - 1);
+
+    for (const [checkName, price] of logicState.shopPrices) {
+      if (price <= 0 || bottomless) continue;
+      const canAfford =
+        (price <= 99  && hasWallet(1)) ||
+        (price <= 200 && hasWallet(2)) ||
+        (price <= 500 && hasWallet(3)) ||
+        (price <= 999 && colossal && hasWallet(4));
+      if (!canAfford) {
+        childChecks.delete(checkName);
+        adultChecks.delete(checkName);
+      }
+    }
+  }
+
   return {
     regions: new Set([...childRegions, ...adultRegions]),
     childRegions,
