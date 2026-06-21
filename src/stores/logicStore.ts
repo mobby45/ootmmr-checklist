@@ -17,7 +17,8 @@ let _entranceMapsReady = false;
 
 export const logicEnabled     = writable<boolean>(localStorage.getItem('logicEnabled') === 'true');
 export const showOutOfLogic   = writable<boolean>(localStorage.getItem('showOutOfLogic') !== 'false');
-export const locationRulesStore = writable<Map<string, string>>(new Map());
+export const locationRulesStore  = writable<Map<string, string>>(new Map());
+export const entranceRulesStore  = writable<Map<string, string>>(new Map());
 /** Age filter for the logic view — child, adult, or both */
 export const logicAgeFilter = writable<'child' | 'adult' | 'both'>(
   (localStorage.getItem('logicAgeFilter') as 'child' | 'adult' | 'both') ?? 'both'
@@ -101,10 +102,6 @@ enabledTricks.subscribe(v => localStorage.setItem('enabledTricks', JSON.stringif
 export const logicResult  = writable<ReachabilityResult | null>(null);
 export const logicLoading = writable<boolean>(false);
 
-/** Maps entranceId → source region name in the world graph (populated on first loadWorld call) */
-export const entranceSourceMapStore = writable<Map<string, string>>(new Map());
-/** Maps entranceId → vanilla destination region name in the world graph (populated on first loadWorld call) */
-export const entranceDestMapStore   = writable<Map<string, string>>(new Map());
 
 // ─── ER active settings (written by ERTracker, read by logic engine) ──────────
 /** Active ER type flags — mirrors ERTracker's activeErSettings so the logic engine sees them. */
@@ -139,20 +136,23 @@ export function initLogicStore(
   async function recompute(enabled: boolean) {
     if (!enabled) { logicResult.set(null); return; }
 
-    if (!_entranceMapsReady) {
+    // Track whether this is the first load — logicLoading must stay true
+    // through the full first world build (loadWorld + logicPassWorld), otherwise
+    // the spinner disappears before the synchronous logicPassWorld freeze.
+    const isFirstLoad = !_entranceMapsReady;
+    if (isFirstLoad) {
       logicLoading.set(true);
       try {
-        const { locationRules, entranceSourceMap, entranceDestMap } = await loadWorld();
+        const { locationRules, entranceRules } = await loadWorld();
         _entranceMapsReady = true;
         locationRulesStore.set(locationRules);
-        entranceSourceMapStore.set(entranceSourceMap);
-        entranceDestMapStore.set(entranceDestMap);
+        entranceRulesStore.set(entranceRules);
       } catch (e) {
         console.error('[logic] Failed to load world:', e);
         logicLoading.set(false);
         return;
       }
-      logicLoading.set(false);
+      // Keep logicLoading true — cleared in finally below after world build
     }
 
     const itemsSnap    = new Map(yItems.entries()) as Map<string, number>;
@@ -207,9 +207,10 @@ export function initLogicStore(
     const resolvedSpecial = specials ? resolveSpecialConditions(specials, itemsSnap) : new Map<string, boolean>();
 
     const songEventsSnap = ySongEvents ? new Map(ySongEvents.entries()) as Map<string, string> : new Map<string, string>();
-    // Strip "OOT "/"MM " prefix: tracker stores prices with game prefix, world.json uses bare names
+    // Shop prices are keyed by full check name including game prefix ("OOT Kokiri Shop Item 1",
+    // "MM Trading Post Item 1", etc.) so OOT vs MM shops with the same base name don't collide.
     const shopPricesSnap = yShopPrices
-      ? new Map([...yShopPrices.entries()].map(([k, v]) => [k.replace(/^(OOT|MM) /, ''), v]))
+      ? new Map(yShopPrices.entries()) as Map<string, number>
       : new Map<string, number>();
     const state = buildLogicState(itemsSnap, settingsSnap, erSnap, tricks, erMode, resolvedSpecial, undefined, songEventsSnap, shopPricesSnap);
     try {
@@ -217,26 +218,37 @@ export function initLogicStore(
       logicResult.set(result);
     } catch (e) {
       console.error('[logic] reachability error:', e);
+    } finally {
+      if (isFirstLoad) logicLoading.set(false);
     }
   }
 
   function scheduleRecompute(delay = 150) {
     if (debounceTimer) clearTimeout(debounceTimer);
     pendingDelay = Math.max(pendingDelay, delay);
-    debounceTimer = setTimeout(() => { pendingDelay = 150; recompute(get(logicEnabled)); }, pendingDelay);
+    debounceTimer = setTimeout(() => {
+      debounceTimer = null;
+      pendingDelay = 150;
+      recompute(get(logicEnabled));
+    }, pendingDelay);
   }
 
-  // Items/entrances: fast (150ms) — world is cached, only Pathfinder reruns
+  // Items/entrances: 150ms — world is cached, pfState reruns
   itemsRev.subscribe(() => scheduleRecompute(150));
   entrancesStore.subscribe(() => scheduleRecompute(150));
   if (ySongEvents) ySongEvents.observe(() => scheduleRecompute(150));
   if (yShopPrices) yShopPrices.observe(() => scheduleRecompute(150));
-  // Settings: slow (600ms) — may trigger a world rebuild via logicPassWorld
-  settingsStore.subscribe(() => scheduleRecompute(600));
-  logicManualSettings.subscribe(() => scheduleRecompute(600));
-  erActiveSettingsStore.subscribe(() => scheduleRecompute(600));
-  enabledTricks.subscribe(() => scheduleRecompute(600));
-  specialConditionsStore.subscribe(() => scheduleRecompute(600));
+  // Settings: 200ms — display-only settings hit pfState cache (fast); logic settings
+  // may rebuild world/pfState but 600ms felt sluggish for display toggles.
+  // Note: logicManualSettings is NOT subscribed here — App.svelte's $: block syncs
+  // it to Yjs on every change, which fires settingsStore below. Subscribing both
+  // caused two recompute cycles (logicManualSettings fires sync, settingsStore fires
+  // one microtask later — debounce absorbs them but the expired timer handle trick
+  // caused a second world build).
+  settingsStore.subscribe(() => scheduleRecompute(200));
+  erActiveSettingsStore.subscribe(() => scheduleRecompute(200));
+  enabledTricks.subscribe(() => scheduleRecompute(200));
+  specialConditionsStore.subscribe(() => scheduleRecompute(200));
   logicEnabled.subscribe(() => scheduleRecompute(150));
   // age filter change does not require recompute — just re-reads the result
 }

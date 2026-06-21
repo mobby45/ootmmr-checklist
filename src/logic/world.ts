@@ -83,6 +83,7 @@ function buildWorldGraph(rawRegions: RawWorld): WorldGraph {
       exits: raw.exits.map(e => ({
         target: e.target,
         rule: safeParseExpr(e.rule, `${raw.name} → ${e.target}`),
+        rawRule: e.rule,
         entranceId: e.entranceId,
       })),
       locations: raw.locations.map(l => ({
@@ -177,11 +178,12 @@ export function resolveEntranceSource(graph: WorldGraph, entranceName: string): 
 let _graph: WorldGraph | null = null;
 let _macros: MacroTable | null = null;
 let _locationRules: Map<string, string> | null = null;
+let _entranceRules: Map<string, string> | null = null;
 let _entranceSourceMap: Map<string, string> | null = null;
 let _entranceDestMap: Map<string, string> | null = null;
 
-export async function loadWorld(): Promise<{ graph: WorldGraph; macros: MacroTable; locationRules: Map<string, string>; entranceSourceMap: Map<string, string>; entranceDestMap: Map<string, string> }> {
-  if (_graph && _macros && _locationRules && _entranceSourceMap && _entranceDestMap) return { graph: _graph, macros: _macros, locationRules: _locationRules, entranceSourceMap: _entranceSourceMap, entranceDestMap: _entranceDestMap };
+export async function loadWorld(): Promise<{ graph: WorldGraph; macros: MacroTable; locationRules: Map<string, string>; entranceRules: Map<string, string>; entranceSourceMap: Map<string, string>; entranceDestMap: Map<string, string> }> {
+  if (_graph && _macros && _locationRules && _entranceRules && _entranceSourceMap && _entranceDestMap) return { graph: _graph, macros: _macros, locationRules: _locationRules, entranceRules: _entranceRules, entranceSourceMap: _entranceSourceMap, entranceDestMap: _entranceDestMap };
 
   // Fetch as separate public assets to avoid bloating the JS bundle
   const base = import.meta.env.BASE_URL ?? '/';
@@ -208,10 +210,25 @@ export async function loadWorld(): Promise<{ graph: WorldGraph; macros: MacroTab
     }
   }
 
+  _entranceRules = new Map<string, string>();
+  for (const entrance of allEntrances) {
+    const src = resolveEntranceSource(_graph, entrance.name);
+    const tgt = resolveEntranceName(_graph, entrance.name);
+    if (!src || !tgt) continue;
+    const region = _graph.get(src);
+    if (!region) continue;
+    for (const exit of region.exits) {
+      if (exit.target === tgt && exit.rawRule) {
+        _entranceRules.set(entrance.id, exit.rawRule);
+        break;
+      }
+    }
+  }
+
   _entranceSourceMap = buildEntranceSourceMap(_graph);
   _entranceDestMap   = buildEntranceDestMap(_graph);
 
-  return { graph: _graph, macros: _macros, locationRules: _locationRules, entranceSourceMap: _entranceSourceMap, entranceDestMap: _entranceDestMap };
+  return { graph: _graph, macros: _macros, locationRules: _locationRules, entranceRules: _entranceRules, entranceSourceMap: _entranceSourceMap, entranceDestMap: _entranceDestMap };
 }
 
 // Maps each entrance ID to the name of its source region in the world graph.

@@ -62,7 +62,7 @@
   import * as T from './data/types';
 
   import CheckGroup from './components/CheckGroup.svelte';
-  import { initLogicStore, logicEnabled, showOutOfLogic, logicAgeFilter, logicResult, logicLoading, logicManualSettings, specialConditionsStore, enabledTricks, locationRulesStore, entranceSourceMapStore, entranceDestMapStore } from './stores/logicStore';
+  import { initLogicStore, logicEnabled, showOutOfLogic, logicAgeFilter, logicResult, logicLoading, logicManualSettings, specialConditionsStore, enabledTricks, locationRulesStore } from './stores/logicStore';
   import { defaultLogicSettings } from './data/logicSettingsDef';
   import { TRICKS_DEFS } from './data/tricksDef';
   const _validTrickIds = new Set(TRICKS_DEFS.map(t => t.id));
@@ -392,13 +392,19 @@ yKeepalive.observe((event: any) => {
   }
   initLogicStore(yItems, ySettings, yEntrances, _itemsRevStore, sSettings, sEntrances, ySongEvents, yShopPrices);
 
-  // Sync all logic manual settings to ySettings so the OBS overlay can read them
+  // Sync all logic manual settings to ySettings so the OBS overlay can read them.
+  // Wrapped in a Yjs transaction so all mutations emit a single observer event instead
+  // of one per key — prevents the settingsStore subscription from firing N times and
+  // triggering N debounced recomputes.
   const _logicDefaults = defaultLogicSettings();
   $: {
-    for (const [key, val] of Object.entries($logicManualSettings)) {
-      if (val !== undefined && val !== _logicDefaults[key]) ySettings.set(key, val);
-      else ySettings.delete(key);
-    }
+    const snap = $logicManualSettings;
+    ySettings.doc!.transact(() => {
+      for (const [key, val] of Object.entries(snap)) {
+        if (val !== undefined && val !== _logicDefaults[key]) ySettings.set(key, val);
+        else ySettings.delete(key);
+      }
+    });
   }
 
   $: checkStatesMap = new Map($sChecks) as Map<string, T.CheckState>;
@@ -412,28 +418,15 @@ yKeepalive.observe((event: any) => {
     ? new Map(Object.entries(spoilerEntrances)) as Map<string, string>
     : new Map($sEntrances) as Map<string, string>;
   $: erSettingsForMap = activeErSettings as unknown as Record<string, boolean>;
-  // Entrance reachability: age-aware, hybrid source/destination logic.
-  // ER active → source-based (can you reach the entrance location to assign/explore it?).
-  // ER off    → destination-based (can you actually get through the entrance into the content?).
-  // In both cases, the age filter narrows to child-only or adult-only regions.
+  // Entrance reachability: age-aware, destination-based logic.
+  // Always checks whether the vanilla destination region is reachable — this reflects
+  // whether the player can physically access the entrance (including any access conditions
+  // within the source area, e.g. Iron Boots to reach the Water Temple door underwater).
+  // Source-based was previously used when ER was active but gave false positives: a source
+  // area can be reachable while the entrance itself requires additional items (Iron Boots,
+  // correct age, etc.) that source-reachability doesn't check.
   $: entranceReachability = ($logicEnabled && $logicResult)
-    ? new Map<string, boolean>((() => {
-        const lr = $logicResult!;
-        const ageRegs = $logicAgeFilter === 'child' ? lr.childRegions
-          : $logicAgeFilter === 'adult' ? lr.adultRegions
-          : lr.regions;
-        const result: [string, boolean][] = [];
-        if (erIsActive) {
-          for (const [id, src] of $entranceSourceMapStore) {
-            result.push([id, ageRegs.has(src)]);
-          }
-        } else {
-          for (const [id, dest] of $entranceDestMapStore) {
-            result.push([id, ageRegs.has(dest)]);
-          }
-        }
-        return result;
-      })())
+    ? $logicResult.entranceReachability
     : null;
   $: checkToGroup = structuredChecks
     ? new Map(structuredChecks.flatMap(g => g.checks.map(c => [c.name, g.groupName])))
@@ -2572,9 +2565,10 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
       matchesSkipZelda = !($sSettings.get('SkipChildZeldaOOT') ?? false);
 
     // --- MM Song of Time gate: hide all MM checks until Song of Time is tracked ---
+    // Only applies when logic is enabled — with logic off the user wants to see everything.
     // Exceptions: Clock Tower Roof (accessible as Deku Scrub) and Initial Song of Healing
     let matchesMmSongOfTime = true;
-    if (check.game === T.Game.mm && !_hasMmSongOfTime) {
+    if ($logicEnabled && check.game === T.Game.mm && !_hasMmSongOfTime) {
       const isClockTowerRoof   = check.scene === 'MM_CLOCK_TOWER_ROOFTOP';
       const isInitialSoH       = check.id === 'SONG_HEALING' && check.scene === 'MM_CLOCK_TOWN_SOUTH';
       matchesMmSongOfTime = isClockTowerRoof || isInitialSoH;
@@ -2715,9 +2709,12 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     const filtered = group.checks.filter(c => checkPredicate(group, c));
     if (filtered.length === 0) {
       // Only keep the group as "entrance-only" if there are genuinely no type-visible checks
-      // (not just all-checked with hide-checked on)
+      // (not just all-checked with hide-checked on).
+      // Exception: if MM Song of Time is not tracked, MM groups are progression-gated, not
+      // type-empty — don't show them as entrance-only (avoids spurious 0/0 groups).
       const typeVisible = group.checks.filter(c => checkPredicate(group, c, true));
-      if (typeVisible.length > 0 || !erIsActive || !groupHasEntrances(group.groupName) || filter.length > 0) return [];
+      const mmSotGated = $logicEnabled && !_hasMmSongOfTime && group.checks.some(c => c.game === T.Game.mm);
+      if (typeVisible.length > 0 || mmSotGated || !erIsActive || !groupHasEntrances(group.groupName) || filter.length > 0) return [];
     }
     return [{ ...group, checks: filtered }];
   });

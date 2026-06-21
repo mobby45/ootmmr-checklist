@@ -4,9 +4,9 @@
   import { filterEntrances, erActiveTypes } from '../util/erFilter';
   import type { Map as YMap } from 'yjs';
   import EntranceSelect from './EntranceSelect.svelte';
-  import { createEventDispatcher, tick, onMount, beforeUpdate, afterUpdate } from 'svelte';
+  import { createEventDispatcher, tick, onMount, beforeUpdate, afterUpdate, onDestroy } from 'svelte';
   import { entrancePositions } from '../data/entrancePositions';
-  import { erActiveSettingsStore } from '../stores/logicStore';
+  import { erActiveSettingsStore, entranceRulesStore } from '../stores/logicStore';
 
   const dispatch = createEventDispatcher();
 
@@ -49,6 +49,14 @@
   export let highlightedEntranceId: string | null = null;
 
   let erListEl: HTMLElement | undefined;
+  let showRuleId: string | null = null;
+  function _closeRule() { showRuleId = null; }
+  $: if (showRuleId) {
+    window.addEventListener('click', _closeRule);
+  } else {
+    window.removeEventListener('click', _closeRule);
+  }
+  onDestroy(() => window.removeEventListener('click', _closeRule));
   let _prevHighlight = '';
   $: if (highlightedEntranceId && highlightedEntranceId !== _prevHighlight) {
     _prevHighlight = highlightedEntranceId;
@@ -94,7 +102,7 @@
 
   const subTypeGroups = [
     { parent: 'erDungeons', label: 'Dungeons', keys: ['erMajorDungeons', 'erMinorDungeons', 'erGanonCastle', 'erGanonTower', 'erMoon', 'erSpiderHouses', 'erPirateFortress', 'erBeneathWell', 'erIkanaCastle', 'erSecretShrine'] },
-    { parent: 'erIndoors', label: 'Interiors', keys: ['erIndoorsMajor', 'erIndoorsExtra', 'erIndoorsGameLinks'] },
+    { parent: 'erIndoors', label: 'Interiors', keys: ['erIndoorsMajor', 'erIndoorsExtra', 'erIndoorsGameLinks', 'erIndoorsTelescopes'] },
     { parent: 'erOneWays', label: 'One-Ways', keys: ['erOneWaysMajor', 'erOneWaysIkana', 'erOneWaysSongs', 'erOneWaysStatues', 'erOneWaysWaterVoids', 'erOneWaysAnywhere', 'erOneWaysOwls'] },
   ];
 
@@ -109,7 +117,7 @@
   let gameFilter: GameFilter = 'both';
   let searchFilter = '';
   let showMode: 'all' | 'filled' | 'unfilled' = 'all';
-  let logicFilterOn = false;
+  let logicFilterOn = localStorage.getItem('erLogicFilter') === 'true';
   let showHelp = false;
 
   function onClickOutside(e: MouseEvent) {
@@ -175,14 +183,31 @@
   };
 
   $: groupedEntrances = (() => {
-    const byType = new Map<string, typeof allEntrances>();
+    type E = (typeof allEntrances)[number];
+    const filteredIds = new Set(filteredEntrances.map(e => e.id));
+    const byType = new Map<string, { entrance: E; partner: E | null }[]>();
+    const seen = new Set<string>();
+
     for (const e of filteredEntrances) {
+      if (seen.has(e.id)) continue;
+      seen.add(e.id);
+
+      // Use findReverseEntrance — handles area names that contain ' to ' correctly
+      const rev = findReverseEntrance(e);
+      const partner = (rev && filteredIds.has(rev.id) && !seen.has(rev.id)) ? rev : null;
+      if (partner) seen.add(partner.id);
+
       if (!byType.has(e.erType)) byType.set(e.erType, []);
-      byType.get(e.erType)!.push(e);
+      byType.get(e.erType)!.push({ entrance: e, partner });
     }
+
     return sectionOrder
       .filter(t => byType.has(t))
-      .map(t => ({ erType: t, label: sectionLabels[t] ?? t, entrances: byType.get(t)! }));
+      .map(t => {
+        const pairs = byType.get(t)!;
+        const count = pairs.reduce((n, p) => n + 1 + (p.partner ? 1 : 0), 0);
+        return { erType: t, label: sectionLabels[t] ?? t, pairs, count };
+      });
   })();
 
   const ALL_ER_TYPES = ['erOverworld','erIndoors','erGrottos','erDungeons','erBoss','erOneWays','erWallmasters','erSpawns','erAlterLw'];
@@ -346,7 +371,7 @@
         <button type="button" class="er-mode-btn" class:active={showMode === 'unfilled'} on:click={() => showMode = 'unfilled'}>Unfilled</button>
       </div>
       {#if entranceReachability !== null}
-        <button type="button" class="er-mode-btn er-logic-filter-btn" class:active={logicFilterOn} on:click={() => logicFilterOn = !logicFilterOn} title="Show only reachable entrances">In logic</button>
+        <button type="button" class="er-mode-btn er-logic-filter-btn" class:active={logicFilterOn} on:click={() => { logicFilterOn = !logicFilterOn; localStorage.setItem('erLogicFilter', String(logicFilterOn)); }} title="Show only reachable entrances">In logic</button>
       {/if}
     </div>
     {#if showHelp}
@@ -380,57 +405,68 @@
         <h4 class="er-section-header" data-er-type={group.erType} on:click={() => toggleSection(group.erType)}>
           <span class="er-section-arrow">{collapsedSections.has(group.erType) ? '▶' : '▼'}</span>
           {group.label}
-          <span class="er-section-count">{group.entrances.length}</span>
+          <span class="er-section-count">{group.count}</span>
         </h4>
         {#if !collapsedSections.has(group.erType)}
-        {#each group.entrances as entrance (entrance.id)}
-          {@const currentValue = getValue(entrance.id)}
-          {@const inLogic = entranceReachability ? (entranceReachability.get(entrance.id) ?? false) : null}
-          <div class="er-row" class:filled={!!currentValue} class:er-row-highlighted={entrance.id === highlightedEntranceId} data-eid={entrance.id}>
-            {#if inLogic !== null}
-              <span class="er-logic-dot" class:er-logic-in={inLogic} class:er-logic-out={!inLogic} title={inLogic ? 'Reachable' : 'Out of logic'}></span>
-            {/if}
-            <span class="er-game-badge er-game-{entrance.game}">
-              {entrance.game.toUpperCase()}
-            </span>
-            <span class="er-name" title={entrance.name}>{entrance.name}</span>
-            {#if entranceHasMap.has(entrance.id)}
-              <button type="button" class="er-map-btn" title="Open map" on:click={() => dispatch('openMapForEntrance', { entranceId: entrance.id })}>🗺️</button>
-            {/if}
-            <span class="er-arrow">→</span>
-            <div class="er-select-wrap" style="width: {currentValue ? Math.max(160, currentValue.length * 7.2) : 160}px">
-              <EntranceSelect
-                options={allEntrances.filter(e => (gameFilter === 'both' || manualErSettings.erMixed || e.game === entrance.game) && (!usedDestinations.has(e.name) || e.name === currentValue))}
-                value={currentValue}
-                on:change={e => {
-                  if (isWatchMode) return;
-                  const newVal = e.detail.trim();
-                  if (newVal === '') {
-                    clearValue(entrance.id);
-                  } else {
-                    if (!manualErSettings.erDecoupled) {
-                      // If changing an existing connection, clear the old reverse(B) → reverse(A) first
-                      const oldVal = entranceValues.get(entrance.id);
-                      if (oldVal && oldVal !== newVal) {
-                        const oldRevB = findReverseEntranceName(oldVal);
-                        const revA    = findReverseEntranceName(entrance.name);
-                        const oldRevBId = oldRevB ? allEntrances.find(e => e.name === oldRevB)?.id : undefined;
-                        if (oldRevBId && entranceValues.get(oldRevBId) === revA)
-                          yEntrances.delete(oldRevBId);
+        {#each group.pairs as {entrance, partner} (entrance.id)}
+          <div class="er-pair" class:er-paired={!!partner}>
+          {#each (partner ? [entrance, partner] : [entrance]) as rowEnt (rowEnt.id)}
+            {@const currentValue = getValue(rowEnt.id)}
+            {@const inLogic = entranceReachability ? (entranceReachability.get(rowEnt.id) ?? false) : null}
+            <div class="er-row" class:filled={!!currentValue} class:er-row-highlighted={rowEnt.id === highlightedEntranceId} data-eid={rowEnt.id}>
+              {#if inLogic !== null}
+                <span class="er-logic-dot" class:er-logic-in={inLogic} class:er-logic-out={!inLogic} title={inLogic ? 'Reachable' : 'Out of logic'}></span>
+              {/if}
+              <span class="er-game-badge er-game-{rowEnt.game}">
+                {rowEnt.game.toUpperCase()}
+              </span>
+              <span class="er-name" title={rowEnt.name}>{rowEnt.name}</span>
+              {#if $entranceRulesStore.has(rowEnt.id)}
+                <button type="button" class="er-rule-btn" title="Logic rule" on:click|stopPropagation={() => showRuleId = showRuleId === rowEnt.id ? null : rowEnt.id}>ⓘ</button>
+                {#if showRuleId === rowEnt.id}
+                  <div class="er-rule-popup" role="tooltip">
+                    <code>{$entranceRulesStore.get(rowEnt.id)}</code>
+                    <button type="button" class="er-rule-close" on:click|stopPropagation={() => showRuleId = null}>✕</button>
+                  </div>
+                {/if}
+              {/if}
+              {#if entranceHasMap.has(rowEnt.id)}
+                <button type="button" class="er-map-btn" title="Open map" on:click={() => dispatch('openMapForEntrance', { entranceId: rowEnt.id })}>🗺️</button>
+              {/if}
+              <span class="er-arrow">→</span>
+              <div class="er-select-wrap" style="width: {currentValue ? Math.max(160, currentValue.length * 7.2) : 160}px">
+                <EntranceSelect
+                  options={allEntrances.filter(e => (gameFilter === 'both' || manualErSettings.erMixed || e.game === rowEnt.game) && (!usedDestinations.has(e.name) || e.name === currentValue))}
+                  value={currentValue}
+                  on:change={e => {
+                    if (isWatchMode) return;
+                    const newVal = e.detail.trim();
+                    if (newVal === '') {
+                      clearValue(rowEnt.id);
+                    } else {
+                      if (!manualErSettings.erDecoupled) {
+                        const oldVal = entranceValues.get(rowEnt.id);
+                        if (oldVal && oldVal !== newVal) {
+                          const oldRevB = findReverseEntranceName(oldVal);
+                          const revA    = findReverseEntranceName(rowEnt.name);
+                          const oldRevBId = oldRevB ? allEntrances.find(e => e.name === oldRevB)?.id : undefined;
+                          if (oldRevBId && entranceValues.get(oldRevBId) === revA)
+                            yEntrances.delete(oldRevBId);
+                        }
+                      }
+                      yEntrances.set(rowEnt.id, newVal);
+                      if (!manualErSettings.erDecoupled) {
+                        const revB   = findReverseEntranceName(newVal);
+                        const revA   = findReverseEntranceName(rowEnt.name);
+                        const revBId = revB ? allEntrances.find(e => e.name === revB)?.id : undefined;
+                        if (revBId && revA && !entranceValues.get(revBId)) yEntrances.set(revBId, revA);
                       }
                     }
-                    yEntrances.set(entrance.id, newVal);
-                    if (!manualErSettings.erDecoupled) {
-                      // Coupled: auto-fill reverse(B) → reverse(A)
-                      const revB   = findReverseEntranceName(newVal);
-                      const revA   = findReverseEntranceName(entrance.name);
-                      const revBId = revB ? allEntrances.find(e => e.name === revB)?.id : undefined;
-                      if (revBId && revA && !entranceValues.get(revBId)) yEntrances.set(revBId, revA);
-                    }
-                  }
-                }}
-              />
+                  }}
+                />
+              </div>
             </div>
+          {/each}
           </div>
         {/each}
         {/if}
@@ -581,11 +617,18 @@
     font-size: 0.85em;
     line-height: 1;
   }
-  .er-row:nth-child(odd) {
-    background: rgba(255,255,255,0.05);
+  .er-pair {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
   }
-  .er-row.filled:nth-child(odd) {
-    background: rgba(100, 150, 255, 0.09);
+  .er-pair.er-paired {
+    border-left: 2px solid rgba(255, 255, 255, 0.12);
+    padding-left: 4px;
+    margin-bottom: 2px;
+  }
+  .er-pair:nth-child(odd) > .er-row:not(.filled) {
+    background: rgba(255,255,255,0.04);
   }
   @keyframes er-flash {
     0%   { background: rgba(255, 200, 50, 0.35); }
@@ -712,6 +755,7 @@
   .er-list::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
 
   .er-row {
+    position: relative;
     display: flex;
     align-items: center;
     gap: 0.4em;
@@ -857,5 +901,54 @@
   @media screen and (max-width: 768px) {
     .er-input-wrap { width: 140px; }
     .er-name { max-width: 150px; }
+  }
+
+  .er-rule-btn {
+    flex-shrink: 0;
+    padding: 1px 4px;
+    font-size: 0.78em;
+    background: none;
+    border: 1px solid rgba(120, 190, 255, 0.6);
+    border-radius: 3px;
+    color: rgba(160, 210, 255, 0.9);
+    cursor: pointer;
+    line-height: 1;
+    &:hover { color: #9fcfff; border-color: #9fcfff; }
+  }
+
+  .er-rule-popup {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    z-index: 200;
+    background: #1a1f2e;
+    border: 1px solid #4488dd;
+    border-radius: 5px;
+    padding: 8px 10px;
+    min-width: 220px;
+    max-width: 480px;
+    word-break: break-word;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.6);
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+
+    code {
+      font-size: 0.82em;
+      color: #b8d4ff;
+      flex: 1;
+      white-space: pre-wrap;
+    }
+  }
+
+  .er-rule-close {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    color: rgba(255,255,255,0.4);
+    cursor: pointer;
+    padding: 0 2px;
+    font-size: 0.85em;
+    &:hover { color: #fff; }
   }
 </style>

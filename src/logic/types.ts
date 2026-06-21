@@ -35,6 +35,7 @@ export interface WorldExit {
   /** Target region name in vanilla logic */
   target: string;
   rule: ExprNode;
+  rawRule?: string;
   /** OoTMM entrance ID (e.g. OOT_DODONGO_CAVERN) — set by injectEntranceIds at load time */
   entranceId?: string;
   /** ER setting key that gates this entrance (e.g. erDungeons, erBoss) */
@@ -110,6 +111,8 @@ export interface ReachabilityResult {
   disabledChecks: Set<string>;
   /** Set of achieved event names */
   events: Set<string>;
+  /** Reachability of ER entrance slots by ID — true if the entrance's source area is reachable */
+  entranceReachability: Map<string, boolean>;
 }
 
 // ─── Raw compiled world format (output of build script) ──────────────────────

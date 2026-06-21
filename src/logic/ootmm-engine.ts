@@ -9,7 +9,8 @@ import { logicPassWorld } from '@ootmm/logic/world/builder';
 import { Pathfinder } from '@ootmm/logic/pathfind/pathfind';
 import { AGE_CHILD, AGE_ADULT } from '@ootmm/logic/age';
 import { exprAge, exprAnd, exprEvent, exprTrue } from '@ootmm/logic/expr/builder';
-import { allEntrances } from '../data/entranceData';
+import { PRICE_RANGES } from '@ootmm/logic/price';
+import { allEntrances, splitEntName } from '../data/entranceData';
 import { isLocationEnabled } from './engine';
 
 // These corrections match the ones in scripts/fetch-logic.ts (LOCATION_CORRECTIONS).
@@ -42,13 +43,67 @@ const OOTMM_AREA_LABEL_OVERRIDES: Record<string, string> = {
 // Computed once at module load since entranceData is static.
 const _entranceAreaMap = new Map<string, [string, string]>();
 for (const e of allEntrances) {
-  const idx = e.name.lastIndexOf(' to ');
-  if (idx === -1) continue;
-  const rawSrc = e.name.slice(0, idx);
-  const rawDst = e.name.slice(idx + 4);
+  const split = splitEntName(e.name);
+  if (!split) continue;
+  const [rawSrc, rawDst] = split;
   const src = OOTMM_AREA_LABEL_OVERRIDES[rawSrc] ?? rawSrc;
   const dst = OOTMM_AREA_LABEL_OVERRIDES[rawDst] ?? rawDst;
   _entranceAreaMap.set(e.id, [src, dst]);
+}
+
+// ─── Shop price slot mapping ──────────────────────────────────────────────────
+// Maps tracker check names (with OOT/MM prefix) to absolute indices in world.prices.
+// Slot IDs match the shop_price(id) hex IDs used in OoTMM world YAML files.
+// PRICE_RANGES.OOT_SHOPS = 0 (64 slots), PRICE_RANGES.MM_SHOPS = 106 (22 slots).
+
+const _SHOP_PRICE_ENTRIES: Array<[string, string, number]> = [
+  // OOT shops (wallet_price(OOT_SHOPS, id))
+  ...Array.from({length: 8}, (_, i): [string, string, number] => [`OOT Kokiri Shop Item ${i+1}`,          'OOT_SHOPS', 0x00 + i]),
+  ...Array.from({length: 8}, (_, i): [string, string, number] => [`OOT Market Bombchu Shop Item ${i+1}`,  'OOT_SHOPS', 0x08 + i]),
+  ...Array.from({length: 8}, (_, i): [string, string, number] => [`OOT Zora Shop Item ${i+1}`,            'OOT_SHOPS', 0x10 + i]),
+  ...Array.from({length: 8}, (_, i): [string, string, number] => [`OOT Goron Shop Item ${i+1}`,           'OOT_SHOPS', 0x18 + i]),
+  ...Array.from({length: 8}, (_, i): [string, string, number] => [`OOT Market Bazaar Item ${i+1}`,        'OOT_SHOPS', 0x20 + i]),
+  ...Array.from({length: 8}, (_, i): [string, string, number] => [`OOT Market Potion Shop Item ${i+1}`,   'OOT_SHOPS', 0x28 + i]),
+  ...Array.from({length: 8}, (_, i): [string, string, number] => [`OOT Kakariko Bazaar Item ${i+1}`,      'OOT_SHOPS', 0x30 + i]),
+  ...Array.from({length: 8}, (_, i): [string, string, number] => [`OOT Kakariko Potion Shop Item ${i+1}`, 'OOT_SHOPS', 0x38 + i]),
+  // MM shops (wallet_price(MM_SHOPS, id))
+  ['MM Bomb Shop Item 1',          'MM_SHOPS', 0x00],
+  ['MM Bomb Shop Item 2',          'MM_SHOPS', 0x01],
+  ['MM Bomb Shop Bomb Bag',        'MM_SHOPS', 0x02],
+  ['MM Bomb Shop Bomb Bag 2',      'MM_SHOPS', 0x03],
+  ['MM Curiosity Shop All-Night Mask', 'MM_SHOPS', 0x04],
+  ...Array.from({length: 8}, (_, i): [string, string, number] => [`MM Trading Post Item ${i+1}`,     'MM_SHOPS', 0x05 + i]),
+  ['MM Swamp Potion Shop Item 1',  'MM_SHOPS', 0x0d],
+  ['MM Swamp Potion Shop Item 2',  'MM_SHOPS', 0x0e],
+  ['MM Swamp Potion Shop Item 3',  'MM_SHOPS', 0x0f],
+  ['MM Goron Shop Item 1',         'MM_SHOPS', 0x10],
+  ['MM Goron Shop Item 2',         'MM_SHOPS', 0x11],
+  ['MM Goron Shop Item 3',         'MM_SHOPS', 0x12],
+  ['MM Zora Shop Item 1',          'MM_SHOPS', 0x13],
+  ['MM Zora Shop Item 2',          'MM_SHOPS', 0x14],
+  ['MM Zora Shop Item 3',          'MM_SHOPS', 0x15],
+];
+
+// Resolved at module load once PRICE_RANGES is available (populated by price.ts IIFE).
+const _shopPriceSlots = new Map<string, number>(
+  _SHOP_PRICE_ENTRIES.map(([name, range, slot]) => [name, PRICE_RANGES[range] + slot])
+);
+
+function injectShopPrices(world: World, shopPrices: Map<string, number> | undefined): World {
+  const prices = [...world.prices];
+  // Default all tracked slots to 0 (always affordable) so shops appear in logic
+  // before actual prices are entered from the spoiler log. Vanilla prices are wrong
+  // in a randomized game and can block MM shop groups when they exceed child wallet.
+  for (const slot of _shopPriceSlots.values()) {
+    prices[slot] = 0;
+  }
+  if (shopPrices && shopPrices.size > 0) {
+    for (const [name, price] of shopPrices) {
+      const slot = _shopPriceSlots.get(name);
+      if (slot !== undefined) prices[slot] = price;
+    }
+  }
+  return { ...world, prices };
 }
 
 // ─── Settings conversion ───────────────────────────────────────────────────────
@@ -79,19 +134,60 @@ interface WorldCache {
 }
 
 let _worldCache: WorldCache | null = null;
+// In-flight build promise — concurrent calls with the same key share one execution.
+let _worldBuildInProgress: { key: string; promise: Promise<World[]> } | null = null;
+
+// ─── Pathfinder state cache ────────────────────────────────────────────────────
+// Caches the Pathfinder result separately from the world build.
+// pfState only changes when items or world-affecting settings change — not when
+// display-only settings (PotShuffleOOT, ShopShuffleMM…) change.
+
+interface PfCache {
+  key: string;
+  state: PathfinderState;
+}
+
+let _pfCache: PfCache | null = null;
+
+function makePfKey(
+  worldKey: string,
+  items: Map<string, number>,
+  erOverrides: Map<string, string>,
+  erMode: boolean,
+  shopPrices: Map<string, number> | undefined,
+): string {
+  const iKey = JSON.stringify([...items.entries()].sort((a, b) => a[0].localeCompare(b[0])));
+  const erPart = erMode && erOverrides.size > 0
+    ? JSON.stringify([...erOverrides.entries()].sort((a, b) => a[0].localeCompare(b[0])))
+    : '';
+  const pricesPart = shopPrices && shopPrices.size > 0
+    ? JSON.stringify([...shopPrices.entries()].sort((a, b) => a[0].localeCompare(b[0])))
+    : '';
+  return `${worldKey}|${iKey}|${erPart}|${pricesPart}`;
+}
 
 async function buildOotmmWorld(settings: Settings, settingsStr: string): Promise<World[]> {
   if (_worldCache?.key === settingsStr) return _worldCache.worlds;
+  if (_worldBuildInProgress?.key === settingsStr) return _worldBuildInProgress.promise;
 
-  const monitor = new Monitor({});
-  const random = new Random();
-  // Seed with a deterministic value — we only need the World structure,
-  // not truly random prices. The seed affects shop prices but not logic reachability.
-  await random.seed('ootmm-tracker-world');
+  const promise = (async () => {
+    const monitor = new Monitor({});
+    const random = new Random();
+    await random.seed('ootmm-tracker-world');
+    // Yield a macrotask so the browser can repaint (e.g. show loading spinner)
+    // before logicPassWorld blocks the main thread synchronously.
+    await new Promise<void>(resolve => setTimeout(resolve, 0));
+    const { worlds } = logicPassWorld({ monitor, settings, random });
+    _worldCache = { key: settingsStr, worlds };
+    return worlds;
+  })();
 
-  const { worlds } = logicPassWorld({ monitor, settings, random });
-  _worldCache = { key: settingsStr, worlds };
-  return worlds;
+  _worldBuildInProgress = { key: settingsStr, promise };
+  try {
+    return await promise;
+  } finally {
+    if (_worldBuildInProgress?.key === settingsStr) _worldBuildInProgress = null;
+  }
 }
 
 // ─── Items conversion ──────────────────────────────────────────────────────────
@@ -231,15 +327,28 @@ export async function computeReachabilityOotmm(
 
   // Apply tracker world patches (SPAWN exits + MM bridge), then ER overrides on top.
   const patched = patchTrackerWorld(baseWorlds);
-  const worlds = logicState.erMode
+  const erWorlds = logicState.erMode
     ? applyErOverrides(patched, logicState.erOverrides)
     : patched;
 
-  const playerItems = toPlayerItems(logicState.items);
-  const pathfinder = new Pathfinder(worlds, ootmmSettings, new Map());
-  const pfState: PathfinderState = pathfinder.run(null, { assumedItems: playerItems });
+  // Inject custom shop prices from the spoiler log into world.prices so the Pathfinder
+  // evaluates wallet requirements (price(range, id, tier)) against actual prices rather
+  // than the vanilla defaults baked in by logicPassWorld.
+  const pricedWorld = injectShopPrices(erWorlds[0], logicState.shopPrices);
+  const worlds = pricedWorld !== erWorlds[0] ? [pricedWorld, ...erWorlds.slice(1)] : erWorlds;
 
-  return extractResult(pfState, worlds, logicState);
+  const cacheKey = makePfKey(sKey, logicState.items, logicState.erOverrides, logicState.erMode, logicState.shopPrices);
+  let pfState: PathfinderState;
+  if (_pfCache?.key === cacheKey) {
+    pfState = _pfCache.state;
+  } else {
+    const playerItems = toPlayerItems(logicState.items);
+    const pathfinder = new Pathfinder(worlds, ootmmSettings, new Map());
+    pfState = pathfinder.run(null, { assumedItems: playerItems });
+    _pfCache = { key: cacheKey, state: pfState };
+  }
+
+  return extractResult(pfState, worlds, patched[0], ootmmSettings, logicState);
 }
 
 // ─── Result extraction ─────────────────────────────────────────────────────────
@@ -247,6 +356,8 @@ export async function computeReachabilityOotmm(
 function extractResult(
   pfState: PathfinderState,
   worlds: World[],
+  baseWorld: World,
+  settings: Settings,
   logicState: LogicState,
 ): ReachabilityResult {
   const world = worlds[0];
@@ -293,6 +404,44 @@ function extractResult(
   const childRegions = new Set([...childAreas.keys()].map(stripPrefix));
   const adultRegions = new Set([...adultAreas.keys()].map(stripPrefix));
 
+  // Entrance reachability: an entrance slot is In Logic when its source area is reachable
+  // AND the exit condition (items, events) for traversing that slot is satisfied.
+  // We evaluate the exit expression directly from the base world (vanilla, pre-ER-override)
+  // so we always have the condition even for mapped entrances (where applyErOverrides moved
+  // the exit key). Items and events come from the ER-aware pfState so mappings are reflected.
+  const ws0 = pfState.ws[0];
+  const entranceReachability = new Map<string, boolean>();
+  for (const [id, [srcArea, vanillaDstArea]] of _entranceAreaMap) {
+    const exitExpr = baseWorld.areas[srcArea]?.exits[vanillaDstArea];
+    if (!exitExpr) {
+      entranceReachability.set(id, false);
+      continue;
+    }
+
+    let accessible = false;
+    for (const age of [AGE_CHILD, AGE_ADULT]) {
+      const areaData = ws0.ages[age].areas.get(srcArea);
+      if (!areaData) continue; // src area not reachable by this age
+
+      const evalState = {
+        settings,
+        world: baseWorld,
+        areaData,
+        items: ws0.items,
+        renewables: ws0.renewables,
+        licenses: ws0.licenses,
+        age,
+        events: ws0.events,
+      };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      if ((exitExpr as any).eval(evalState, { items: [], events: [] }).result) {
+        accessible = true;
+        break;
+      }
+    }
+    entranceReachability.set(id, accessible);
+  }
+
   return {
     regions: new Set([...childRegions, ...adultRegions]),
     childRegions,
@@ -301,5 +450,6 @@ function extractResult(
     adultChecks,
     disabledChecks,
     events: pfState.ws[0].events,
+    entranceReachability,
   };
 }

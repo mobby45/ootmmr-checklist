@@ -191,6 +191,7 @@ export function computeReachability(
     adultChecks: checksByAge.adult,
     disabledChecks,
     events,
+    entranceReachability: new Map(),
   };
 }
 

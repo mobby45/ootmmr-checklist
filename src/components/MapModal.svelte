@@ -16,6 +16,7 @@ import type { EntranceInfo } from '../data/entranceData';
   import { entrancePositions } from '../data/entrancePositions';
   import { YAML_ENTRANCE_IDS } from '../data/yamlEntranceIds';
   import { showOutOfLogic } from '../stores/logicStore';
+  import { erMatchesSubTypes } from '../util/erFilter';
 
   const dispatch = createEventDispatcher();
 
@@ -718,6 +719,7 @@ import type { EntranceInfo } from '../data/entranceData';
     if (!hasErSettings) return true;
     // Must match erType first, then apply the optional hide-when-active override
     if (!erSettings[ent.erType]) return false;
+    if (!erMatchesSubTypes(id, ent.erType as any, erSettings as any)) return false;
     if (ent.hideWhenErActive) return !erSettings[ent.hideWhenErActive];
     return true;
   }
@@ -745,6 +747,10 @@ import type { EntranceInfo } from '../data/entranceData';
   $: ageFilteredPrecomputed = filterByAge(visiblePrecomputed, ageFilter, sceneData.game)
     .filter(p => !p.mqOnly || (mqSettings.get(p.mqOnly) ?? false))
     .filter(p => !p.vanillaOnly || !(mqSettings.get(p.vanillaOnly) ?? false))
+
+  // Entrance IDs that already have a visible diamond marker — sub-zone dots are suppressed for these
+  // positions since the entrance marker already displays the check count badge.
+  $: _activeEntranceIds = new Set(ageFilteredPrecomputed.map(p => p.entranceId));
 
 
   // All precomputed positions for the current subscene (no ER visibility filter) — used for sub-zone check dots.
@@ -1115,10 +1121,11 @@ import type { EntranceInfo } from '../data/entranceData';
             </button>
           {/each}
 
-          <!-- Sub-zone check dots: always shown for all precomputed positions (shuffled or not) -->
+          <!-- Sub-zone check dots: only shown when logic is enabled -->
+          {#if logicEnabled && logicResult}
           {#each allAgeFilteredPrecomputed as pos (pos.entranceId + '_' + pos.x + '_' + pos.y)}
             {@const badge = getEntranceBadge(pos.entranceId, false)}
-            {#if badge}
+            {#if badge && !_activeEntranceIds.has(pos.entranceId)}
               {@const dotCount = (logicEnabled && logicResult)
                 ? ($showOutOfLogic ? badge.unchecked : badge.inLogic)
                 : badge.unchecked}
@@ -1138,6 +1145,7 @@ import type { EntranceInfo } from '../data/entranceData';
               {/if}
             {/if}
           {/each}
+          {/if}
 
             {#if placementMode}
             {#each vanillaEntranceMarkers as marker (marker.uid)}
@@ -1729,8 +1737,6 @@ import type { EntranceInfo } from '../data/entranceData';
     opacity: 0.5;
   }
   .entrance-marker-unmapped .entrance-diamond {
-    --ec: #888;
-    border-style: dashed;
     box-shadow: none;
   }
   .entrance-marker-unmapped:hover .entrance-diamond {

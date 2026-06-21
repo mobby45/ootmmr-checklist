@@ -478,6 +478,12 @@ export const allEntrances: EntranceInfo[] = [
   { id: 'MM_TOURIST_INFORMATION', name: "MM Swamp Front to MM Tourist Information", type: 'interior', erType: 'erIndoors', game: 'mm' },
   { id: 'MM_ASTRAL_OBSERVATORY_FROM_CLOCK_TOWN_EAST', name: "MM Clock Town East Main to MM Astral Observatory Passage", type: 'interior', erType: 'erIndoors', game: 'mm' },
   { id: 'MM_ASTRAL_OBSERVATORY_FROM_FIELD', name: "MM Astral Observatory Balcony to MM Astral Observatory", type: 'interior', erType: 'erIndoors', game: 'mm' },
+  { id: 'MM_TERMINA_FIELD_TELESCOPE', name: "MM Astral Observatory to MM Astral Observatory Telescope", type: 'interior', erType: 'erIndoors', game: 'mm' },
+  { id: 'MM_CURIOSITY_SHOP_TELESCOPE', name: "MM Kafei Hideout to MM Curiosity Shop Telescope", type: 'interior', erType: 'erIndoors', game: 'mm' },
+  { id: 'MM_PIRATE_FORTRESS_TELESCOPE', name: "MM Pirate Fortress Sewers End to MM Pirate Fortress Telescope", type: 'interior', erType: 'erIndoors', game: 'mm' },
+  { id: 'MM_ASTRAL_OBSERVATORY_FROM_TELESCOPE', name: "MM Astral Observatory Telescope to MM Astral Observatory Telescope Exit", type: 'interior', erType: 'erIndoors', game: 'mm' },
+  { id: 'MM_KAFEI_HIDEOUT_FROM_TELESCOPE', name: "MM Curiosity Shop Telescope Exit to MM Kafei Hideout", type: 'interior', erType: 'erIndoors', game: 'mm' },
+  { id: 'MM_PIRATE_FORTRESS_SEWERS_FROM_TELESCOPE', name: "MM Pirate Fortress Telescope Exit to MM Pirate Fortress Sewers End", type: 'interior', erType: 'erIndoors', game: 'mm' },
   { id: 'MM_CLOCK_TOWN_EAST_FROM_CHEST_GAME', name: "MM Chest Game to MM Clock Town East", type: 'interior', erType: 'erIndoors', game: 'mm' },
   { id: 'MM_CLOCK_TOWN_EAST_FROM_HONEY_AND_DARLING', name: "MM Honey & Darling Game to MM Clock Town East", type: 'interior', erType: 'erIndoors', game: 'mm' },
   { id: 'MM_CLOCK_TOWN_EAST_FROM_MAYORS_OFFICE', name: "MM Mayor's Office to MM Clock Town East", type: 'interior', erType: 'erIndoors', game: 'mm' },
@@ -967,6 +973,11 @@ export const entranceSubTypes: Record<string, string[]> = {
     'MM_TOURIST_INFORMATION', 'MM_SWAMP_FROM_TOURIST_INFORMATION',
     'MM_EXTERIOR_DOOR_FROM_SEWERS', 'MM_SEWERS_FROM_EXTERIOR_DOOR',
   ],
+  erIndoorsTelescopes: [
+    'MM_TERMINA_FIELD_TELESCOPE', 'MM_ASTRAL_OBSERVATORY_FROM_TELESCOPE',
+    'MM_CURIOSITY_SHOP_TELESCOPE', 'MM_KAFEI_HIDEOUT_FROM_TELESCOPE',
+    'MM_PIRATE_FORTRESS_TELESCOPE', 'MM_PIRATE_FORTRESS_SEWERS_FROM_TELESCOPE',
+  ],
   erIndoorsGameLinks: [
     'OOT_MARKET_FROM_MASK_SHOP',
     'MM_CLOCK_TOWN_FROM_CLOCK_TOWER',
@@ -1012,7 +1023,7 @@ export const subTypeToParent: Record<string, ErSettingKey> = {
   erGanonCastle: 'erDungeons', erGanonTower: 'erDungeons', erMoon: 'erDungeons',
   erSpiderHouses: 'erDungeons', erPirateFortress: 'erDungeons',
   erBeneathWell: 'erDungeons', erIkanaCastle: 'erDungeons', erSecretShrine: 'erDungeons',
-  erIndoorsMajor: 'erIndoors', erIndoorsExtra: 'erIndoors', erIndoorsGameLinks: 'erIndoors',
+  erIndoorsMajor: 'erIndoors', erIndoorsExtra: 'erIndoors', erIndoorsGameLinks: 'erIndoors', erIndoorsTelescopes: 'erIndoors',
   erOneWaysMajor: 'erOneWays', erOneWaysIkana: 'erOneWays', erOneWaysSongs: 'erOneWays',
   erOneWaysStatues: 'erOneWays', erOneWaysWoods: 'erAlterLw',
   erOneWaysWaterVoids: 'erOneWays', erOneWaysAnywhere: 'erOneWays', erOneWaysOwls: 'erOneWays',
@@ -1024,7 +1035,7 @@ function normEntName(s: string): string {
 }
 
 // Find the semantic "A to B" split: both sides must start with OOT/MM prefix
-function splitEntName(name: string): [string, string] | null {
+export function splitEntName(name: string): [string, string] | null {
   let pos = 0;
   while (true) {
     const i = name.indexOf(' to ', pos);
@@ -1068,7 +1079,7 @@ export const subTypeLabels: Record<string, string> = {
   erSpiderHouses: 'Spider Houses', erPirateFortress: "Pirates' Fortress",
   erBeneathWell: 'Beneath the Well', erIkanaCastle: "Ikana Castle's Interior",
   erSecretShrine: 'Secret Shrine',
-  erIndoorsMajor: 'Most Interiors', erIndoorsExtra: 'Extra Interiors', erIndoorsGameLinks: 'Mask Shop/Clock Tower',
+  erIndoorsMajor: 'Most Interiors', erIndoorsExtra: 'Extra Interiors', erIndoorsGameLinks: 'Mask Shop/Clock Tower', erIndoorsTelescopes: 'Telescopes',
   erOneWaysMajor: 'Standard One-Ways', erOneWaysIkana: 'Ikana Castle One-Ways',
   erOneWaysSongs: 'Warp Songs', erOneWaysStatues: 'Soaring Spots',
   erOneWaysWoods: 'Altered Lost Woods', erOneWaysWaterVoids: 'Water Void Points',
