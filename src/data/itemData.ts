@@ -60,7 +60,7 @@ export const allTrackerItems: TrackerItem[] = [
   { id: 'bean', name: "Magic Bean", icon: 'item/bean', game: 'oot', category: 'items', maxLevel: 1 },
   { id: 'nuts_oot', name: "Nuts", icon: 'item/nut', game: 'oot', category: 'items', levelLabels: ['20', '30', '40'], maxLevel: 3, showCount: true },
   { id: 'sticks_oot', name: "Deku Sticks", icon: 'item/deku_stick', game: 'oot', category: 'items', levelLabels: ['10', '20', '30'], maxLevel: 3, showCount: true },
-  { id: 'wallet', name: "Wallet", icon: 'upgrade/wallet', game: 'oot', category: 'items', maxLevel: 3, levelIcons: ['upgrade/wallet1', 'upgrade/wallet2', 'upgrade/wallet3'], levelLabels: [null, '500', '999'], startUndimmed: true },
+  { id: 'wallet', name: "Wallet", icon: 'upgrade/wallet', game: 'oot', category: 'items', maxLevel: 3, levelIcons: ['upgrade/wallet1', 'upgrade/wallet2', 'upgrade/wallet3'], levelLabels: ['200', '500', '999'], startUndimmed: true },
   { id: 'ocarina', name: "Ocarina", icon: 'item/fairyocarina', game: 'oot', category: 'items', maxLevel: 2, levelIcons: ['item/fairyocarina', 'item/ocarina'] },
   { id: 'deku_shield', name: "Deku Shield", icon: 'shield/deku_shield', game: 'oot', category: 'items', maxLevel: 1, },
   { id: 'hyrule_shield', name: "Hyrule Shield", icon: 'shield/hyrule_shield', game: 'oot', category: 'items', maxLevel: 1, },
