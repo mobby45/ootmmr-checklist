@@ -199,8 +199,8 @@ export const LOGIC_SETTINGS_DEFS: LogicSettingDef[] = [
   { group: 'Events', section: 'World Access', key: 'openMaskShop', label: 'Open Mask Shop', type: 'bool', default: false },
   { group: 'Events', section: 'World Access', key: 'alterLostWoodsExits', label: 'Alternate LW Exits', type: 'bool', default: false },
 
-  { group: 'Events', section: 'Age & Combat', key: 'ageChange', label: 'Age Change', type: 'select', default: 'oot',
-    options: [{ value: 'oot', label: 'OoT only' }, { value: 'none', label: 'No age change' }] },
+  { group: 'Events', section: 'Age & Combat', key: 'ageChange', label: 'Age Change', type: 'select', default: 'always',
+    options: [{ value: 'always', label: 'Always' }, { value: 'oot', label: 'OoT only' }, { value: 'none', label: 'No age change' }] },
   { group: 'Events', section: 'Age & Combat', key: 'swordlessAdult', label: 'Swordless Adult', type: 'bool', default: false,
     desc: 'Adult Link can use all items without having a sword equipped.' },
   { group: 'Events', section: 'Age & Combat', key: 'timeTravelSword', label: 'Time Travel Sword', type: 'bool', default: false,

@@ -30,6 +30,7 @@ export interface ErSettings {
   erIndoorsMajor: boolean;
   erIndoorsExtra: boolean;
   erIndoorsGameLinks: boolean;
+  erIndoorsTelescopes: boolean;
   erOneWaysMajor: boolean;
   erOneWaysIkana: boolean;
   erOneWaysSongs: boolean;
@@ -65,6 +66,7 @@ export const defaultErSettings: ErSettings = {
   erIndoorsMajor: false,
   erIndoorsExtra: false,
   erIndoorsGameLinks: false,
+  erIndoorsTelescopes: false,
   erOneWaysMajor: false,
   erOneWaysIkana: false,
   erOneWaysSongs: false,
@@ -384,6 +386,7 @@ export function parseSpoilerLog(text: string): SpoilerData {
     erIndoorsMajor:      rawEr['erIndoorsMajor'] === 'true',
     erIndoorsExtra:      rawEr['erIndoorsExtra'] === 'true',
     erIndoorsGameLinks:  rawEr['erIndoorsGameLinks'] === 'true',
+    erIndoorsTelescopes: rawEr['erIndoorsTelescopes'] === 'true',
     erOneWaysMajor:      rawEr['erOneWaysMajor'] === 'true',
     erOneWaysIkana:      rawEr['erOneWaysIkana'] === 'true',
     erOneWaysSongs:      rawEr['erOneWaysSongs'] === 'true',
@@ -402,7 +405,7 @@ export function parseSpoilerLog(text: string): SpoilerData {
     'erSelfLoops', 'erNoPolarity', 'erDecoupled',
     'erMajorDungeons', 'erMinorDungeons', 'erGanonCastle', 'erGanonTower', 'erMoon',
     'erSpiderHouses', 'erPirateFortress', 'erBeneathWell', 'erIkanaCastle', 'erSecretShrine',
-    'erIndoorsMajor', 'erIndoorsExtra', 'erIndoorsGameLinks',
+    'erIndoorsMajor', 'erIndoorsExtra', 'erIndoorsGameLinks', 'erIndoorsTelescopes',
     'erRegionsExtra', 'erRegionsShortcuts', 'erPiratesWorld',
     'erSpawns', 'erWarps',
     'erMixedDungeons', 'erMixedGrottos', 'erMixedIndoors', 'erMixedRegions', 'erMixedOverworld',

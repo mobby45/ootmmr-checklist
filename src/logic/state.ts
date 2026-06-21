@@ -48,7 +48,7 @@ export function buildLogicState(
 
     // Open areas — logic checks setting(x, 'vanilla'/'closed'/'remains'/'cycle'/'none'/'oot')
     startingAge:            'child',
-    ageChange:              'oot',
+    ageChange:              'always',
     doorOfTime:             'vanilla',   // 'vanilla' = door closed; presets may override to 'open'
     beneathWell:            'vanilla',   // 'vanilla' = need shadow medal; 'open' = always open
     dekuTree:               'vanilla',

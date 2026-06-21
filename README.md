@@ -27,7 +27,18 @@ Join the same room to mark off checks collaboratively with other players.
 ### Trackers
 - **Item Tracker** — track collected items with visual icons
 - **Entrance Rando Tracker** — map entrances for randomized entrance settings
+  - Pair entrances by clicking source then destination
+  - Filter by All / Filled / Unfilled / **In Logic** (persisted across sessions)
+  - Click ⓘ on any entrance to view its raw logic rule
+  - Entrance dots show on the map at their vanilla position
 - **Hint Tracker / Notes** — track Way of the Hero, barren zones, and custom notes
+
+### Logic
+- Logic engine powered by the compiled OoTMM world graph (Pathfinder BFS)
+- Highlights reachable checks and entrances based on current items and settings
+- Age filter (child / adult / both) — persisted per session
+- Click ⓘ on any check or entrance to view its raw logic rule
+- Entrance logic evaluates exit conditions (items required) not just area reachability
 
 ### Co-op
 - Real-time collaborative checking via WebRTC (P2P, no server required)
@@ -48,6 +59,7 @@ Join the same room to mark off checks collaboratively with other players.
 ### Map
 - Visual map for each zone with check markers
 - Map pings visible to all co-op players
+- Entrance dots shown at vanilla positions (Observatory, Curiosity Shop, Pirate Fortress telescope entrances included)
 
 ---
 

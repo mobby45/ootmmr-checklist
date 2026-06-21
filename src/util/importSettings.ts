@@ -321,6 +321,7 @@ const KEY_MAP: Record<string, string> = {
   erIndoorsMajor:       'erIndoorsMajor',
   erIndoorsExtra:       'erIndoorsExtra',
   erIndoorsGameLinks:   'erIndoorsGameLinks',
+  erIndoorsTelescopes:  'erIndoorsTelescopes',
   erRegions:            'erRegions',
   erRegionsExtra:       'erRegionsExtra',
   erRegionsShortcuts:   'erRegionsShortcuts',

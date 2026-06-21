@@ -532,6 +532,8 @@ export const entrancePositions: EntrancePosition[] = [
   { renderscene: 'MM_LAUNDRY_POOL', entranceId: 'MM_CLOCK_TOWN_SOUTH_FROM_LAUNDRY_POOL', x: 551, y: 18 },
   { renderscene: 'MM_LAUNDRY_POOL', entranceId: 'MM_KAFEI_HIDEOUT', x: 198, y: 425 },
   { renderscene: 'MM_CURIOSITY_SHOP', entranceId: 'MM_LAUNDRY_POOL_FROM_KAFEI_HIDEOUT', x: 782, y: 173 },
+  { renderscene: 'MM_CURIOSITY_SHOP', entranceId: 'MM_CURIOSITY_SHOP_TELESCOPE', x: 600, y: 384 },
+  { renderscene: 'MM_CURIOSITY_SHOP', entranceId: 'MM_KAFEI_HIDEOUT_FROM_TELESCOPE', x: 627, y: 384 },
 
   { renderscene: 'MM_BOMB_SHOP', entranceId: 'MM_CLOCK_TOWN_WEST_FROM_BOMB_SHOP', x: 325, y: 588 },
   { renderscene: 'MM_TRADING_POST', entranceId: 'MM_CLOCK_TOWN_WEST_FROM_TRADING_POST', x: 504, y: 601 },
@@ -550,6 +552,8 @@ export const entrancePositions: EntrancePosition[] = [
   { renderscene: 'MM_MILK_BAR', entranceId: 'MM_CLOCK_TOWN_EAST_FROM_MILK_BAR', x: 839, y: 446 },
 
   { renderscene: 'MM_OBSERVATORY_ROOM_0', entranceId: 'MM_FIELD_FROM_ASTRAL_OBSERVATORY', x: 331, y: 267 },
+  { renderscene: 'MM_OBSERVATORY_ROOM_0', entranceId: 'MM_TERMINA_FIELD_TELESCOPE', x: 617, y: 249 },
+  { renderscene: 'MM_OBSERVATORY_ROOM_0', entranceId: 'MM_ASTRAL_OBSERVATORY_FROM_TELESCOPE', x: 584, y: 250 },
   { renderscene: 'MM_OBSERVATORY_ROOM_1', entranceId: 'MM_CLOCK_TOWN_EAST_FROM_ASTRAL_OBSERVATORY', x: 929, y: 155, targetScene: 'MM_CLOCK_TOWN_EAST' },
 
   { renderscene: 'MM_STOCK_POT_INN_ROOM_0', entranceId: 'MM_CLOCK_TOWN_EAST_FROM_STOCK_POT_INN', x: 593, y: 587 },
@@ -942,6 +946,8 @@ export const entrancePositions: EntrancePosition[] = [
   { renderscene: 'MM_PIRATE_FORTRESS_INTERIOR', entranceId: 'MM_EXTERIOR_DOOR_FROM_SEWERS', x: 954, y: 388 },
   { renderscene: 'MM_PIRATE_FORTRESS_INTERIOR', entranceId: 'MM_ENTRANCE_VENT_FROM_SEWERS', x: 780, y: 625, targetScene: 'MM_PIRATE_FORTRESS_ENTRANCE' },
   { renderscene: 'MM_PIRATE_FORTRESS_INTERIOR', entranceId: 'MM_ENTRANCE_VENT_FROM_SEWERS', x: 803, y: 503, targetScene: 'MM_PIRATE_FORTRESS_ENTRANCE' },
+  { renderscene: 'MM_PIRATE_FORTRESS_INTERIOR', entranceId: 'MM_PIRATE_FORTRESS_TELESCOPE', x: 933, y: 315 },
+  { renderscene: 'MM_PIRATE_FORTRESS_INTERIOR', entranceId: 'MM_PIRATE_FORTRESS_SEWERS_FROM_TELESCOPE', x: 965, y: 317 },
 
   // MM_SECRET_SHRINE
   { renderscene: 'MM_SECRET_SHRINE', entranceId: 'MM_IKANA_VALLEY_FROM_SHRINE', x: 473, y: 605 },
