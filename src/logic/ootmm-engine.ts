@@ -468,8 +468,9 @@ function extractResult(
         (price <= 500 && hasWallet(3)) ||
         (price <= 999 && colossal && hasWallet(4));
       if (!canAfford) {
-        childChecks.delete(checkName);
-        adultChecks.delete(checkName);
+        const trackerName = ootmmLocToTracker(checkName);
+        childChecks.delete(trackerName);
+        adultChecks.delete(trackerName);
       }
     }
   }
