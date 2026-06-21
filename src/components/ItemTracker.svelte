@@ -241,14 +241,21 @@
       map['sh_scale'] = { ...itemById['sh_scale'], maxLevel: 3, levelIcons: ['upgrade/scale_bronze', 'upgrade/scale1', 'upgrade/scale2'] };
     }
     if (childWallets || colossalWallets || bottomlessWallets) {
-      const newLevel = bottomlessWallets ? 5 : colossalWallets ? 4 : 3;
-      const icons = Array.from({ length: newLevel }, (_, i) => `upgrade/wallet${Math.min(i + 1, 3)}`);
+      const extra = childWallets ? 1 : 0;
+      const newLevel = (bottomlessWallets ? 5 : colossalWallets ? 4 : 3) + extra;
+      const icons = [
+        ...(childWallets ? [itemById['wallet'].icon] : []),
+        ...Array.from({ length: newLevel - extra }, (_, i) => `upgrade/wallet${Math.min(i + 1, 3)}`),
+      ];
       const labels: (string | undefined)[] = Array(newLevel).fill(undefined);
-      if (colossalWallets || bottomlessWallets) labels[3] = '999';
-      if (bottomlessWallets) labels[4] = '9999';
+      if (childWallets) labels[0] = '99';
+      if (colossalWallets || bottomlessWallets) labels[extra + 3] = '999';
+      if (bottomlessWallets) labels[extra + 4] = '9999';
       map['wallet'] = { ...itemById['wallet'],
         ...(childWallets ? { startUndimmed: false } : {}),
-        ...(newLevel > 3 ? { maxLevel: newLevel, levelIcons: icons, levelLabels: labels as string[] } : {}),
+        maxLevel: newLevel,
+        levelIcons: icons,
+        levelLabels: labels as string[],
       };
     }
     // GTG Lava silver rupees: vanilla needs 5, MQ needs 6
