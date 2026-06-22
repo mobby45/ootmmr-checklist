@@ -373,6 +373,21 @@ function extractResult(
   const adultAreas = pfState.ws[0].ages[AGE_ADULT].areas;
   const reachableLocs = pfState.ws[0].locations;
 
+  // Temporary diagnostic — remove once Fire Temple logic is confirmed working
+  if ((globalThis as any).__ootmmDebugLogic) {
+    const ws0 = pfState.ws[0];
+    console.log('[logic-debug] events fired:', [...ws0.events].sort().join(', '));
+    const adultCrater = adultAreas.has('OOT Death Mountain Crater Near Temple');
+    console.log('[logic-debug] OOT Death Mountain Crater Near Temple reachable as adult:', adultCrater);
+    console.log('[logic-debug] OOT_DOOR_OF_TIME_OPEN fired:', ws0.events.has('OOT_DOOR_OF_TIME_OPEN'));
+    console.log('[logic-debug] OOT_TIME_TRAVEL_AT_WILL fired:', ws0.events.has('OOT_TIME_TRAVEL_AT_WILL'));
+    const items: [string, number][] = [];
+    for (const [item, count] of ws0.items.entries()) {
+      if (count > 0) items.push([(item as any).id ?? String(item), count]);
+    }
+    console.log('[logic-debug] ws0 items:', items.sort((a, b) => a[0].localeCompare(b[0])).map(([id, n]) => `${id}×${n}`).join(', '));
+  }
+
   // Build location → area map from world
   const locToArea = new Map<string, string>();
   for (const [areaName, worldArea] of Object.entries(world.areas)) {

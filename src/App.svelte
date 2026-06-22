@@ -3280,6 +3280,19 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
       notes: Object.fromEntries(yNotes.entries()),
       hints: yHints.toArray(),
       songEvents: Object.fromEntries(ySongEvents.entries()),
+      spoilerLocations,
+      spoilerSpheres,
+      spoilerSeedInfo,
+      spoilerErSettings,
+      spoilerExtraEr,
+      spoilerSpecialConditions,
+      spoilerEntrances,
+      spoilerCoinCounts,
+      manualErSettings: JSON.parse(localStorage.getItem('erSettings') ?? 'null'),
+      manualConditions,
+      enabledTricks: [...$enabledTricks],
+      logicManualSettings: $logicManualSettings,
+      entranceMarkers: JSON.parse(localStorage.getItem('entranceMarkers') ?? '[]'),
     };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -3364,6 +3377,42 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
           yHints.push(data.hints);
         }
         if (data.songEvents) Object.entries(data.songEvents).forEach(([k, v]) => ySongEvents.set(k, v as string));
+        if ('spoilerLocations' in data) {
+          spoilerLocations = data.spoilerLocations ?? {};
+          localStorage.setItem('spoilerLocations', JSON.stringify(spoilerLocations));
+        }
+        if ('spoilerSpheres' in data) {
+          spoilerSpheres = data.spoilerSpheres ?? [];
+          localStorage.setItem('spoilerSpheres', JSON.stringify(spoilerSpheres));
+        }
+        if ('spoilerSeedInfo' in data) {
+          spoilerSeedInfo = data.spoilerSeedInfo ?? null;
+          localStorage.setItem('spoilerSeedInfo', JSON.stringify(spoilerSeedInfo));
+        }
+        if ('spoilerErSettings' in data) {
+          spoilerErSettings = data.spoilerErSettings ?? null;
+          localStorage.setItem('spoilerErSettings', JSON.stringify(spoilerErSettings));
+        }
+        if ('spoilerExtraEr' in data) {
+          spoilerExtraEr = data.spoilerExtraEr ?? null;
+          localStorage.setItem('spoilerExtraEr', JSON.stringify(spoilerExtraEr));
+        }
+        if ('spoilerSpecialConditions' in data) {
+          spoilerSpecialConditions = data.spoilerSpecialConditions ?? null;
+          localStorage.setItem('spoilerSpecialConditions', JSON.stringify(spoilerSpecialConditions));
+        }
+        if ('spoilerEntrances' in data) {
+          spoilerEntrances = data.spoilerEntrances ?? null;
+          localStorage.setItem('spoilerEntrances', JSON.stringify(spoilerEntrances));
+        }
+        if (data.manualErSettings) {
+          localStorage.setItem('erSettings', JSON.stringify(data.manualErSettings));
+        }
+        if ('spoilerCoinCounts' in data) { spoilerCoinCounts = data.spoilerCoinCounts ?? {}; localStorage.setItem('spoilerCoinCounts', JSON.stringify(spoilerCoinCounts)); }
+        if (data.manualConditions) { manualConditions = data.manualConditions; localStorage.setItem('manualConditions', JSON.stringify(manualConditions)); }
+        if (Array.isArray(data.enabledTricks)) enabledTricks.set(new Set(data.enabledTricks));
+        if (data.logicManualSettings) logicManualSettings.set(data.logicManualSettings);
+        if (Array.isArray(data.entranceMarkers) && data.entranceMarkers.length > 0) localStorage.setItem('entranceMarkers', JSON.stringify(data.entranceMarkers));
       } catch {
         alert('Invalid file!');
       }
@@ -3398,6 +3447,13 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     spoilerErSettings: ErSettings | null;
     spoilerExtraEr: Record<string, any> | null;
     spoilerSpecialConditions: SpecialConditionsMap | null;
+    spoilerEntrances: Record<string, string> | null;
+    spoilerCoinCounts?: Record<string, number>;
+    manualErSettings?: Record<string, any> | null;
+    manualConditions?: Record<string, any>;
+    enabledTricks?: string[];
+    logicManualSettings?: Record<string, any>;
+    entranceMarkers?: any[];
   }
 
   let saveSlots: SaveSlot[] = JSON.parse(localStorage.getItem('saveSlots') ?? '[]');
@@ -3429,6 +3485,13 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
       spoilerErSettings,
       spoilerExtraEr,
       spoilerSpecialConditions,
+      spoilerEntrances,
+      spoilerCoinCounts,
+      manualErSettings: JSON.parse(localStorage.getItem('erSettings') ?? 'null'),
+      manualConditions,
+      enabledTricks: [...$enabledTricks],
+      logicManualSettings: $logicManualSettings,
+      entranceMarkers: JSON.parse(localStorage.getItem('entranceMarkers') ?? '[]'),
     };
   }
 
@@ -3495,6 +3558,14 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     localStorage.setItem('spoilerExtraEr', JSON.stringify(spoilerExtraEr));
     spoilerSpecialConditions = slot.spoilerSpecialConditions ?? null;
     localStorage.setItem('spoilerSpecialConditions', JSON.stringify(spoilerSpecialConditions));
+    spoilerEntrances = slot.spoilerEntrances ?? null;
+    localStorage.setItem('spoilerEntrances', JSON.stringify(spoilerEntrances));
+    if (slot.spoilerCoinCounts !== undefined) { spoilerCoinCounts = slot.spoilerCoinCounts; localStorage.setItem('spoilerCoinCounts', JSON.stringify(spoilerCoinCounts)); }
+    if (slot.manualErSettings) localStorage.setItem('erSettings', JSON.stringify(slot.manualErSettings));
+    if (slot.manualConditions) { manualConditions = slot.manualConditions as typeof manualConditions; localStorage.setItem('manualConditions', JSON.stringify(manualConditions)); }
+    if (slot.enabledTricks) enabledTricks.set(new Set(slot.enabledTricks));
+    if (slot.logicManualSettings) logicManualSettings.set(slot.logicManualSettings);
+    if (slot.entranceMarkers) localStorage.setItem('entranceMarkers', JSON.stringify(slot.entranceMarkers));
     currentSlotId = slot.id;
     localStorage.setItem('currentSlotId', slot.id);
   }
