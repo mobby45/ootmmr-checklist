@@ -80,6 +80,8 @@ export interface LogicState {
   erMode: boolean;
   /** Pre-resolved special condition results (BRIDGE, MOON, LACS, GANON_BK, MAJORA) */
   resolvedSpecial: Map<string, boolean>;
+  /** Raw special condition configs (count + flags) — passed to the Pathfinder as specialConds */
+  rawSpecialConds: Record<string, any> | null;
   /** Song event assignments: tracker key (oot_0, mm_2…) → song item ID (oot_song_zelda…) */
   songEvents: Map<string, string>;
   /** Manually entered prices for shop checks (check name → rupee cost) */

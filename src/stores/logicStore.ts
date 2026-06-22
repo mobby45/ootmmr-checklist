@@ -212,7 +212,7 @@ export function initLogicStore(
     const shopPricesSnap = yShopPrices
       ? new Map(yShopPrices.entries()) as Map<string, number>
       : new Map<string, number>();
-    const state = buildLogicState(itemsSnap, settingsSnap, erSnap, tricks, erMode, resolvedSpecial, undefined, songEventsSnap, shopPricesSnap);
+    const state = buildLogicState(itemsSnap, settingsSnap, erSnap, tricks, erMode, resolvedSpecial, undefined, songEventsSnap, shopPricesSnap, specials ?? null);
     try {
       const result = await computeReachabilityOotmm(state);
       logicResult.set(result);

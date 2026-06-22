@@ -14,6 +14,7 @@ export function buildLogicState(
   prebuiltItems?: Map<string, number>,
   ySongEventsSnapshot: Map<string, string> = new Map(),
   yShopPricesSnapshot: Map<string, number> = new Map(),
+  rawSpecialConds: Record<string, any> | null = null,
 ): LogicState {
   const notesMode = ySettingsSnapshot.get('songShuffle') === 'notes';
   const items = prebuiltItems ?? buildItemsMap(yItemsSnapshot, notesMode);
@@ -237,6 +238,7 @@ export function buildLogicState(
     flags: new Set(),
     erMode,
     resolvedSpecial,
+    rawSpecialConds,
     songEvents: ySongEventsSnapshot,
     shopPrices: yShopPricesSnapshot,
     mmTime:  1, // Day1 AM 6:00 — engine propagates this per-region via BFS (stay=null expansion)

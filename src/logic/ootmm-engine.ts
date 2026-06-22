@@ -115,11 +115,12 @@ function settingsKey(ootmmSettings: Settings): string {
   return JSON.stringify(Object.entries(ootmmSettings as unknown as Record<string, unknown>).sort((a, b) => a[0].localeCompare(b[0])));
 }
 
-export function toOotmmSettings(settings: Map<string, any>): Settings {
+export function toOotmmSettings(settings: Map<string, any>, rawSpecialConds?: Record<string, any> | null): Settings {
   const partial: Record<string, any> = {};
   for (const [k, v] of settings) {
     partial[k] = v;
   }
+  if (rawSpecialConds) partial.specialConds = rawSpecialConds;
   // Force single-player ootmm mode
   partial.mode = 'single';
   partial.players = 1;
@@ -155,6 +156,7 @@ function makePfKey(
   erOverrides: Map<string, string>,
   erMode: boolean,
   shopPrices: Map<string, number> | undefined,
+  rawSpecialConds: Record<string, any> | null | undefined,
 ): string {
   const iKey = JSON.stringify([...items.entries()].sort((a, b) => a[0].localeCompare(b[0])));
   const erPart = erMode && erOverrides.size > 0
@@ -163,7 +165,8 @@ function makePfKey(
   const pricesPart = shopPrices && shopPrices.size > 0
     ? JSON.stringify([...shopPrices.entries()].sort((a, b) => a[0].localeCompare(b[0])))
     : '';
-  return `${worldKey}|${iKey}|${erPart}|${pricesPart}`;
+  const specialPart = rawSpecialConds ? JSON.stringify(rawSpecialConds) : '';
+  return `${worldKey}|${iKey}|${erPart}|${pricesPart}|${specialPart}`;
 }
 
 async function buildOotmmWorld(settings: Settings, settingsStr: string): Promise<World[]> {
@@ -337,13 +340,18 @@ export async function computeReachabilityOotmm(
   const pricedWorld = injectShopPrices(erWorlds[0], logicState.shopPrices);
   const worlds = pricedWorld !== erWorlds[0] ? [pricedWorld, ...erWorlds.slice(1)] : erWorlds;
 
-  const cacheKey = makePfKey(sKey, logicState.items, logicState.erOverrides, logicState.erMode, logicState.shopPrices);
+  // Use separate settings for the Pathfinder so specialConds don't pollute the world cache key.
+  const pfSettings = logicState.rawSpecialConds
+    ? toOotmmSettings(logicState.settings, logicState.rawSpecialConds)
+    : ootmmSettings;
+
+  const cacheKey = makePfKey(sKey, logicState.items, logicState.erOverrides, logicState.erMode, logicState.shopPrices, logicState.rawSpecialConds);
   let pfState: PathfinderState;
   if (_pfCache?.key === cacheKey) {
     pfState = _pfCache.state;
   } else {
     const playerItems = toPlayerItems(logicState.items);
-    const pathfinder = new Pathfinder(worlds, ootmmSettings, new Map());
+    const pathfinder = new Pathfinder(worlds, pfSettings, new Map());
     pfState = pathfinder.run(null, { assumedItems: playerItems });
     _pfCache = { key: cacheKey, state: pfState };
   }
