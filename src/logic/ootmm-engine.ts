@@ -420,17 +420,9 @@ function extractResult(
   const ws0 = pfState.ws[0];
   const entranceReachability = new Map<string, boolean>();
 
-  // Temporary debug: log reachability details for specific entrance IDs
-  const DEBUG_IDS = new Set([
-    'OOT_DODONGO_CAVERN', 'MM_IKANA_CASTLE_EXTERIOR_FROM_WELL',
-    'OOT_TEMPLE_FIRE', 'MM_IKANA_CANYON_FROM_WELL',
-    'MM_STONE_TOWER_FROM_TEMPLE', 'OOT_TEMPLE_SPIRIT',
-  ]);
-
   for (const [id, [srcArea, vanillaDstArea]] of _entranceAreaMap) {
     const exitExpr = baseWorld.areas[srcArea]?.exits[vanillaDstArea];
     if (!exitExpr) {
-      if (DEBUG_IDS.has(id)) console.log(`[ER debug] ${id}: NO exitExpr (srcArea=${srcArea}, dst=${vanillaDstArea})`);
       entranceReachability.set(id, false);
       continue;
     }
@@ -438,8 +430,7 @@ function extractResult(
     let accessible = false;
     for (const age of [AGE_CHILD, AGE_ADULT]) {
       const areaData = ws0.ages[age].areas.get(srcArea);
-      if (DEBUG_IDS.has(id) && !areaData) console.log(`[ER debug] ${id}: age=${age} srcArea="${srcArea}" NOT reachable`);
-      if (!areaData) continue; // src area not reachable by this age
+      if (!areaData) continue;
 
       const evalState = {
         settings,
@@ -452,9 +443,7 @@ function extractResult(
         events: ws0.events,
       };
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const evalResult = (exitExpr as any).eval(evalState, { items: [], events: [] }).result;
-      if (DEBUG_IDS.has(id)) console.log(`[ER debug] ${id}: age=${age} srcArea="${srcArea}" reachable, exitExpr.eval=${evalResult}, hasAccessEvent=${ws0.events.has('MM_ACCESS')}`);
-      if (evalResult) {
+      if ((exitExpr as any).eval(evalState, { items: [], events: [] }).result) {
         accessible = true;
         break;
       }

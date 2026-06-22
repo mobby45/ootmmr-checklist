@@ -179,6 +179,10 @@ export function initLogicStore(
     // ageChange default is 'none' in OoTMM but that blocks TIME_TRAVEL_AT_WILL entirely.
     // 'always' lets the Pathfinder propagate adult into child areas once ToT is reachable.
     if (!settingsSnap.has('ageChange'))          settingsSnap.set('ageChange', 'always');
+    // moonCrash default in OoTMM is 'reset', but the tracker default (logicSettingsDef.ts) is
+    // 'cycle'. Without this, the Pathfinder never fires the MM_ACCESS event, making every exit
+    // that requires can_reset_time appear out-of-logic when settings haven't been imported.
+    if (!settingsSnap.has('moonCrash'))          settingsSnap.set('moonCrash', 'cycle');
     // Standard defaults for settings not in the UI
     if (!settingsSnap.has('shufflePotsMm'))      settingsSnap.set('shufflePotsMm', 'none');
     // sharedBombchu in logic = sharedBombchuBags in tracker/spoilerMappings
