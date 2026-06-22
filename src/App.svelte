@@ -5207,11 +5207,26 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
           currentMapScene = e.detail.scene;
           currentSceneData = mapData?.[e.detail.scene] ?? null;
           if (e.detail.subscene) mapInitialSubscene = e.detail.subscene;
-          filteredCheckNames = new Set();
-          currentGroupName = '';
           if (!matchedScenes.includes(e.detail.scene)) {
             const group = Object.values(groupToSceneMapping).find(scenes => scenes.includes(e.detail.scene));
             matchedScenes = group ? [...new Set(group)] : [e.detail.scene];
+          }
+          // Repopulate filteredCheckNames from the destination group so hideOutOfLogic
+          // and group filtering work correctly when navigating with ‹ ›.
+          // Falls back to empty (show all) if no matching group exists in the checklist.
+          const destGroupName = Object.entries(groupToSceneMapping).find(([, scenes]) => scenes.includes(e.detail.scene))?.[0] ?? '';
+          const destGroup = destGroupName ? sortedChecks?.find(g => g.groupName === destGroupName) : null;
+          if (destGroup) {
+            currentGroupName = destGroupName;
+            filteredCheckNames = new Set(
+              destGroup.checks.flatMap(c => {
+                const mapped = checkNameMapping[c.name];
+                return mapped ? [c.name, mapped] : [c.name];
+              })
+            );
+          } else {
+            currentGroupName = '';
+            filteredCheckNames = new Set();
           }
         }}
         shopItems={shopItemsMap}
