@@ -350,24 +350,9 @@ export async function computeReachabilityOotmm(
   if (_pfCache?.key === cacheKey) {
     pfState = _pfCache.state;
   } else {
-    if ((globalThis as any).__ootmmDebugLogic) {
-      const swordItems = ['OOT_SWORD', 'OOT_SWORD_KOKIRI', 'OOT_SWORD_MASTER', 'OOT_SWORD_BIGGORON'];
-      const stateItems = swordItems.map(k => `${k}:${logicState.items.get(k) ?? 0}`).join(', ');
-      console.log('[logic-debug] logicState.items (swords):', stateItems);
-      console.log('[logic-debug] settings progressiveSwordsOot:', logicState.settings.get('progressiveSwordsOot'), '| extraChildSwordsOot:', logicState.settings.get('extraChildSwordsOot'));
-    }
     const playerItems = toPlayerItems(logicState.items);
-    if ((globalThis as any).__ootmmDebugLogic) {
-      const piSwords: string[] = [];
-      for (const [pi, count] of playerItems.entries()) {
-        if (count > 0 && (pi as any).item?.id?.includes('SWORD')) {
-          piSwords.push(`${(pi as any).item.id}×${count}`);
-        }
-      }
-      console.log('[logic-debug] playerItems (swords):', piSwords.join(', '));
-    }
     const pathfinder = new Pathfinder(worlds, pfSettings, new Map());
-    pfState = pathfinder.run(null, { assumedItems: playerItems });
+    pfState = pathfinder.run(null, { assumedItems: playerItems, recursive: true });
     _pfCache = { key: cacheKey, state: pfState };
   }
 
@@ -387,21 +372,6 @@ function extractResult(
   const childAreas = pfState.ws[0].ages[AGE_CHILD].areas;
   const adultAreas = pfState.ws[0].ages[AGE_ADULT].areas;
   const reachableLocs = pfState.ws[0].locations;
-
-  // Temporary diagnostic — remove once Fire Temple logic is confirmed working
-  if ((globalThis as any).__ootmmDebugLogic) {
-    const ws0 = pfState.ws[0];
-    console.log('[logic-debug] events fired:', [...ws0.events].sort().join(', '));
-    const adultCrater = adultAreas.has('OOT Death Mountain Crater Near Temple');
-    console.log('[logic-debug] OOT Death Mountain Crater Near Temple reachable as adult:', adultCrater);
-    console.log('[logic-debug] OOT_DOOR_OF_TIME_OPEN fired:', ws0.events.has('OOT_DOOR_OF_TIME_OPEN'));
-    console.log('[logic-debug] OOT_TIME_TRAVEL_AT_WILL fired:', ws0.events.has('OOT_TIME_TRAVEL_AT_WILL'));
-    const items: [string, number][] = [];
-    for (const [item, count] of ws0.items.entries()) {
-      if (count > 0) items.push([(item as any).id ?? String(item), count]);
-    }
-    console.log('[logic-debug] ws0 items:', items.sort((a, b) => a[0].localeCompare(b[0])).map(([id, n]) => `${id}×${n}`).join(', '));
-  }
 
   // Build location → area map from world
   const locToArea = new Map<string, string>();
