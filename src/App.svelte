@@ -1549,6 +1549,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     localStorage.setItem('spoilerFillEntrances', String(spoilerFillEntrances));
   }
   let activeErSettings: ErSettings = spoilerErSettings ?? JSON.parse(localStorage.getItem('erSettings') ?? JSON.stringify(defaultErSettings));
+  let importedManualErSettings: ErSettings | null = null;
 
   function toggleShareSpoiler() {
     if (isWatchMode) return;
@@ -3407,6 +3408,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
         }
         if (data.manualErSettings) {
           localStorage.setItem('erSettings', JSON.stringify(data.manualErSettings));
+          if (!data.spoilerErSettings) importedManualErSettings = data.manualErSettings;
         }
         if ('spoilerCoinCounts' in data) { spoilerCoinCounts = data.spoilerCoinCounts ?? {}; localStorage.setItem('spoilerCoinCounts', JSON.stringify(spoilerCoinCounts)); }
         if (data.manualConditions) { manualConditions = data.manualConditions; localStorage.setItem('manualConditions', JSON.stringify(manualConditions)); }
@@ -3561,7 +3563,10 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     spoilerEntrances = slot.spoilerEntrances ?? null;
     localStorage.setItem('spoilerEntrances', JSON.stringify(spoilerEntrances));
     if (slot.spoilerCoinCounts !== undefined) { spoilerCoinCounts = slot.spoilerCoinCounts; localStorage.setItem('spoilerCoinCounts', JSON.stringify(spoilerCoinCounts)); }
-    if (slot.manualErSettings) localStorage.setItem('erSettings', JSON.stringify(slot.manualErSettings));
+    if (slot.manualErSettings) {
+      localStorage.setItem('erSettings', JSON.stringify(slot.manualErSettings));
+      if (!slot.spoilerErSettings) importedManualErSettings = slot.manualErSettings as ErSettings;
+    }
     if (slot.manualConditions) { manualConditions = slot.manualConditions as typeof manualConditions; localStorage.setItem('manualConditions', JSON.stringify(manualConditions)); }
     if (slot.enabledTricks) enabledTricks.set(new Set(slot.enabledTricks));
     if (slot.logicManualSettings) logicManualSettings.set(slot.logicManualSettings);
@@ -4827,7 +4832,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
           <button type="button" class="er-tab" class:active={erTab === 'pathfinder'} on:click={() => erTab = 'pathfinder'} role="tab">Pathfinder</button>
         </div>
         {#if erTab === 'tracker'}
-          <ERTracker {yEntrances} entranceValues={entranceValuesMap} {spoilerErSettings} {spoilerExtraEr} isWatchMode={isWatchMode || spoilerFillEntrances} bind:activeErSettings={activeErSettings} highlightedEntranceId={erHighlightId} {entranceReachability}
+          <ERTracker {yEntrances} entranceValues={entranceValuesMap} {spoilerErSettings} {spoilerExtraEr} {importedManualErSettings} isWatchMode={isWatchMode || spoilerFillEntrances} bind:activeErSettings={activeErSettings} highlightedEntranceId={erHighlightId} {entranceReachability}
             on:openMapForEntrance={e => openMapForEntrance(e.detail.entranceId)}
           />
         {:else}

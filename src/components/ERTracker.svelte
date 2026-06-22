@@ -25,6 +25,19 @@
     localStorage.getItem('erSettings') ?? JSON.stringify(defaultErSettings)
   );
 
+  // When App.svelte pushes a full manualErSettings replacement (e.g. on file import),
+  // overwrite the local copy and persist it. Uses the same change-detection pattern as spoilerExtraEr.
+  export let importedManualErSettings: ErSettings | null = null;
+  let _lastImportedEr = JSON.stringify(importedManualErSettings);
+  $: {
+    const s = JSON.stringify(importedManualErSettings);
+    if (s !== _lastImportedEr && importedManualErSettings) {
+      _lastImportedEr = s;
+      manualErSettings = { ...importedManualErSettings };
+      saveManualErSettings();
+    }
+  }
+
   // When spoilerExtraEr changes, merge sub-type values into manual settings (only once)
   let lastExtraEr = JSON.stringify(spoilerExtraEr);
   $: {
