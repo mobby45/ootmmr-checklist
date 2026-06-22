@@ -31,7 +31,8 @@ export const sharedToOot: Record<string, string[]> = {
   'sh_nayru':          ['nayru'],
   'sh_stone_of_agony': ['agony'],
   'sh_spin_upgrade':   ['oot_spin_upgrade'],
-  'sh_nuts_sticks':    ['sticks_oot', 'nuts_oot'],
+  // sh_nuts_sticks intentionally empty: individual sticks/nuts sync via directSyncPairs below
+  'sh_nuts_sticks':    [],
   'sh_mask_keaton':    ['mask_keaton_oot'],
   'sh_mask_bunny':     ['mask_bunny_oot'],
   'sh_mask_truth':     ['mask_truth_oot'],
@@ -86,7 +87,8 @@ export const sharedToMm: Record<string, string[]> = {
   'sh_nayru':          ['mm_spell_love'],
   'sh_stone_of_agony': ['mm_stone_of_agony'],
   'sh_spin_upgrade':   ['mm_spin_upgrade'],
-  'sh_nuts_sticks':    ['mm_stick', 'mm_nuts'],
+  // sh_nuts_sticks intentionally empty: individual sticks/nuts sync via directSyncPairs below
+  'sh_nuts_sticks':    [],
   'sh_mask_goron':     ['mask_goron'],
   'sh_mask_zora':      ['mask_zora'],
   'sh_mask_keaton':    ['mask_keaton'],
@@ -117,6 +119,9 @@ export const sharedToMm: Record<string, string[]> = {
 
 // Direct OoT↔MM sync pairs for items with no sh_* intermediary (souls, ocarina buttons)
 export const directSyncPairs: [string, string, string][] = [
+  // Deku Sticks / Nuts (sharedNutsSticks bundles them but they track separately)
+  ['sticks_oot', 'mm_stick', 'sharedNutsSticks'],
+  ['nuts_oot',   'mm_nuts',  'sharedNutsSticks'],
   // Ocarina Buttons
   ['button_a',     'mm_button_a',     'sharedOcarinaButtons'],
   ['button_up',    'mm_button_up',    'sharedOcarinaButtons'],

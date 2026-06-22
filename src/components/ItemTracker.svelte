@@ -303,6 +303,32 @@
     ['mm_rk_beneath_graveyard','mm_rk_dampe_house','mm_rk_music_house','mm_rk_blacksmith'],
   ];
 
+  // Cross-game song rows — only show songs whose specific setting is active.
+  // crossGameSongs is too broad (triggered by crossGameSongElegy which doesn't add songs to the pool).
+  $: ootCrossGameSongsRow = ([
+    ['oot_song_healing', 'songHealingOot',   'sharedSongHealing'],
+    ['oot_song_soaring', 'songSoaringOot',   'sharedSongSoaring'],
+    ['oot_song_sonata',  'songAwakeningOot', 'sharedSongSonata'],
+    ['oot_song_lullaby', 'songGoronOot',     'sharedSongLullaby'],
+    ['oot_song_nova',    'songZoraOot',      'sharedSongNova'],
+    ['oot_song_oath',    'songOrderOot',     'sharedSongOath'],
+  ] as [string, string, string][])
+    .filter(([, k1, k2]) => $settingsStore.get(k1) === true || $settingsStore.get(k2) === true)
+    .map(([id]) => id);
+
+  $: mmCrossGameSongsRow = ([
+    ['mm_song_zelda',    'songZeldaLullabyMm', 'sharedSongZeldaLullaby'],
+    ['mm_song_saria',    'songSariasMm',       'sharedSongSaria'],
+    ['mm_song_minuet',   'songMinuetMm',       'sharedSongMinuet'],
+    ['mm_song_bolero',   'songBoleroMm',       'sharedSongBolero'],
+    ['mm_song_serenade', 'songSerenadeMm',     'sharedSongSerenade'],
+    ['mm_song_requiem',  'songRequiemMm',      'sharedSongRequiem'],
+    ['mm_song_nocturne', 'songNocturneMm',     'sharedSongNocturne'],
+    ['mm_song_prelude',  'songPreludeMm',      'sharedSongPrelude'],
+  ] as [string, string, string][])
+    .filter(([, k1, k2]) => $settingsStore.get(k1) === true || $settingsStore.get(k2) === true)
+    .map(([id]) => id);
+
   // OoT
   $: ootSections = [
     {
@@ -335,9 +361,7 @@
       rows: [
         ['oot_song_zelda','oot_song_epona','oot_song_saria','oot_song_sun','oot_song_time','oot_song_storms'],
         ['oot_song_minuet','oot_song_bolero','oot_song_serenade','oot_song_requiem','oot_song_nocturne','oot_song_prelude'],
-        ...($settingsStore.get('crossGameSongs') === true ? [
-          ['oot_song_healing','oot_song_soaring','oot_song_sonata','oot_song_lullaby','oot_song_nova','oot_song_oath'],
-        ] : []),
+        ...(ootCrossGameSongsRow.length > 0 ? [ootCrossGameSongsRow] : []),
       ]
     },
     {
@@ -394,9 +418,7 @@
       rows: [
         ['mm_song_time','mm_song_healing','mm_song_epona','mm_song_soaring','mm_song_storms','mm_song_sun'],
         ['mm_song_sonata','mm_song_lullaby','mm_song_nova','mm_song_elegy','mm_song_oath'],
-        ...($settingsStore.get('crossGameSongs') === true ? [
-          ['mm_song_zelda','mm_song_saria','mm_song_minuet','mm_song_bolero','mm_song_serenade','mm_song_requiem','mm_song_nocturne','mm_song_prelude'],
-        ] : []),
+        ...(mmCrossGameSongsRow.length > 0 ? [mmCrossGameSongsRow] : []),
       ]
     },
     {
