@@ -350,7 +350,22 @@ export async function computeReachabilityOotmm(
   if (_pfCache?.key === cacheKey) {
     pfState = _pfCache.state;
   } else {
+    if ((globalThis as any).__ootmmDebugLogic) {
+      const swordItems = ['OOT_SWORD', 'OOT_SWORD_KOKIRI', 'OOT_SWORD_MASTER', 'OOT_SWORD_BIGGORON'];
+      const stateItems = swordItems.map(k => `${k}:${logicState.items.get(k) ?? 0}`).join(', ');
+      console.log('[logic-debug] logicState.items (swords):', stateItems);
+      console.log('[logic-debug] settings progressiveSwordsOot:', logicState.settings.get('progressiveSwordsOot'), '| extraChildSwordsOot:', logicState.settings.get('extraChildSwordsOot'));
+    }
     const playerItems = toPlayerItems(logicState.items);
+    if ((globalThis as any).__ootmmDebugLogic) {
+      const piSwords: string[] = [];
+      for (const [pi, count] of playerItems.entries()) {
+        if (count > 0 && (pi as any).item?.id?.includes('SWORD')) {
+          piSwords.push(`${(pi as any).item.id}×${count}`);
+        }
+      }
+      console.log('[logic-debug] playerItems (swords):', piSwords.join(', '));
+    }
     const pathfinder = new Pathfinder(worlds, pfSettings, new Map());
     pfState = pathfinder.run(null, { assumedItems: playerItems });
     _pfCache = { key: cacheKey, state: pfState };
