@@ -530,7 +530,7 @@ export const entrancePositions: EntrancePosition[] = [
   { renderscene: 'MM_CLOCK_TOWN_EAST', entranceId: 'MM_ASTRAL_OBSERVATORY_FROM_CLOCK_TOWN_EAST', x: 98, y: 183, targetScene: 'MM_OBSERVATORY_ROOM_1' },
 
   { renderscene: 'MM_LAUNDRY_POOL', entranceId: 'MM_CLOCK_TOWN_SOUTH_FROM_LAUNDRY_POOL', x: 551, y: 18 },
-  { renderscene: 'MM_LAUNDRY_POOL', entranceId: 'MM_KAFEI_HIDEOUT', x: 198, y: 425 },
+  { renderscene: 'MM_LAUNDRY_POOL', entranceId: 'MM_KAFEI_HIDEOUT', x: 198, y: 425, targetScene: 'MM_CURIOSITY_SHOP' },
   { renderscene: 'MM_CURIOSITY_SHOP', entranceId: 'MM_LAUNDRY_POOL_FROM_KAFEI_HIDEOUT', x: 782, y: 173 },
   { renderscene: 'MM_CURIOSITY_SHOP', entranceId: 'MM_CURIOSITY_SHOP_TELESCOPE', x: 600, y: 384 },
   { renderscene: 'MM_CURIOSITY_SHOP', entranceId: 'MM_KAFEI_HIDEOUT_FROM_TELESCOPE', x: 627, y: 384 },

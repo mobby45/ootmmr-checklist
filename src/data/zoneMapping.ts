@@ -402,7 +402,7 @@ export const zoneMapping: Record<string, { game: 'oot' | 'mm'; subscenes: Subsce
     displayName: 'Laundry Pool',
     subscenes: [
       { renderscene: 'MM_LAUNDRY_POOL', displayName: 'Laundry Pool' },
-      
+      { renderscene: 'MM_CURIOSITY_SHOP', displayName: 'Curiosity Shop' },
     ]
   },
 

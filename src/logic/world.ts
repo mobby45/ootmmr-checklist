@@ -94,6 +94,7 @@ function buildWorldGraph(rawRegions: RawWorld): WorldGraph {
       events: raw.events.map(ev => ({
         name: ev.name,
         rule: safeParseExpr(ev.rule, `${raw.name} event:${ev.name}`),
+        rawRule: ev.rule,
       })),
     };
 
@@ -173,6 +174,15 @@ export function resolveEntranceSource(graph: WorldGraph, entranceName: string): 
   return null;
 }
 
+function expandEventRefs(rule: string, eventRules: Map<string, string>, depth = 0): string {
+  if (depth > 4) return rule;
+  return rule.replace(/\bevent\(([^)]+)\)/g, (_, name: string) => {
+    const evRule = eventRules.get(name);
+    if (!evRule) return `event(${name})`;
+    return `(${expandEventRefs(evRule, eventRules, depth + 1)})`;
+  });
+}
+
 // ─── Lazy-loaded singletons ───────────────────────────────────────────────────
 
 let _graph: WorldGraph | null = null;
@@ -203,10 +213,17 @@ export async function loadWorld(): Promise<{ graph: WorldGraph; macros: MacroTab
   _graph  = buildWorldGraph(rawWorld);
   injectEntranceIds(_graph);
 
+  const eventRules = new Map<string, string>();
+  for (const region of _graph.values()) {
+    for (const ev of region.events) {
+      eventRules.set(ev.name, ev.rawRule);
+    }
+  }
+
   _locationRules = new Map<string, string>();
   for (const region of _graph.values()) {
     for (const loc of region.locations) {
-      _locationRules.set(loc.name, loc.rawRule);
+      _locationRules.set(loc.name, expandEventRefs(loc.rawRule, eventRules));
     }
   }
 
@@ -219,7 +236,7 @@ export async function loadWorld(): Promise<{ graph: WorldGraph; macros: MacroTab
     if (!region) continue;
     for (const exit of region.exits) {
       if (exit.target === tgt && exit.rawRule) {
-        _entranceRules.set(entrance.id, exit.rawRule);
+        _entranceRules.set(entrance.id, expandEventRefs(exit.rawRule, eventRules));
         break;
       }
     }

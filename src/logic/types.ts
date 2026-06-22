@@ -45,6 +45,7 @@ export interface WorldExit {
 export interface WorldEvent {
   name: string;
   rule: ExprNode;
+  rawRule: string;
 }
 
 export interface WorldRegion {

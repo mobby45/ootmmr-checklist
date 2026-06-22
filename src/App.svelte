@@ -1884,6 +1884,28 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     });
     return scene ? [scene] : [];
   });
+
+  // Subset of checklistNavScenes that have at least one accessible (in-logic) check
+  $: navScenesWithLogic = (() => {
+    const normalize = (s: string) => s.toLowerCase().replace(/[''']/g, '').replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
+    const result = new Set<string>();
+    for (const g of (sortedChecks ?? [])) {
+      if ((groupCheckCounts[g.groupName]?.accessible ?? 0) === 0) continue;
+      const overrides = (groupToSceneMapping as Record<string, string[]>)[g.groupName];
+      let scene: string | undefined;
+      if (overrides?.length) {
+        scene = overrides.find(s => mapData?.[s]);
+      } else {
+        const np = normalize(g.groupName);
+        scene = Object.keys(mapData ?? {}).find(s => {
+          const ns = normalize(s);
+          return ns === np || ns.replace(/^(oot|mm) /, '') === np;
+        });
+      }
+      if (scene) result.add(scene);
+    }
+    return result;
+  })();
   let showAgeFilter = true;
   // Map modal age filter is driven directly by logicAgeFilter store (no local variable needed)
   let scrollPosition = 0;
@@ -2755,6 +2777,22 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     }
     return result;
   })();
+
+  // Auto-collapse groups that lose all accessible checks when out-of-logic checks are hidden
+  $: if ($logicEnabled && !$showOutOfLogic) {
+    let changed = false;
+    for (const [groupName, counts] of Object.entries(groupCheckCounts)) {
+      if (counts.accessible === 0 && groupStates.get(groupName) === true) {
+        groupStates.set(groupName, false);
+        allGroupStatesMemory.set(groupName, false);
+        changed = true;
+      }
+    }
+    if (changed) {
+      groupStates = new Map(groupStates);
+      localStorage.setItem('groupStates', JSON.stringify([...allGroupStatesMemory]));
+    }
+  }
 
   $: totalCheckCount = trackDep($_checksRevStore, countableChecks?.reduce(
     (acc, group) => {
@@ -5188,6 +5226,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
         groupName={currentGroupName}
         allScenes={matchedScenes}
         navScenes={checklistNavScenes}
+        {navScenesWithLogic}
         allScenesData={mapData}
         checkStates={checkStatesMap}
         {hideChecked}

@@ -23,7 +23,8 @@ import type { EntranceInfo } from '../data/entranceData';
   export let scene: string = '';
   export let sceneData: SceneData;
   export let allScenes: string[] = [scene];
-  export let navScenes: string[] = [];   // checklist-ordered scenes for ‹ › navigation
+  export let navScenes: string[] = [];       // checklist-ordered scenes for ‹ › navigation
+  export let navScenesWithLogic: Set<string> = new Set(); // subset with accessible > 0
   export let allScenesData: MapData | null = null;
   export let checkStates: Map<string, T.CheckState> = new Map();
   export let hideChecked: boolean = false;
@@ -326,10 +327,13 @@ import type { EntranceInfo } from '../data/entranceData';
     'SCRUB_SHOP_POTION_GREEN', 'SCRUB_SHOP_POTION_BLUE',
   ]);
 
+  // Subscenes shared between multiple checklist groups — show all their checks regardless of filteredCheckNames
+  const sharedSubscenes = new Set(['MM_CURIOSITY_SHOP']);
+
   $: filteredChecks = currentData
     ? currentData.checks.filter(check => {
         const nameWithoutPrefix = check.name.replace(/^(OOT|MM) /, '');
-        const matchesName = filteredCheckNames.size === 0 || filteredCheckNames.has(check.name) || filteredCheckNames.has(nameWithoutPrefix);
+        const matchesName = sharedSubscenes.has(currentSubscene) || filteredCheckNames.size === 0 || filteredCheckNames.has(check.name) || filteredCheckNames.has(nameWithoutPrefix);
 
         const matchesAge =
           sceneData.game !== 'oot' ||
@@ -648,7 +652,7 @@ import type { EntranceInfo } from '../data/entranceData';
         for (const check of sub.checks) {
           const key = checkNameMappingReverse[check.name] ?? check.name;
           if ((checkStates.get(key) ?? T.CheckState.unchecked) === T.CheckState.checked) continue;
-          if (_fcn.size > 0 && !_fcn.has(check.name) && !_fcn.has(key)) continue;
+          if (!sharedSubscenes.has(rs) && _fcn.size > 0 && !_fcn.has(check.name) && !_fcn.has(key)) continue;
           if (_le && _lr) {
             const n = key.replace(/^(OOT|MM) /, '');
             if (_lr.disabledChecks.has(n) && !_lr.childChecks.has(n) && !_lr.adultChecks.has(n)) continue;
@@ -927,6 +931,36 @@ import type { EntranceInfo } from '../data/entranceData';
     dragPositions = rest;
   }
 
+  function resolveNavStart(nav: string[]) {
+    let i = nav.indexOf(scene);
+    if (i === -1) { const sib = allScenes.find(s => nav.indexOf(s) !== -1); i = sib ? nav.indexOf(sib) : 0; }
+    return i;
+  }
+
+  function navNext() {
+    const nav = navScenes.length > 1 ? navScenes : allScenes;
+    const i = resolveNavStart(nav);
+    if (navScenesWithLogic.size > 0) {
+      for (let j = 1; j <= nav.length; j++) {
+        const c = nav[(i + j) % nav.length];
+        if (navScenesWithLogic.has(c)) { changeMainScene(c); return; }
+      }
+    }
+    changeMainScene(nav[(i + 1) % nav.length]);
+  }
+
+  function navPrev() {
+    const nav = navScenes.length > 1 ? navScenes : allScenes;
+    const i = resolveNavStart(nav);
+    if (navScenesWithLogic.size > 0) {
+      for (let j = 1; j <= nav.length; j++) {
+        const c = nav[(i - j + nav.length) % nav.length];
+        if (navScenesWithLogic.has(c)) { changeMainScene(c); return; }
+      }
+    }
+    changeMainScene(nav[(i - 1 + nav.length) % nav.length]);
+  }
+
 </script>
 
 <!-- svelte-ignore a11y-click-events-have-key-events -->
@@ -935,9 +969,9 @@ import type { EntranceInfo } from '../data/entranceData';
   <div class="modal-content" on:click|stopPropagation={() => typeDropdownOpen = false}>
     <button type="button" class="close-button" on:click={closeModal}>✕</button>
     <div class="map-title-row">
-      <button type="button" class="nav-btn" on:click={() => { const nav = navScenes.length > 1 ? navScenes : allScenes; let i = nav.indexOf(scene); if (i === -1) { const sib = allScenes.find(s => nav.indexOf(s) !== -1); i = sib ? nav.indexOf(sib) : 0; } changeMainScene(nav[(i - 1 + nav.length) % nav.length]); }} title="Previous zone" disabled={(navScenes.length > 1 ? navScenes : allScenes).length <= 1}>‹</button>
+      <button type="button" class="nav-btn" on:click={navPrev} title="Previous zone" disabled={(navScenes.length > 1 ? navScenes : allScenes).length <= 1}>‹</button>
       <h2>{sceneData.displayName || rendersceneToDisplayName(scene)}</h2>
-      <button type="button" class="nav-btn" on:click={() => { const nav = navScenes.length > 1 ? navScenes : allScenes; let i = nav.indexOf(scene); if (i === -1) { const sib = allScenes.find(s => nav.indexOf(s) !== -1); i = sib ? nav.indexOf(sib) : 0; } changeMainScene(nav[(i + 1) % nav.length]); }} title="Next zone" disabled={(navScenes.length > 1 ? navScenes : allScenes).length <= 1}>›</button>
+      <button type="button" class="nav-btn" on:click={navNext} title="Next zone" disabled={(navScenes.length > 1 ? navScenes : allScenes).length <= 1}>›</button>
     </div>
 
     {#if allScenes.length > 1}

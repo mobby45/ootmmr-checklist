@@ -230,8 +230,10 @@ $: tooltip = [
       background-image: linear-gradient(rgba(200,50,50,0.11), rgba(200,50,50,0.11));
     }
     &.out-of-logic:not(.checked) {
-      opacity: 0.38;
       filter: grayscale(0.4);
+      & > *:not(.rule-popup) {
+        opacity: 0.38;
+      }
     }
     &.logic-child:not(.checked) {
       box-shadow: 0 0 0 1px rgba(90, 176, 255, 0.6);
@@ -310,6 +312,10 @@ $: tooltip = [
     cursor: pointer;
     line-height: 1;
     &:hover { color: #9fcfff; border-color: #9fcfff; }
+  }
+
+  .check-item:has(.rule-popup) {
+    z-index: 10;
   }
 
   .rule-popup {
