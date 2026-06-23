@@ -63,6 +63,7 @@
 
   import CheckGroup from './components/CheckGroup.svelte';
   import { initLogicStore, logicEnabled, showOutOfLogic, logicAgeFilter, logicResult, logicLoading, logicManualSettings, specialConditionsStore, enabledTricks, locationRulesStore } from './stores/logicStore';
+  import { initAutotrack, autotrackStatus } from './stores/autotrackStore';
   import { defaultLogicSettings } from './data/logicSettingsDef';
   import { TRICKS_DEFS } from './data/tricksDef';
   const _validTrickIds = new Set(TRICKS_DEFS.map(t => t.id));
@@ -391,6 +392,7 @@ yKeepalive.observe((event: any) => {
     logicEnabled.set(false);
   }
   initLogicStore(yItems, ySettings, yEntrances, _itemsRevStore, sSettings, sEntrances, ySongEvents, yShopPrices);
+  initAutotrack(yItems);
 
   // Sync all logic manual settings to ySettings so the OBS overlay can read them.
   // Wrapped in a Yjs transaction so all mutations emit a single observer event instead
@@ -3323,6 +3325,15 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
       const { appSettings, clearedKeys, startingItems, tricks, unmapped, junkLocations, derivedConditions } = await importRandomizerSettings(randoImportStr);
       Object.entries(appSettings).forEach(([k, v]) => ySettings.set(k, v));
       for (const k of clearedKeys) ySettings.delete(k);
+      // Keep logicManualSettings in sync so the reactive $: block doesn't overwrite
+      // ySettings with stale values when the user next touches the settings panel.
+      const _lmsDefaults = defaultLogicSettings();
+      logicManualSettings.update(current => {
+        const next = { ...current };
+        for (const [k, v] of Object.entries(appSettings)) { if (k in next) next[k] = v; }
+        for (const k of clearedKeys) { if (k in next) next[k] = _lmsDefaults[k]; }
+        return next;
+      });
       const validTricks = tricks.filter(id => _validTrickIds.has(id));
       if (validTricks.length > 0) enabledTricks.set(new Set(validTricks));
       for (const [itemId, level] of Object.entries(startingItems)) {
@@ -3338,6 +3349,8 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
         manualConditions = merged;
         localStorage.setItem('manualConditions', JSON.stringify(merged));
       }
+      // New seed — entrance assignments from the previous run are invalid.
+      [...yEntrances.keys()].forEach(k => yEntrances.delete(k));
       randoImportOk = true;
       randoImportStr = '';
       if (unmapped.length) console.info('Unmapped settings:', unmapped);
@@ -3376,7 +3389,10 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
         if (data.items) Object.entries(data.items).forEach(([k, v]) => yItems.set(k, v as number));
         if (data.shopItems) Object.entries(data.shopItems).forEach(([k, v]) => yShopItems.set(k, v as string));
         if (data.shopPrices) Object.entries(data.shopPrices).forEach(([k, v]) => yShopPrices.set(k, v as number));
-        if (data.entrances) Object.entries(data.entrances).forEach(([k, v]) => yEntrances.set(k, v as string));
+        if (data.entrances) {
+          [...yEntrances.keys()].forEach(k => yEntrances.delete(k));
+          Object.entries(data.entrances).forEach(([k, v]) => yEntrances.set(k, v as string));
+        }
         if (data.notes) Object.entries(data.notes).forEach(([k, v]) => yNotes.set(k, v as string));
         if (Array.isArray(data.hints) && data.hints.length > 0) {
           yHints.delete(0, yHints.length);
