@@ -3323,6 +3323,15 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
       const { appSettings, clearedKeys, startingItems, tricks, unmapped, junkLocations, derivedConditions } = await importRandomizerSettings(randoImportStr);
       Object.entries(appSettings).forEach(([k, v]) => ySettings.set(k, v));
       for (const k of clearedKeys) ySettings.delete(k);
+      // Keep logicManualSettings in sync so the reactive $: block doesn't overwrite
+      // ySettings with stale values when the user next touches the settings panel.
+      const _lmsDefaults = defaultLogicSettings();
+      logicManualSettings.update(current => {
+        const next = { ...current };
+        for (const [k, v] of Object.entries(appSettings)) { if (k in next) next[k] = v; }
+        for (const k of clearedKeys) { if (k in next) next[k] = _lmsDefaults[k]; }
+        return next;
+      });
       const validTricks = tricks.filter(id => _validTrickIds.has(id));
       if (validTricks.length > 0) enabledTricks.set(new Set(validTricks));
       for (const [itemId, level] of Object.entries(startingItems)) {

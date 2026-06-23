@@ -832,6 +832,7 @@ export async function importRandomizerSettings(str: string): Promise<{
   if (!('bossKeyOotEnabled' in appSettings)) clearedKeys.push('bossKeyOotEnabled');
   if (!('bossKeyMmEnabled' in appSettings)) clearedKeys.push('bossKeyMmEnabled');
   if (!('songEventShuffle' in appSettings)) clearedKeys.push('songEventShuffle');
+  if (!('crossGameSongs' in appSettings)) clearedKeys.push('crossGameSongs');
 
   const derivedConditions = deriveSpecialConditions(raw);
   // OoTMM hash may provide pre-computed specialConds with coin flags (coinsRed, coinsBlue, etc.)
