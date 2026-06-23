@@ -2217,7 +2217,12 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
   // Each shuffle setting independently controls a subset of checks.
   // ==========================================
   // Reactive item snapshots for checkPredicate (must reference $_itemsRevStore to stay in sync)
-  $: _hasMmSongOfTime = ($_itemsRevStore, (yItems.get('mm_song_time') ?? 0) > 0 || (yItems.get('sh_song_time') ?? 0) > 0);
+  // MM Song of Time gate: true when MM checks should be visible without logic restriction.
+  // With moonCrash=cycle (new cycle), MM is always accessible — no Song of Time needed.
+  // With moonCrash=reset (last save), requires Song of Time AND an ocarina to play it.
+  $: _mmNewCycle = ($logicManualSettings.moonCrash ?? 'cycle') === 'cycle' || ($sSettings.get('moonCrash') ?? 'cycle') === 'cycle';
+  $: _hasMmOcarina = ($_itemsRevStore, (yItems.get('ocarina') ?? 0) > 0 || (yItems.get('mm_ocarina') ?? 0) > 0 || (yItems.get('sh_ocarina') ?? 0) > 0);
+  $: _hasMmSongOfTime = _mmNewCycle || (($_itemsRevStore, (yItems.get('mm_song_time') ?? 0) > 0 || (yItems.get('sh_song_time') ?? 0) > 0) && _hasMmOcarina);
   $: _hasMmWallet     = ($_itemsRevStore, (yItems.get('mm_wallet') ?? 0) > 0 || (yItems.get('shared_wallet') ?? 0) > 0);
 
   $: checkPredicate = (group: T.CheckGroup, check: T.Check, ignoreHide = false) => {
@@ -2587,9 +2592,9 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     if (check.game === T.Game.oot && ["Zelda's Letter", "Zelda's Song"].includes(checkName))
       matchesSkipZelda = !($sSettings.get('SkipChildZeldaOOT') ?? false);
 
-    // --- MM Song of Time gate: hide all MM checks until Song of Time is tracked ---
-    // Only applies when logic is enabled — with logic off the user wants to see everything.
-    // Exceptions: Clock Tower Roof (accessible as Deku Scrub) and Initial Song of Healing
+    // --- MM access gate: hide MM checks until the cycle reset method is satisfied ---
+    // New Cycle (moonCrash=cycle): always open. Last Save (moonCrash=reset): needs Song of Time + Ocarina.
+    // Only applies when logic is enabled. Exceptions: Clock Tower Roof and Initial Song of Healing.
     let matchesMmSongOfTime = true;
     if ($logicEnabled && check.game === T.Game.mm && !_hasMmSongOfTime) {
       const isClockTowerRoof   = check.scene === 'MM_CLOCK_TOWER_ROOFTOP';
