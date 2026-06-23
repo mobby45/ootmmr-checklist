@@ -4345,6 +4345,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
           {#if connectionProvider != null}
             <span>&nbsp; (Connected to room: <code class="room-code-copy" title="Click to copy">{roomCodeCopied ? '✓' : roomBaseCode}</code> {roomHasPassword ? '🔒' : '🔓'})</span>
           {/if}
+          <span class="autotrack-badge autotrack-{$autotrackStatus}" title="Autotracker: {$autotrackStatus}">AT</span>
           <button type="button" class="undo-btn" on:click|stopPropagation={undo} disabled={isWatchMode || !canUndo} title="Undo (Ctrl+Z)">↩ Undo</button>
           <button type="button" class="undo-btn" on:click|stopPropagation={redo} disabled={isWatchMode || !canRedo} title="Redo (Ctrl+Y)">↪ Redo</button>
         </summary>
@@ -5556,6 +5557,35 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     margin: 0.8em;
   }
 
+  .autotrack-badge {
+    margin-left: 0.6em;
+    padding: 0.15em 0.45em;
+    font-size: 0.75em;
+    font-weight: bold;
+    border-radius: 4px;
+    vertical-align: middle;
+    letter-spacing: 0.05em;
+    border: 1px solid currentColor;
+    opacity: 0.5;
+    transition: opacity 0.3s, color 0.3s;
+  }
+  .autotrack-badge.autotrack-connected {
+    color: #4caf50;
+    opacity: 1;
+  }
+  .autotrack-badge.autotrack-connecting {
+    color: #ff9800;
+    opacity: 0.85;
+    animation: autotrack-pulse 1s ease-in-out infinite;
+  }
+  .autotrack-badge.autotrack-disconnected {
+    color: var(--color-text);
+    opacity: 0.3;
+  }
+  @keyframes autotrack-pulse {
+    0%, 100% { opacity: 0.85; }
+    50%       { opacity: 0.4; }
+  }
   .undo-btn {
     margin-left: 0.5em;
     padding: 0.2em 0.6em;

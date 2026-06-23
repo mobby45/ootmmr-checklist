@@ -99,9 +99,10 @@ sealed class MemoryPoller
 
     void DetectActiveGame()
     {
-        // Read magic from each game's gSaveContext to determine which is loaded.
-        var ootMagic = _mem!.ReadString(N64Addresses.SaveContextOot, 6);
-        var mmMagic  = _mem.ReadString(N64Addresses.SaveContextMm,  6);
+        // "ZELDAZ"/"ZELDA3" sits inside OotSave.info.playerData.newf / MmSave.info.playerData.newf,
+        // which are at fixed offsets from gSaveContext, not at byte 0.
+        var ootMagic = _mem!.ReadString(N64Addresses.SaveContextOot + (uint)N64Addresses.OotSave.MagicOffset, 6);
+        var mmMagic  = _mem.ReadString (N64Addresses.SaveContextMm  + (uint)N64Addresses.MmSave.MagicOffset,  6);
 
         bool ootValid = ootMagic == N64Addresses.SaveMagicOot;
         bool mmValid  = mmMagic  == N64Addresses.SaveMagicMm;
