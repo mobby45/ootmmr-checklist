@@ -435,13 +435,15 @@
               </span>
               <span class="er-name" title={rowEnt.name}>{rowEnt.name}</span>
               {#if $entranceRulesStore.has(rowEnt.id)}
-                <button type="button" class="er-rule-btn" title="Logic rule" on:click|stopPropagation={() => showRuleId = showRuleId === rowEnt.id ? null : rowEnt.id}>ⓘ</button>
-                {#if showRuleId === rowEnt.id}
-                  <div class="er-rule-popup" role="tooltip">
-                    <code>{$entranceRulesStore.get(rowEnt.id)}</code>
-                    <button type="button" class="er-rule-close" on:click|stopPropagation={() => showRuleId = null}>✕</button>
-                  </div>
-                {/if}
+                <span class="er-rule-wrap">
+                  <button type="button" class="er-rule-btn" title="Logic rule" on:click|stopPropagation={() => showRuleId = showRuleId === rowEnt.id ? null : rowEnt.id}>ⓘ</button>
+                  {#if showRuleId === rowEnt.id}
+                    <div class="er-rule-popup" role="tooltip">
+                      <code>{$entranceRulesStore.get(rowEnt.id)}</code>
+                      <button type="button" class="er-rule-close" on:click|stopPropagation={() => showRuleId = null}>✕</button>
+                    </div>
+                  {/if}
+                </span>
               {/if}
               {#if entranceHasMap.has(rowEnt.id)}
                 <button type="button" class="er-map-btn" title="Open map" on:click={() => dispatch('openMapForEntrance', { entranceId: rowEnt.id })}>🗺️</button>
@@ -914,6 +916,11 @@
   @media screen and (max-width: 768px) {
     .er-input-wrap { width: 140px; }
     .er-name { max-width: 150px; }
+  }
+
+  .er-rule-wrap {
+    position: relative;
+    flex-shrink: 0;
   }
 
   .er-rule-btn {
