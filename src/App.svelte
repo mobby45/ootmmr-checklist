@@ -63,6 +63,7 @@
 
   import CheckGroup from './components/CheckGroup.svelte';
   import { initLogicStore, logicEnabled, showOutOfLogic, logicAgeFilter, logicResult, logicLoading, logicManualSettings, specialConditionsStore, enabledTricks, locationRulesStore } from './stores/logicStore';
+  import { initAutotrack, autotrackStatus } from './stores/autotrackStore';
   import { defaultLogicSettings } from './data/logicSettingsDef';
   import { TRICKS_DEFS } from './data/tricksDef';
   const _validTrickIds = new Set(TRICKS_DEFS.map(t => t.id));
@@ -391,6 +392,7 @@ yKeepalive.observe((event: any) => {
     logicEnabled.set(false);
   }
   initLogicStore(yItems, ySettings, yEntrances, _itemsRevStore, sSettings, sEntrances, ySongEvents, yShopPrices);
+  initAutotrack(yItems);
 
   // Sync all logic manual settings to ySettings so the OBS overlay can read them.
   // Wrapped in a Yjs transaction so all mutations emit a single observer event instead
@@ -3347,6 +3349,8 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
         manualConditions = merged;
         localStorage.setItem('manualConditions', JSON.stringify(merged));
       }
+      // New seed — entrance assignments from the previous run are invalid.
+      [...yEntrances.keys()].forEach(k => yEntrances.delete(k));
       randoImportOk = true;
       randoImportStr = '';
       if (unmapped.length) console.info('Unmapped settings:', unmapped);
@@ -3385,7 +3389,10 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
         if (data.items) Object.entries(data.items).forEach(([k, v]) => yItems.set(k, v as number));
         if (data.shopItems) Object.entries(data.shopItems).forEach(([k, v]) => yShopItems.set(k, v as string));
         if (data.shopPrices) Object.entries(data.shopPrices).forEach(([k, v]) => yShopPrices.set(k, v as number));
-        if (data.entrances) Object.entries(data.entrances).forEach(([k, v]) => yEntrances.set(k, v as string));
+        if (data.entrances) {
+          [...yEntrances.keys()].forEach(k => yEntrances.delete(k));
+          Object.entries(data.entrances).forEach(([k, v]) => yEntrances.set(k, v as string));
+        }
         if (data.notes) Object.entries(data.notes).forEach(([k, v]) => yNotes.set(k, v as string));
         if (Array.isArray(data.hints) && data.hints.length > 0) {
           yHints.delete(0, yHints.length);
