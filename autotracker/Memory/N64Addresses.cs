@@ -37,6 +37,49 @@ static class N64Addresses
         public const int SceneFlags  = 0xD4; // struct[124]
     }
 
+    // Payload BSS scan — OoT combo payload starts at 0x80400000.
+    // We scan for the payload copy of gMmSave (distinct from SaveContextMm at 0x801EF670)
+    // by looking for "ZELDA3" at offset +0x24 (MmSave.info.playerData.newf) from a
+    // 16-byte aligned address. gSharedCustomSave sits at gMmSave_payload + sizeof(MmSave).
+    // OoT payload BSS: scan for payload gMmSave ("ZELDA3" at +0x24, 16-byte aligned).
+    // gSharedCustomSave follows at +sizeof(MmSave) = +0x3CA0.
+    public const uint PayloadOotStart           = 0x80400000u;
+    public const uint PayloadOotEnd             = 0x80720000u; // MM payload start
+    public const int  PayloadMmSaveMagicOffset  = 0x24;        // "ZELDA3" offset in MmSave
+    public const int  PayloadMmSaveSize         = 0x3CA0;      // sizeof(MmSave) → offset to SharedCustomSave
+    public const int  SharedCustomSaveSongOff   = 0x362;       // hasSong* byte in OotCustomSave (= SharedCustomSave.oot)
+
+    // MM payload BSS: scan for payload gOotSave ("ZELDAZ" at +0x1C, 16-byte aligned).
+    public const uint PayloadMmStart            = 0x80720000u;
+    public const uint PayloadMmEnd              = 0x80800000u; // RDRAM ceiling
+    public const int  PayloadOotSaveMagicOffset = 0x1C;        // "ZELDAZ" offset in OotSave
+
+    // gComboConfig scan + read (OoT payload BSS).
+    // Identified by: byte[0]=playerId(1-8), bytes[1-3]=0x00 (padding), bytes[4-5]=0x00 (high
+    // bytes of dungeonWarps[0] u32 — entrance IDs < 0x10000 so upper bytes are always 0).
+    //
+    // We read the full ComboConfig header (0x12C = 300 bytes from offset 0) to include:
+    //   dungeonWarps[12]   u32[12] at offset   4 (48 bytes)
+    //   dungeonEntrances[26] u32[26] at offset 52 (104 bytes) ← shuffled dungeon ER mappings
+    //   mq, preCompleted   u32[2]  at offset 156 (8 bytes)
+    //   entrancesSong[6]   u32[6]  at offset 164 (24 bytes)
+    //   entrancesOwl[10]   u32[10] at offset 188 (40 bytes)
+    //   entrancesSpawns[2] u32[2]  at offset 228 (8 bytes)
+    //   config[0x40]       u8[64]  at offset 236 (64 bytes = 512 confvar bits)
+    public const int ComboConfigReadOffset        = 0;     // read from start of gComboConfig
+    public const int ComboConfigReadSize          = 0x12C; // 300 bytes = up to end of config[0x40]
+    public const int ComboConfigDungeonEntrOff    = 52;    // offset of dungeonEntrances[26] in buffer
+    public const int ComboConfigDungeonEntrCount  = 26;
+    public const int ComboConfigBitsOff           = 0xEC;  // offset of config[0x40] in buffer
+
+    // gMmSave candidate validation offsets.
+    // After Save_CreateMM(), playerForm is set to 4 (init marker, never used in real gameplay).
+    // playerName in gMmSave is copyName(gSave.info.playerData.playerName) — used to cross-check
+    // that the found "ZELDA3" belongs to the current session, not stale PJ64 RDRAM from a prior one.
+    public const int OotPlayerNameOff  = 0x24; // OotSave.info.playerData.playerName (after newf[6]+deathCount[2])
+    public const int MmPlayerFormOff   = 0x20; // MmSave.playerForm u8 (set to 4 by Save_CreateMM)
+    public const int MmPlayerNameOff   = 0x2C; // MmSave.info.playerData.playerName (0x24 info + 0x08 after newf+songOfTimeCount)
+
     // MM gSaveContext offsets (from SaveContextMm).
     // Source: ASSERT_OFFSET macros in include/combo/mm/save.h
     // MmSave.entrance is at 0x00; MmSave.info (MmSaveInfo) is at 0x24.
@@ -52,4 +95,29 @@ static class N64Addresses
         public const int DungItems   = 0xC0;  // u8[10]  MmDungeonItems
         public const int DungKeys    = 0xCA;  // s8[9]
     }
+
+    // Permanent scene flags — OotPermanentSceneFlags/MmPermanentSceneFlags are both 0x1C bytes.
+    // chest u32 is at offset 0 within each block.
+    // OoT: OotSave.SceneFlags at OotSave+0xD4 = SaveContextOot+0xD4, 124 scenes.
+    // MM:  MmSave.info.permanentSceneFlags at MmSave+0x24(info)+0xD2(perm) = SaveContextMm+0xF6, 120 scenes.
+    //      Derivation: MmSaveInfo.playerData(0x28)+itemEquips(0x24)+inventory(0x86) = 0xD2 from MmSaveInfo.
+    public const uint OotSceneFlagsAddr = SaveContextOot + 0xD4;
+    public const int  OotSceneFlagsSize = 124 * 0x1C; // 0x89C
+    public const uint MmSceneFlagsAddr  = SaveContextMm + 0xF6;
+    public const int  MmSceneFlagsSize  = 120 * 0x1C; // 0x870
+
+    // Live OoT/MM scene flags — play->actorCtx.flags.chest, updated immediately on chest open.
+    // Both games keep permanent flags in gSaveContext and only sync at scene exit.
+    // PlayState addresses are static BSS symbols at fixed ROM locations (NTSC 1.0).
+    // OoTMM does not shift these — additions (SaveContextMm, payload) are appended after vanilla BSS.
+    //
+    // Offsets from tlt/packs/ootmm/src/autotracker/rawFrameParser.ts and
+    // OOTMMCombo-Tracker/PJ64Tracking/PJ64OoTMMTracker/Hooking.h:
+    //   OoT: gGlobalCtx=0x801C84A0, sceneId@+0xA4=0x801C8544, chest@+0x1D38
+    //   MM:  gGlobalCtx=0x803E6B20, sceneId@+0xA4=0x803E6BC4, chest@+0x1E68
+    public const uint OotPlayStateAddr     = 0x801C84A0u;
+    public const uint MmPlayStateAddr      = 0x803E6B20u;
+    public const int  PlayStateSceneOff    = 0x0A4;        // play->sceneId (u16 big-endian) — same offset in both games
+    public const int  OotPlayStateChestOff = 0x1D38;       // OoT play->actorCtx.flags.chest (u32)
+    public const int  MmPlayStateChestOff  = 0x1E68;       // MM  play->actorCtx.flags.chest (u32)
 }

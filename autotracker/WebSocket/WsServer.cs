@@ -11,6 +11,10 @@ sealed class WsServer
     readonly List<System.Net.WebSockets.WebSocket> _clients = [];
     readonly SemaphoreSlim _lock = new(1, 1);
 
+    // Called on the WebSocket accept task each time a new client connects.
+    // Used to trigger a snapshot reset in MemoryPoller so all current state is re-broadcast.
+    public Action? OnClientConnected { get; set; }
+
     public WsServer(int port = 8338)
     {
         _port = port;
@@ -52,6 +56,7 @@ sealed class WsServer
         _lock.Release();
 
         Console.WriteLine($"[autotracker] Client connected ({_clients.Count} total)");
+        OnClientConnected?.Invoke();
 
         try
         {

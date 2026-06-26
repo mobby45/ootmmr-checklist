@@ -6,6 +6,7 @@ Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
 var server = new WsServer(port: 8338);
 var poller = new MemoryPoller(msg => _ = server.BroadcastAsync(msg));
+server.OnClientConnected = poller.RequestReset;
 
 Console.WriteLine("OoTMM Autotracker — press Ctrl+C to exit");
 
