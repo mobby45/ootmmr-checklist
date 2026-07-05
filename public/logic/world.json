@@ -22930,7 +22930,7 @@
       },
       {
         "name": "Graveyard Sell Spooky Mask",
-        "rule": "is_child && soul_bombers && has(MASK_SPOOKY)"
+        "rule": "is_child && soul_bombers && (has(MASK_SPOOKY) || has(SHARED_MASK_SPOOKY))"
       },
       {
         "name": "Graveyard Crate HP",
@@ -27933,7 +27933,7 @@
       },
       {
         "name": "Lost Woods Sell Skull Mask",
-        "rule": "is_child && can_play_saria && has(MASK_SKULL)"
+        "rule": "is_child && can_play_saria && (has(MASK_SKULL) || has(SHARED_MASK_SKULL))"
       },
       {
         "name": "Lost Woods Memory Game",
@@ -28391,7 +28391,7 @@
     "locations": [
       {
         "name": "Deku Theater Sticks Upgrade",
-        "rule": "age_child_trade && has(MASK_SKULL)"
+        "rule": "age_child_trade && (has(MASK_SKULL) || has(SHARED_MASK_SKULL))"
       },
       {
         "name": "Deku Theater Nuts Upgrade",
@@ -34085,7 +34085,7 @@
       },
       {
         "target": "Pirate Fortress Entrance",
-        "rule": "can_reset_time_dungeon"
+        "rule": "can_reset_time_dungeon && can_swim_mm"
       }
     ],
     "locations": [],
@@ -34654,7 +34654,7 @@
     "events": [
       {
         "name": "FORTRESS_BEEHIVE",
-        "rule": "has_mask_stone_mm && can_hookshot_short && (has_arrows_mm || can_use_deku_bubble || can_use_slingshot_mm)"
+        "rule": "(has_mask_stone_mm || has_mask_gerudo) && can_hookshot_short && (has_arrows_mm || can_use_deku_bubble || can_use_slingshot_mm)"
       },
       {
         "name": "ZORA_EGGS_HOOKSHOT_ROOM",
@@ -35040,6 +35040,18 @@
     ],
     "locations": [
       {
+        "name": "Secret Shrine Pot Entrance 1",
+        "rule": "true"
+      },
+      {
+        "name": "Secret Shrine Pot Entrance 2",
+        "rule": "true"
+      },
+      {
+        "name": "Secret Shrine Pot Entrance 3",
+        "rule": "true"
+      },
+      {
         "name": "Secret Shrine Grass Entrance 1",
         "rule": "true"
       },
@@ -35204,40 +35216,28 @@
         "rule": "soul_poe_collector && event(SECRET_SHRINE_DINOLFOS) && event(SECRET_SHRINE_WIZZROBE) && event(SECRET_SHRINE_WART) && event(SECRET_SHRINE_GARO)"
       },
       {
-        "name": "Secret Shrine Pot 1",
-        "rule": "true"
+        "name": "Secret Shrine Pot Underwater 1",
+        "rule": "has_mask_zora || has_boomerang || (can_swim_or_sink && (has_arrows_mm || can_hookshot_short || can_use_slingshot_mm))"
       },
       {
-        "name": "Secret Shrine Pot 2",
-        "rule": "true"
+        "name": "Secret Shrine Pot Underwater 2",
+        "rule": "has_mask_zora || has_boomerang || (can_swim_or_sink && (has_arrows_mm || can_hookshot_short || can_use_slingshot_mm))"
       },
       {
-        "name": "Secret Shrine Pot 3",
-        "rule": "true"
+        "name": "Secret Shrine Pot Underwater 3",
+        "rule": "has_mask_zora || has_boomerang || (can_swim_or_sink && (has_arrows_mm || can_hookshot_short || can_use_slingshot_mm))"
       },
       {
-        "name": "Secret Shrine Pot 4",
-        "rule": "true"
+        "name": "Secret Shrine Pot Underwater 4",
+        "rule": "has_mask_zora || has_boomerang || (can_swim_or_sink && (has_arrows_mm || can_hookshot_short || can_use_slingshot_mm))"
       },
       {
-        "name": "Secret Shrine Pot 5",
-        "rule": "true"
+        "name": "Secret Shrine Pot Underwater 5",
+        "rule": "has_mask_zora || has_boomerang || (can_swim_or_sink && (has_arrows_mm || can_hookshot_short || can_use_slingshot_mm))"
       },
       {
-        "name": "Secret Shrine Pot 6",
-        "rule": "true"
-      },
-      {
-        "name": "Secret Shrine Pot 7",
-        "rule": "true"
-      },
-      {
-        "name": "Secret Shrine Pot 8",
-        "rule": "true"
-      },
-      {
-        "name": "Secret Shrine Pot 9",
-        "rule": "true"
+        "name": "Secret Shrine Pot Underwater 6",
+        "rule": "has_mask_zora || has_boomerang || (can_swim_or_sink && (has_arrows_mm || can_hookshot_short || can_use_slingshot_mm))"
       }
     ],
     "events": [
@@ -36797,7 +36797,7 @@
     "locations": [
       {
         "name": "Stone Tower Temple Entrance Chest",
-        "rule": "has_arrows_mm"
+        "rule": "has_arrows_mm || can_use_slingshot_mm"
       },
       {
         "name": "Stone Tower Temple Entrance Switch Chest",
@@ -41992,7 +41992,7 @@
       },
       {
         "target": "Deku Palace Main",
-        "rule": "has(MASK_DEKU) || trick(MM_PALACE_GUARD_SKIP) || short_hook_anywhere"
+        "rule": "can_enter_deku_palace || trick(MM_PALACE_GUARD_SKIP) || short_hook_anywhere"
       },
       {
         "target": "Deku Palace Upper",
@@ -42217,22 +42217,22 @@
       },
       {
         "target": "Deku Palace Main",
-        "rule": "has(MASK_DEKU)"
+        "rule": "can_enter_deku_palace"
       },
       {
         "target": "Deku Palace Throne To Cage",
-        "rule": "event(RETURN_PRINCESS) && short_hook_anywhere"
+        "rule": "(event(RETURN_PRINCESS) || has_mask_skull) && short_hook_anywhere"
       }
     ],
     "locations": [],
     "events": [
       {
         "name": "PICTURE_DEKU_KING",
-        "rule": "has(PICTOGRAPH_BOX) && has(MASK_DEKU) && soul_npc_mm(SOUL_NPC_DEKU_KING)"
+        "rule": "has(PICTOGRAPH_BOX) && can_enter_deku_palace && soul_npc_mm(SOUL_NPC_DEKU_KING)"
       },
       {
         "name": "RETURN_PRINCESS",
-        "rule": "is_swamp_cleared && has_deku_princess && has(MASK_DEKU) && soul_npc_mm(SOUL_NPC_DEKU_KING)"
+        "rule": "is_swamp_cleared && has_deku_princess && can_enter_deku_palace && soul_npc_mm(SOUL_NPC_DEKU_KING)"
       }
     ]
   },
@@ -43674,7 +43674,7 @@
       },
       {
         "target": "Pirate Fortress",
-        "rule": "true"
+        "rule": "can_swim_mm"
       },
       {
         "target": "SOARING",
@@ -47434,7 +47434,7 @@
       },
       {
         "target": "Road to Ikana Top",
-        "rule": "(soul_poe_collector && (has(MASK_GARO) || has(MASK_GIBDO)) && (can_hookshot_mm || (can_hookshot_short && (trick(MM_HARD_HOOKSHOT) || is_adult_mm)))) || short_hook_anywhere"
+        "rule": "(soul_poe_collector && (has(MASK_GARO) || has(MASK_GIBDO) || (has_mask_spooky && is_night_mm)) && (can_hookshot_mm || (can_hookshot_short && (trick(MM_HARD_HOOKSHOT) || is_adult_mm)))) || short_hook_anywhere"
       },
       {
         "target": "Ikana Graveyard",
