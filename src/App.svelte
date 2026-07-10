@@ -1550,7 +1550,12 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
   // spoilerExtraEr so the ERTracker's sub-type checkboxes reflect the actual seed settings.
   // Resets to null on each new connection, so stale sub-types from a previous seed are cleared.
   $: if ($autotrackErSubTypes !== null) {
-    spoilerExtraEr = { ...(spoilerExtraEr ?? {}), ...$autotrackErSubTypes };
+    const _merged = { ...(spoilerExtraEr ?? {}), ...$autotrackErSubTypes };
+    // alterLostWoodsExits is gated on erOverworld — LW exits only join the ER pool when
+    // erOverworld is active. OoTMM always puts them in gEntrances for routing so the scan
+    // detects them regardless. Without this gate they'd show as active on non-ER seeds.
+    if (!$autotrackErSettings?.erOverworld) _merged.alterLostWoodsExits = false;
+    spoilerExtraEr = _merged;
     localStorage.setItem('spoilerExtraEr', JSON.stringify(spoilerExtraEr));
   } else if ($autotrackErSubTypes === null && $autotrackStatus === 'connected') {
     // New connection — clear autotrack-contributed sub-types so stale data from the previous
