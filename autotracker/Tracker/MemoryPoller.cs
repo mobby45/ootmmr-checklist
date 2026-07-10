@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text.Json;
 using Autotracker.Memory;
 
 namespace Autotracker.Tracker;
@@ -9,8 +10,44 @@ sealed class MemoryPoller
     ProcessMemory? _mem;
     GameState _state = new();
     volatile bool _resetRequested;
+    string? _romVersion; // "dev", "release", or null until detected
+    int _lastShopKey            = -1; // (isOot?0:0x10000)|sceneId — avoids re-scanning same shop visit
+    int   _prevOotLiveSceneId     = -1;
+    int   _ootSceneSettleCounter  = 0;
+    uint? _ootLiveChestBaseline   = null;
+    int   _prevMmLiveSceneId      = -1;
+    int   _mmSceneSettleCounter   = 0;
+    uint? _mmLiveChestBaseline    = null;
+    int   _songEventEmittedSceneOot = -1; // last OoT scene for which song_event_slot was emitted
+    int   _songEventEmittedSceneMm  = -1; // last MM scene for which song_event_slot was emitted
+    const int SceneSettlePolls  = 5; // 5 × 250ms = 1.25s after scene change before trusting chest flags
 
-    const int PollIntervalMs = 100; // 10Hz
+    const int PollIntervalMs = 250; // 4Hz
+    int _gossipScanCooldown    = 0;  // polls remaining before next RDRAM gossip scan
+    int _entranceScanCooldown  = 0;  // polls remaining before next RDRAM entrance scan
+    int _overrideScanCooldown  = 0;  // polls remaining before next RDRAM override table scan
+    Dictionary<uint, string>? _xflagIndex;      // key32 → "game:csvtype:layout", null until loaded
+    bool _xflagIndexLoaded = false;
+
+    // Gossip stone read tracking — session cache of hint keys the player has talked to.
+    // Persists across WebSocket reconnects; cleared only when PJ64 re-attaches (new game session).
+    readonly HashSet<(string game, byte key)> _seenHintKeys = new();
+    bool  _gossipTextWasActive      = false; // edge-trigger for MM: was textId==0x20D0 on last poll?
+    bool  _ootGossipWasActive       = false; // edge-trigger for OoT: was msgMode != 0 on last poll?
+    bool  _reemitSeenHintsNextPoll  = false; // set by ResetSnapshotsForReconnect, consumed by PollGossipStoneRead
+    int   _gossipOotLastSceneId     = -1;    // OoT sceneId last seen by PollGossipStoneRead (for baseline reset)
+    int   _ootGossipSceneSettle     = 0;     // polls to wait after scene change before detecting OoT gossip
+
+    // Altar read tracking — similar to gossip stones but for dungeon reward hint signs.
+    readonly HashSet<(string game, string age)> _seenAltarFlags = new();
+    bool _reemitSeenAltarNextPoll  = false; // set by ResetSnapshotsForReconnect, consumed by PollAltarRead
+    int _pollCount = 0; // poll counter (unused, kept for future use)
+    int  _healthCheckFails   = 0;      // consecutive failed health checks
+    int  _nullAddrLogSkip    = 0;      // rate-limiter for "SharedCustomSaveAddr null" log spam
+    bool _isRdramRelocation = false; // true when health check triggered silent reattach (OoT↔MM)
+    int _reattachAttempts   = 0;    // reattach attempts since RDRAM relocation
+    int  _comboConfigEmitCount = 0;  // consecutive emissions since confirmation (volatility guard)
+    DateTime _comboConfigFirstEmit = DateTime.MinValue;
 
     public MemoryPoller(Action<object> emit)
     {
@@ -33,11 +70,49 @@ sealed class MemoryPoller
                 _mem = TryAttach();
                 if (_mem is null)
                 {
+                    if (_isRdramRelocation)
+                    {
+                        _reattachAttempts++;
+                        if (_reattachAttempts >= 10) // ~20s — treat as real disconnect
+                        {
+                            Console.WriteLine("[autotracker] Reattach after RDRAM relocation timed out — disconnecting.");
+                            _isRdramRelocation = false;
+                            _reattachAttempts  = 0;
+                            _state = new GameState();
+                            _seenHintKeys.Clear();
+                            _reemitSeenHintsNextPoll = false;
+                            _emit(new { type = "disconnected" });
+                        }
+                    }
                     await Task.Delay(2000, ct);
                     continue;
                 }
-                Console.WriteLine("[autotracker] Attached to Project64.");
-                _state = new GameState();
+                _reattachAttempts = 0;
+                if (_isRdramRelocation)
+                {
+                    // OoT↔MM transitions: RDRAM base stays constant but N64 virtual addresses
+                    // all change (OoT vs MM have different BSS layouts). Full rescan is required.
+                    // Skip "disconnected" to avoid a UI flash; "connected" fires once ComboContext
+                    // is found by TryFindComboContext on the next Poll().
+                    _isRdramRelocation    = false;
+                    _comboConfigEmitCount = 0;
+                    _comboConfigFirstEmit = DateTime.MinValue;
+                    _entranceScanCooldown = 0;
+                    _gossipScanCooldown   = 0;
+                    Console.WriteLine("[autotracker] Reattached after game transition — full rescan (no disconnect emitted).");
+                    _state = new GameState();
+                    // Preserve _seenHintKeys: same save session, just crossing to the other game.
+                    _reemitSeenHintsNextPoll = false;
+                }
+                else
+                {
+                    Console.WriteLine("[autotracker] Attached to Project64.");
+                    _comboConfigEmitCount = 0;
+                    _comboConfigFirstEmit = DateTime.MinValue;
+                    _state = new GameState();
+                    _seenHintKeys.Clear();          // new PJ64 session = new game, discard read cache
+                    _reemitSeenHintsNextPoll = false;
+                }
             }
 
             try
@@ -82,20 +157,104 @@ sealed class MemoryPoller
             ResetSnapshotsForReconnect();
         }
 
+        // Health check on every poll (250ms). RDRAM relocation during OoT↔MM transitions
+        // causes all ReadProcessMemory calls to fail on the old base address simultaneously.
+        // 4 consecutive failures (~1s) → reconnect. A single transient failure resets on the
+        // next successful read without reconnecting.
+        _pollCount++;
+        if (_state.ComboContextAddress is not null)
+        {
+            var magic = _mem!.ReadString(_state.ComboContextAddress!.Value, 8);
+            if (magic != "OoT+MM<3")
+            {
+                _healthCheckFails++;
+                if (_healthCheckFails == 1 || _healthCheckFails >= 4)
+                    Console.WriteLine($"[autotracker] Health check #{_healthCheckFails}: ComboContext magic lost — {(magic is null ? "process dead?" : $"got \"{magic}\"")}");
+                if (_healthCheckFails >= 4)
+                {
+                    Console.WriteLine("[autotracker] Health check failed 4× — RDRAM relocation assumed, reattaching silently.");
+                    _healthCheckFails              = 0;
+                    _isRdramRelocation             = true;
+                    _mem!.Dispose();
+                    _mem = null;
+                    return; // preserve _state: N64 virtual addresses stay valid after RDRAM reloc
+                }
+                return; // Skip this poll — RDRAM may be mid-relocation, reads would return garbage
+            }
+            else if (_healthCheckFails > 0)
+            {
+                _healthCheckFails = 0;
+                Console.WriteLine("[autotracker] Health check recovered.");
+            }
+        }
+
         // Ensure ComboContext is located.
         if (_state.ComboContextAddress is null)
         {
             if (!TryFindComboContext()) return;
         }
 
+        CheckPayloadMmSaveStillValid(); // detect RDRAM relocation before scanning
         if      (_state.PayloadMmSaveCandidateAddr is null) TryScanOotPayload();
         else if (_state.PayloadMmSaveAddr          is null) TryValidatePayloadMmSave();
         if (_state.PayloadOotSaveAddr is null) TryScanMmPayload();
-        if (_state.ComboConfigAddr    is null) TryScanComboConfig();
+        if (_state.ComboConfigAddr is null) TryLocateComboConfig();
+
+        // Fallback: if OoT payload scan never found gMmSave (e.g. game started in MM, or PJ64
+        // reconnected in MM mode), use the MM payload's gSharedCustomSave directly if safe.
+        // Safe = fully initialized by comboCreateSave (0xFFFF) OR clean BSS (0x0000).
+        // Rejects partial garbage (0x00F2) from transitional states.
+        if (_state.SharedCustomSaveAddr is null && _state.MmPayloadSharedCustomSaveAddr is not null)
+        {
+            if (IsMmPayloadFallbackSafe())
+            {
+                _state.SharedCustomSaveAddr = _state.MmPayloadSharedCustomSaveAddr;
+                Console.WriteLine("[autotracker] Using MM payload SharedCustomSave as fallback (OoT payload unavailable)");
+            }
+        }
 
         DetectActiveGame();
+
+        // Guard: only poll when a save file is loaded and the active game is known.
+        // DetectActiveGame sets Game=Unknown at title screen / file select (no save magic).
+        if (_state.Game == ActiveGame.Unknown) return;
+
         PollEntrance();
+
+        // Gate: gSaveContext.gameMode is GAMEMODE_NORMAL (0) only during real gameplay.
+        // GAMEMODE_TITLE_SCREEN (1) and GAMEMODE_FILE_SELECT (2) are set during the title/file select.
+        // FileSelect_LoadGame() sets gameMode = GAMEMODE_NORMAL just before transitioning to PlayState.
+        uint gameModeAddr = _state.Game == ActiveGame.Oot
+            ? N64Addresses.SaveContextOot + (uint)N64Addresses.OotGameModeOff
+            : N64Addresses.SaveContextMm  + (uint)N64Addresses.MmGameModeOff;
+        var gameModeRaw = _mem!.Read(gameModeAddr, 4);
+        if (gameModeRaw is null) return;
+        int gameMode = (gameModeRaw[0] << 24) | (gameModeRaw[1] << 16) | (gameModeRaw[2] << 8) | gameModeRaw[3];
+        if (gameMode != N64Addresses.GameModeNormal) return;
+
         PollSaveContext();
+    }
+
+    // Validates native gMmSave (fixed address 0x801EF670) against the current OoT save.
+    // The OoT BSS payload copy may not be synced yet (new game, no MM visit), but native
+    // gMmSave is written by comboCreateSave() at game start and always has starting items.
+    // Only valid when actively playing OoT — in MM mode, 0x801EF670 is OoT BSS.
+    void TryValidateNativeMmSave()
+    {
+        if (_state.NativeMmSaveValidated) return;
+        if (_state.Game != ActiveGame.Oot) return;
+
+        var magic = _mem!.Read(N64Addresses.SaveContextMm + (uint)N64Addresses.MmSave.MagicOffset, 6);
+        if (magic is null || System.Text.Encoding.ASCII.GetString(magic) != N64Addresses.SaveMagicMm) return;
+
+        var ootName      = _mem.Read(N64Addresses.SaveContextOot + (uint)N64Addresses.OotPlayerNameOff, 8);
+        var nativeMmName = _mem.Read(N64Addresses.SaveContextMm  + (uint)N64Addresses.MmPlayerNameOff, 8);
+        if (ootName is null || nativeMmName is null) return;
+        if (!CopyName(ootName).SequenceEqual(nativeMmName)) return;
+
+        _state.NativeMmSaveValidated = true;
+        Console.WriteLine("[autotracker] native gMmSave validated (name match) — mm_save readable in OoT");
+        _emit(new { type = "mm_validated" });
     }
 
     // Phase 1 — scan the OoT payload BSS (0x80400000–0x80720000) for the payload copy of gMmSave.
@@ -105,15 +264,56 @@ sealed class MemoryPoller
     // since it is a separate reliable struct written by OoTMM independently of gMmSave validity.
     void TryScanOotPayload()
     {
+        var magicBytes = System.Text.Encoding.ASCII.GetBytes(N64Addresses.SaveMagicMm);
+
         int scanLen = (int)(N64Addresses.PayloadOotEnd - N64Addresses.PayloadOotStart);
         var buf = _mem!.Read(N64Addresses.PayloadOotStart, scanLen);
-        if (buf is null) return;
-
-        if (ScanForMagic(buf, N64Addresses.PayloadMmSaveMagicOffset, "ZELDA3", out int idx))
+        if (buf is not null)
         {
-            _state.PayloadMmSaveCandidateAddr = N64Addresses.PayloadOotStart + (uint)idx;
-            _state.SharedCustomSaveAddr       = _state.PayloadMmSaveCandidateAddr.Value + (uint)N64Addresses.PayloadMmSaveSize;
-            Console.WriteLine($"[autotracker] OoT payload: gMmSave candidate=0x{_state.PayloadMmSaveCandidateAddr:X8}, gSharedCustomSave=0x{_state.SharedCustomSaveAddr:X8}, validating...");
+            for (int i = 0; i + N64Addresses.PayloadMmSaveMagicOffset + magicBytes.Length <= buf.Length; i += 16)
+            {
+                bool match = true;
+                for (int j = 0; j < magicBytes.Length; j++)
+                    if (buf[i + N64Addresses.PayloadMmSaveMagicOffset + j] != magicBytes[j]) { match = false; break; }
+                if (!match) continue;
+                // Reject candidates where any MM player name byte > 0x40 — valid encoded names
+                // use 0x00–0x40 only. Stale RDRAM from a prior PJ64 session often has out-of-range bytes.
+                bool nameValid = i + N64Addresses.MmPlayerNameOff + 8 <= buf.Length;
+                for (int j = 0; j < 8 && nameValid; j++)
+                    if (buf[i + N64Addresses.MmPlayerNameOff + j] > 0x40) nameValid = false;
+                if (!nameValid) continue;
+                _state.PayloadMmSaveCandidateAddr = N64Addresses.PayloadOotStart + (uint)i;
+                var scAddr = _state.PayloadMmSaveCandidateAddr.Value + (uint)N64Addresses.PayloadMmSaveSize;
+                _state.SharedCustomSaveAddr ??= scAddr;
+                Console.WriteLine($"[autotracker] OoT payload: gMmSave candidate=0x{_state.PayloadMmSaveCandidateAddr:X8}, gSharedCustomSave=0x{scAddr:X8}, validating...");
+                return;
+            }
+        }
+
+        // No match in upper RDRAM — scan lower RDRAM for dev builds where payload BSS starts below 0x80400000.
+        // Skip the native gMmSave at SaveContextMm (handled separately by TryValidateNativeMmSave).
+        const uint lowerScanBase = 0x80100000u;
+        int lowerLen = (int)(N64Addresses.PayloadOotStart - lowerScanBase);
+        var lowerBuf = _mem.Read(lowerScanBase, lowerLen);
+        if (lowerBuf is null) return;
+
+        for (int i = 0; i + N64Addresses.PayloadMmSaveMagicOffset + magicBytes.Length <= lowerBuf.Length; i += 16)
+        {
+            uint candidateAddr = lowerScanBase + (uint)i;
+            if (candidateAddr == N64Addresses.SaveContextMm) continue; // skip native gMmSave
+            bool match = true;
+            for (int j = 0; j < magicBytes.Length; j++)
+                if (lowerBuf[i + N64Addresses.PayloadMmSaveMagicOffset + j] != magicBytes[j]) { match = false; break; }
+            if (!match) continue;
+            bool nameValid = i + N64Addresses.MmPlayerNameOff + 8 <= lowerBuf.Length;
+            for (int j = 0; j < 8 && nameValid; j++)
+                if (lowerBuf[i + N64Addresses.MmPlayerNameOff + j] > 0x40) nameValid = false;
+            if (!nameValid) continue;
+            _state.PayloadMmSaveCandidateAddr = candidateAddr;
+            var scAddr = candidateAddr + (uint)N64Addresses.PayloadMmSaveSize;
+            _state.SharedCustomSaveAddr ??= scAddr;
+            Console.WriteLine($"[autotracker] OoT payload (lower RDRAM): gMmSave candidate=0x{candidateAddr:X8}, gSharedCustomSave=0x{scAddr:X8}, validating...");
+            break;
         }
     }
 
@@ -128,24 +328,38 @@ sealed class MemoryPoller
         if (_state.PayloadMmSaveCandidateAddr is null) return;
         var addr = _state.PayloadMmSaveCandidateAddr.Value;
 
-        // Check 1: playerForm == 4 → Save_CreateMM() was called for this session.
+        // Check 1: playerForm == 4 → Save_CreateMM() was called for this session (fresh init).
         var formBuf = _mem!.Read(addr + (uint)N64Addresses.MmPlayerFormOff, 1);
         if (formBuf is not null && formBuf[0] == 4)
         {
             _state.PayloadMmSaveAddr = addr;
+            _state.SharedCustomSaveAddr = addr + (uint)N64Addresses.PayloadMmSaveSize;
             Console.WriteLine($"[autotracker] gMmSave validated at 0x{addr:X8} (playerForm=4, fresh init)");
             return;
         }
 
-        // Check 2: copyName(OoT player name) == MM player name.
+        // Check 2: copyName(OoT player name) == MM player name (fallback when playerForm is invalid).
         var ootName = _mem.Read(N64Addresses.SaveContextOot + (uint)N64Addresses.OotPlayerNameOff, 8);
         var mmName  = _mem.Read(addr + (uint)N64Addresses.MmPlayerNameOff, 8);
         if (ootName is null || mmName is null) return;
 
-        if (CopyName(ootName).SequenceEqual(mmName))
+        var converted = CopyName(ootName);
+        if (converted.SequenceEqual(mmName))
         {
             _state.PayloadMmSaveAddr = addr;
+            _state.SharedCustomSaveAddr = addr + (uint)N64Addresses.PayloadMmSaveSize;
             Console.WriteLine($"[autotracker] gMmSave validated at 0x{addr:X8} (player name match)");
+        }
+        else
+        {
+            byte pf = formBuf is not null ? formBuf[0] : (byte)0xFF;
+            Console.WriteLine($"[autotracker] gMmSave candidate 0x{addr:X8} rejected: playerForm=0x{pf:X2} ootName=[{BitConverter.ToString(ootName)}] conv=[{BitConverter.ToString(converted)}] mmName=[{BitConverter.ToString(mmName)}]");
+            _state.PayloadMmSaveCandidateAddr = null; // allow re-scan for the next valid candidate
+            // Also clear SharedCustomSaveAddr if it was set from this rejected candidate so the next
+            // candidate can overwrite it. Don't clear if it was set via fallback (MmPayload address).
+            var expectedScAddr = addr + (uint)N64Addresses.PayloadMmSaveSize;
+            if (_state.SharedCustomSaveAddr == expectedScAddr)
+                _state.SharedCustomSaveAddr = null;
         }
     }
 
@@ -168,44 +382,35 @@ sealed class MemoryPoller
         return dst;
     }
 
-    // Scans the OoT payload BSS for gComboConfig.
-    // Heuristic: 16-byte aligned, byte[0]=0x01 (playerId), bytes[1-3]=0x00 (padding),
-    // bytes[4-5]=0x00 (high bytes of dungeonWarps[0] u32 in big-endian — entrance IDs < 0x10000).
-    // Also validates bytes[8-9]=0x00 (high bytes of dungeonWarps[1]) for extra confidence.
-    void TryScanComboConfig()
+    // Locates gComboConfig via its fixed offset from gComboCtx.
+    // gComboConfig (config.c) immediately precedes gComboCtx (context.c) in BSS alphabetically
+    // with nothing in between, so gComboConfig = gComboCtx - sizeof(ComboConfig) = gComboCtx - 0x2EC.
+    void TryLocateComboConfig()
     {
-        int scanLen = (int)(N64Addresses.PayloadOotEnd - N64Addresses.PayloadOotStart);
-        var buf = _mem!.Read(N64Addresses.PayloadOotStart, scanLen);
-        if (buf is null) return;
+        if (_state.ComboContextAddress is null) return;
 
-        for (int i = 0; i + N64Addresses.ComboConfigReadOffset + N64Addresses.ComboConfigReadSize <= buf.Length; i += 16)
+        uint addr = _state.ComboContextAddress.Value - N64Addresses.ComboConfigOffsetFromCtx;
+
+        var buf = _mem!.Read(addr, N64Addresses.ComboConfigReadSizeDev);
+        if (buf is null)
         {
-            if (buf[i]   != 0x01) continue; // playerId = 1 (single world)
-            if (buf[i+1] != 0x00) continue; // padding
-            if (buf[i+2] != 0x00) continue;
-            if (buf[i+3] != 0x00) continue;
-            // dungeonWarps[0..5] high bytes (entrance IDs are < 0x1000, so top 2 bytes = 0)
-            if (buf[i+4]  != 0x00) continue;
-            if (buf[i+5]  != 0x00) continue;
-            if (buf[i+8]  != 0x00) continue;
-            if (buf[i+9]  != 0x00) continue;
-            if (buf[i+12] != 0x00) continue;
-            if (buf[i+13] != 0x00) continue;
-            if (buf[i+16] != 0x00) continue;
-            if (buf[i+17] != 0x00) continue;
-            if (buf[i+20] != 0x00) continue;
-            if (buf[i+21] != 0x00) continue;
-            if (buf[i+24] != 0x00) continue;
-            if (buf[i+25] != 0x00) continue;
-            // mq field (offset 156): only 12 dungeon bits valid — high 20 bits must be 0
-            if (buf[i+156] != 0x00) continue;
-            if ((buf[i+157] & 0xF0) != 0x00) continue;
-
-            _state.ComboConfigAddr = N64Addresses.PayloadOotStart + (uint)i;
-            Console.WriteLine($"[autotracker] Found gComboConfig at 0x{_state.ComboConfigAddr:X8}");
+            Console.WriteLine($"[autotracker] TryLocateComboConfig: read failed at 0x{addr:X8}");
             return;
         }
+
+        // Sanity check: playerId ≤ 8 (singleplayer=0 or 1, multiworld=1-8).
+        if (buf[0] > 0x08)
+        {
+            Console.WriteLine($"[autotracker] TryLocateComboConfig: 0x{addr:X8} playerId=0x{buf[0]:X2} > 8 — struct layout mismatch?");
+            return;
+        }
+
+        _state.ComboConfigAddr = addr;
+        int bitsOff = N64Addresses.ComboConfigBitsOff;
+        int nz = 0; for (int b = 0; b < 64; b++) if (buf[bitsOff + b] != 0) nz++;
+        Console.WriteLine($"[autotracker] gComboConfig at 0x{addr:X8} (gComboCtx-0x2EC) playerId={buf[0]} configNonZero={nz}");
     }
+
 
     // Scans the MM payload BSS (0x80720000–0x80800000) for the payload copy of gOotSave.
     // Identified by "ZELDAZ" at offset +0x1C from a 16-byte aligned address.
@@ -218,8 +423,81 @@ sealed class MemoryPoller
         if (ScanForMagic(buf, N64Addresses.PayloadOotSaveMagicOffset, "ZELDAZ", out int idx))
         {
             _state.PayloadOotSaveAddr = N64Addresses.PayloadMmStart + (uint)idx;
-            Console.WriteLine($"[autotracker] MM payload: gOotSave=0x{_state.PayloadOotSaveAddr:X8}");
+            _state.MmPayloadSharedCustomSaveAddr = _state.PayloadOotSaveAddr.Value + (uint)N64Addresses.PayloadOotSaveSize;
+            Console.WriteLine($"[autotracker] MM payload: gOotSave=0x{_state.PayloadOotSaveAddr:X8}, gSharedCustomSave=0x{_state.MmPayloadSharedCustomSaveAddr:X8}");
         }
+    }
+
+    // Returns true if the SharedCustomSave was fully initialized by comboCreateSave (ocarinaButtonMaskOot == 0xFFFF).
+    // Only valid when ocarina buttons are NOT randomized. Used for coins/souls guards where 0xFFFF signals
+    // comboCreateSave has run. Do NOT use for xflags — see PollOotXflags comment.
+    bool IsSharedCustomSaveInitialized(uint addr)
+    {
+        var btn = _mem!.Read(addr + (uint)N64Addresses.SharedCustomSaveOcarinaBtnOff, 2);
+        return btn is not null && btn[0] == 0xFF && btn[1] == 0xFF;
+    }
+
+    // Convenience wrapper for the MM payload address.
+    bool IsMmPayloadSharedCustomSaveValid() =>
+        _state.MmPayloadSharedCustomSaveAddr is not null
+        && IsSharedCustomSaveInitialized(_state.MmPayloadSharedCustomSaveAddr.Value);
+
+    // Checks if a SharedCustomSave at any address is safe to read from.
+    // Accepts 0xFFFF (fully initialized by comboCreateSave) or 0x0000 (clean BSS — all zeros are
+    // correct default values). Rejects partial garbage (e.g. 0x00F2) seen during transitional
+    // states when PJ64-EM relocates RDRAM and the old address now holds stale data.
+    bool IsSharedCustomSaveTrustworthy(uint addr)
+    {
+        var btn = _mem!.Read(addr + (uint)N64Addresses.SharedCustomSaveOcarinaBtnOff, 2);
+        if (btn is null) return false;
+        return (btn[0] == 0x00 && btn[1] == 0x00) || (btn[0] == 0xFF && btn[1] == 0xFF);
+    }
+
+    // Verifies ZELDA3 is still present at PayloadMmSaveAddr (OoT payload gMmSave) on each poll.
+    // Detects RDRAM relocation by PJ64-EM: if the magic disappeared, clears the validated addresses
+    // so the next scan can re-locate the relocated gMmSave. Called once per poll before scanning.
+    static readonly byte[] _zelda3Bytes = System.Text.Encoding.ASCII.GetBytes("ZELDA3");
+    void CheckPayloadMmSaveStillValid()
+    {
+        if (_state.PayloadMmSaveAddr is null) return;
+        var addr = _state.PayloadMmSaveAddr.Value;
+        var magic = _mem!.Read(addr + (uint)N64Addresses.PayloadMmSaveMagicOffset, _zelda3Bytes.Length);
+        if (magic is not null && magic.SequenceEqual(_zelda3Bytes)) return;
+
+        Console.WriteLine($"[autotracker] ZELDA3 gone at PayloadMmSaveAddr 0x{addr:X8} — RDRAM relocated, re-scanning OoT payload");
+        var expectedScAddr = addr + (uint)N64Addresses.PayloadMmSaveSize;
+        if (_state.SharedCustomSaveAddr == expectedScAddr)
+            _state.SharedCustomSaveAddr = null;
+        _state.PayloadMmSaveAddr        = null;
+        _state.PayloadMmSaveCandidateAddr = null;
+    }
+
+    // Checks if the MM payload's SharedCustomSave is safe to use as a fallback primary source.
+    bool IsMmPayloadFallbackSafe() =>
+        _state.MmPayloadSharedCustomSaveAddr is not null
+        && IsSharedCustomSaveTrustworthy(_state.MmPayloadSharedCustomSaveAddr.Value);
+
+    // Checks if the MM payload's SharedCustomSave is safe for the xflag/npc MERGE operation.
+    // Stricter than IsMmPayloadFallbackSafe: also verifies "ZELDAZ" is still present at
+    // PayloadOotSaveAddr — detects RDRAM relocation by PJ64-EM after a game switch. If ZELDAZ
+    // is gone the addresses are cleared so TryScanMmPayload re-runs on the next poll.
+    static readonly byte[] _zeldazBytes = System.Text.Encoding.ASCII.GetBytes("ZELDAZ");
+    bool ValidateMmPayloadForMerge()
+    {
+        if (_state.PayloadOotSaveAddr is null || _state.MmPayloadSharedCustomSaveAddr is null) return false;
+
+        // Verify ZELDAZ still at gOotSave (MM payload) — guards against RDRAM relocation.
+        var magic = _mem!.Read(_state.PayloadOotSaveAddr.Value + (uint)N64Addresses.PayloadOotSaveMagicOffset,
+                               _zeldazBytes.Length);
+        if (magic is null || !magic.SequenceEqual(_zeldazBytes))
+        {
+            Console.WriteLine($"[autotracker] ZELDAZ gone at 0x{_state.PayloadOotSaveAddr.Value:X8} — RDRAM relocated, re-scanning MM payload");
+            _state.PayloadOotSaveAddr        = null;
+            _state.MmPayloadSharedCustomSaveAddr = null;
+            return false;
+        }
+
+        return IsSharedCustomSaveTrustworthy(_state.MmPayloadSharedCustomSaveAddr.Value);
     }
 
     static bool ScanForMagic(byte[] buf, int magicOffset, string magic, out int index)
@@ -246,22 +524,56 @@ sealed class MemoryPoller
         _state.MmSaveSnapshot                = null;
         _state.PayloadMmSaveSnapshot         = null;
         _state.SharedCustomSaveSnapshot      = null;
+        _state.OotNpcFlagsSnapshot          = null;
         _state.PayloadOotSaveSnapshot        = null;
         _state.ComboConfigSnapshot           = null;
         _state.ComboConfigSignature          = null;
+        _state.SoulsDataSnapshot             = null;
+        _state.MmSkullTokensSnapshot         = null;
+            _state.RustyKeysSnapshot             = null;
+            _state.CoinsSnapshot                 = null;
+            _state.CoinsMaxSnapshot             = null;
+            _state.GossipHintsOotSnapshot        = null;
+        _state.GossipHintsMmSnapshot         = null;
+        _gossipScanCooldown                  = 0;
+        _state.EntranceTableOotSnapshot      = null;
+        _state.EntranceTableMmSnapshot       = null;
+        _entranceScanCooldown                = 0;
+        _state.OverrideTableScanned          = false;
+        _overrideScanCooldown                = 0;
+        _gossipTextWasActive                 = false;
+        _ootGossipWasActive                  = false;
+        _gossipOotLastSceneId                = -1;
+        _ootGossipSceneSettle                = 0;
+        _reemitSeenHintsNextPoll             = true; // re-emit seen keys after gossip_hints is re-emitted
+        _reemitSeenAltarNextPoll             = true; // re-emit altar reads after reconnect
         _state.OotSceneFlagsSnapshot         = null;
         _state.MmSceneFlagsSnapshot          = null;
         _state.OotLiveSceneFlagsSnapshot     = null;
         _state.MmLiveSceneFlagsSnapshot      = null;
+        _prevOotLiveSceneId                  = -1;
+        _ootSceneSettleCounter               = 0;
+        _ootLiveChestBaseline                = null;
+        _prevMmLiveSceneId                   = -1;
+        _mmSceneSettleCounter                = 0;
+        _mmLiveChestBaseline                 = null;
+        _songEventEmittedSceneOot            = -1;
+        _songEventEmittedSceneMm             = -1;
+        _lastShopKey                         = -1;
 
         // Re-emit "connected" so the frontend clears stale items/checks.
         if (_state.ComboContextAddress is not null)
             _emit(new { type = "connected" });
 
+        // Re-emit cached shop data so the frontend can reapply shop hints without re-entering shops.
+        foreach (var cached in _state.ShopDataCache.Values)
+            _emit(cached);
+
         // Force game re-detection so "game: oot/mm" is re-emitted.
-        _state.Game            = ActiveGame.Unknown;
-        _state.OotSaveEntrance = null;
-        _state.MmSaveEntrance  = null;
+        _state.Game                  = ActiveGame.Unknown;
+        _state.OotSaveEntrance       = null;
+        _state.MmSaveEntrance        = null;
+        _state.NativeMmSaveValidated = false;
     }
 
     bool TryFindComboContext()
@@ -282,44 +594,53 @@ sealed class MemoryPoller
         return true;
     }
 
+    // Returns true when OoT's msgCtx.talkActor is a valid En_Gs actor (id=0x1B9).
+    // Used as the oscillation guard: En_Gs overlay loading writes to MM BSS, faking a game switch.
+    bool OotTalkActorIsEnGs()
+    {
+        if (_mem is null) return false;
+        var raw = _mem.Read(N64Addresses.OotPlayStateAddr + (uint)N64Addresses.OotMsgCtxTalkActorOff, 4);
+        if (raw is null) return false;
+        uint ptr = (uint)(raw[0]<<24|raw[1]<<16|raw[2]<<8|raw[3]);
+        if (ptr < 0x80000000u || ptr >= 0x80800000u) return false;
+        var idRaw = _mem.Read(ptr + (uint)N64Addresses.ActorIdOff, 2);
+        if (idRaw is null) return false;
+        return ((idRaw[0] << 8) | idRaw[1]) == (int)N64Addresses.ActorEnGsOot;
+    }
+
     void DetectActiveGame()
     {
-        // gComboCtx.valid is only set to 1 during OoT↔MM transitions (when Context_Init finds
-        // a prior magic in gComboCtxRead). On cold OoT boot it stays 0, so valid is useless
-        // as an "active game" indicator.
-        //
-        // Instead: detect OoT vs MM by watching which save context's entrance field (at
-        // offset 0 in both OotSave and MmSave) changes between polls.  OoT always boots
-        // first in OoTMM, so the first reading while ComboContext is present defaults to Oot.
-        var ootEntr = _mem!.ReadU32(N64Addresses.SaveContextOot);
+        // Detect OoT vs MM by reading save context magic — more reliable than watching scene IDs.
+        // In OoT mode: SaveContextOot+0x1C = "ZELDAZ" (OotSave.info.playerData.newf).
+        //   That address is MM BSS in MM mode — won't contain "ZELDAZ".
+        // In MM mode:  SaveContextMm+0x24 = "ZELDA3" (MmSave.info.playerData.newf).
+        // OoT is checked first: in OoT mode, "ZELDA3" may also appear at SaveContextMm
+        //   (native gMmSave copy synced by TryValidateNativeMmSave), so "ZELDAZ" takes priority.
+        // Magic absent in both → title screen / file select / mid-transition → inactive.
+
+        var ootMagicRaw = _mem!.Read(N64Addresses.SaveContextOot + (uint)N64Addresses.OotSave.MagicOffset, 6);
+        var mmMagicRaw  = _mem.Read(N64Addresses.SaveContextMm   + (uint)N64Addresses.MmSave.MagicOffset,  6);
+        if (ootMagicRaw is null || mmMagicRaw is null) return;
+
+        bool ootMagic = System.Text.Encoding.ASCII.GetString(ootMagicRaw) == N64Addresses.SaveMagicOot;
+        bool mmMagic  = System.Text.Encoding.ASCII.GetString(mmMagicRaw)  == N64Addresses.SaveMagicMm;
+
+        ActiveGame detected = ootMagic ? ActiveGame.Oot
+                            : mmMagic  ? ActiveGame.Mm
+                            :            ActiveGame.Unknown;
+
+        // Update save entrances (used by PollOotSceneFlags, PollEntrance, and player_entrance events).
+        var ootEntr = _mem.ReadU32(N64Addresses.SaveContextOot);
         var mmEntr  = _mem.ReadU32(N64Addresses.SaveContextMm);
-        if (ootEntr is null || mmEntr is null) return;
+        if (ootEntr is not null) _state.OotSaveEntrance = ootEntr;
+        if (mmEntr  is not null) _state.MmSaveEntrance  = mmEntr;
 
-        ActiveGame game;
-        if (_state.OotSaveEntrance is null)
-        {
-            // First poll after attach: OoT always boots first in OoTMM.
-            game = ActiveGame.Oot;
-        }
-        else
-        {
-            bool ootChanged = ootEntr.Value != _state.OotSaveEntrance.Value;
-            bool mmChanged  = mmEntr.Value  != _state.MmSaveEntrance!.Value;
+        if (detected == _state.Game) return;
 
-            if      (ootChanged && !mmChanged) game = ActiveGame.Oot;
-            else if (mmChanged && !ootChanged) game = ActiveGame.Mm;
-            else                               game = _state.Game; // neither or both changed: keep last known
-        }
-
-        _state.OotSaveEntrance = ootEntr;
-        _state.MmSaveEntrance  = mmEntr;
-
-        if (game != _state.Game)
-        {
-            _state.Game = game;
-            Console.WriteLine($"[autotracker] Active game: {game}");
-            _emit(new { type = "game", game = game.ToString().ToLower() });
-        }
+        _state.Game = detected;
+        if (detected == ActiveGame.Unknown) return; // title screen — no event
+        Console.WriteLine($"[autotracker] Active game: {detected}");
+        _emit(new { type = "game", game = detected.ToString().ToLower() });
     }
 
     void PollEntrance()
@@ -332,29 +653,50 @@ sealed class MemoryPoller
         if (entrance != _state.LastEntrance)
         {
             _state.LastEntrance = entrance.Value;
-            Console.WriteLine($"[autotracker] Entrance: 0x{entrance:X4}");
-            _emit(new { type = "entrance", value = entrance.Value });
+            // Log save entrance of the active game alongside combo entrance for cross-game diagnostics.
+            uint? saveEntr = _state.Game == ActiveGame.Mm ? _state.MmSaveEntrance : _state.OotSaveEntrance;
+            Console.WriteLine($"[autotracker] Entrance: 0x{entrance:X4} ({(_state.Game == ActiveGame.Mm ? "mm" : "oot")}Save=0x{saveEntr:X8})");
+            _emit(new { type = "entrance", value = entrance.Value,
+                        game = _state.Game == ActiveGame.Mm ? "mm" : "oot",
+                        saveEntrance = saveEntr ?? 0u });
         }
     }
 
     void PollSaveContext()
     {
+        TryValidateNativeMmSave();
         PollOotSave();
         PollMmSave();
         PollPayloadMmSave();
         PollSharedCustomSave();
+        PollOotNpcFlags();
+        PollOotXflags();
+        PollMmXflags();
+        PollSoulsData();
+        PollRustyKeys();
+        PollCoins();
+        PollMmSkullTokens();
         PollPayloadOotSave();
         PollComboConfig();
+        PollGossipHints();
+        PollGossipStoneRead();
+        PollAltarRead();
+        PollEntranceTable();
+        PollOverrideTable();
         PollOotSceneFlags();
         PollOotLiveSceneFlags();
         PollMmSceneFlags();
         PollMmLiveSceneFlags();
+        PollShopData();
     }
 
     void PollOotSave()
     {
-        // Read a chunk of gSaveContext large enough to cover inventory + quest items.
-        const int saveChunkSize = 0x200;
+        // Gate on OoT: in MM mode, 0x8011A5D0 is MM BSS, not the OoT save.
+        // OoT items obtained in MM are covered by PollPayloadOotSave (payload_oot_save).
+        if (_state.Game != ActiveGame.Oot) return;
+        // Read 0x300 bytes to cover gTriforceCount at OotSave+0x2F8 (SAVE_EXTRA_RECORD index 19).
+        const int saveChunkSize = 0x300;
         var buf = _mem!.Read(N64Addresses.SaveContextOot, saveChunkSize);
         if (buf is null) return;
 
@@ -367,6 +709,9 @@ sealed class MemoryPoller
 
     void PollMmSave()
     {
+        // Gate on MM: in OoT mode, 0x801EF670 is OoT BSS, not the MM save.
+        // MM items obtained in OoT are covered by PollPayloadMmSave (payload_mm_save).
+        if (_state.Game != ActiveGame.Mm) return;
         const int saveChunkSize = 0x200;
         var buf = _mem!.Read(N64Addresses.SaveContextMm, saveChunkSize);
         if (buf is null) return;
@@ -380,12 +725,26 @@ sealed class MemoryPoller
 
     // Polls the payload copy of gMmSave — authoritative for MM items obtained in OoT,
     // before the native MM gSaveContext (0x801EF670) is synced on transition.
+    // Fallback: if the payload scan has not found gMmSave yet but native gMmSave is validated
+    // (name+magic confirmed), read directly from SaveContextMm so MM items are visible in OoT.
     void PollPayloadMmSave()
     {
-        if (_state.PayloadMmSaveAddr is null) return;
+        uint addr;
+        if (_state.PayloadMmSaveAddr is not null)
+        {
+            addr = _state.PayloadMmSaveAddr.Value;
+        }
+        else if (_state.NativeMmSaveValidated && _state.Game == ActiveGame.Oot)
+        {
+            addr = N64Addresses.SaveContextMm;
+        }
+        else
+        {
+            return;
+        }
 
         const int saveChunkSize = 0x200;
-        var buf = _mem!.Read(_state.PayloadMmSaveAddr.Value, saveChunkSize);
+        var buf = _mem!.Read(addr, saveChunkSize);
         if (buf is null) return;
 
         if (_state.PayloadMmSaveSnapshot is not null && buf.SequenceEqual(_state.PayloadMmSaveSnapshot))
@@ -400,7 +759,8 @@ sealed class MemoryPoller
     {
         if (_state.PayloadOotSaveAddr is null) return;
 
-        const int saveChunkSize = 0x200;
+        // Match PollOotSave size so the frontend can read gTriforceCount at 0x2F8.
+        const int saveChunkSize = 0x300;
         var buf = _mem!.Read(_state.PayloadOotSaveAddr.Value, saveChunkSize);
         if (buf is null) return;
 
@@ -411,9 +771,33 @@ sealed class MemoryPoller
         _emit(new { type = "payload_oot_save", data = Convert.ToBase64String(buf) });
     }
 
-    // Polls the first 0x12C bytes of gComboConfig, covering:
+    // Detects ROM version (dev vs release) from a combo config buffer.
+    // Dev has giZoraSapphire (u16 >= 0x10) at offset 0x2A4 and songEventsMm[0] (0-19) at 0x2DC.
+    // Release has staticHintsImportance[0..1] (u16 0x0000-0x0303) at 0x2A4 and garbage at 0x2DC.
+    static string DetectRomVersion(byte[] buf)
+    {
+        if (buf.Length < N64Addresses.ComboConfigSongEventsMmCheck + 1)
+            return "dev"; // can't determine, assume dev (current)
+
+        // Primary: check byte at 0x2DC — dev has song index (0-19)
+        byte songMm = buf[N64Addresses.ComboConfigSongEventsMmCheck];
+        if (songMm <= 19)
+            return "dev";
+
+        // Secondary check: u16 at 0x2A4 — giZoraSapphire (dev) vs importance byte (release).
+        // If 0, gComboConfig is not yet initialised; assume dev to avoid false "release" detection
+        // (which would cause _devToRelease lookups for custom-fork-only settings to fail).
+        int disc = (buf[N64Addresses.ComboConfigVersionDiscOff] << 8)
+                 | buf[N64Addresses.ComboConfigVersionDiscOff + 1];
+        if (disc == 0)   return "dev"; // not loaded yet
+        if (disc >= 0x10) return "dev";
+
+        return "release";
+    }
+
+    // Polls the combo config header from gComboConfig, covering:
     //   - dungeonEntrances[26] at offset 52  → dungeon ER connections
-    //   - config[0x40]         at offset 0xEC → all 512 confvar bits (settings)
+    //   - config[0x40]         at offset 0xEC → all confvar bits (settings)
     // Emitted once on first read and again only on change.
     // Comparison uses a signature of only the fields the tracker uses (not entrancesSong/Owl/Spawns
     // at offsets 164-235) to avoid re-emitting due to volatile noise in those fields.
@@ -421,28 +805,67 @@ sealed class MemoryPoller
     {
         if (_state.ComboConfigAddr is null) return;
 
-        var buf = _mem!.Read(_state.ComboConfigAddr.Value + (uint)N64Addresses.ComboConfigReadOffset,
-                             N64Addresses.ComboConfigReadSize);
+        int readSize = N64Addresses.ComboConfigReadSizeDev;
+        if (_romVersion == "release")
+            readSize = N64Addresses.ComboConfigReadSizeRelease;
+        var buf = _mem!.Read(_state.ComboConfigAddr.Value + (uint)N64Addresses.ComboConfigReadOffset, readSize);
         if (buf is null) return;
+
+        // Detect version on first read
+        if (_romVersion is null && buf.Length >= N64Addresses.ComboConfigReadSizeRelease)
+        {
+            _romVersion = DetectRomVersion(buf);
+            Console.WriteLine($"[autotracker] Detected ROM version: {_romVersion}");
+        }
 
         var sig = ComboConfigSignature(buf);
         if (_state.ComboConfigSignature is not null && sig.SequenceEqual(_state.ComboConfigSignature))
+        {
+            _comboConfigEmitCount = 0; // stable read — reset volatility counter
             return;
+        }
+
+        // Volatility guard: if the signature keeps changing rapidly, the address is a false positive.
+        // Real gComboConfig is written once at startup; volatile BSS or stack memory changes every poll.
+        var now = DateTime.UtcNow;
+        if (_comboConfigEmitCount == 0) _comboConfigFirstEmit = now;
+        _comboConfigEmitCount++;
+        if (_comboConfigEmitCount > 6 && (now - _comboConfigFirstEmit).TotalSeconds < 5.0)
+        {
+            Console.WriteLine($"[autotracker] gComboConfig at 0x{_state.ComboConfigAddr:X8} is volatile post-confirmation — clearing for re-derive.");
+            _state.ComboConfigAddr      = null;
+            _state.ComboConfigSignature = null;
+            _comboConfigEmitCount       = 0;
+            return;
+        }
 
         _state.ComboConfigSignature = sig;
         _state.ComboConfigSnapshot  = buf;
-        _emit(new { type = "combo_config", data = Convert.ToBase64String(buf) });
+        _emit(new { type = "combo_config", data = Convert.ToBase64String(buf), romVersion = _romVersion ?? "dev" });
         Console.WriteLine("[autotracker] combo_config emitted.");
     }
 
-    // Extracts a compact signature covering only the fields the tracker actually reads:
-    // dungeonEntrances[26] (offset 52, 104 bytes) + mq (offset 156, 4 bytes) + config[0x40] (offset 236, 64 bytes).
-    static byte[] ComboConfigSignature(byte[] buf)
+    // Extracts a compact signature covering only the fields the tracker actually reads.
+    // Dev: dungeonEntrances[26] + mq + config[0x40] + songEventsOot[18] + songEventsMm[13].
+    // Release: dungeonEntrances[26] + mq + config[0x40] + songEvents[18] (no songEventsMm).
+    byte[] ComboConfigSignature(byte[] buf)
     {
-        var sig = new byte[104 + 4 + 64];
-        Array.Copy(buf, N64Addresses.ComboConfigDungeonEntrOff,  sig, 0,   104); // dungeonEntrances
-        Array.Copy(buf, 156,                                      sig, 104, 4);   // mq
-        Array.Copy(buf, N64Addresses.ComboConfigBitsOff,         sig, 108, 64);  // config[0x40]
+        bool isDev = _romVersion != "release";
+        int songEventsLen = isDev
+            ? (N64Addresses.ComboConfigSongEventsOotCnt + N64Addresses.ComboConfigSongEventsMmCnt)
+            : N64Addresses.ComboConfigSongEventsReleaseCnt;
+        int songEventsOff = isDev
+            ? N64Addresses.ComboConfigSongEventsOotOff
+            : N64Addresses.ComboConfigSongEventsReleaseOff;
+        int hintsSize = (buf.Length >= N64Addresses.ComboConfigHintsOff + N64Addresses.ComboConfigHintsSize)
+            ? N64Addresses.ComboConfigHintsSize : 0;
+        var sig = new byte[104 + 4 + 64 + songEventsLen + hintsSize];
+        Array.Copy(buf, N64Addresses.ComboConfigDungeonEntrOff, sig, 0,   104); // dungeonEntrances
+        Array.Copy(buf, 156,                                     sig, 104, 4);   // mq
+        Array.Copy(buf, N64Addresses.ComboConfigBitsOff,        sig, 108, 64);  // config[0x40]
+        Array.Copy(buf, songEventsOff,                           sig, 172, songEventsLen); // song events
+        if (hintsSize > 0)
+            Array.Copy(buf, N64Addresses.ComboConfigHintsOff,   sig, 172 + songEventsLen, hintsSize); // hints
         return sig;
     }
 
@@ -454,7 +877,9 @@ sealed class MemoryPoller
     void PollSharedCustomSave()
     {
         if (_state.SharedCustomSaveAddr is null) return;
-        if (_state.PayloadMmSaveAddr is null) return; // wait for gMmSave validation
+        // gMmSave validation ensures OoT payload data isn't stale. Skip this gate when using
+        // the MM payload directly (fallback) — that source uses its own validity check.
+        if (_state.PayloadMmSaveAddr is null && _state.SharedCustomSaveAddr != _state.MmPayloadSharedCustomSaveAddr) return;
 
         // Read 2 bytes at offset 0x362 within SharedCustomSave (OotCustomSave.hasSong* bitfield).
         var buf = _mem!.Read(_state.SharedCustomSaveAddr.Value + (uint)N64Addresses.SharedCustomSaveSongOff, 2);
@@ -467,10 +892,327 @@ sealed class MemoryPoller
         _emit(new { type = "shared_custom_save", b0 = (int)buf[0], b1 = (int)buf[1] });
     }
 
+    // Polls gSharedCustomSave.oot.npc[32] — 256-bit bitmap of NPC reward completions.
+    // Each bit index corresponds to an NPC slot ID from data/defs/npc.yml.
+    // Gated on PayloadMmSaveAddr validation — same guard as PollSharedCustomSave.
+    void PollOotNpcFlags()
+    {
+        if (_state.SharedCustomSaveAddr is null)
+        {
+            if (_nullAddrLogSkip-- <= 0) { Console.Error.WriteLine("[autotrack] PollOotNpcFlags: SharedCustomSaveAddr null"); _nullAddrLogSkip = 400; }
+            return;
+        }
+        if (_state.PayloadMmSaveAddr is null && _state.SharedCustomSaveAddr != _state.MmPayloadSharedCustomSaveAddr)
+        {
+            if (_nullAddrLogSkip-- <= 0) { Console.Error.WriteLine("[autotrack] PollOotNpcFlags: PayloadMmSaveAddr null"); _nullAddrLogSkip = 400; }
+            return;
+        }
+        // In fallback mode (SharedCustomSaveAddr == MmPayloadSharedCustomSaveAddr but PayloadMmSaveAddr
+        // not yet validated), still require ocarina mask sentinel. When fully validated, skip it:
+        // ocarina buttons may be partially collected (mask 0x0007 etc.) and the address is already
+        // confirmed by playerForm/name — calling IsSharedCustomSaveTrustworthy would block emission.
+        if (_state.PayloadMmSaveAddr is null
+            && !IsSharedCustomSaveTrustworthy(_state.SharedCustomSaveAddr.Value)) return;
+
+        var addr = _state.SharedCustomSaveAddr.Value + (uint)N64Addresses.OotNpcFlagsOff;
+        var buf = _mem!.Read(addr, N64Addresses.OotNpcFlagsSize);
+        if (buf is null) { Console.Error.WriteLine("[autotrack] PollOotNpcFlags: read returned null"); return; }
+        // Dump raw bytes for debugging
+        if (_state.OotNpcFlagsSnapshot is null)
+            Console.Error.WriteLine($"[autotrack] PollOotNpcFlags: raw read at 0x{addr:X8}: {BitConverter.ToString(buf)}");
+
+        // Merge with MM payload's SharedCustomSave.npc (same struct layout, offset 0x2E8).
+        // Skip if both addresses point to the same data (fallback mode — no separate MM copy to merge).
+        if (_state.MmPayloadSharedCustomSaveAddr is not null
+            && _state.MmPayloadSharedCustomSaveAddr != _state.SharedCustomSaveAddr
+            && IsMmPayloadSharedCustomSaveValid())
+        {
+            var mmBuf = _mem!.Read(_state.MmPayloadSharedCustomSaveAddr.Value + (uint)N64Addresses.OotNpcFlagsOff,
+                                   N64Addresses.OotNpcFlagsSize);
+            if (mmBuf is not null)
+            {
+                for (int i = 0; i < buf.Length; i++)
+                    buf[i] |= mmBuf[i];
+                if (_state.OotNpcFlagsSnapshot is null)
+                    Console.Error.WriteLine($"[autotrack] PollOotNpcFlags: merged with MM payload");
+            }
+        }
+
+        if (_state.OotNpcFlagsSnapshot is not null && buf.SequenceEqual(_state.OotNpcFlagsSnapshot))
+            return;
+
+        _state.OotNpcFlagsSnapshot = buf;
+        int nonZero = buf.Count(b => b != 0);
+        Console.Error.WriteLine($"[autotrack] PollOotNpcFlags: emitting {buf.Length} bytes, {nonZero} non-zero");
+        _emit(new { type = "oot_npc_flags", data = Convert.ToBase64String(buf) });
+    }
+
+    // Polls gSharedCustomSave.oot.xflags[762] — bitmap set by comboXflagsSetOot for pots, grass, crates, etc.
+    // Gated on PayloadMmSaveAddr validation: uninitialised RDRAM (garbage pointers, floats) in the xflag
+    // region causes false-positive check detections. IsSharedCustomSaveTrustworthy is NOT used here
+    // because it accepts 0x0000 (zero-initialised garbage) and 0xFFFF (old session), letting garbage
+    // through. The PayloadMmSaveAddr guard is the authoritative filter.
+    void PollOotXflags()
+    {
+        if (_state.SharedCustomSaveAddr is null) return;
+        // Block during candidate phase (before TryValidatePayloadMmSave succeeds). The fallback
+        // path (SharedCustomSaveAddr == MmPayloadSharedCustomSaveAddr) is already validated.
+        if (_state.PayloadMmSaveAddr is null
+            && _state.SharedCustomSaveAddr != _state.MmPayloadSharedCustomSaveAddr)
+            return;
+
+        var buf = _mem!.Read(_state.SharedCustomSaveAddr.Value + (uint)N64Addresses.SharedCustomSaveOotXflagsOff,
+                             N64Addresses.SharedCustomSaveOotXflagsSize);
+        if (buf is null) return;
+
+        // Merge MM-payload copy only when ZELDAZ is still present (guards RDRAM relocation) AND
+        // the ocarina mask is trustworthy (0x0000 or 0xFFFF — rejects partial garbage from transitions).
+        if (ValidateMmPayloadForMerge()
+            && _state.MmPayloadSharedCustomSaveAddr != _state.SharedCustomSaveAddr)
+        {
+            var mmBuf = _mem!.Read(_state.MmPayloadSharedCustomSaveAddr!.Value + (uint)N64Addresses.SharedCustomSaveOotXflagsOff,
+                                   N64Addresses.SharedCustomSaveOotXflagsSize);
+            if (mmBuf is not null)
+                for (int i = 0; i < buf.Length; i++) buf[i] |= mmBuf[i];
+        }
+
+        if (_state.OotXflagsSnapshot is not null && buf.SequenceEqual(_state.OotXflagsSnapshot)) return;
+        _state.OotXflagsSnapshot = buf;
+        _emit(new { type = "oot_xflags", data = Convert.ToBase64String(buf) });
+    }
+
+    // Polls gSharedCustomSave.mm.xflags[848] — bitmap set by comboXflagsSetMm for pots, grass, crates, etc.
+    // Same PayloadMmSaveAddr guard as PollOotXflags — see comment there for rationale.
+    void PollMmXflags()
+    {
+        if (_state.SharedCustomSaveAddr is null) return;
+        if (_state.PayloadMmSaveAddr is null
+            && _state.SharedCustomSaveAddr != _state.MmPayloadSharedCustomSaveAddr)
+            return;
+
+        var buf = _mem!.Read(_state.SharedCustomSaveAddr.Value + (uint)N64Addresses.SharedCustomSaveMmXflagsOff,
+                             N64Addresses.SharedCustomSaveMmXflagsSize);
+        if (buf is null) return;
+
+        // Same guard as PollOotXflags — verify ZELDAZ + ocarina mask before merging.
+        if (ValidateMmPayloadForMerge()
+            && _state.MmPayloadSharedCustomSaveAddr != _state.SharedCustomSaveAddr)
+        {
+            var mmBuf = _mem!.Read(_state.MmPayloadSharedCustomSaveAddr!.Value + (uint)N64Addresses.SharedCustomSaveMmXflagsOff,
+                                   N64Addresses.SharedCustomSaveMmXflagsSize);
+            if (mmBuf is not null)
+                for (int i = 0; i < buf.Length; i++) buf[i] |= mmBuf[i];
+        }
+
+        if (_state.MmXflagsSnapshot is not null && buf.SequenceEqual(_state.MmXflagsSnapshot)) return;
+        _state.MmXflagsSnapshot = buf;
+        _emit(new { type = "mm_xflags", data = Convert.ToBase64String(buf) });
+    }
+
+    // Polls all souls arrays from SharedCustomSave (41 bytes at offset 0x7DC).
+    // Gated on PayloadMmSaveAddr validation — same guard as PollSharedCustomSave.
+    void PollSoulsData()
+    {
+        if (_state.SharedCustomSaveAddr is null) return;
+        if (_state.PayloadMmSaveAddr is null && _state.SharedCustomSaveAddr != _state.MmPayloadSharedCustomSaveAddr) return;
+        if (!IsSharedCustomSaveTrustworthy(_state.SharedCustomSaveAddr.Value)) return;
+
+        var buf = _mem!.Read(_state.SharedCustomSaveAddr.Value + (uint)N64Addresses.SharedCustomSaveSoulsOff,
+                             N64Addresses.SharedCustomSaveSoulsSize);
+        if (buf is null) return;
+
+        // Merge with MM payload: take non-zero MM value unless OoT has it collected already.
+        // Skip if fallback mode (same address).
+        if (_state.MmPayloadSharedCustomSaveAddr is not null
+            && _state.MmPayloadSharedCustomSaveAddr != _state.SharedCustomSaveAddr
+            && IsMmPayloadSharedCustomSaveValid())
+        {
+            var mmBuf = _mem!.Read(_state.MmPayloadSharedCustomSaveAddr.Value + (uint)N64Addresses.SharedCustomSaveSoulsOff,
+                                   N64Addresses.SharedCustomSaveSoulsSize);
+            if (mmBuf is not null)
+            {
+                for (int i = 0; i < buf.Length; i++)
+                {
+                    if (mmBuf[i] == 0xFF)
+                        buf[i] = 0xFF; // disabled takes priority
+                    else if (mmBuf[i] != 0 && buf[i] == 0)
+                        buf[i] = mmBuf[i]; // collected in MM but not in OoT
+                }
+            }
+        }
+
+        if (_state.SoulsDataSnapshot is not null && buf.SequenceEqual(_state.SoulsDataSnapshot))
+            return;
+
+        _state.SoulsDataSnapshot = buf;
+        _emit(new { type = "souls_data", data = Convert.ToBase64String(buf) });
+    }
+
+    // Polls gSharedCustomSave.rustyKeysOot (4 bytes) and rustyKeysMm (5 bytes) — both are
+    // bitmaps set by item_add.c when a rusty key is collected (BITMAP8_SET).
+    // Gated on PayloadMmSaveAddr validation — same guard as PollSoulsData.
+    void PollRustyKeys()
+    {
+        if (_state.SharedCustomSaveAddr is null) return;
+        if (_state.PayloadMmSaveAddr is null && _state.SharedCustomSaveAddr != _state.MmPayloadSharedCustomSaveAddr) return;
+        if (!IsSharedCustomSaveTrustworthy(_state.SharedCustomSaveAddr.Value)) return;
+
+        var buf = _mem!.Read(_state.SharedCustomSaveAddr.Value + (uint)N64Addresses.SharedCustomSaveRkOff,
+                             N64Addresses.SharedCustomSaveRkSize);
+        if (buf is null) return;
+
+        // Merge with MM payload (OR bitmaps). Skip in fallback mode.
+        if (_state.MmPayloadSharedCustomSaveAddr is not null
+            && _state.MmPayloadSharedCustomSaveAddr != _state.SharedCustomSaveAddr
+            && IsMmPayloadSharedCustomSaveValid())
+        {
+            var mmBuf = _mem!.Read(_state.MmPayloadSharedCustomSaveAddr.Value + (uint)N64Addresses.SharedCustomSaveRkOff,
+                                   N64Addresses.SharedCustomSaveRkSize);
+            if (mmBuf is not null)
+            {
+                for (int i = 0; i < buf.Length; i++)
+                    buf[i] |= mmBuf[i];
+            }
+        }
+
+        if (_state.RustyKeysSnapshot is not null && buf.SequenceEqual(_state.RustyKeysSnapshot))
+            return;
+
+        _state.RustyKeysSnapshot = buf;
+        _emit(new { type = "rusty_keys", data = Convert.ToBase64String(buf) });
+    }
+
+    // Polls gSharedCustomSave.coins[4] (4 × u16 big-endian) — set by item_add.c when items
+    // with coin-give events are collected in either game. Gated on PayloadMmSaveAddr validation.
+    void PollCoins()
+    {
+        if (_state.SharedCustomSaveAddr is null)
+        {
+            if (_nullAddrLogSkip-- <= 0) { Console.Error.WriteLine("[autotrack] PollCoins: SharedCustomSaveAddr null"); _nullAddrLogSkip = 400; }
+            return;
+        }
+        if (_state.PayloadMmSaveAddr is null && _state.SharedCustomSaveAddr != _state.MmPayloadSharedCustomSaveAddr)
+        {
+            if (_nullAddrLogSkip-- <= 0) { Console.Error.WriteLine("[autotrack] PollCoins: PayloadMmSaveAddr null"); _nullAddrLogSkip = 400; }
+            return;
+        }
+        // Reject reads when ocarinaButtonMask is neither 0x0000 nor 0xFFFF — indicates stale RDRAM
+        // from an OoT↔MM transition where PJ64-EM relocated RDRAM to a new base address.
+        if (!IsSharedCustomSaveTrustworthy(_state.SharedCustomSaveAddr.Value)) return;
+
+        var coinAddr = _state.SharedCustomSaveAddr.Value + (uint)N64Addresses.SharedCustomSaveCoinOff;
+        var buf = _mem!.Read(coinAddr, N64Addresses.SharedCustomSaveCoinSize);
+        if (buf is null) { Console.Error.WriteLine("[autotrack] PollCoins: read returned null"); return; }
+        if (_state.CoinsSnapshot is null)
+            Console.Error.WriteLine($"[autotrack] PollCoins: raw read at 0x{coinAddr:X8}: {BitConverter.ToString(buf)}");
+
+        // Merge with MM payload's SharedCustomSave.coins (same offset 0x7D0) — take max per color.
+        // Skip in fallback mode or when MM data is uninitialized (ocarinaButtonMask == 0).
+        if (_state.MmPayloadSharedCustomSaveAddr is not null
+            && _state.MmPayloadSharedCustomSaveAddr != _state.SharedCustomSaveAddr
+            && IsMmPayloadSharedCustomSaveValid())
+        {
+            var mmBuf = _mem!.Read(_state.MmPayloadSharedCustomSaveAddr.Value + (uint)N64Addresses.SharedCustomSaveCoinOff,
+                                   N64Addresses.SharedCustomSaveCoinSize);
+            if (mmBuf is not null)
+            {
+                for (int i = 0; i < buf.Length; i += 2)
+                {
+                    int ootVal = (buf[i] << 8) | buf[i + 1];
+                    int mmVal  = (mmBuf[i] << 8) | mmBuf[i + 1];
+                    int merged = Math.Max(ootVal, mmVal);
+                    buf[i]     = (byte)(merged >> 8);
+                    buf[i + 1] = (byte)merged;
+                }
+                if (_state.CoinsSnapshot is null)
+                    Console.Error.WriteLine($"[autotrack] PollCoins: merged with MM payload");
+            }
+        }
+
+        // Dump 256 bytes at SharedCustomSave to check if address is correct.
+        // After comboCreateSave runs, the souls arrays (at +0x7DC) should be 0xff
+        // for disabled souls, and ocarinaButtonMask (at +0x7D8) should be 0xffff.
+        if (_state.CoinsSnapshot is null) {
+            var sAddr = _state.SharedCustomSaveAddr.Value;
+            var full  = _mem!.Read(sAddr, 0x900);
+            if (full is not null) {
+                Console.Error.WriteLine($"[autotrack] DUMP gSharedCustomSave[0..256]: {BitConverter.ToString(full, 0, 256)}");
+                Console.Error.WriteLine($"[autotrack] DUMP gSharedCustomSave[0x1A0..0x1E0] (oot xflags bytes 416-480, Kokiri Forest grass): {BitConverter.ToString(full, 0x1A0, 64)}");
+                Console.Error.WriteLine($"[autotrack] DUMP gSharedCustomSave[0x7D0..0x7DF] (coins+ocarinaMask): {BitConverter.ToString(full, 0x7D0, 16)}");
+                Console.Error.WriteLine($"[autotrack] DUMP gSharedCustomSave[0x7DC..0x804] (souls): {BitConverter.ToString(full, 0x7DC, 41)}");
+                Console.Error.WriteLine($"[autotrack] DUMP gSharedCustomSave[0x2E8..0x308] (ootNpc): {BitConverter.ToString(full, 0x2E8, 32)}");
+            }
+            var mmPrefix  = _state.PayloadMmSaveAddr is not null ? _mem!.Read(_state.PayloadMmSaveAddr.Value, 64) : null;
+            if (mmPrefix is not null)
+                Console.Error.WriteLine($"[autotrack] DUMP gMmSave[0..64]: {BitConverter.ToString(mmPrefix)}");
+            if (_state.MmPayloadSharedCustomSaveAddr is not null)
+            {
+                var mmSc  = _mem!.Read(_state.MmPayloadSharedCustomSaveAddr.Value, 0x900);
+                if (mmSc is not null)
+                {
+                    Console.Error.WriteLine($"[autotrack] DUMP MM gSharedCustomSave[0..256]: {BitConverter.ToString(mmSc, 0, 256)}");
+                    Console.Error.WriteLine($"[autotrack] DUMP MM gSharedCustomSave[0x7D0..0x7DF] (coins+ocarinaMask): {BitConverter.ToString(mmSc, 0x7D0, 16)}");
+                    Console.Error.WriteLine($"[autotrack] DUMP MM gSharedCustomSave[0x7DC..0x804] (souls): {BitConverter.ToString(mmSc, 0x7DC, 41)}");
+                    Console.Error.WriteLine($"[autotrack] DUMP MM gSharedCustomSave[0x2E8..0x308] (ootNpc): {BitConverter.ToString(mmSc, 0x2E8, 32)}");
+                }
+            }
+            if (_state.ComboConfigAddr is not null)
+            {
+                var ccPrefix = _mem!.Read(_state.ComboConfigAddr.Value, 32);
+                if (ccPrefix is not null)
+                    Console.Error.WriteLine($"[autotrack] DUMP gComboConfig[0..32]: {BitConverter.ToString(ccPrefix)}");
+            }
+        }
+
+        // Also read maxCoins from gComboConfig for auto-detect (bypasses combo_config signature dedup)
+        byte[]? maxBuf = null;
+        if (_state.ComboConfigAddr is not null)
+        {
+            int mcLen = N64Addresses.ComboConfigMaxCoinsCount * 2;
+            maxBuf = _mem!.Read(_state.ComboConfigAddr.Value + (uint)N64Addresses.ComboConfigMaxCoinsOff, mcLen);
+        }
+
+        if (_state.CoinsSnapshot is not null && buf.SequenceEqual(_state.CoinsSnapshot))
+        {
+            // Coins haven't changed, but we may still need to emit if maxCoins changed (first time with config)
+            if (maxBuf is null || _state.CoinsMaxSnapshot is not null)
+                return;
+        }
+
+        _state.CoinsSnapshot = buf;
+        _state.CoinsMaxSnapshot = maxBuf;
+        int r = (buf[0] << 8) | buf[1], g = (buf[2] << 8) | buf[3];
+        int b = (buf[4] << 8) | buf[5], y = (buf[6] << 8) | buf[7];
+        Console.Error.WriteLine($"[autotrack] PollCoins: emitting r={r} g={g} b={b} y={y} maxBuf={maxBuf is not null}");
+        _emit(new { type = "coins_data", data = Convert.ToBase64String(buf), max = maxBuf is not null ? Convert.ToBase64String(maxBuf) : null });
+    }
+
+    // Polls MM spider house token counts: skullCountSwamp (u16) and skullCountOcean (u16)
+    // at MmSave+0xEE4 (SaveContextMm+0xEE4). Gated on PayloadMmSaveAddr validation
+    // since these live deep in MmSaveInfo and the address holds stale RDRAM before MM init.
+    void PollMmSkullTokens()
+    {
+        if (_state.PayloadMmSaveAddr is null) return;
+
+        var buf = _mem!.Read(N64Addresses.SaveContextMm + (uint)N64Addresses.MmSave.SkullCountSwamp, 4);
+        if (buf is null) return;
+
+        if (_state.MmSkullTokensSnapshot is not null && buf.SequenceEqual(_state.MmSkullTokensSnapshot))
+            return;
+
+        _state.MmSkullTokensSnapshot = buf;
+        int swamp = (buf[0] << 8) | buf[1];
+        int ocean = (buf[2] << 8) | buf[3];
+        _emit(new { type = "mm_skull_tokens", swamp, ocean });
+    }
+
     // Polls OotSave.permanentSceneFlags[124] — chest bits set when a chest is opened.
     // Only emitted on change; the frontend builds a lookup to map (sceneId, bit) → check name.
+    // Gated on game == Oot: in MM mode, N64 address 0x8011A5D0 is MM BSS (not the OoT save),
+    // so reading it would emit garbage chest flags that falsely mark OoT checks as done.
     void PollOotSceneFlags()
     {
+        if (_state.Game != ActiveGame.Oot) return;
         var buf = _mem!.Read(N64Addresses.OotSceneFlagsAddr, N64Addresses.OotSceneFlagsSize);
         if (buf is null) return;
         if (_state.OotSceneFlagsSnapshot is not null && buf.SequenceEqual(_state.OotSceneFlagsSnapshot)) return;
@@ -481,16 +1223,105 @@ sealed class MemoryPoller
     // Polls live OoT chest flags from play->actorCtx.flags.chest (updated immediately on chest open).
     // gSaveContext.sceneFlags only syncs at scene exit; this catches changes in real time.
     // PlayState (gGlobalCtx) is a static BSS symbol at a fixed address — no scan needed.
-    // Emits "oot_scene_flags" overlaying live chest flags for the current scene onto the
-    // gSaveContext snapshot maintained by PollOotSceneFlags.
+    // Only runs when the active game is OoT — the MM PlayState address contains garbage in OoT.
+    // Requires sceneId to be stable for two consecutive polls to avoid emitting during transitions.
+    // Scene ID → song event (slot, trackerKey) pairs. Scene IDs match the OoTMM combined enum
+    // (data-scenes.json values), identical to the RDRAM sceneId read from play->sceneId.
+    // Multi-slot scenes (Great Fairy Spells/Upgrades by spawn, Spirit Temple by room) emit all
+    // their slots on entry — spawn/room are not tracked separately in the autotracker.
+    static readonly Dictionary<int, (int slot, string trackerKey)[]> _ootSceneToSongSlots = new()
+    {
+        [67] = new[] { (0, "oot_0") },                                    // TEMPLE_OF_TIME
+        [72] = new[] { (1, "oot_7") },                                    // TOMB_DAMPE_WINDMILL
+        [83] = new[] { (2, "oot_2") },                                    // GRAVEYARD
+        [84] = new[] { (3, "oot_5") },                                    // ZORA_RIVER
+        [98] = new[] { (4, "oot_3") },                                    // GORON_CITY
+        [61] = new[] { (5, "oot_1"), (6, "oot_4"), (7, "oot_6") },       // GREAT_FAIRY_SPELLS (spawn 0/1/2)
+        [59] = new[] { (8, "oot_9"), (9, "oot_11"), (10, "oot_16") },    // GREAT_FAIRY_UPGRADES (spawn 0/1/2)
+        [ 5] = new[] { (11, "oot_10") },                                  // TEMPLE_WATER
+        [ 7] = new[] { (12, "oot_15") },                                  // TEMPLE_SHADOW
+        [ 6] = new[] { (13, "oot_12"), (14, "oot_13"), (15, "oot_14") }, // TEMPLE_SPIRIT (room 5/14/24)
+        [ 8] = new[] { (16, "oot_8") },                                   // BOTTOM_OF_THE_WELL
+        [13] = new[] { (17, "oot_17") },                                  // INSIDE_GANON_CASTLE
+    };
+
+    static readonly Dictionary<int, (int slot, string trackerKey)[]> _mmSceneToSongSlots = new()
+    {
+        [70] = new[] { (0, "mm_2") },   // MM_WOODFALL → TEMPLE_WOODFALL
+        [92] = new[] { (1, "mm_6") },   // MM_SNOWHEAD → TEMPLE_SNOWHEAD
+        [56] = new[] { (2, "mm_8") },   // MM_ZORA_CAPE → TEMPLE_GREATBAY
+        [78] = new[] { (4, "mm_5") },   // MM_GORON_GRAVEYARD → HEALING_DARMANI
+        [85] = new[] { (5, "mm_11") },  // MM_MUSIC_BOX_HOUSE → HEALING_PAMELA_FATHER
+        [45] = new[] { (6, "mm_1") },   // MM_TERMINA_FIELD → HEALING_KAMARO
+        [55] = new[] { (7, "mm_7") },   // MM_GREAT_BAY_COAST → HEALING_MIKAU
+        [67] = new[] { (8, "mm_9") },   // MM_IKANA_GRAVEYARD → AWAKENING_KEETA
+        [50] = new[] { (10, "mm_4") },  // MM_GORON_SHRINE → LULLABY_KID
+        [19] = new[] { (11, "mm_10") }, // MM_IKANA_CANYON → STORMS_COMPOSER
+        [25] = new[] { (12, "mm_0") },  // MM_CLOCK_TOWER_ROOFTOP → CLOCK_TOWER_ROOF
+    };
+
+    // Emits song_event_slot messages for each song event slot assigned to the given scene.
+    // Reads slot→songIdx assignments from gComboConfig.songEventsOot/Mm (dev) or songEvents (release).
+    // Release has no MM song event shuffle, so MM scenes are skipped there.
+    void EmitSongEventForScene(int sceneId, bool isOot)
+    {
+        if (_state.ComboConfigSnapshot is null) return;
+        bool isDev = _romVersion != "release";
+        // Release has no MM song event shuffle — skip MM scene events.
+        if (!isDev && !isOot) return;
+        var map  = isOot ? _ootSceneToSongSlots : _mmSceneToSongSlots;
+        if (!map.TryGetValue(sceneId, out var slots)) return;
+        int baseOff, count;
+        if (isDev)
+        {
+            baseOff = isOot ? N64Addresses.ComboConfigSongEventsOotOff : N64Addresses.ComboConfigSongEventsMmOff;
+            count   = isOot ? N64Addresses.ComboConfigSongEventsOotCnt : N64Addresses.ComboConfigSongEventsMmCnt;
+        }
+        else
+        {
+            baseOff = N64Addresses.ComboConfigSongEventsReleaseOff;
+            count   = N64Addresses.ComboConfigSongEventsReleaseCnt;
+        }
+        var buf = _state.ComboConfigSnapshot;
+        if (buf.Length < baseOff + count) return;
+        foreach (var (slot, trackerKey) in slots)
+        {
+            int songIdx = buf[baseOff + slot];
+            _emit(new { type = "song_event_slot", trackerKey, songIdx });
+            Console.WriteLine($"[autotracker] song_event_slot: {trackerKey} → songIdx={songIdx} (scene={sceneId}, oot={isOot})");
+        }
+    }
+
     void PollOotLiveSceneFlags()
     {
+        if (_state.Game != ActiveGame.Oot) { _prevOotLiveSceneId = -1; _ootSceneSettleCounter = 0; _state.OotLiveSceneFlagsSnapshot = null; return; }
+
         const uint ps = N64Addresses.OotPlayStateAddr; // 0x801C84A0 — fixed BSS address
 
         var sceneRaw = _mem!.Read(ps + (uint)N64Addresses.PlayStateSceneOff, 2);
-        if (sceneRaw is null) { _state.OotLiveSceneFlagsSnapshot = null; return; }
+        if (sceneRaw is null) { _prevOotLiveSceneId = -1; _ootSceneSettleCounter = 0; _state.OotLiveSceneFlagsSnapshot = null; return; }
         int sceneId = (sceneRaw[0] << 8) | sceneRaw[1];
-        if (sceneId >= 124) { _state.OotLiveSceneFlagsSnapshot = null; return; }
+        if (sceneId >= 124) { _prevOotLiveSceneId = -1; _ootSceneSettleCounter = 0; _state.OotLiveSceneFlagsSnapshot = null; return; }
+
+        // On scene change, reset settle counter and wait SceneSettlePolls before trusting chest flags.
+        // This avoids reading leftover chest flags from the previous scene during actor context init.
+        if (sceneId != _prevOotLiveSceneId) { _prevOotLiveSceneId = sceneId; _ootSceneSettleCounter = SceneSettlePolls; _ootLiveChestBaseline = null; return; }
+        if (_ootSceneSettleCounter > 0) { _ootSceneSettleCounter--; return; }
+
+        // First stable poll for this scene — emit scene_change and song event assignment.
+        if (sceneId != _songEventEmittedSceneOot)
+        {
+            _songEventEmittedSceneOot = sceneId;
+            _emit(new { type = "scene_change", game = "oot", sceneId });
+            EmitSongEventForScene(sceneId, isOot: true);
+            // Read gSave.entrance NOW (after settle) so Play_TransitionDone has had time to write it.
+            var ootEntrance = _state.OotSaveEntrance;
+            if (ootEntrance is not null && ootEntrance.Value != 0xFFFFFFFF)
+            {
+                Console.WriteLine($"[autotrack] player_entrance oot scene={sceneId} entrance=0x{ootEntrance.Value:X8}");
+                _emit(new { type = "player_entrance", game = "oot", value = ootEntrance.Value });
+            }
+        }
 
         var chestRaw = _mem.Read(ps + (uint)N64Addresses.OotPlayStateChestOff, 4);
         if (chestRaw is null) return;
@@ -500,27 +1331,67 @@ sealed class MemoryPoller
             ? (byte[])_state.OotSceneFlagsSnapshot.Clone()
             : new byte[N64Addresses.OotSceneFlagsSize];
         int off = sceneId * 0x1C;
-        fullBuf[off + 0] = (byte)(liveChest >> 24);
-        fullBuf[off + 1] = (byte)(liveChest >> 16);
-        fullBuf[off + 2] = (byte)(liveChest >>  8);
-        fullBuf[off + 3] = (byte) liveChest;
+        uint permanentChest = (uint)(fullBuf[off]<<24|fullBuf[off+1]<<16|fullBuf[off+2]<<8|fullBuf[off+3]);
+
+        // Set baseline on the first stable poll after settle (5 × 100ms).
+        // The settle window already covers the actorCtx init race (sceneId flips before reset).
+        // Using liveChest directly means chests opened before connection are included in the
+        // baseline so they don't fire as false positives; only bits that appear AFTER this poll
+        // are treated as newly opened.
+        if (_ootLiveChestBaseline is null)
+        {
+            _ootLiveChestBaseline = liveChest;
+            return;
+        }
+
+        uint newBits = liveChest & ~_ootLiveChestBaseline.Value;
+        if (newBits == 0) return;
+        _ootLiveChestBaseline = _ootLiveChestBaseline.Value | newBits;
+        uint effectiveChest = permanentChest | newBits;
+        fullBuf[off + 0] = (byte)(effectiveChest >> 24);
+        fullBuf[off + 1] = (byte)(effectiveChest >> 16);
+        fullBuf[off + 2] = (byte)(effectiveChest >>  8);
+        fullBuf[off + 3] = (byte) effectiveChest;
 
         if (_state.OotLiveSceneFlagsSnapshot is not null && fullBuf.SequenceEqual(_state.OotLiveSceneFlagsSnapshot)) return;
         _state.OotLiveSceneFlagsSnapshot = fullBuf;
-        Console.WriteLine($"[autotracker] oot_scene_flags emitted (live chest=0x{liveChest:X8} scene={sceneId})");
+        Console.WriteLine($"[autotracker] oot_scene_flags emitted (newBits=0x{newBits:X8} scene={sceneId})");
         _emit(new { type = "oot_scene_flags", data = Convert.ToBase64String(fullBuf) });
     }
 
     // Polls live MM chest flags from play->actorCtx.flags.chest (updated immediately on chest open).
     // Mirrors PollOotLiveSceneFlags — same pattern, different PlayState address and offsets.
+    // Only runs when the active game is MM — the OoT PlayState address contains garbage in MM.
+    // Requires sceneId to be stable for two consecutive polls to avoid emitting during transitions.
     void PollMmLiveSceneFlags()
     {
+        if (_state.Game != ActiveGame.Mm) { _prevMmLiveSceneId = -1; _mmSceneSettleCounter = 0; _state.MmLiveSceneFlagsSnapshot = null; return; }
+
         const uint ps = N64Addresses.MmPlayStateAddr; // 0x803E6B20 — fixed BSS address
 
         var sceneRaw = _mem!.Read(ps + (uint)N64Addresses.PlayStateSceneOff, 2);
-        if (sceneRaw is null) { _state.MmLiveSceneFlagsSnapshot = null; return; }
+        if (sceneRaw is null) { _prevMmLiveSceneId = -1; _mmSceneSettleCounter = 0; _state.MmLiveSceneFlagsSnapshot = null; return; }
         int sceneId = (sceneRaw[0] << 8) | sceneRaw[1];
-        if (sceneId >= 120) { _state.MmLiveSceneFlagsSnapshot = null; return; }
+        if (sceneId >= 120) { _prevMmLiveSceneId = -1; _mmSceneSettleCounter = 0; _state.MmLiveSceneFlagsSnapshot = null; return; }
+
+        // On scene change, reset settle counter and wait SceneSettlePolls before trusting chest flags.
+        if (sceneId != _prevMmLiveSceneId) { _prevMmLiveSceneId = sceneId; _mmSceneSettleCounter = SceneSettlePolls; _mmLiveChestBaseline = null; return; }
+        if (_mmSceneSettleCounter > 0) { _mmSceneSettleCounter--; return; }
+
+        // First stable poll for this scene — emit scene_change and song event assignment.
+        if (sceneId != _songEventEmittedSceneMm)
+        {
+            _songEventEmittedSceneMm = sceneId;
+            _emit(new { type = "scene_change", game = "mm", sceneId });
+            EmitSongEventForScene(sceneId, isOot: false);
+            // Read gSave.entrance NOW (after settle) so Play_TransitionDone has had time to write it.
+            var mmEntrance = _state.MmSaveEntrance;
+            if (mmEntrance is not null && mmEntrance.Value != 0xFFFFFFFF)
+            {
+                Console.WriteLine($"[autotrack] player_entrance mm scene={sceneId} entrance=0x{mmEntrance.Value:X8}");
+                _emit(new { type = "player_entrance", game = "mm", value = mmEntrance.Value });
+            }
+        }
 
         var chestRaw = _mem.Read(ps + (uint)N64Addresses.MmPlayStateChestOff, 4);
         if (chestRaw is null) return;
@@ -530,24 +1401,945 @@ sealed class MemoryPoller
             ? (byte[])_state.MmSceneFlagsSnapshot.Clone()
             : new byte[N64Addresses.MmSceneFlagsSize];
         int off = sceneId * 0x1C;
-        fullBuf[off + 0] = (byte)(liveChest >> 24);
-        fullBuf[off + 1] = (byte)(liveChest >> 16);
-        fullBuf[off + 2] = (byte)(liveChest >>  8);
-        fullBuf[off + 3] = (byte) liveChest;
+        uint permanentChest = (uint)(fullBuf[off]<<24|fullBuf[off+1]<<16|fullBuf[off+2]<<8|fullBuf[off+3]);
+
+        // Same settle-based baseline as OoT — see PollOotLiveSceneFlags for rationale.
+        if (_mmLiveChestBaseline is null)
+        {
+            _mmLiveChestBaseline = liveChest;
+            return;
+        }
+
+        uint newBits = liveChest & ~_mmLiveChestBaseline.Value;
+        if (newBits == 0) return;
+        _mmLiveChestBaseline = _mmLiveChestBaseline.Value | newBits;
+        uint effectiveChest = permanentChest | newBits;
+        fullBuf[off + 0] = (byte)(effectiveChest >> 24);
+        fullBuf[off + 1] = (byte)(effectiveChest >> 16);
+        fullBuf[off + 2] = (byte)(effectiveChest >>  8);
+        fullBuf[off + 3] = (byte) effectiveChest;
 
         if (_state.MmLiveSceneFlagsSnapshot is not null && fullBuf.SequenceEqual(_state.MmLiveSceneFlagsSnapshot)) return;
         _state.MmLiveSceneFlagsSnapshot = fullBuf;
-        Console.WriteLine($"[autotracker] mm_scene_flags emitted (live chest=0x{liveChest:X8} scene={sceneId})");
+        Console.WriteLine($"[autotracker] mm_scene_flags emitted (newBits=0x{newBits:X8} scene={sceneId})");
         _emit(new { type = "mm_scene_flags", data = Convert.ToBase64String(fullBuf) });
     }
 
     // Polls MmSave.info.permanentSceneFlags[120] — chest bits set when a chest is opened in MM.
+    // Gated on PayloadMmSaveAddr: gMmSave in OoT BSS is only validated (playerForm=4 or name match)
+    // after MM has actually been initialised for this session. Before that, SaveContextMm+0xF6
+    // holds stale RDRAM data from a prior session that must not be applied to checks.
     void PollMmSceneFlags()
     {
+        if (_state.PayloadMmSaveAddr is null) return;
         var buf = _mem!.Read(N64Addresses.MmSceneFlagsAddr, N64Addresses.MmSceneFlagsSize);
         if (buf is null) return;
         if (_state.MmSceneFlagsSnapshot is not null && buf.SequenceEqual(_state.MmSceneFlagsSnapshot)) return;
         _state.MmSceneFlagsSnapshot = buf;
         _emit(new { type = "mm_scene_flags", data = Convert.ToBase64String(buf) });
+    }
+
+    // Detects when the player reads a gossip stone and emits gossip_hint_read { game, key }.
+    // OoT detection: vanilla En_Gs calls Flags_SetSwitch(play, params & 0x1F) on talk; OoTMM only
+    //   patches EnGs_TalkedTo so the switch flag write in EnGs_Update is preserved. We detect the new
+    //   bit in actorCtx.flags.swch (PS+0x1D28) combined with msgBuf[0]==0x08 (TEXT_FAST) to confirm
+    //   the hint was displayed. Key = bit position (0-31); bit 0x18 = grotto, actual key via gGrottoData.
+    // OoT: msgMode rising edge + msgBuf[0]==0x08 (TEXT_FAST header from Hint_DisplayRaw) + talkActor==En_Gs.
+    // MM:  textId==0x20D0 + talkActor (PlayerDisplayTextBox called with that value in MM En_Gs.c).
+    // Emits once per unique stone per session; re-emits all on reconnect.
+    void PollGossipStoneRead()
+    {
+        if (_state.ComboConfigAddr is null) return;
+
+        // Re-emit cached seen keys on reconnect, after gossip_hints has been re-emitted (same poll).
+        if (_reemitSeenHintsNextPoll)
+        {
+            _reemitSeenHintsNextPoll = false;
+            _gossipTextWasActive = false;
+            foreach (var (g, k) in _seenHintKeys)
+                _emit(new { type = "gossip_hint_read", game = g, key = k });
+            return;
+        }
+
+        if (_state.Game == ActiveGame.Unknown) return;
+
+        bool isOot = _state.Game == ActiveGame.Oot;
+        uint ps = isOot ? N64Addresses.OotPlayStateAddr : N64Addresses.MmPlayStateAddr;
+
+        if (isOot)
+        {
+            // OoT gossip detection via msgMode rising edge + msgBuf[0]==0x08.
+            // EnGs_TalkedTo (OoT En_Gs.c) calls Hint_Display → Hint_DisplayRaw, which writes
+            // comboTextAppendHeader (byte 0x08 = TEXT_FAST) to play->msgCtx.font.msgBuf first.
+            // We detect the rising edge of msgMode going non-zero with msgBuf[0]==0x08, then
+            // confirm talkActor is En_Gs (0x1B9) and read actor.params to derive the hint key.
+            // A settle delay after scene change prevents stale msgBuf+talkActor false positives.
+
+            // Scene change: reset edge state and wait a few polls before detecting in new scene.
+            var sceneRaw = _mem!.Read(ps + (uint)N64Addresses.PlayStateSceneOff, 2);
+            if (sceneRaw is null) { _ootGossipWasActive = false; return; }
+            int curScene = (sceneRaw[0] << 8) | sceneRaw[1];
+            if (curScene != _gossipOotLastSceneId)
+            {
+                _gossipOotLastSceneId    = curScene;
+                _ootGossipWasActive      = false;
+                _ootGossipSceneSettle    = 4; // 4 × 250ms = 1s dead time after scene change
+                return;
+            }
+            if (_ootGossipSceneSettle > 0) { _ootGossipSceneSettle--; return; }
+
+            // Read msgMode — track rising edge (dialog just opened).
+            var msgModeRaw = _mem.Read(ps + (uint)N64Addresses.OotMsgCtxMsgModeOff, 1);
+            if (msgModeRaw is null) return;
+            if (msgModeRaw[0] == 0) { _ootGossipWasActive = false; return; }
+
+            // Dialog is open. Only fire on the first poll of the opening.
+            if (_ootGossipWasActive) return;
+            _ootGossipWasActive = true;
+
+            // Confirm this dialog is a combo gossip hint: msgBuf[0] must be 0x08 (TEXT_FAST header
+            // written by comboTextAppendHeader, called exclusively from Hint_DisplayRaw).
+            var msgBufRaw = _mem.Read(ps + (uint)N64Addresses.OotMsgBufOff, 1);
+            if (msgBufRaw is null || msgBufRaw[0] != 0x08) return;
+
+            // Confirm talkActor is En_Gs (0x1B9) and read its params for the hint key.
+            var talkActorRaw = _mem.Read(ps + (uint)N64Addresses.OotMsgCtxTalkActorOff, 4);
+            if (talkActorRaw is null) return;
+            uint talkActorPtr = (uint)(talkActorRaw[0]<<24|talkActorRaw[1]<<16|talkActorRaw[2]<<8|talkActorRaw[3]);
+            if (talkActorPtr < 0x80000000u || talkActorPtr >= 0x80800000u) return;
+
+            var actorIdRaw = _mem.Read(talkActorPtr + (uint)N64Addresses.ActorIdOff, 2);
+            if (actorIdRaw is null) return;
+            if (((actorIdRaw[0] << 8) | actorIdRaw[1]) != (int)N64Addresses.ActorEnGsOot) return;
+
+            var ootParamsRaw = _mem.Read(talkActorPtr + (uint)N64Addresses.ActorParamsOff, 2);
+            if (ootParamsRaw is null) return;
+            short ootActorParams = (short)((ootParamsRaw[0] << 8) | ootParamsRaw[1]);
+
+            byte key = (byte)(ootActorParams & 0x1F);
+            if (key == 0x18)
+            {
+                var grottoRaw = _mem.Read(N64Addresses.SaveContextOot + (uint)N64Addresses.OotGrottoDataOff, 1);
+                if (grottoRaw is null) return;
+                key = (byte)((grottoRaw[0] & 0x1F) | 0x20);
+            }
+
+            _seenHintKeys.Add(("oot", key));
+            Console.WriteLine($"[autotracker] gossip_hint_read (oot) key=0x{key:X2} params=0x{ootActorParams:X4} actor=0x{talkActorPtr:X8}");
+            _emit(new { type = "gossip_hint_read", game = "oot", key });
+            return;
+        }
+
+        // MM branch below — uses textId + talkActor (unchanged).
+        uint actorPtr;
+        {
+            // MM: textId 0x20D0 is the fixed ID PlayerDisplayTextBox is called with for gossip stones.
+            var textIdRaw = _mem!.Read(ps + (uint)N64Addresses.MmMsgCtxTextIdOff, 2);
+            if (textIdRaw is null) { _gossipTextWasActive = false; return; }
+            uint textId = (uint)((textIdRaw[0] << 8) | textIdRaw[1]);
+            if (textId != N64Addresses.GossipHintTextId) { _gossipTextWasActive = false; return; }
+
+            var ptrRaw = _mem.Read(ps + (uint)N64Addresses.MmMsgCtxTalkActorOff, 4);
+            if (ptrRaw is null) { _gossipTextWasActive = false; return; }
+            actorPtr = (uint)(ptrRaw[0] << 24 | ptrRaw[1] << 16 | ptrRaw[2] << 8 | ptrRaw[3]);
+            if (actorPtr < 0x80000000u || actorPtr >= 0x80800000u) { _gossipTextWasActive = false; return; }
+        }
+
+        // Rising edge only: don't repeat while the MM textbox stays open.
+        if (_gossipTextWasActive) return;
+        _gossipTextWasActive = true;
+
+        // Read Actor.params (s16 big-endian at Actor+0x14).
+        var paramsRaw = _mem!.Read(actorPtr + (uint)N64Addresses.ActorParamsOff, 2);
+        if (paramsRaw is null) return;
+        short actorParams = (short)((paramsRaw[0] << 8) | paramsRaw[1]);
+
+        // MM En_Gs: params==1 or 2 → key = (unk_198 & 0x1F) | 0x20; else key = unk_195 & 0x1F.
+        byte mmKey;
+        if (actorParams == 1 || actorParams == 2)
+        {
+            var unk198Raw = _mem.Read(actorPtr + (uint)N64Addresses.MmEnGsUnk198Off, 2);
+            if (unk198Raw is null) return;
+            short unk198 = (short)((unk198Raw[0] << 8) | unk198Raw[1]);
+            mmKey = (byte)((unk198 & 0x1F) | 0x20);
+        }
+        else
+        {
+            var unk195Raw = _mem.Read(actorPtr + (uint)N64Addresses.MmEnGsUnk195Off, 1);
+            if (unk195Raw is null) return;
+            mmKey = (byte)(unk195Raw[0] & 0x1F);
+
+            // Moon trial scenes: key |= 0x40
+            var sceneRaw = _mem.Read(ps + (uint)N64Addresses.PlayStateSceneOff, 2);
+            if (sceneRaw is not null)
+            {
+                int sceneId = (sceneRaw[0] << 8) | sceneRaw[1];
+                if (Array.IndexOf(N64Addresses.MmMoonSceneIds, sceneId) >= 0)
+                    mmKey |= 0x40;
+            }
+        }
+
+        _seenHintKeys.Add(("mm", mmKey)); // keep for reconnect re-emission
+        Console.WriteLine($"[autotracker] gossip_hint_read (mm) key=0x{mmKey:X2} actorParams=0x{actorParams:X4} actorPtr=0x{actorPtr:X8}");
+        _emit(new { type = "gossip_hint_read", game = "mm", key = mmKey });
+    }
+
+    // Detects when the player reads a dungeon reward hint sign (altar) and emits altar_read { game, age }.
+    // OoT: En_Wonder_Talk (0x0147) with params & 0xF800 == 0x0800 — shows stones (child) or medallions+Ganon BK (adult).
+    // MM:  En_Talk (0x0261) with params & 0x3F == 0x18 — shows boss remains + light arrows.
+    void PollAltarRead()
+    {
+        if (_state.ComboConfigAddr is null) return;
+
+        if (_reemitSeenAltarNextPoll)
+        {
+            _reemitSeenAltarNextPoll = false;
+            foreach (var (g, a) in _seenAltarFlags)
+                _emit(new { type = "altar_read", game = g, age = a });
+            return;
+        }
+
+        // Ganon Battle Arena scene detection: entering scene 79 (OOT_GANON_BATTLE_ARENA) reveals
+        // the light arrow hint without needing to interact with any actor.
+        if (_state.Game == ActiveGame.Oot)
+        {
+            var sceneRaw = _mem!.Read(N64Addresses.OotPlayStateAddr + (uint)N64Addresses.PlayStateSceneOff, 2);
+            if (sceneRaw is not null)
+            {
+                int sceneId = (sceneRaw[0] << 8) | sceneRaw[1];
+                if (sceneId == N64Addresses.OotGanonBattleArenaSceneId
+                    && _seenAltarFlags.Add(("oot", "ganon")))
+                {
+                    Console.WriteLine("[autotracker] altar_read (oot, ganon) — entered Ganon Battle Arena (scene 79)");
+                    _emit(new { type = "altar_read", game = "oot", age = "ganon" });
+                }
+            }
+        }
+
+        bool isOot = _state.Game == ActiveGame.Oot;
+        var  ps    = isOot ? N64Addresses.OotPlayStateAddr : N64Addresses.MmPlayStateAddr;
+
+        // Require an active textbox (textId != 0).
+        uint textId;
+        if (isOot)
+        {
+            var raw = _mem!.Read(ps + (uint)N64Addresses.OotMsgCtxTextIdOff, 2);
+            if (raw is null) return;
+            textId = (uint)((raw[0] << 8) | raw[1]);
+        }
+        else
+        {
+            var raw = _mem!.Read(ps + (uint)N64Addresses.MmMsgCtxTextIdOff, 2);
+            if (raw is null) return;
+            textId = (uint)((raw[0] << 8) | raw[1]);
+        }
+        if (textId == 0) return;
+
+        // Read talkActor pointer.
+        var ptrOff = isOot ? N64Addresses.OotMsgCtxTalkActorOff : N64Addresses.MmMsgCtxTalkActorOff;
+        var ptrRaw = _mem!.Read(ps + (uint)ptrOff, 4);
+        if (ptrRaw is null) return;
+        uint actorPtr = (uint)(ptrRaw[0] << 24 | ptrRaw[1] << 16 | ptrRaw[2] << 8 | ptrRaw[3]);
+        if (actorPtr < 0x80000000u || actorPtr >= 0x80800000u) return;
+
+        // Check actor ID.
+        uint targetId = isOot ? N64Addresses.ActorEnWonderTalk : N64Addresses.ActorEnTalk;
+        var  idRaw    = _mem.Read(actorPtr + (uint)N64Addresses.ActorIdOff, 2);
+        if (idRaw is null) return;
+        uint actorId = (uint)((idRaw[0] << 8) | idRaw[1]);
+        if (actorId != targetId) return;
+
+        // Check actor params.
+        var paramsRaw = _mem.Read(actorPtr + (uint)N64Addresses.ActorParamsOff, 2);
+        if (paramsRaw is null) return;
+        int paramsInt = (int)(short)((paramsRaw[0] << 8) | paramsRaw[1]);
+
+        string game = isOot ? "oot" : "mm";
+        string age;
+
+        if (isOot)
+        {
+            if ((paramsInt & 0xF800) != 0x0800) return;
+            // Read OotSave.age (u32 at +0x04): 0=adult, 1=child.
+            var ageRaw = _mem.Read(N64Addresses.SaveContextOot + (uint)N64Addresses.OotSaveAgeOff, 4);
+            if (ageRaw is null) return;
+            uint ageVal = (uint)(ageRaw[0] << 24 | ageRaw[1] << 16 | ageRaw[2] << 8 | ageRaw[3]);
+            age = ageVal == 1 ? "child" : "adult";
+        }
+        else
+        {
+            if ((paramsInt & 0x3F) != 0x18) return;
+            age = "adult"; // MM altar shows boss remains + light arrows (single page set)
+        }
+
+        if (!_seenAltarFlags.Add((game, age))) return;
+        Console.WriteLine($"[autotracker] altar_read ({game}, {age})");
+        _emit(new { type = "altar_read", game, age });
+    }
+
+// Scans all of RDRAM for the gHints array loaded by Hint_Init().
+    // Pattern: 15+ consecutive 16-byte blocks where byte[0] is a valid gossip key (0x00-0x5F)
+    // and byte[1] is a valid hint type (0x00-0x04), followed by a terminator with byte[0]=0xFF.
+    // Additional validation: world field (byte[3]) must be 1 or 2 for types 0-3.
+    // Minimum 15 entries avoids false positives from non-heap data.
+    // Returns the start address if found, or null.
+    uint? ScanForGossipHintArray(byte[] rdram, bool isMm)
+    {
+        // Scan the OoTMM overlay BSS for a 32-bit pointer to gHints.
+        // gHints = Hint* gHints (in hint.c), a BSS global whose value is the malloc'd address.
+        // The OoTMM custom heap starts at 0x80700000 (OoT) / 0x806E0000 (MM).
+        // OoT BSS: 0x80400000-0x80700000 (just below OoT heap)
+        // MM  BSS: 0x80720000-0x80800000 (above OoT heap, below RAM end)
+        uint bssStart, bssEnd;
+        uint heapMin, heapMax;
+        if (!isMm)
+        {
+            // OoT heap lives at 0x80700000-0x807FFFFF. Any BSS pointer targeting below 0x80700000
+            // is payload BSS or actor memory — volatile and not a valid gHints address.
+            // Scanning BSS from 0x80100000 to cover dev builds with lower-RDRAM payload.
+            bssStart = 0x80100000u;
+            bssEnd   = 0x80700000u;
+            heapMin  = 0x80700000u; // OoT heap start — rejects false positives in payload BSS
+            heapMax  = 0x80800000u;
+        }
+        else
+        {
+            // MM heap lives at 0x806E0000-0x8071FFFF.
+            bssStart = 0x80100000u;
+            bssEnd   = N64Addresses.PayloadMmEnd;
+            heapMin  = 0x806E0000u; // MM heap start
+            heapMax  = 0x80800000u;
+        }
+
+        int bssOffStart = (int)(bssStart - 0x80000000u);
+        int bssOffEnd   = (int)(Math.Min(bssEnd, 0x80800000u) - 0x80000000u);
+        bssOffEnd = Math.Min(bssOffEnd, rdram.Length);
+
+        List<uint> matches = new List<uint>();
+        for (int i = bssOffStart; i + 4 <= bssOffEnd; i += 4)
+        {
+            uint ptr = (uint)(rdram[i] << 24 | rdram[i+1] << 16 | rdram[i+2] << 8 | rdram[i+3]);
+            if (ptr < heapMin || ptr >= heapMax) continue;
+
+            uint off = ptr - 0x80000000u;
+            if (off + 16 > (uint)rdram.Length) continue;
+
+            // Quick check on the first entry
+            if (rdram[(int)off] > 0x5F || rdram[(int)off] == 0xFF) continue;
+            if (rdram[(int)off + 1] > 4) continue;
+            // world (byte[3]): 0 in single-player, 1-indexed in multiworld (up to 127 players).
+            byte w = rdram[(int)off + 3];
+            if (rdram[(int)off + 1] < 4 && w > 127) continue;
+
+            // Count consecutive valid entries
+            int run = 0;
+            uint j = off;
+            bool hasMoon = false;
+            uint limit = Math.Min((uint)rdram.Length, heapMax);
+            while (j + 16 <= limit)
+            {
+                byte k = rdram[(int)j];
+                byte t = rdram[(int)j + 1];
+                byte ww = rdram[(int)j + 3];
+                if (k == 0xFF) { j += 16; break; }
+                if (k > 0x5F || t > 4) break;
+                if (t < 4 && ww > 127) break;
+                if ((k & 0x40) != 0) hasMoon = true;
+                run++;
+                j += 16;
+            }
+            if (run < 15) continue;
+            // OoT: no moon keys; MM: must have at least one moon key
+            if (!isMm && hasMoon) continue;
+            if (isMm && !hasMoon) continue;
+
+            // Exclude all-same-key patterns (e.g. zeroed BSS filler)
+            bool allSameKey = true;
+            byte firstKey = rdram[(int)off];
+            for (uint k = off + 16; k < j && k < off + 256; k += 16)
+                if (rdram[(int)k] != firstKey) { allSameKey = false; break; }
+            if (allSameKey) continue;
+
+            matches.Add(ptr);
+        }
+        // Return the last (most recently stored) match — likely the real gHints,
+        // since the BSS variable is set after earlier init functions.
+        if (matches.Count > 0)
+        {
+            uint ptr = matches[matches.Count - 1];
+            return ptr;
+        }
+        return null;
+    }
+
+    // Polls gossip stone hint arrays (gHints for OoT and MM).
+    // Scans RDRAM once every 5 s until the ACTIVE game's array is found, then just polls the known address.
+    // Only the active game's hints are polled per cycle: OoT heap (0x80700000-0x807FFFFF) overlaps
+    // with MM heap (0x806E0000-0x8071FFFF), so reading MM hints while in OoT would read live OoT
+    // heap data and spam changes. Each game's hints are stable only when that game is active.
+    void PollGossipHints()
+    {
+        if (_state.ComboConfigAddr is null) return;
+
+        bool isOot  = _state.Game == ActiveGame.Oot;
+        bool needOot = _state.GossipHintsOotAddr is null;
+        bool needMm  = _state.GossipHintsMmAddr  is null;
+
+        // Fast path: relevant address already found — just poll and emit on change.
+        if (isOot && !needOot)
+        {
+            _state.GossipHintsOotSnapshot = ReadAndEmitGossipHints(_state.GossipHintsOotAddr!.Value, _state.GossipHintsOotSnapshot, "oot");
+            return;
+        }
+        if (!isOot && !needMm)
+        {
+            _state.GossipHintsMmSnapshot = ReadAndEmitGossipHints(_state.GossipHintsMmAddr!.Value, _state.GossipHintsMmSnapshot, "mm");
+            return;
+        }
+
+        // Scan needed — throttle to once every 50 polls (≈5 s) to avoid 8 MB reads every tick.
+        if (_gossipScanCooldown > 0) { _gossipScanCooldown--; return; }
+        _gossipScanCooldown = 50;
+
+        var rdram = _mem!.ReadAllRdram();
+        if (rdram is null) return;
+
+        // Only scan for the current game's hints — scanning the other game's array from the wrong
+        // heap context produces false positives from volatile actor/stack memory.
+        if (isOot && needOot)
+        {
+            var addr = ScanForGossipHintArray(rdram, false);
+            if (addr is not null)
+            {
+                _state.GossipHintsOotAddr = addr;
+                Console.WriteLine($"[autotracker] gHints (OoT) found at 0x{addr:X8}");
+                _state.GossipHintsOotSnapshot = ReadAndEmitGossipHints(addr.Value, _state.GossipHintsOotSnapshot, "oot");
+            }
+        }
+        else if (!isOot && needMm)
+        {
+            var addr = ScanForGossipHintArray(rdram, true);
+            if (addr is not null)
+            {
+                _state.GossipHintsMmAddr = addr;
+                Console.WriteLine($"[autotracker] gHints (MM) found at 0x{addr:X8}");
+                _state.GossipHintsMmSnapshot = ReadAndEmitGossipHints(addr.Value, _state.GossipHintsMmSnapshot, "mm");
+            }
+        }
+    }
+
+    // Reads the hint array at the given N64 address, emits gossip_hints if changed, and returns the new snapshot.
+    byte[]? ReadAndEmitGossipHints(uint addr, byte[]? snapshot, string game)
+    {
+        // Read up to 256 hint records (16 bytes each) — generous upper bound
+        const int MaxHints = 256;
+        var buf = _mem!.Read(addr, MaxHints * 16);
+        if (buf is null) return snapshot;
+
+        // Find the actual length (up to the 0xFF terminator)
+        int len = buf.Length;
+        for (int i = 0; i < buf.Length; i += 16)
+        {
+            if (buf[i] == 0xFF) { len = i + 16; break; }
+        }
+
+        var slice = buf[..len];
+        if (snapshot is not null && slice.SequenceEqual(snapshot)) return snapshot;
+        _emit(new { type = "gossip_hints", game, data = Convert.ToBase64String(slice) });
+        Console.WriteLine($"[autotracker] gossip_hints ({game}) emitted ({len / 16} entries)");
+        return slice;
+    }
+
+    // Scans the given payload heap range for the gEntrances table (key/value u32 pairs terminated by 0xFFFFFFFF).
+    // Valid srcId: 0 ≤ key ≤ 0x20000; valid dstId: (val & 0x7FFFFFFF) ≤ 0x20000 (bit31=cross-game allowed).
+    // Requires 6+ consecutive valid pairs before the terminator to reject false positives.
+    uint? ScanForEntranceTable(byte[] rdram, bool isMm)
+    {
+        int startOff = (int)((isMm ? N64Addresses.PayloadMmStart : N64Addresses.PayloadOotStart) - 0x80000000u);
+        int endOff   = (int)((isMm ? N64Addresses.PayloadMmEnd   : N64Addresses.PayloadOotEnd)   - 0x80000000u);
+
+        const int MinPairs = 6;
+        int sequenceStart = -1;
+        int pairCount     = 0;
+        int nonZeroKeys   = 0; // number of pairs with key > 0 (guards against BSS zero runs)
+
+        for (int i = startOff; i + 8 <= endOff; i += 8)
+        {
+            uint key = (uint)(rdram[i]<<24 | rdram[i+1]<<16 | rdram[i+2]<<8 | rdram[i+3]);
+            uint val = (uint)(rdram[i+4]<<24 | rdram[i+5]<<16 | rdram[i+6]<<8 | rdram[i+7]);
+
+            if (key == 0xFFFFFFFF)
+            {
+                if (pairCount >= MinPairs && nonZeroKeys >= MinPairs - 1)
+                {
+                    // Walk back to include any key=0 pairs (e.g. OOT_DEKU_TREE id=0) before sequenceStart.
+                    int tableStart = sequenceStart;
+                    while (tableStart - 8 >= startOff)
+                    {
+                        int prev = tableStart - 8;
+                        uint pk = (uint)(rdram[prev]<<24 | rdram[prev+1]<<16 | rdram[prev+2]<<8 | rdram[prev+3]);
+                        uint pv = (uint)(rdram[prev+4]<<24 | rdram[prev+5]<<16 | rdram[prev+6]<<8 | rdram[prev+7]);
+                        if (pk == 0 && pv > 0 && (pv & 0x7FFFFFFFu) <= 0x20000u)
+                            tableStart = prev;
+                        else
+                            break;
+                    }
+                    return 0x80000000u + (uint)tableStart;
+                }
+                sequenceStart = -1;
+                pairCount     = 0;
+                nonZeroKeys   = 0;
+                continue;
+            }
+
+            bool validKey = key <= 0x20000u;
+            bool validVal = (val & 0x7FFFFFFFu) <= 0x20000u;
+            // Reject BSS zero pairs (would give a false sequence of all-zero matches)
+            if (!validKey || !validVal || (key == 0 && val == 0))
+            {
+                sequenceStart = -1;
+                pairCount     = 0;
+                nonZeroKeys   = 0;
+                continue;
+            }
+
+            if (sequenceStart < 0) sequenceStart = i;
+            pairCount++;
+            if (key > 0) nonZeroKeys++;
+        }
+        return null;
+    }
+
+    // Polls gEntrances arrays for OoT and MM.
+    // Scans payload heap once every 5 s until both are found, then polls for content changes.
+    void PollEntranceTable()
+    {
+        if (_state.ComboConfigAddr is null) return;
+
+        bool needOot = _state.EntranceTableOotAddr is null;
+        bool needMm  = _state.EntranceTableMmAddr  is null;
+        if (!needOot && !needMm)
+        {
+            _state.EntranceTableOotSnapshot = ReadAndEmitEntranceTable(_state.EntranceTableOotAddr!.Value, _state.EntranceTableOotSnapshot, "oot");
+            _state.EntranceTableMmSnapshot  = ReadAndEmitEntranceTable(_state.EntranceTableMmAddr!.Value,  _state.EntranceTableMmSnapshot,  "mm");
+            return;
+        }
+
+        if (_entranceScanCooldown > 0) { _entranceScanCooldown--; return; }
+        _entranceScanCooldown = 50;
+
+        var rdram = _mem!.ReadAllRdram();
+        if (rdram is null) return;
+
+        if (needOot)
+        {
+            var addr = ScanForEntranceTable(rdram, false);
+            if (addr is not null)
+            {
+                _state.EntranceTableOotAddr = addr;
+                Console.WriteLine($"[autotrack] gEntrances (OoT) found at 0x{addr:X8}");
+            }
+        }
+        if (needMm)
+        {
+            var addr = ScanForEntranceTable(rdram, true);
+            if (addr is not null)
+            {
+                _state.EntranceTableMmAddr = addr;
+                Console.WriteLine($"[autotrack] gEntrances (MM) found at 0x{addr:X8}");
+            }
+        }
+
+        if (_state.EntranceTableOotAddr is not null)
+            _state.EntranceTableOotSnapshot = ReadAndEmitEntranceTable(_state.EntranceTableOotAddr.Value, _state.EntranceTableOotSnapshot, "oot");
+        if (_state.EntranceTableMmAddr is not null)
+            _state.EntranceTableMmSnapshot  = ReadAndEmitEntranceTable(_state.EntranceTableMmAddr.Value,  _state.EntranceTableMmSnapshot,  "mm");
+    }
+
+    // Reads the gEntrances table at the given N64 address and emits entrance_table if changed.
+    byte[]? ReadAndEmitEntranceTable(uint addr, byte[]? snapshot, string game)
+    {
+        // Read up to 1024 pairs (8 bytes each) — generous upper bound for a full ER seed
+        const int MaxPairs = 1024;
+        var buf = _mem!.Read(addr, MaxPairs * 8);
+        if (buf is null) return snapshot;
+
+        // Find the actual length up to the 0xFFFFFFFF terminator
+        int len = buf.Length;
+        for (int i = 0; i + 4 <= buf.Length; i += 8)
+        {
+            uint key = (uint)(buf[i]<<24 | buf[i+1]<<16 | buf[i+2]<<8 | buf[i+3]);
+            if (key == 0xFFFFFFFF) { len = i + 8; break; }
+        }
+
+        var slice = buf[..len];
+        if (snapshot is not null && slice.SequenceEqual(snapshot)) return snapshot;
+        _emit(new { type = "entrance_table", game, data = Convert.ToBase64String(slice) });
+        Console.WriteLine($"[autotrack] entrance_table ({game}) emitted ({(len - 8) / 8} pairs)");
+        return slice;
+    }
+
+    // Polls shop slot data (item GI, player, price) when the player is in a shop scene.
+    // Reads prices from gComboConfig.prices[] and scans the active payload BSS for
+    // sComboOverridesCache entries with key 0x07000000|shopId (type=OV_SHOP, scene=0, room=0).
+    // Only runs when the scene has settled (sceneSettleCounter == 0) to ensure actors are initialised.
+    // Emits shop_data once per unique shop scene entry; re-emits on reconnect/resync.
+    void PollShopData()
+    {
+        if (_state.ComboConfigAddr is null) return;
+        if (_state.Game == ActiveGame.Unknown) return;
+
+        bool isOot = _state.Game == ActiveGame.Oot;
+        uint ps = isOot ? N64Addresses.OotPlayStateAddr : N64Addresses.MmPlayStateAddr;
+
+        var sceneRaw = _mem!.Read(ps + (uint)N64Addresses.PlayStateSceneOff, 2);
+        if (sceneRaw is null) return;
+        int sceneId = (sceneRaw[0] << 8) | sceneRaw[1];
+
+        // Require scene to be settled (same criteria as live chest flag polls).
+        bool settled = isOot
+            ? (_prevOotLiveSceneId == sceneId && _ootSceneSettleCounter == 0)
+            : (_prevMmLiveSceneId  == sceneId && _mmSceneSettleCounter  == 0);
+        if (!settled) return;
+
+        if (!IsShopScene(isOot, sceneId)) { _lastShopKey = -1; return; }
+
+        int shopKey = (isOot ? 0 : 0x10000) | sceneId;
+        if (shopKey == _lastShopKey) return;
+
+        // Build set of valid shopIds for this scene (may be non-contiguous, e.g. Bazaar).
+        var validIds = new HashSet<int>();
+        foreach (var (min, max) in ShopIdRanges(isOot, sceneId))
+            for (int id = min; id <= max; id++) validIds.Add(id);
+
+        if (validIds.Count == 0) { _lastShopKey = shopKey; return; }
+
+        // Read prices: gComboConfig.prices[141] at offset 0x15C, u16 big-endian each.
+        int priceBytes = N64Addresses.ComboConfigPricesCount * 2;
+        var priceBuf = _mem.Read(_state.ComboConfigAddr.Value + (uint)N64Addresses.ComboConfigPricesOff, priceBytes);
+        if (priceBuf is null) return;
+
+        // Scan the active game's payload BSS for sComboOverridesCache entries.
+        // Key layout (big-endian u32): byte[0]=0x07, byte[1]=0x00, byte[2]=0x00, byte[3]=shopId.
+        // Struct (16 bytes): key(4) | player s16(2) | gi u16(2) | ...
+        uint scanStart = isOot ? N64Addresses.PayloadOotStart : N64Addresses.PayloadMmStart;
+        uint scanEnd   = isOot ? N64Addresses.PayloadOotEnd   : N64Addresses.PayloadMmEnd;
+        var bss = _mem.Read(scanStart, (int)(scanEnd - scanStart));
+        if (bss is null) return;
+
+        var overrides = new Dictionary<int, (int Gi, int Player)>();
+        // Step 4 bytes: OverrideData.key is u32-aligned, but the cache array may start at
+        // any 4-byte boundary — stepping 16 would miss entries not on 16-byte boundaries.
+        for (int i = 0; i + 16 <= bss.Length; i += 4)
+        {
+            if (bss[i] != 0x07 || bss[i+1] != 0x00 || bss[i+2] != 0x00) continue;
+            int sid = bss[i+3];
+            if (!validIds.Contains(sid)) continue;
+            // bytes[4-5] = player (s16 big-endian, 1-8 for valid players)
+            int player = (short)((bss[i+4] << 8) | bss[i+5]);
+            if (player < 1 || player > 8) continue;
+            // bytes[6-7] = GI (u16 big-endian, 1-933 for valid GI indices)
+            int gi = (bss[i+6] << 8) | bss[i+7];
+            if (gi < 1 || gi > 933) continue;
+            overrides[sid] = (gi, player);
+        }
+
+        var slots = new List<object>(validIds.Count);
+        foreach (int shopId in validIds.Order())
+        {
+            // OoT: priceIdx = shopId (PRICE_RANGES.OOT_SHOPS = 0)
+            // MM:  priceIdx = MM_SHOPS_BASE (106) + shopId
+            int priceIdx = isOot ? shopId : N64Addresses.MmShopsPriceBase + shopId;
+            int priceOff = priceIdx * 2;
+            int price    = priceOff + 2 <= priceBuf.Length
+                ? (priceBuf[priceOff] << 8) | priceBuf[priceOff + 1]
+                : 0;
+            var ov = overrides.TryGetValue(shopId, out var v) ? v : (Gi: 0, Player: 0);
+            slots.Add(new { shopId, gi = ov.Gi, player = ov.Player, price });
+        }
+
+        // If no overrides found, sComboOverridesCache hasn't been populated yet (actors haven't drawn).
+        // Don't cache or update _lastShopKey so the scan retries next poll.
+        if (overrides.Count == 0)
+        {
+            Console.WriteLine($"[autotracker] shop_data: {(isOot ? "oot" : "mm")} scene={sceneId} — no overrides yet, retrying next poll");
+            return;
+        }
+
+        Console.WriteLine($"[autotracker] shop_data: {(isOot ? "oot" : "mm")} scene={sceneId}, {slots.Count} slots, {overrides.Count} overrides");
+        var payload = new { type = "shop_data", game = isOot ? "oot" : "mm", sceneId, slots };
+        _state.ShopDataCache[shopKey] = payload;
+        _lastShopKey = shopKey;
+        _emit(payload);
+    }
+
+    static bool IsShopScene(bool isOot, int sceneId) =>
+        isOot ? sceneId is 44 or 45 or 46 or 47 or 48 or 49 or 50
+              : sceneId is 10 or 13 or 52 or 61 or 76 or 104;
+
+    // Returns the shopId ranges for the given (game, scene). Non-contiguous for Bazaar (scene 44).
+    // ShopId→PRICE_RANGES mapping:
+    //   OoT shops: OOT_SHOPS base=0, so priceIdx = shopId directly.
+    //   MM shops:  MM_SHOPS  base=106, so priceIdx = 106 + shopId.
+    static IEnumerable<(int Min, int Max)> ShopIdRanges(bool isOot, int sceneId)
+    {
+        if (isOot) switch (sceneId)
+        {
+            case 45: yield return (0x00, 0x07); break; // Kokiri Shop
+            case 50: yield return (0x08, 0x0F); break; // Bombchu Shop
+            case 47: yield return (0x10, 0x17); break; // Zora Shop
+            case 46: yield return (0x18, 0x1F); break; // Goron Shop
+            case 44: yield return (0x20, 0x27); yield return (0x30, 0x37); break; // Market + Kakariko Bazaar
+            case 49: yield return (0x28, 0x2F); break; // Market Potion Shop
+            case 48: yield return (0x38, 0x3F); break; // Kakariko Potion Shop
+        }
+        else switch (sceneId)
+        {
+            case 104: yield return (0x00, 0x03); break; // Bomb Shop
+            case  13: yield return (0x04, 0x04); break; // Curiosity Shop
+            case  52: yield return (0x05, 0x0C); break; // Trading Post
+            case  10: yield return (0x0D, 0x0F); break; // Swamp Potion Shop
+            case  61: yield return (0x10, 0x12); break; // Goron Shop
+            case  76: yield return (0x13, 0x15); break; // Zora Hall Rooms
+        }
+    }
+
+    // Searches several paths relative to the exe for xflag-type-index.json (built by process-data).
+    // Returns a dictionary mapping override key32 → "game:csvtype:layout" (e.g. "oot:pot:dungeon").
+    // Returns null and logs a warning if the file is not found; per-type detection is skipped gracefully.
+    Dictionary<uint, string>? LoadXflagIndex()
+    {
+        var baseDir = AppContext.BaseDirectory;
+        string[] candidates = [
+            Path.Combine(baseDir, "xflag-type-index.json"),
+            Path.Combine(baseDir, "src", "data", "dist", "xflag-type-index.json"),
+            Path.Combine(baseDir, "..", "src", "data", "dist", "xflag-type-index.json"),
+            Path.Combine(baseDir, "..", "..", "src", "data", "dist", "xflag-type-index.json"),
+            Path.Combine(baseDir, "..", "..", "..", "..", "src", "data", "dist", "xflag-type-index.json"),
+        ];
+        var path = candidates.FirstOrDefault(File.Exists);
+        if (path is null)
+        {
+            Console.WriteLine("[autotrack] xflag-type-index.json not found — per-type xflag detection skipped");
+            return null;
+        }
+        try
+        {
+            using var doc = JsonDocument.Parse(File.ReadAllText(path));
+            var index = new Dictionary<uint, string>();
+            foreach (var prop in doc.RootElement.EnumerateObject())
+                if (uint.TryParse(prop.Name, out var k))
+                    index[k] = prop.Value.GetString() ?? "";
+            Console.WriteLine($"[autotrack] xflag-type-index: {index.Count} entries from {Path.GetFullPath(path)}");
+            return index;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[autotrack] xflag-type-index load failed: {ex.Message}");
+            return null;
+        }
+    }
+
+    // Locates the COMBO_VROM_CHECKS file in ROM via the OoTMM extra DMA table.
+    // COMBO_META_ROM (physical offset 0x03FFF000) holds:
+    //   u32 extraDmaRomOff — physical ROM offset of the extra DMA table
+    //   u32 extraDmaCount  — number of 16-byte DmaEntry records in that table
+    // Each DmaEntry is: { u32 vstart, u32 vend, u32 pstart, u32 pend }.
+    // COMBO_VROM_CHECKS VROM address:
+    //   OoT payload: 0xF0400000
+    //   MM  payload: 0xF0500000
+    // Returns the ROM byte offset (pstart) of the override table; count = (pend-pstart)/16.
+    uint? FindOverrideTableViaDma(out int count)
+    {
+        count = 0;
+        if (_mem is null || _mem.RomBase == 0) return null;
+
+        const uint comboMetaRom = 0x03FFF000u;
+        var meta = _mem.ReadRom(comboMetaRom, 8);
+        if (meta is null)
+        {
+            Console.WriteLine("[autotrack] FindOverrideTableViaDma: ReadRom(COMBO_META_ROM) failed");
+            return null;
+        }
+
+        uint extraDmaRomOff = (uint)(meta[0]<<24 | meta[1]<<16 | meta[2]<<8 | meta[3]);
+        uint extraDmaCount  = (uint)(meta[4]<<24 | meta[5]<<16 | meta[6]<<8 | meta[7]);
+        Console.WriteLine($"[autotrack] extraDma romOff=0x{extraDmaRomOff:X8} count={extraDmaCount}");
+
+        if (extraDmaRomOff == 0 || extraDmaCount == 0 || extraDmaCount > 4096) return null;
+
+        // COMBO_VROM_CHECKS vstart: OoT=0xF0400000, MM=0xF0500000 (COMBO_EXTRA_DMA_VROM|0x00400000/00500000)
+        const uint checksVromOot = 0xF0400000u;
+        const uint checksVromMm  = 0xF0500000u;
+
+        const int dmaEntrySize = 16; // sizeof(DmaEntry)
+        uint tableBytes = extraDmaCount * dmaEntrySize;
+        var table = _mem.ReadRom(extraDmaRomOff, (int)tableBytes);
+        if (table is null)
+        {
+            Console.WriteLine($"[autotrack] FindOverrideTableViaDma: ReadRom(extraDmaTable) failed at 0x{extraDmaRomOff:X8}");
+            return null;
+        }
+
+        for (int i = 0; i < (int)extraDmaCount; i++)
+        {
+            int off = i * dmaEntrySize;
+            uint vstart = (uint)(table[off+0]<<24 | table[off+1]<<16 | table[off+2]<<8 | table[off+3]);
+            uint vend   = (uint)(table[off+4]<<24 | table[off+5]<<16 | table[off+6]<<8 | table[off+7]);
+            uint pstart = (uint)(table[off+8]<<24  | table[off+9]<<16  | table[off+10]<<8 | table[off+11]);
+            if (vstart != checksVromOot && vstart != checksVromMm) continue;
+            if (pstart == 0 || pstart == 0xFFFFFFFF) continue;
+
+            // Uncompressed files have pend=0; compressed have pend=pstart+compressedSize.
+            // File size (count of 16-byte entries) comes from the virtual span (vend-vstart).
+            uint fileSize = vend - vstart;
+            int  cnt      = (int)(fileSize / N64Addresses.OverrideEntrySize);
+            if (cnt < 10 || cnt > 30000) continue;
+
+            uint pend = (uint)(table[off+12]<<24 | table[off+13]<<16 | table[off+14]<<8 | table[off+15]);
+            Console.WriteLine($"[autotrack] COMBO_VROM_CHECKS vstart=0x{vstart:X8} vend=0x{vend:X8} pstart=0x{pstart:X8} pend=0x{pend:X8} count={cnt}");
+            count = cnt;
+            return pstart;
+        }
+
+        Console.WriteLine("[autotrack] FindOverrideTableViaDma: COMBO_VROM_CHECKS entry not found in extra DMA table");
+        return null;
+    }
+
+    // Polls the sComboOverrides table once it has been located, collecting OV_* type bytes to
+    // derive which check categories are shuffled.  Emits shuffle_settings once and stops polling.
+    // On WebSocket reconnect, OverrideTableScanned is reset to false so the emit is repeated.
+    void PollOverrideTable()
+    {
+        if (_state.OverrideTableScanned) return;
+        if (_state.ComboConfigAddr is null) return;
+
+        if (_state.OverrideTableAddr is null)
+        {
+            if (_overrideScanCooldown > 0) { _overrideScanCooldown--; return; }
+            _overrideScanCooldown = 40; // ~10 s
+
+            var ptr = FindOverrideTableViaDma(out int cnt);
+            if (ptr is null)
+            {
+                Console.WriteLine("[autotrack] sComboOverrides: DMA lookup found no table (will retry)");
+                return;
+            }
+
+            _state.OverrideTableAddr  = ptr;
+            _state.OverrideTableCount = cnt;
+            Console.WriteLine($"[autotrack] sComboOverrides romOff=0x{ptr:X8} count={cnt}");
+            return; // will be read on next poll
+        }
+
+        // OverrideTableAddr stores the ROM file offset; read from the ROM buffer (not RDRAM).
+        int byteCount = _state.OverrideTableCount * N64Addresses.OverrideEntrySize;
+        var buf = _mem!.ReadRom(_state.OverrideTableAddr!.Value, byteCount);
+        if (buf is null) return;
+
+        bool scrub = false, cow = false, shop = false;
+        bool gs    = false, sf  = false, fish = false, xflag = false;
+        // "game:csvtype" → hasDungeon (any dungeon entry → 'anywhere', else 'overworld')
+        var xflagDetected = new Dictionary<string, bool>();
+
+        if (!_xflagIndexLoaded) { _xflagIndex = LoadXflagIndex(); _xflagIndexLoaded = true; }
+
+        for (int i = 0; i < _state.OverrideTableCount; i++)
+        {
+            int off = i * N64Addresses.OverrideEntrySize;
+            byte t  = buf[off + N64Addresses.OverrideKeyOffset];
+            switch (t)
+            {
+                case N64Addresses.OvGs:    gs    = true; break;
+                case N64Addresses.OvSf:    sf    = true; break;
+                case N64Addresses.OvCow:   cow   = true; break;
+                case N64Addresses.OvShop:  shop  = true; break;
+                case N64Addresses.OvScrub: scrub = true; break;
+                case N64Addresses.OvFish:  fish  = true; break;
+                default:
+                    if (t >= N64Addresses.OvXflagMin && t <= N64Addresses.OvXflagMax)
+                    {
+                        xflag = true;
+                        if (_xflagIndex is not null)
+                        {
+                            uint key = (uint)((buf[off] << 24) | (buf[off+1] << 16) | (buf[off+2] << 8) | buf[off+3]);
+                            if (_xflagIndex.TryGetValue(key, out var tag))
+                            {
+                                // tag = "game:csvtype:layout" e.g. "oot:pot:dungeon"
+                                int c2 = tag.LastIndexOf(':');
+                                if (c2 > 0)
+                                {
+                                    string gameType = tag[..c2];
+                                    bool isDungeon  = tag.AsSpan(c2 + 1).SequenceEqual("dungeon");
+                                    xflagDetected[gameType] = (xflagDetected.TryGetValue(gameType, out bool prev) && prev) || isDungeon;
+                                }
+                            }
+                        }
+                    }
+                    break;
+            }
+        }
+
+        _state.ScrubShuffle  = scrub;
+        _state.CowShuffle    = cow;
+        _state.ShopShuffle   = shop;
+        _state.GsShuffle     = gs;
+        _state.SfShuffle     = sf;
+        _state.FishShuffle   = fish;
+        _state.XflagShuffle  = xflag;
+        _state.OverrideTableScanned = true;
+
+        // Helper: null = not detected, value otherwise.
+        string? Sel(string gameType) =>
+            !xflagDetected.TryGetValue(gameType, out bool hasDungeon) ? null :
+            hasDungeon ? "anywhere" : "overworld";
+        bool Bln(string gameType) => xflagDetected.ContainsKey(gameType);
+
+        _emit(new {
+            type         = "shuffle_settings",
+            scrubShuffle = scrub,
+            cowShuffle   = cow,
+            shopShuffle  = shop,
+            gsShuffle    = gs,
+            sfShuffle    = sf,
+            fishShuffle  = fish,
+            xflagShuffle = xflag,
+            // xflag per-type (null = not detected → frontend keeps its default)
+            potShuffleOot        = Sel("oot:pot"),
+            potShuffleMm         = Sel("mm:pot"),
+            crateShuffleOot      = Sel("oot:crate"),
+            crateShuffleMm       = Sel("mm:crate"),
+            barrelsShuffleMm     = Sel("mm:barrel"),
+            grassShuffleOot      = Sel("oot:grass"),
+            grassShuffleMm       = Sel("mm:grass"),
+            treeShuffleMm        = Sel("mm:tree"),
+            soilShuffleMm        = Sel("mm:soil"),
+            rupeeShuffleOot      = Sel("oot:rupee"),
+            rupeeShuffleMm       = Sel("mm:rupee"),
+            heartsShuffleOot     = Sel("oot:heart"),
+            snowballShuffleMm    = Sel("mm:snowball"),
+            bushShuffleMm        = Sel("mm:bush"),
+            wonderShuffleOot     = Sel("oot:wonder"),
+            rockShuffleMm        = Sel("mm:rock"),
+            hivesShuffleOot      = Bln("oot:hive"),
+            hivesShuffleMm       = Bln("mm:hive"),
+            rockShuffleOot       = Bln("oot:rock"),
+            treeShuffleOot       = Bln("oot:tree"),
+            soilShuffleOot       = Bln("oot:soil"),
+            heartShuffleMm       = Bln("mm:heart"),
+            wonderShuffleMm      = Bln("mm:wonder"),
+            butterflyShuffleOot  = Bln("oot:butterfly"),
+            butterflyShuffleMm   = Bln("mm:butterfly"),
+            redBoulderShuffleOot = Bln("oot:boulder-red"),
+            redBoulderShuffleMm  = Bln("mm:boulder-red"),
+            iciclesShuffleOot    = Bln("oot:icicle"),
+            iciclesShuffleMm     = Bln("mm:icicle"),
+            fairySpotShuffleOot  = Bln("oot:fairy_spot"),
+            fairyFountainShuffleOot = Bln("oot:fairy"),
+            fairyFountainShuffleMm  = Bln("mm:fairy"),
+            bushShuffleOot       = Bln("oot:bush"),
+            redIceShuffleOot     = Bln("oot:redice"),
+        });
+        Console.WriteLine($"[autotrack] shuffle_settings: scrub={scrub} cow={cow} shop={shop} gs={gs} sf={sf} fish={fish} xflag={xflag} xflagTypes={xflagDetected.Count}");
     }
 }
