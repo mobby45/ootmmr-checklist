@@ -2005,36 +2005,11 @@ function getXflagLookup(mqBitmask: number): Promise<{ oot: Map<number, string>; 
 function applyXflags(
   buf: Uint8Array,
   lookup: Map<number, string>,
-  yChecks: YMap<number>,
-  prevBuf: Uint8Array | null,
-  autoSet: Set<string>
+  yChecks: YMap<number>
 ): void {
   const ageFilter: string = typeof localStorage !== 'undefined'
     ? (localStorage.getItem('logicAgeFilter') ?? 'both') : 'both';
-  const sets: Array<string> = [];
-  const clears: Array<string> = [];
-
-  // Detect 1→0 transitions: when the game re-initialises the save (e.g. comboCreateSave zeros
-  // gSharedCustomSave after garbage RDRAM was read at first poll), clear auto-set checks so
-  // false-positive detections from uninitialised memory don't persist.
-  if (prevBuf) {
-    for (let byteIdx = 0; byteIdx < prevBuf.length; byteIdx++) {
-      const prevByte = prevBuf[byteIdx];
-      if (prevByte === 0) continue;
-      const curByte = byteIdx < buf.length ? buf[byteIdx] : 0;
-      const dropped = prevByte & ~curByte;
-      if (dropped === 0) continue;
-      for (let bit = 0; bit < 8; bit++) {
-        if (!((dropped >>> bit) & 1)) continue;
-        const bitPos = byteIdx * 8 + bit;
-        const raw = lookup.get(bitPos);
-        if (!raw) continue;
-        const pipe = raw.indexOf('|');
-        const checkName = raw.slice(pipe + 1);
-        if (autoSet.has(checkName) && (yChecks.get(checkName) ?? 0) >= 2) clears.push(checkName);
-      }
-    }
-  }
+  const changes: Array<string> = [];
 
   for (let byteIdx = 0; byteIdx < buf.length; byteIdx++) {
     const byteVal = buf[byteIdx];
@@ -2048,20 +2023,13 @@ function applyXflags(
       const checkAge = raw.slice(0, pipe);
       const checkName = raw.slice(pipe + 1);
       if (ageFilter !== 'both' && checkAge !== 'both' && checkAge !== ageFilter) continue;
-      if ((yChecks.get(checkName) ?? 0) < 2) sets.push(checkName);
+      if ((yChecks.get(checkName) ?? 0) < 2) changes.push(checkName);
     }
   }
 
-  if (sets.length > 0 || clears.length > 0) {
+  if (changes.length > 0) {
     yChecks.doc!.transact(() => {
-      for (const n of clears) {
-        yChecks.delete(n);
-        autoSet.delete(n);
-      }
-      for (const n of sets) {
-        yChecks.set(n, 2);
-        autoSet.add(n);
-      }
+      for (const n of changes) yChecks.set(n, 2);
     });
   }
 }
@@ -2600,11 +2568,6 @@ export function initAutotrack(yItems: YMap<number>, ySettings: YMap<unknown>, yE
   let pendingOotNpcFlags: Uint8Array | null = null;
   let pendingOotXflags: Uint8Array | null = null;
   let pendingMmXflags: Uint8Array | null = null;
-  // Previous xflag buffers and auto-set tracking for bidirectional apply (clear on 1→0 transitions).
-  let ootXflagPrevBuf: Uint8Array | null = null;
-  let mmXflagPrevBuf:  Uint8Array | null = null;
-  const ootXflagAutoSet = new Set<string>();
-  const mmXflagAutoSet  = new Set<string>();
   // oot_save received before activeGame is known; applied when first 'game' message arrives.
   let pendingOotSave: Uint8Array | null = null;
 
@@ -2718,10 +2681,7 @@ export function initAutotrack(yItems: YMap<number>, ySettings: YMap<unknown>, yE
         pendingOotXflags = null;
         pendingMmXflags = null;
         pendingOotSave = null;
-        ootXflagPrevBuf = null;
-        mmXflagPrevBuf  = null;
-        ootXflagAutoSet.clear();
-        mmXflagAutoSet.clear();
+
         // autotrackErSubTypes intentionally NOT reset here — it's seed-specific and valid
         // across OoT↔MM game switches (same gEntrances table, same seed). Clearing it would
         // cause the OR-merge to produce all-false on every reconnect until the entrance table
@@ -2764,8 +2724,7 @@ export function initAutotrack(yItems: YMap<number>, ySettings: YMap<unknown>, yE
             }
             if (pendingMmXflags) {
               const f = pendingMmXflags; pendingMmXflags = null;
-              const prevMm = mmXflagPrevBuf; mmXflagPrevBuf = f;
-              getXflagLookup(mq).then(({ mm }) => applyXflags(f, mm, yChecks, prevMm, mmXflagAutoSet)).catch(err => console.error('[autotrack] mm xflags first-mm flush failed:', err));
+              getXflagLookup(mq).then(({ mm }) => applyXflags(f, mm, yChecks)).catch(err => console.error('[autotrack] mm xflags first-mm flush failed:', err));
             }
           }
         }
@@ -2794,13 +2753,11 @@ export function initAutotrack(yItems: YMap<number>, ySettings: YMap<unknown>, yE
             }
             if (pendingOotXflags) {
               const f = pendingOotXflags; pendingOotXflags = null;
-              const prevOot = ootXflagPrevBuf; ootXflagPrevBuf = f;
-              getXflagLookup(mq).then(({ oot }) => applyXflags(f, oot, yChecks, prevOot, ootXflagAutoSet)).catch(err => console.error('[autotrack] oot xflags flush failed:', err));
+              getXflagLookup(mq).then(({ oot }) => applyXflags(f, oot, yChecks)).catch(err => console.error('[autotrack] oot xflags flush failed:', err));
             }
             if (pendingMmXflags && hasVisitedMm) {
               const f = pendingMmXflags; pendingMmXflags = null;
-              const prevMm = mmXflagPrevBuf; mmXflagPrevBuf = f;
-              getXflagLookup(mq).then(({ mm }) => applyXflags(f, mm, yChecks, prevMm, mmXflagAutoSet)).catch(err => console.error('[autotrack] mm xflags flush failed:', err));
+              getXflagLookup(mq).then(({ mm }) => applyXflags(f, mm, yChecks)).catch(err => console.error('[autotrack] mm xflags flush failed:', err));
             }
           }
         }
@@ -3012,13 +2969,11 @@ export function initAutotrack(yItems: YMap<number>, ySettings: YMap<unknown>, yE
         }
         if (pendingOotXflags) {
           const f = pendingOotXflags; pendingOotXflags = null;
-          const prevOot = ootXflagPrevBuf; ootXflagPrevBuf = f;
-          getXflagLookup(mq).then(({ oot }) => applyXflags(f, oot, yChecks, prevOot, ootXflagAutoSet)).catch(err => console.error('[autotrack] oot xflags combo_config flush failed:', err));
+          getXflagLookup(mq).then(({ oot }) => applyXflags(f, oot, yChecks)).catch(err => console.error('[autotrack] oot xflags combo_config flush failed:', err));
         }
         if (pendingMmXflags && hasVisitedMm) {
           const f = pendingMmXflags; pendingMmXflags = null;
-          const prevMm = mmXflagPrevBuf; mmXflagPrevBuf = f;
-          getXflagLookup(mq).then(({ mm }) => applyXflags(f, mm, yChecks, prevMm, mmXflagAutoSet)).catch(err => console.error('[autotrack] mm xflags combo_config flush failed:', err));
+          getXflagLookup(mq).then(({ mm }) => applyXflags(f, mm, yChecks)).catch(err => console.error('[autotrack] mm xflags combo_config flush failed:', err));
         }
       } else if (msg.type === 'gossip_hints' && msg.data && msg.game) {
         // Parse 16-byte Hint structs into the raw cache — display is gated on gossip_hint_read.
@@ -3275,9 +3230,8 @@ export function initAutotrack(yItems: YMap<number>, ySettings: YMap<unknown>, yE
         if (activeGame === null || mqBitmask === null) { pendingOotXflags = buf; }
         else {
           const mq = mqBitmask;
-          const prevOot = ootXflagPrevBuf; ootXflagPrevBuf = buf;
           getXflagLookup(mq)
-            .then(({ oot }) => applyXflags(buf, oot, yChecks, prevOot, ootXflagAutoSet))
+            .then(({ oot }) => applyXflags(buf, oot, yChecks))
             .catch(err => console.error('[autotrack] oot xflags failed:', err));
         }
       } else if (msg.type === 'mm_xflags' && msg.data) {
@@ -3285,9 +3239,8 @@ export function initAutotrack(yItems: YMap<number>, ySettings: YMap<unknown>, yE
         if (!hasVisitedMm || activeGame === null || mqBitmask === null) { pendingMmXflags = buf; }
         else {
           const mq = mqBitmask;
-          const prevMm = mmXflagPrevBuf; mmXflagPrevBuf = buf;
           getXflagLookup(mq)
-            .then(({ mm }) => applyXflags(buf, mm, yChecks, prevMm, mmXflagAutoSet))
+            .then(({ mm }) => applyXflags(buf, mm, yChecks))
             .catch(err => console.error('[autotrack] mm xflags failed:', err));
         }
       } else if (msg.type === 'scene_change' && msg.game && typeof msg.sceneId === 'number') {
