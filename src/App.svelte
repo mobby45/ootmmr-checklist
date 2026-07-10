@@ -1581,6 +1581,11 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     for (const k of NO_CONFVAR_KEYS) {
       if (!(k in confvars)) (confvars as Record<string, boolean>)[k] = false;
     }
+    // alterLostWoodsExits is a sub-type of erOverworld: the LW exits are only in the ER pool when
+    // erOverworld is active. With erOverworld off, OoTMM still puts the fixed altered connections in
+    // gEntrances for routing, causing inferErSubTypesFromTable to always detect alterLostWoodsExits.
+    // Gate it: if erOverworld is not active, there is nothing to track for altered LW exits.
+    if (!confvars.erOverworld) (confvars as Record<string, boolean>)['alterLostWoodsExits'] = false;
     const merged = { ...currentManual, ...confvars } as ErSettings;
     console.log('[autotrack] applying ER to ERTracker:', merged);
     importedManualErSettings = merged;
