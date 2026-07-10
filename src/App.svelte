@@ -2,7 +2,7 @@
   // ==========================================
   // IMPORTS
   // ==========================================
-  import { tick } from 'svelte';
+  import { tick, onDestroy } from 'svelte';
   import * as Y from 'yjs';
   import { readableArray, readableMap } from 'svelt-yjs';
   import { writable } from 'svelte/store';
@@ -63,7 +63,8 @@
 
   import CheckGroup from './components/CheckGroup.svelte';
   import { initLogicStore, logicEnabled, showOutOfLogic, logicAgeFilter, logicResult, logicLoading, logicManualSettings, specialConditionsStore, enabledTricks, locationRulesStore } from './stores/logicStore';
-  import { initAutotrack, autotrackStatus } from './stores/autotrackStore';
+  import { initAutotrack, setIndexeddbSynced, autotrackStatus, autotrackEnabled, resyncAutotrack, currentAutotrackScene, autotrackErSubTypes, autotrackErSettings, clearVisitedEntrances } from './stores/autotrackStore';
+  import SCENES from './data/dist/data-scenes.json';
   import { defaultLogicSettings } from './data/logicSettingsDef';
   import { TRICKS_DEFS } from './data/tricksDef';
   const _validTrickIds = new Set(TRICKS_DEFS.map(t => t.id));
@@ -392,7 +393,7 @@ yKeepalive.observe((event: any) => {
     logicEnabled.set(false);
   }
   initLogicStore(yItems, ySettings, yEntrances, _itemsRevStore, sSettings, sEntrances, ySongEvents, yShopPrices);
-  initAutotrack(yItems);
+  onDestroy(initAutotrack(yItems, ySettings, yEntrances, yChecks, yShopItems, yShopPrices, yHints, ySongEvents));
 
   // Sync all logic manual settings to ySettings so the OBS overlay can read them.
   // Wrapped in a Yjs transaction so all mutations emit a single observer event instead
@@ -502,6 +503,7 @@ yKeepalive.observe((event: any) => {
       if (erStr) ySpoiler.set('erSettings', erStr);
       if (scStr) ySpoiler.set('specialConditions', scStr);
     }
+    setIndexeddbSynced();
   });
 
   ySpoiler.observe((event: any) => {
@@ -1543,6 +1545,47 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
   let spoilerErSettings: ErSettings | null = JSON.parse(localStorage.getItem('spoilerErSettings') ?? 'null');
   let spoilerExtraEr: Record<string, any> | null = JSON.parse(localStorage.getItem('spoilerExtraEr') ?? 'null');
   let spoilerEntrances: Record<string, string> | null = JSON.parse(localStorage.getItem('spoilerEntrances') ?? 'null');
+
+  // When the autotracker infers ER sub-types from the gEntrances runtime table, merge them into
+  // spoilerExtraEr so the ERTracker's sub-type checkboxes reflect the actual seed settings.
+  // Resets to null on each new connection, so stale sub-types from a previous seed are cleared.
+  $: if ($autotrackErSubTypes !== null) {
+    spoilerExtraEr = { ...(spoilerExtraEr ?? {}), ...$autotrackErSubTypes };
+    localStorage.setItem('spoilerExtraEr', JSON.stringify(spoilerExtraEr));
+  } else if ($autotrackErSubTypes === null && $autotrackStatus === 'connected') {
+    // New connection — clear autotrack-contributed sub-types so stale data from the previous
+    // seed doesn't bleed into the new one.
+    spoilerExtraEr = null;
+    localStorage.removeItem('spoilerExtraEr');
+  }
+  // When the autotracker detects ER type settings from gComboConfig, push them into the ERTracker.
+  // Only activates when no spoiler log is loaded (spoiler log takes priority).
+  // erSpawns is now derived from entrancesSpawns. erOneWays/erAlterLw come from entrance-table subTypes.
+  $: if ($autotrackErSettings !== null && !spoilerErSettings) {
+    const currentManual: ErSettings = JSON.parse(localStorage.getItem('erSettings') ?? JSON.stringify(defaultErSettings));
+    // confvars = what combo_config detected via confvar bits (authoritative for those keys).
+    // subTypes = what the entrance-table scan detected (for keys with no confvar bit).
+    const subTypes = ($autotrackErSubTypes ?? {}) as Record<string, boolean>;
+    const confvars: Partial<ErSettings> = { ...$autotrackErSettings };
+    // Add keys only detectable via entrance-table scan (alterLostWoodsExits, erOneWays, etc.)
+    // that have no confvar bit and are therefore absent from confvars.
+    for (const k of Object.keys(subTypes) as Array<keyof ErSettings>) {
+      if (subTypes[k] && !(k in confvars)) confvars[k] = true;
+    }
+    // Zero out ER types that have no confvar bit AND were not detected by the entrance-table scan.
+    // Without this, old localStorage values from a previous ER seed would bleed through via
+    // `{ ...currentManual, ...confvars }` since confvars has no entry to override them.
+    // erSpawns: always excluded from detectedEr (no reliable detection — see autotrackStore.ts).
+    // erOneWays: not in confvars on non-ER seeds; must be set to false to clear stale localStorage.
+    const NO_CONFVAR_KEYS: Array<keyof ErSettings> = ['erOneWays', 'erSpawns'];
+    for (const k of NO_CONFVAR_KEYS) {
+      if (!(k in confvars)) (confvars as Record<string, boolean>)[k] = false;
+    }
+    const merged = { ...currentManual, ...confvars } as ErSettings;
+    console.log('[autotrack] applying ER to ERTracker:', merged);
+    importedManualErSettings = merged;
+  }
+
   let spoilerFillEntrances = localStorage.getItem('spoilerFillEntrances') === 'true';
 
   function toggleSpoilerFillEntrances() {
@@ -1854,8 +1897,10 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     shopEditOpen = false;
   }
 
+  function ootShopItemKey(name: string): string { return name; }
+
   function handleShopEdit(checkName: string, checkId: string) {
-    openShopEdit(checkName, !itemOnlyIds.has(checkId));
+    openShopEdit(ootShopItemKey(checkName), !itemOnlyIds.has(checkId));
   }
 
   function handleMapShopEdit(key: string) {
@@ -2205,6 +2250,14 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
   // ==========================================
   let structuredChecks: T.CheckGroup[] | null = null;
   initializeStructuredChecks().then((data: T.CheckGroup[]) => {
+    // Reorder 8-slot OoT shops to match the in-game visual layout:
+    // shopIds 0,1,4,5,2,3,6,7 → visual rows [Item1,Item2,Item5,Item6] / [Item3,Item4,Item7,Item8]
+    const OOT_SHOP_VISUAL_ORDER = [0, 1, 2, 3, 4, 6, 7, 5];
+    for (const group of data) {
+      if (group.checks.length === 8 && group.checks.every(c => c.type === T.CheckType.shop)) {
+        group.checks = OOT_SHOP_VISUAL_ORDER.map(i => group.checks[i]);
+      }
+    }
     structuredChecks = data;
   });
 
@@ -2932,15 +2985,122 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
   $: visibleGroupCount = sortedChecks?.length ?? 0;
   $: visibleCheckCount = sortedChecks?.reduce((a, g) => a + g.checks.length, 0) ?? 0;
 
+  // Maps "game:sceneId" → { groupName, sceneKey } for autotracker scene navigation.
+  $: sceneIdToGroup = (() => {
+    const map = new Map<string, { groupName: string; sceneKey: string }>();
+    if (!structuredChecks) return map;
+    for (const group of structuredChecks) {
+      for (const check of group.checks) {
+        const sceneKey = `${check.game.toUpperCase()}_${check.scene}`;
+        const sceneId = (SCENES as Record<string, number>)[sceneKey];
+        if (sceneId !== undefined) {
+          const k = `${check.game}:${sceneId}`;
+          if (!map.has(k)) map.set(k, { groupName: group.groupName, sceneKey });
+        }
+      }
+    }
+    return map;
+  })();
+
+  // Reverse lookup: subscene key → parent scene key (for sub-areas like Mido's House → Kokiri Forest).
+  $: subsceneToParent = (() => {
+    const m = new Map<string, string>();
+    if (!mapData) return m;
+    for (const [parent, sd] of Object.entries(mapData)) {
+      for (const sub of Object.keys(sd.subscenes)) {
+        if (!m.has(sub)) m.set(sub, parent);
+      }
+    }
+    return m;
+  })();
+
+  let _prevAutotrackSceneKey = '';
+  let _prevAutotrackGroupName = '';
+  $: {
+    const s = $currentAutotrackScene;
+    const k = s ? `${s.game}:${s.sceneId}` : '';
+    if (k !== _prevAutotrackSceneKey) {
+      _prevAutotrackSceneKey = k;
+      const info = s ? sceneIdToGroup.get(k) : undefined;
+      const oldGroupName = _prevAutotrackGroupName;
+      const needsCollapse = autoExpandOnJump && oldGroupName && info?.groupName !== oldGroupName;
+      if (needsCollapse) {
+        groupStates.set(oldGroupName, false);
+        allGroupStatesMemory.set(oldGroupName, false);
+        groupStates = new Map(groupStates);
+      }
+      _prevAutotrackGroupName = info?.groupName ?? '';
+      if (s && autoExpandOnJump && info) {
+        // navigateToAutotrackScene fires its own timestamp update that covers the collapse too
+        navigateToAutotrackScene(info.groupName, info.sceneKey);
+      } else if (needsCollapse) {
+        // Leaving a known zone for an unknown one — fire timestamps for both games so all CheckGroups re-evaluate
+        const ts = Date.now();
+        forceOpenTimestamp = ts;
+        ootTimestamp = ts;
+        mmTimestamp = ts;
+      }
+    }
+  }
+
+  async function navigateToAutotrackScene(groupName: string, sceneKey: string) {
+    if (autoExpandOnJump) {
+      groupStates.set(groupName, true);
+      allGroupStatesMemory.set(groupName, true);
+      groupStates = new Map(groupStates);
+      const ts = Date.now();
+      forceOpenTimestamp = ts;
+      ootTimestamp = ts;
+      mmTimestamp = ts;
+      await new Promise(r => setTimeout(r, 80));
+      const el = document.querySelector(`[data-group="${CSS.escape(groupName)}"]`);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    if (showMapModal && mapData) {
+      // Resolve target scene and subscene: sceneKey may itself be a subscene of a parent scene.
+      let targetScene = sceneKey;
+      let targetSubscene = '';
+      if (!mapData[sceneKey]) {
+        const parent = subsceneToParent.get(sceneKey);
+        if (parent) {
+          targetScene = parent;
+          targetSubscene = sceneKey;
+        } else {
+          // No direct map entry and no parent — fall back to first scene in group
+          const manual = (groupToSceneMapping as Record<string, string[]>)[groupName];
+          targetScene = (manual?.length ? manual.filter(s => mapData![s]) : [])[0] ?? '';
+        }
+      }
+      if (targetScene && mapData[targetScene]) {
+        const prevScene = currentMapScene;
+        currentMapScene = targetScene;
+        mapInitialSubscene = targetSubscene;
+        // Force a new object reference when navigating to a subscene of the same parent scene
+        // so MapModal's reactive block re-triggers and switches the active tab.
+        currentSceneData = (targetSubscene && prevScene === targetScene)
+          ? { ...mapData[targetScene]! }
+          : mapData[targetScene];
+        const manual = (groupToSceneMapping as Record<string, string[]>)[groupName];
+        matchedScenes = manual?.length ? manual.filter(s => mapData![s]) : [targetScene];
+        if (!matchedScenes.includes(targetScene)) matchedScenes = [targetScene, ...matchedScenes];
+        currentGroupName = groupName;
+      }
+    }
+  }
+
   let spoilerHighlight = '';
   async function jumpToCheck(loc: string) {
     spoilerHighlight = loc;
     const group = structuredChecks?.find(g => g.checks.some(c => c.name === loc));
-    if (group) {
+    if (group && autoExpandOnJump) {
       groupStates.set(group.groupName, true);
       allGroupStatesMemory.set(group.groupName, true);
       groupStates = new Map(groupStates);
-      forceOpenTimestamp = Date.now();
+      const ts = Date.now();
+      forceOpenTimestamp = ts;
+      const game = groupGame(group);
+      if (game === 'oot') ootTimestamp = ts;
+      else if (game === 'mm') mmTimestamp = ts;
     }
     await new Promise(r => setTimeout(r, 80));
     const el = document.querySelector(`[data-check="${CSS.escape(loc)}"]`);
@@ -3008,8 +3168,12 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     }
     const hw = sigWords(hintText);
     const gw = sigWords(groupName);
-    // Only word-match on words that uniquely identify this group (avoids e.g. "Forest" matching both Forest Temple and Sacred Forest Meadow)
-    return hw.some(w => gw.includes(w) && (wordGroups.get(w)?.length ?? 0) === 1);
+    // For multi-word hints, require ALL hint words to appear in the group name before applying
+    // the uniqueness check. This prevents "Gerudo Training Grounds" from matching "Gerudo Valley"
+    // just because "gerudo" happens to be unique when some groups are filtered out.
+    // For single-word hints the every() is trivially true, preserving the old uniqueness behavior
+    // (avoids e.g. "Forest" matching both Forest Temple and Sacred Forest Meadow).
+    return hw.every(w => gw.includes(w)) && hw.some(w => gw.includes(w) && (wordGroups.get(w)?.length ?? 0) === 1);
   }
 
   $: wothGroups = new Set(
@@ -3216,6 +3380,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     [...yShopItems.keys()].forEach(k => yShopItems.delete(k));
     [...yShopPrices.keys()].forEach(k => yShopPrices.delete(k));
     [...yEntrances.keys()].forEach(k => yEntrances.delete(k));
+    clearVisitedEntrances();
     [...yItems.keys()].forEach(k => yItems.delete(k));
     [...yNotes.keys()].forEach(k => yNotes.delete(k));
     [...ySongEvents.keys()].forEach(k => ySongEvents.delete(k));
@@ -3322,7 +3487,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     randoImportError = '';
     randoImportOk = false;
     try {
-      const { appSettings, clearedKeys, startingItems, tricks, unmapped, junkLocations, derivedConditions } = await importRandomizerSettings(randoImportStr);
+      const { appSettings, clearedKeys, startingItems, tricks, unmapped, junkLocations, derivedConditions, coinCounts } = await importRandomizerSettings(randoImportStr);
       Object.entries(appSettings).forEach(([k, v]) => ySettings.set(k, v));
       for (const k of clearedKeys) ySettings.delete(k);
       // Keep logicManualSettings in sync so the reactive $: block doesn't overwrite
@@ -3335,7 +3500,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
         return next;
       });
       const validTricks = tricks.filter(id => _validTrickIds.has(id));
-      if (validTricks.length > 0) enabledTricks.set(new Set(validTricks));
+      enabledTricks.set(new Set(validTricks));
       for (const [itemId, level] of Object.entries(startingItems)) {
         const current = yItems.get(itemId) ?? 0;
         if (current < level) yItems.set(itemId, level);
@@ -3349,22 +3514,34 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
         manualConditions = merged;
         localStorage.setItem('manualConditions', JSON.stringify(merged));
       }
+      // Coin hunt target counts from hash (used by condition progress display)
+      if (Object.keys(coinCounts).length > 0) {
+        spoilerCoinCounts = coinCounts;
+        localStorage.setItem('spoilerCoinCounts', JSON.stringify(coinCounts));
+      }
       // New seed — entrance assignments from the previous run are invalid.
       [...yEntrances.keys()].forEach(k => yEntrances.delete(k));
+      clearVisitedEntrances();
       randoImportOk = true;
       randoImportStr = '';
       if (unmapped.length) console.info('Unmapped settings:', unmapped);
       // Sync ER settings to ERTracker
       const erKeys = Object.keys(defaultErSettings);
       const mergedEr: Record<string, boolean> = {};
+      // Any non-empty string that isn't explicitly inactive counts as active.
+      const isErActive = (v: unknown): boolean =>
+        typeof v === 'boolean' ? v :
+        typeof v === 'string'  ? v !== '' && v !== 'false' && v !== 'none' && v !== 'vanilla' && v !== 'removed' : false;
       for (const k of erKeys) {
         const v = appSettings[k];
-        if (v !== undefined) {
-          mergedEr[k] = typeof v === 'boolean' ? v : v === 'full' || v === 'ownGame' || v === 'dungeon' || v === 'true';
-        } else {
-          mergedEr[k] = false;
-        }
+        mergedEr[k] = v !== undefined ? isErActive(v) : false;
       }
+      // erAlterLw has no direct OoTMM ER key — it maps from the alterLostWoodsExits setting.
+      if (appSettings['alterLostWoodsExits']) mergedEr['erAlterLw'] = true;
+      // Reset to null first so ERTracker's change-detection always sees a diff,
+      // even if the same hash is re-imported after the user manually disabled settings.
+      spoilerExtraEr = null;
+      await tick();
       spoilerExtraEr = mergedEr;
       localStorage.setItem('spoilerExtraEr', JSON.stringify(mergedEr));
       setTimeout(() => { randoImportOpen = false; randoImportOk = false; }, 1200);
@@ -3564,6 +3741,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
     [...yItems.keys()].forEach(k => yItems.delete(k));
     Object.entries(slot.items).forEach(([k, v]) => yItems.set(k, v));
     [...yEntrances.keys()].forEach(k => yEntrances.delete(k));
+    clearVisitedEntrances();
     Object.entries(slot.entrances).forEach(([k, v]) => yEntrances.set(k, v));
     [...ySongEvents.keys()].forEach(k => ySongEvents.delete(k));
     if (slot.songEvents) Object.entries(slot.songEvents).forEach(([k, v]) => ySongEvents.set(k, v as string));
@@ -3746,6 +3924,7 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
   }
   let compact = false;
   let showLegend = false;
+  let autoExpandOnJump = localStorage.getItem('autoExpandOnJump') !== 'false';
   const isDevEnv = import.meta.env.DEV;
   let devMode = isDevEnv && localStorage.getItem('devMode') === 'true';
   function toggleDevMode() { devMode = !devMode; localStorage.setItem('devMode', String(devMode)); }
@@ -4345,7 +4524,9 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
           {#if connectionProvider != null}
             <span>&nbsp; (Connected to room: <code class="room-code-copy" title="Click to copy">{roomCodeCopied ? '✓' : roomBaseCode}</code> {roomHasPassword ? '🔒' : '🔓'})</span>
           {/if}
-          <span class="autotrack-badge autotrack-{$autotrackStatus}" title="Autotracker: {$autotrackStatus}">AT</span>
+          <span class="autotrack-badge autotrack-{$autotrackStatus}" title="Autotracker: {$autotrackStatus}">AutoTracker</span>
+          <button type="button" class="undo-btn" on:click|stopPropagation={() => autotrackEnabled.update(v => !v)} title="{$autotrackEnabled ? 'Disable' : 'Enable'} autotracker">{$autotrackEnabled ? 'AutoTracker off' : 'AutoTracker on'}</button>
+          <button type="button" class="undo-btn" on:click|stopPropagation={resyncAutotrack} disabled={$autotrackStatus !== 'connected'} title="Re-sync tracker from game state">⟳ Sync</button>
           <button type="button" class="undo-btn" on:click|stopPropagation={undo} disabled={isWatchMode || !canUndo} title="Undo (Ctrl+Z)">↩ Undo</button>
           <button type="button" class="undo-btn" on:click|stopPropagation={redo} disabled={isWatchMode || !canRedo} title="Redo (Ctrl+Y)">↪ Redo</button>
         </summary>
@@ -5023,6 +5204,13 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
             <button
               class="pure-button"
               type="button"
+              class:pure-button-active={autoExpandOnJump}
+              on:click={() => { autoExpandOnJump = !autoExpandOnJump; localStorage.setItem('autoExpandOnJump', String(autoExpandOnJump)); }}
+              title="Auto-expand zone when jumping to a check"
+            >Auto-expand {autoExpandOnJump ? 'ON' : 'OFF'}</button>
+            <button
+              class="pure-button"
+              type="button"
               class:pure-button-active={showTypeColors}
               on:click={() => { if (isWatchMode) return; saveDisplaySetting('showTypeColors', !showTypeColors); }}
               title="Toggle type colors on checks"
@@ -5188,8 +5376,8 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
                         vanillaItem={check.item ?? ''}
                         type={check.type}
                         state={$sChecks.get(check.name) ?? T.CheckState.unchecked}
-                        shopItem={$sShopItems.get(check.name) ?? ''}
-                        shopPrice={$sShopPrices.get(check.name) ?? null}
+                        shopItem={$sShopItems.get(ootShopItemKey(check.name)) ?? ''}
+                        shopPrice={$sShopPrices.get(ootShopItemKey(check.name)) ?? null}
                         isShop={check.type === T.CheckType.deku_scrub || check.type === T.CheckType.shop || priceEditIds.has(check.id)}
                         showPrice={!itemOnlyIds.has(check.id)}
                         spoilerItem={showSpoilerItems ? (spoilerLocations[check.name] ?? '') : ''}
@@ -5264,8 +5452,8 @@ connectionProvider.awareness.setLocalStateField('user', { name: pseudo || 'Anony
                     vanillaItem={check.item ?? ''}
                     type={check.type}
                     state={$sChecks.get(check.name) ?? T.CheckState.unchecked}
-                    shopItem={$sShopItems.get(check.name) ?? ''}
-                    shopPrice={$sShopPrices.get(check.name) ?? null}
+                    shopItem={$sShopItems.get(ootShopItemKey(check.name)) ?? ''}
+                    shopPrice={$sShopPrices.get(ootShopItemKey(check.name)) ?? null}
                     isShop={check.type === T.CheckType.deku_scrub || check.type === T.CheckType.shop || priceEditIds.has(check.id)}
                     showPrice={!itemOnlyIds.has(check.id)}
                     spoilerItem={showSpoilerItems ? (spoilerLocations[check.name] ?? '') : ''}

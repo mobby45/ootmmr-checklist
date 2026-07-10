@@ -2957,8 +2957,10 @@ export function initAutotrack(yItems: YMap<number>, ySettings: YMap<unknown>, yE
           erOverworld:         !!ySettings.get('erOverworld'),
           erIndoors:           !!ySettings.get('erIndoors'),
           erIndoorsTelescopes: !!ySettings.get('erIndoorsTelescopes'),
-          // erSpawns has no confvar bit — infer from entrancesSpawns being non-zero.
-          erSpawns:            (_ootSpawnChildDst != null || _ootSpawnAdultDst != null),
+          // erSpawns has no confvar bit, and entrancesSpawns is always non-null in OoTMM
+          // (spawn addresses exist even on non-ER seeds). Spawns also bypass gEntrances so
+          // inferErSubTypesFromTable can't detect them. Excluded from detectedEr — erSpawns
+          // is zeroed explicitly in App.svelte to prevent stale localStorage from bleeding through.
         };
         console.log('[autotrack] combo_config ER detected:', detectedEr, 'playerId:', comboPlayerId);
         // Reset subTypes so stale entrance-table data from a previous seed doesn't
