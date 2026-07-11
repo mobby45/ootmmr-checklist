@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text.Json;
+using System.Threading;
 using Autotracker.Memory;
 
 namespace Autotracker.Tracker;
@@ -8,6 +9,7 @@ sealed class MemoryPoller
 {
     readonly Action<object> _emit;
     ProcessMemory? _mem;
+    PipeMemory? _pipeMem;
     GameState _state = new();
     volatile bool _resetRequested;
     string? _romVersion; // "dev", "release", or null until detected
@@ -48,6 +50,16 @@ sealed class MemoryPoller
     int _reattachAttempts   = 0;    // reattach attempts since RDRAM relocation
     int  _comboConfigEmitCount = 0;  // consecutive emissions since confirmation (volatility guard)
     DateTime _comboConfigFirstEmit = DateTime.MinValue;
+    byte[]? _ootNpcFlagsBaseline = null; // first poll discard: skip until data changes (detects bzero flush)
+    int     _ootNpcFlagsStablePolls = 0;
+    byte[]? _ootXflagsBaseline = null;
+    int     _ootXflagsStablePolls = 0;
+    byte[]? _mmXflagsBaseline = null;
+    int     _mmXflagsStablePolls = 0;
+    int     _xflagSkipPolls = 0;
+    bool    _xflagSkipDone = false;
+    const int XflagSkipPolls = 40; // ~10s skip for cache flush + Save_CreateMM
+    const int StableTimeoutPolls = 10; // used by NPC flags and xflag polling
 
     public MemoryPoller(Action<object> emit)
     {
@@ -88,6 +100,7 @@ sealed class MemoryPoller
                     continue;
                 }
                 _reattachAttempts = 0;
+
                 if (_isRdramRelocation)
                 {
                     // OoT↔MM transitions: RDRAM base stays constant but N64 virtual addresses
@@ -124,6 +137,8 @@ sealed class MemoryPoller
                 Console.WriteLine($"[autotracker] Lost connection: {ex.Message}");
                 _mem.Dispose();
                 _mem = null;
+                _pipeMem?.Dispose();
+                _pipeMem = null;
                 _state = new GameState();
                 _emit(new { type = "disconnected" });
             }
@@ -132,7 +147,7 @@ sealed class MemoryPoller
         }
     }
 
-    static ProcessMemory? TryAttach()
+    ProcessMemory? TryAttach()
     {
         var candidates = new[] { "Project64", "Project64d", "Project64-EM", "Project64EM" };
         foreach (var name in candidates)
@@ -141,10 +156,77 @@ sealed class MemoryPoller
             if (procs.Length == 0) continue;
             Console.WriteLine($"[autotracker] Found process {name} (PID {procs[0].Id}), scanning RDRAM...");
             var mem = ProcessMemory.TryAttach(procs[0]);
-            if (mem is not null) return mem;
-            Console.WriteLine("[autotracker] RDRAM not found in this process — magic string absent. Load a save file and retry.");
+            if (mem is null)
+            {
+                Console.WriteLine("[autotracker] RDRAM not found in this process — magic string absent. Load a save file and retry.");
+                continue;
+            }
+            // Inject pjmembridge.dll for in-process xflag reads (bypasses PJ64 write buffer).
+            try
+            {
+                bool pipeOk = TryInjectPipe(procs[0].Id);
+                if (pipeOk)
+                    Console.WriteLine("[autotracker] pjmembridge pipe active");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[autotracker] pjmembridge injection error: {ex.Message}");
+                _pipeMem?.Dispose();
+                _pipeMem = null;
+            }
+            return mem;
         }
         return null;
+    }
+
+    bool TryInjectPipe(int pid)
+    {
+        var assembly = System.Reflection.Assembly.GetExecutingAssembly();
+        string? dllPath = null;
+        string tag = Guid.NewGuid().ToString("N")[..8];
+        try
+        {
+            // Extract pjmembridge.dll from embedded resource
+            using (var stream = assembly.GetManifestResourceStream("Autotracker.pjmembridge.pjmembridge.dll"))
+            {
+                if (stream is null)
+                {
+                    Console.WriteLine("[autotracker] Embedded resource 'Autotracker.pjmembridge.dll' not found");
+                    return false;
+                }
+                dllPath = Path.Combine(Path.GetTempPath(), $"pjmembridge-{pid}-{tag}.dll");
+                using (var fs = new FileStream(dllPath, FileMode.Create, FileAccess.Write))
+                    stream.CopyTo(fs);
+            }
+
+            // Inject DLL from C# directly (WOW64-safe PE export parsing)
+            _pipeMem?.Dispose();
+            _pipeMem = new PipeMemory(pid);
+            if (!_pipeMem.Inject(dllPath!))
+            {
+                Console.WriteLine("[autotracker] pjmembridge injection failed -- your antivirus may be blocking it.");
+                Console.WriteLine("  To fix this, add an exclusion for the tracker folder in Windows Security:");
+                Console.WriteLine("    Open Windows Security > Virus & threat protection > Manage settings");
+                Console.WriteLine("    Under 'Exclusions', click 'Add or remove exclusions'");
+                Console.WriteLine("    Click 'Add an exclusion' > 'Folder' and select the tracker's directory.");
+                return false;
+            }
+
+            // Connect to the pipe
+            for (int i = 0; i < 20; i++)
+            {
+                if (_pipeMem.Connect(500)) return true;
+                Thread.Sleep(200);
+            }
+            Console.WriteLine("[autotracker] pjmembridge pipe connect timed out");
+            _pipeMem.Dispose();
+            _pipeMem = null;
+            return false;
+        }
+        finally
+        {
+            try { if (dllPath is not null) File.Delete(dllPath); } catch { }
+        }
     }
 
     void Poll()
@@ -177,6 +259,8 @@ sealed class MemoryPoller
                     _isRdramRelocation             = true;
                     _mem!.Dispose();
                     _mem = null;
+                    _pipeMem?.Dispose();
+                    _pipeMem = null;
                     return; // preserve _state: N64 virtual addresses stay valid after RDRAM reloc
                 }
                 return; // Skip this poll — RDRAM may be mid-relocation, reads would return garbage
@@ -210,6 +294,7 @@ sealed class MemoryPoller
             {
                 _state.SharedCustomSaveAddr = _state.MmPayloadSharedCustomSaveAddr;
                 Console.WriteLine("[autotracker] Using MM payload SharedCustomSave as fallback (OoT payload unavailable)");
+                ResetXflagSession();
             }
         }
 
@@ -317,6 +402,28 @@ sealed class MemoryPoller
         }
     }
 
+    // Resets the xflag skip timer and all xflag/NPC baselines when a new game session is detected.
+    // Called whenever PayloadMmSaveAddr is newly validated — ensures the 10s skip re-runs for the
+    // new session so comboCreateSave has time to run before xflag data is read via the pipe.
+    // Without this reset, _xflagSkipDone=true persists across PJ64 ROM reloads: stale RDRAM data
+    // (previous session's xflags, still at the same BSS addresses since PJ64 doesn't zero RDRAM)
+    // gets emitted immediately, causing false-positive auto-checks.
+    void ResetXflagSession()
+    {
+        _xflagSkipDone          = false;
+        _xflagSkipPolls         = 0;
+        _ootXflagsBaseline      = null;
+        _mmXflagsBaseline       = null;
+        _ootNpcFlagsBaseline    = null;
+        _ootXflagsStablePolls   = 0;
+        _mmXflagsStablePolls    = 0;
+        _ootNpcFlagsStablePolls = 0;
+        _state.OotXflagsSnapshot   = null;
+        _state.MmXflagsSnapshot    = null;
+        _state.OotNpcFlagsSnapshot = null;
+        Console.WriteLine("[autotracker] xflag session reset — waiting for comboCreateSave to run");
+    }
+
     // Phase 2 — validate gMmSave candidate against two criteria, tried in order:
     //   1. playerForm == 4: Save_CreateMM() was just called (bzero + init, no stale items).
     //   2. MM player name == CopyName(OoT player name): the gMmSave was initialised for the
@@ -335,6 +442,7 @@ sealed class MemoryPoller
             _state.PayloadMmSaveAddr = addr;
             _state.SharedCustomSaveAddr = addr + (uint)N64Addresses.PayloadMmSaveSize;
             Console.WriteLine($"[autotracker] gMmSave validated at 0x{addr:X8} (playerForm=4, fresh init)");
+            ResetXflagSession();
             return;
         }
 
@@ -349,6 +457,7 @@ sealed class MemoryPoller
             _state.PayloadMmSaveAddr = addr;
             _state.SharedCustomSaveAddr = addr + (uint)N64Addresses.PayloadMmSaveSize;
             Console.WriteLine($"[autotracker] gMmSave validated at 0x{addr:X8} (player name match)");
+            ResetXflagSession();
         }
         else
         {
@@ -530,9 +639,17 @@ sealed class MemoryPoller
         _state.ComboConfigSignature          = null;
         _state.SoulsDataSnapshot             = null;
         _state.MmSkullTokensSnapshot         = null;
-            _state.RustyKeysSnapshot             = null;
-            _state.CoinsSnapshot                 = null;
-            _state.CoinsMaxSnapshot             = null;
+        _state.RustyKeysSnapshot             = null;
+        _state.CoinsSnapshot                 = null;
+        _state.CoinsMaxSnapshot             = null;
+        _state.OotXflagsSnapshot            = null;
+        _state.MmXflagsSnapshot             = null;
+        _ootNpcFlagsBaseline                = null;
+        _ootNpcFlagsStablePolls             = 0;
+        _ootXflagsBaseline                  = null;
+        _ootXflagsStablePolls               = 0;
+        _mmXflagsBaseline                   = null;
+        _mmXflagsStablePolls                = 0;
             _state.GossipHintsOotSnapshot        = null;
         _state.GossipHintsMmSnapshot         = null;
         _gossipScanCooldown                  = 0;
@@ -914,12 +1031,12 @@ sealed class MemoryPoller
         if (_state.PayloadMmSaveAddr is null
             && !IsSharedCustomSaveTrustworthy(_state.SharedCustomSaveAddr.Value)) return;
 
-        var addr = _state.SharedCustomSaveAddr.Value + (uint)N64Addresses.OotNpcFlagsOff;
-        var buf = _mem!.Read(addr, N64Addresses.OotNpcFlagsSize);
+        var npcAddr = _state.SharedCustomSaveAddr.Value + (uint)N64Addresses.OotNpcFlagsOff;
+        var buf = ReadXflagSafe(npcAddr, N64Addresses.OotNpcFlagsSize);
         if (buf is null) { Console.Error.WriteLine("[autotrack] PollOotNpcFlags: read returned null"); return; }
         // Dump raw bytes for debugging
         if (_state.OotNpcFlagsSnapshot is null)
-            Console.Error.WriteLine($"[autotrack] PollOotNpcFlags: raw read at 0x{addr:X8}: {BitConverter.ToString(buf)}");
+            Console.Error.WriteLine($"[autotrack] PollOotNpcFlags: raw read at 0x{npcAddr:X8}: {BitConverter.ToString(buf)}");
 
         // Merge with MM payload's SharedCustomSave.npc (same struct layout, offset 0x2E8).
         // Skip if both addresses point to the same data (fallback mode — no separate MM copy to merge).
@@ -927,8 +1044,8 @@ sealed class MemoryPoller
             && _state.MmPayloadSharedCustomSaveAddr != _state.SharedCustomSaveAddr
             && IsMmPayloadSharedCustomSaveValid())
         {
-            var mmBuf = _mem!.Read(_state.MmPayloadSharedCustomSaveAddr.Value + (uint)N64Addresses.OotNpcFlagsOff,
-                                   N64Addresses.OotNpcFlagsSize);
+            var mmBuf = ReadXflagSafe(_state.MmPayloadSharedCustomSaveAddr.Value + (uint)N64Addresses.OotNpcFlagsOff,
+                                      N64Addresses.OotNpcFlagsSize);
             if (mmBuf is not null)
             {
                 for (int i = 0; i < buf.Length; i++)
@@ -936,6 +1053,20 @@ sealed class MemoryPoller
                 if (_state.OotNpcFlagsSnapshot is null)
                     Console.Error.WriteLine($"[autotrack] PollOotNpcFlags: merged with MM payload");
             }
+        }
+
+        // Wait-for-change with timeout guard: first poll captures baseline, skip until
+        // data changes (detects bzero flush). Timeout at StableTimeoutPolls (~2.5s)
+        // prevents permanent block if PJ64 write buffer never flushes.
+        if (_ootNpcFlagsBaseline is null) { _ootNpcFlagsBaseline = [..buf]; _ootNpcFlagsStablePolls = 0; return; }
+        if (buf.AsSpan().SequenceEqual(_ootNpcFlagsBaseline))
+        {
+            if (++_ootNpcFlagsStablePolls < StableTimeoutPolls) return;
+        }
+        else
+        {
+            _ootNpcFlagsBaseline = [..buf];
+            _ootNpcFlagsStablePolls = 0;
         }
 
         if (_state.OotNpcFlagsSnapshot is not null && buf.SequenceEqual(_state.OotNpcFlagsSnapshot))
@@ -947,6 +1078,13 @@ sealed class MemoryPoller
         _emit(new { type = "oot_npc_flags", data = Convert.ToBase64String(buf) });
     }
 
+    // Read N64 memory exclusively through the pjmembridge pipe (no ReadProcessMemory fallback).
+    byte[]? ReadXflagSafe(uint n64Address, int size)
+    {
+        if (_pipeMem is null || _mem is null) return null;
+        return _pipeMem.ReadN64(n64Address, size, _mem.RdramBase, _mem.UpperRdramBase, _mem.IsSwapped);
+    }
+
     // Polls gSharedCustomSave.oot.xflags[762] — bitmap set by comboXflagsSetOot for pots, grass, crates, etc.
     // Gated on PayloadMmSaveAddr validation: uninitialised RDRAM (garbage pointers, floats) in the xflag
     // region causes false-positive check detections. IsSharedCustomSaveTrustworthy is NOT used here
@@ -955,29 +1093,62 @@ sealed class MemoryPoller
     void PollOotXflags()
     {
         if (_state.SharedCustomSaveAddr is null) return;
-        // Block during candidate phase (before TryValidatePayloadMmSave succeeds). The fallback
-        // path (SharedCustomSaveAddr == MmPayloadSharedCustomSaveAddr) is already validated.
         if (_state.PayloadMmSaveAddr is null
             && _state.SharedCustomSaveAddr != _state.MmPayloadSharedCustomSaveAddr)
             return;
 
-        var buf = _mem!.Read(_state.SharedCustomSaveAddr.Value + (uint)N64Addresses.SharedCustomSaveOotXflagsOff,
-                             N64Addresses.SharedCustomSaveOotXflagsSize);
-        if (buf is null) return;
+        // Skip first ~10s to let Save_CreateMM + N64 cache flush complete.
+        // Persists across reattaches (not reset by ResetSnapshotsForReconnect).
+        if (!_xflagSkipDone)
+        {
+            if (++_xflagSkipPolls < XflagSkipPolls) return;
+            _xflagSkipDone = true;
+            _ootXflagsBaseline = null; // re-capture baseline after skip
+        }
+
+        var xflagAddr = _state.SharedCustomSaveAddr.Value + (uint)N64Addresses.SharedCustomSaveOotXflagsOff;
+        var buf = ReadXflagSafe(xflagAddr, N64Addresses.SharedCustomSaveOotXflagsSize);
+        if (buf is null)
+        {
+            if (_ootXflagsBaseline is null)
+                Console.Error.WriteLine($"[autotrack] PollOotXflags: pipe read null (pipe {(_pipeMem is null ? "not injected" : "injected but read failed")}) at 0x{xflagAddr:X8}");
+            return;
+        }
+        if (_ootXflagsBaseline is null)
+        {
+            int nonZero = 0; for (int i = 0; i < buf.Length; i++) if (buf[i] != 0) nonZero++;
+            Console.Error.WriteLine($"[autotrack] PollOotXflags: first read at 0x{xflagAddr:X8}: {nonZero}/{buf.Length} non-zero bytes, sample=[{BitConverter.ToString(buf, 0, Math.Min(8, buf.Length))}]");
+        }
 
         // Merge MM-payload copy only when ZELDAZ is still present (guards RDRAM relocation) AND
         // the ocarina mask is trustworthy (0x0000 or 0xFFFF — rejects partial garbage from transitions).
         if (ValidateMmPayloadForMerge()
             && _state.MmPayloadSharedCustomSaveAddr != _state.SharedCustomSaveAddr)
         {
-            var mmBuf = _mem!.Read(_state.MmPayloadSharedCustomSaveAddr!.Value + (uint)N64Addresses.SharedCustomSaveOotXflagsOff,
-                                   N64Addresses.SharedCustomSaveOotXflagsSize);
+            var mmBuf = ReadXflagSafe(_state.MmPayloadSharedCustomSaveAddr!.Value + (uint)N64Addresses.SharedCustomSaveOotXflagsOff,
+                                      N64Addresses.SharedCustomSaveOotXflagsSize);
             if (mmBuf is not null)
                 for (int i = 0; i < buf.Length; i++) buf[i] |= mmBuf[i];
         }
 
+        // Stabilisation: must be stable for StableTimeoutPolls before emission.
+        if (_ootXflagsBaseline is null) { _ootXflagsBaseline = [..buf]; _ootXflagsStablePolls = 0; return; }
+        if (buf.AsSpan().SequenceEqual(_ootXflagsBaseline))
+        {
+            if (++_ootXflagsStablePolls < StableTimeoutPolls) return;
+        }
+        else
+        {
+            _ootXflagsBaseline = [..buf];
+            _ootXflagsStablePolls = 0;
+            return;
+        }
+
+        // Snapshot diff: emit only when data changes from the last-sent state.
         if (_state.OotXflagsSnapshot is not null && buf.SequenceEqual(_state.OotXflagsSnapshot)) return;
         _state.OotXflagsSnapshot = buf;
+        _ootXflagsBaseline = [..buf];
+        _ootXflagsStablePolls = 0;
         _emit(new { type = "oot_xflags", data = Convert.ToBase64String(buf) });
     }
 
@@ -990,22 +1161,49 @@ sealed class MemoryPoller
             && _state.SharedCustomSaveAddr != _state.MmPayloadSharedCustomSaveAddr)
             return;
 
-        var buf = _mem!.Read(_state.SharedCustomSaveAddr.Value + (uint)N64Addresses.SharedCustomSaveMmXflagsOff,
-                             N64Addresses.SharedCustomSaveMmXflagsSize);
-        if (buf is null) return;
+        // Same initial skip as PollOotXflags (global counter, persists across reattaches)
+        if (!_xflagSkipDone) return;
+
+        var xflagAddr = _state.SharedCustomSaveAddr.Value + (uint)N64Addresses.SharedCustomSaveMmXflagsOff;
+        var buf = ReadXflagSafe(xflagAddr, N64Addresses.SharedCustomSaveMmXflagsSize);
+        if (buf is null)
+        {
+            if (_mmXflagsBaseline is null)
+                Console.Error.WriteLine($"[autotrack] PollMmXflags: pipe read null at 0x{xflagAddr:X8}");
+            return;
+        }
+        if (_mmXflagsBaseline is null)
+        {
+            int nonZero = 0; for (int i = 0; i < buf.Length; i++) if (buf[i] != 0) nonZero++;
+            Console.Error.WriteLine($"[autotrack] PollMmXflags: first read at 0x{xflagAddr:X8}: {nonZero}/{buf.Length} non-zero bytes");
+        }
 
         // Same guard as PollOotXflags — verify ZELDAZ + ocarina mask before merging.
         if (ValidateMmPayloadForMerge()
             && _state.MmPayloadSharedCustomSaveAddr != _state.SharedCustomSaveAddr)
         {
-            var mmBuf = _mem!.Read(_state.MmPayloadSharedCustomSaveAddr!.Value + (uint)N64Addresses.SharedCustomSaveMmXflagsOff,
-                                   N64Addresses.SharedCustomSaveMmXflagsSize);
+            var mmBuf = ReadXflagSafe(_state.MmPayloadSharedCustomSaveAddr!.Value + (uint)N64Addresses.SharedCustomSaveMmXflagsOff,
+                                      N64Addresses.SharedCustomSaveMmXflagsSize);
             if (mmBuf is not null)
                 for (int i = 0; i < buf.Length; i++) buf[i] |= mmBuf[i];
         }
 
+        if (_mmXflagsBaseline is null) { _mmXflagsBaseline = [..buf]; _mmXflagsStablePolls = 0; return; }
+        if (buf.AsSpan().SequenceEqual(_mmXflagsBaseline))
+        {
+            if (++_mmXflagsStablePolls < StableTimeoutPolls) return;
+        }
+        else
+        {
+            _mmXflagsBaseline = [..buf];
+            _mmXflagsStablePolls = 0;
+            return;
+        }
+
         if (_state.MmXflagsSnapshot is not null && buf.SequenceEqual(_state.MmXflagsSnapshot)) return;
         _state.MmXflagsSnapshot = buf;
+        _mmXflagsBaseline = [..buf];
+        _mmXflagsStablePolls = 0;
         _emit(new { type = "mm_xflags", data = Convert.ToBase64String(buf) });
     }
 
@@ -1129,39 +1327,12 @@ sealed class MemoryPoller
             }
         }
 
-        // Dump 256 bytes at SharedCustomSave to check if address is correct.
-        // After comboCreateSave runs, the souls arrays (at +0x7DC) should be 0xff
-        // for disabled souls, and ocarinaButtonMask (at +0x7D8) should be 0xffff.
+        // First-read diagnostic — one-shot dump of SharedCustomSave prefix for debugging.
         if (_state.CoinsSnapshot is null) {
-            var sAddr = _state.SharedCustomSaveAddr.Value;
-            var full  = _mem!.Read(sAddr, 0x900);
-            if (full is not null) {
-                Console.Error.WriteLine($"[autotrack] DUMP gSharedCustomSave[0..256]: {BitConverter.ToString(full, 0, 256)}");
-                Console.Error.WriteLine($"[autotrack] DUMP gSharedCustomSave[0x1A0..0x1E0] (oot xflags bytes 416-480, Kokiri Forest grass): {BitConverter.ToString(full, 0x1A0, 64)}");
-                Console.Error.WriteLine($"[autotrack] DUMP gSharedCustomSave[0x7D0..0x7DF] (coins+ocarinaMask): {BitConverter.ToString(full, 0x7D0, 16)}");
-                Console.Error.WriteLine($"[autotrack] DUMP gSharedCustomSave[0x7DC..0x804] (souls): {BitConverter.ToString(full, 0x7DC, 41)}");
-                Console.Error.WriteLine($"[autotrack] DUMP gSharedCustomSave[0x2E8..0x308] (ootNpc): {BitConverter.ToString(full, 0x2E8, 32)}");
-            }
-            var mmPrefix  = _state.PayloadMmSaveAddr is not null ? _mem!.Read(_state.PayloadMmSaveAddr.Value, 64) : null;
-            if (mmPrefix is not null)
-                Console.Error.WriteLine($"[autotrack] DUMP gMmSave[0..64]: {BitConverter.ToString(mmPrefix)}");
-            if (_state.MmPayloadSharedCustomSaveAddr is not null)
-            {
-                var mmSc  = _mem!.Read(_state.MmPayloadSharedCustomSaveAddr.Value, 0x900);
-                if (mmSc is not null)
-                {
-                    Console.Error.WriteLine($"[autotrack] DUMP MM gSharedCustomSave[0..256]: {BitConverter.ToString(mmSc, 0, 256)}");
-                    Console.Error.WriteLine($"[autotrack] DUMP MM gSharedCustomSave[0x7D0..0x7DF] (coins+ocarinaMask): {BitConverter.ToString(mmSc, 0x7D0, 16)}");
-                    Console.Error.WriteLine($"[autotrack] DUMP MM gSharedCustomSave[0x7DC..0x804] (souls): {BitConverter.ToString(mmSc, 0x7DC, 41)}");
-                    Console.Error.WriteLine($"[autotrack] DUMP MM gSharedCustomSave[0x2E8..0x308] (ootNpc): {BitConverter.ToString(mmSc, 0x2E8, 32)}");
-                }
-            }
-            if (_state.ComboConfigAddr is not null)
-            {
-                var ccPrefix = _mem!.Read(_state.ComboConfigAddr.Value, 32);
-                if (ccPrefix is not null)
-                    Console.Error.WriteLine($"[autotrack] DUMP gComboConfig[0..32]: {BitConverter.ToString(ccPrefix)}");
-            }
+            var sAddr    = _state.SharedCustomSaveAddr.Value;
+            var ootX     = _mem!.Read(sAddr, 30);
+            if (ootX is not null)
+                Console.Error.WriteLine($"[autotrack] oot_x[0..30]: {BitConverter.ToString(ootX)}");
         }
 
         // Also read maxCoins from gComboConfig for auto-detect (bypasses combo_config signature dedup)
