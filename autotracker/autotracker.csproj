@@ -8,6 +8,14 @@
     <AssemblyName>autotracker</AssemblyName>
     <RootNamespace>Autotracker</RootNamespace>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained>false</SelfContained>
   </PropertyGroup>
+
+  <!-- Embed pjmembridge.dll for extraction at runtime (single-file publish) -->
+  <ItemGroup>
+    <EmbeddedResource Include="$(ProjectDir)pjmembridge\pjmembridge.dll" Condition="Exists('$(ProjectDir)pjmembridge\pjmembridge.dll')" />
+  </ItemGroup>
 
 </Project>

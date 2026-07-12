@@ -7,6 +7,7 @@
   import { sharedToOot, sharedToMm, ootToShared, mmToShared, directSyncOotToMm, directSyncMmToOot } from '../data/sharedSync';
   import type { Map as YMap } from 'yjs';
   import { readable } from 'svelte/store';
+  import { altarHints, altarRead } from '../stores/autotrackStore';
 
   export let yItems: YMap<number>;
   export let ySettings: YMap<any>;
@@ -184,11 +185,6 @@
     'mm_bk_st':               'bossKeyMmEnabled',
   };
 
-  // Coins with 0 count are hidden individually even when the coins setting is on
-  $: zeroCountCoins = new Set(
-    ['coin_red', 'coin_green', 'coin_blue', 'coin_yellow'].filter(id => ($itemStore.get(id) ?? 0) === 0)
-  );
-
   $: disabledItems = new Set([
     ...Object.entries(itemVisibilityMap)
       .filter(([, sk]) => OPT_IN_VISIBILITY_KEYS.has(sk)
@@ -197,7 +193,6 @@
       .map(([id]) => id),
     // hide mm_roomkey from Side Quests when rusty keys MM is on (shown in rusty keys section instead)
     ...($settingsStore.get('rustyKeysMm') === true ? ['mm_roomkey'] : []),
-    ...zeroCountCoins,
   ]);
 
   // Dynamic item overrides based on settings (short hookshot, fairy ocarina, lullaby, GFS, wallets)
@@ -582,6 +577,38 @@
   }
 
 
+  $: altarHintForItem = (() => {
+    const hints = $altarHints;
+    const read  = $altarRead;
+    if (!hints) return new Map<string, string>();
+    const m = new Map<string, string>();
+    // Each section only shown after the player has physically read the corresponding altar sign.
+    if (read.ootChild) {
+      if (hints.stones[0]?.regionId) m.set('stone_emerald',   hints.stones[0].name);
+      if (hints.stones[1]?.regionId) m.set('stone_ruby',      hints.stones[1].name);
+      if (hints.stones[2]?.regionId) m.set('stone_sapphire',  hints.stones[2].name);
+    }
+    if (read.ootAdult) {
+      if (hints.medallions[0]?.regionId) m.set('medal_light',  hints.medallions[0].name);
+      if (hints.medallions[1]?.regionId) m.set('medal_forest', hints.medallions[1].name);
+      if (hints.medallions[2]?.regionId) m.set('medal_fire',   hints.medallions[2].name);
+      if (hints.medallions[3]?.regionId) m.set('medal_water',  hints.medallions[3].name);
+      if (hints.medallions[4]?.regionId) m.set('medal_spirit', hints.medallions[4].name);
+      if (hints.medallions[5]?.regionId) m.set('medal_shadow', hints.medallions[5].name);
+      if (hints.ganonBossKey?.regionId)  m.set('oot_bk_ganon', hints.ganonBossKey.name);
+    }
+    if (read.mm) {
+      if (hints.remains[0]?.regionId)   m.set('remains_odolwa',   hints.remains[0].name);
+      if (hints.remains[1]?.regionId)   m.set('remains_goht',     hints.remains[1].name);
+      if (hints.remains[2]?.regionId)   m.set('remains_gyorg',    hints.remains[2].name);
+      if (hints.remains[3]?.regionId)   m.set('remains_twinmold', hints.remains[3].name);
+    }
+    if (read.ganonBoss) {
+      if (hints.lightArrows?.regionId)  m.set('arrow_light_oot',  hints.lightArrows.name);
+    }
+    return m;
+  })();
+
   function soulShortName(name: string) { return name.replace(/^Soul:\s*/, ''); }
 
   // helper pour rendre une cellule
@@ -804,11 +831,15 @@
                   {#if item}
                     {@const level = $itemStore.get(cellId) ?? 0}
                     {@const badge = getBadge(item, level)}
-                    <div class="tracker-item" role="button" tabindex="0" class:obtained={isObtained(item,level)} class:maxed={isMaxed(item,level)}
-                      title="{item.name}{item.maxLevel>1&&level>0?` — ${item.levelLabels?.[level-1]??level}`:''}"
-                      on:click={e=>handleClick(e,item)} on:contextmenu={e=>handleRightClick(e,item)} on:keydown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();handleClick(e,item)}}}>
-                      <img loading="lazy" src={getIconSrc(item,level)} alt={item.name} class="tracker-icon" class:greyed={isGreyed(item,level)} draggable="false"/>
-                      {#if badge}<span class="badge">{badge}</span>{/if}
+                    {@const altarHint = altarHintForItem.get(cellId)}
+                    <div class="dungeon-cell">
+                      <div class="tracker-item" role="button" tabindex="0" class:obtained={isObtained(item,level)} class:maxed={isMaxed(item,level)}
+                        title="{item.name}{altarHint ? ` — ${altarHint}` : (item.maxLevel>1&&level>0?` — ${item.levelLabels?.[level-1]??level}`:'')}"
+                        on:click={e=>handleClick(e,item)} on:contextmenu={e=>handleRightClick(e,item)} on:keydown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();handleClick(e,item)}}}>
+                        <img loading="lazy" src={getIconSrc(item,level)} alt={item.name} class="tracker-icon" class:greyed={isGreyed(item,level)} draggable="false"/>
+                        {#if badge}<span class="badge">{badge}</span>{/if}
+                      </div>
+                      {#if altarHint}<span class="altar-hint-lbl">{altarHint}</span>{/if}
                     </div>
                   {:else}<div class="cell-empty"></div>{/if}
                 {/if}
@@ -944,10 +975,14 @@
                 {#if item}
                   {@const level = $itemStore.get(cellId) ?? 0}
                   {@const badge = getBadge(item, level)}
-                  <div class="tracker-item" role="button" tabindex="0" class:obtained={isObtained(item,level)} class:maxed={isMaxed(item,level)}
-                    title="{item.name}" on:click={e=>handleClick(e,item)} on:contextmenu={e=>handleRightClick(e,item)} on:keydown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();handleClick(e,item)}}}>
-                    <img loading="lazy" src={getIconSrc(item,level)} alt={item.name} class="tracker-icon" class:greyed={isGreyed(item,level)} draggable="false"/>
-                    {#if badge}<span class="badge">{badge}</span>{/if}
+                  {@const altarHint = altarHintForItem.get(cellId)}
+                  <div class="dungeon-cell">
+                    <div class="tracker-item" role="button" tabindex="0" class:obtained={isObtained(item,level)} class:maxed={isMaxed(item,level)}
+                      title="{item.name}{altarHint ? ` — ${altarHint}` : ''}" on:click={e=>handleClick(e,item)} on:contextmenu={e=>handleRightClick(e,item)} on:keydown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();handleClick(e,item)}}}>
+                      <img loading="lazy" src={getIconSrc(item,level)} alt={item.name} class="tracker-icon" class:greyed={isGreyed(item,level)} draggable="false"/>
+                      {#if badge}<span class="badge">{badge}</span>{/if}
+                    </div>
+                    {#if altarHint}<span class="altar-hint-lbl">{altarHint}</span>{/if}
                   </div>
                 {:else}<div class="cell-empty"></div>{/if}
               {/if}
@@ -1195,10 +1230,14 @@
                   {#if item}
                     {@const level = $itemStore.get(cellId) ?? 0}
                     {@const badge = getBadge(item, level)}
-                    <div class="tracker-item" role="button" tabindex="0" class:obtained={isObtained(item,level)} class:maxed={isMaxed(item,level)}
-                      title="{item.name}" on:click={e=>handleClick(e,item)} on:contextmenu={e=>handleRightClick(e,item)} on:keydown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();handleClick(e,item)}}}>
-                      <img loading="lazy" src={getIconSrc(item,level)} alt={item.name} class="tracker-icon" class:greyed={isGreyed(item,level)} draggable="false"/>
-                      {#if badge}<span class="badge">{badge}</span>{/if}
+                    {@const altarHint = altarHintForItem.get(cellId)}
+                    <div class="dungeon-cell">
+                      <div class="tracker-item" role="button" tabindex="0" class:obtained={isObtained(item,level)} class:maxed={isMaxed(item,level)}
+                        title="{item.name}{altarHint ? ` — ${altarHint}` : ''}" on:click={e=>handleClick(e,item)} on:contextmenu={e=>handleRightClick(e,item)} on:keydown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();handleClick(e,item)}}}>
+                        <img loading="lazy" src={getIconSrc(item,level)} alt={item.name} class="tracker-icon" class:greyed={isGreyed(item,level)} draggable="false"/>
+                        {#if badge}<span class="badge">{badge}</span>{/if}
+                      </div>
+                      {#if altarHint}<span class="altar-hint-lbl">{altarHint}</span>{/if}
                     </div>
                   {:else}<div class="cell-empty"></div>{/if}
                 {/if}
@@ -1513,6 +1552,13 @@
     font-size: 0.68em; font-weight: bold; line-height: 1;
     padding: 1px 2px; border-radius: 2px 0 0 0;
     pointer-events: none; white-space: nowrap; max-width: 30px; overflow: hidden;
+  }
+
+  .dungeon-cell { display: inline-flex; flex-direction: column; align-items: center; gap: 1px; }
+  .altar-hint-lbl {
+    font-size: 0.5em; color: var(--color-header); text-align: center;
+    max-width: 42px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    line-height: 1.2; pointer-events: none;
   }
 
 

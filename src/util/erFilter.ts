@@ -2,7 +2,7 @@ import { bossExitIds, entranceSubTypes, type EntranceInfo, type ErSettingKey } f
 import { YAML_ENTRANCE_IDS } from '../data/yamlEntranceIds';
 import type { ErSettings } from './spoilerParser';
 
-export const erSubTypeGroups = [
+const erSubTypeGroups = [
   { parent: 'erDungeons', keys: ['erMajorDungeons','erMinorDungeons','erGanonCastle','erGanonTower','erMoon','erSpiderHouses','erPirateFortress','erBeneathWell','erIkanaCastle','erSecretShrine'] },
   { parent: 'erIndoors',  keys: ['erIndoorsMajor','erIndoorsExtra','erIndoorsGameLinks','erIndoorsTelescopes'] },
   { parent: 'erOneWays',  keys: ['erOneWaysMajor','erOneWaysIkana','erOneWaysSongs','erOneWaysStatues','erOneWaysWaterVoids','erOneWaysAnywhere','erOneWaysOwls'] },

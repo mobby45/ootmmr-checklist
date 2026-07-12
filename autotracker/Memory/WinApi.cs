@@ -23,12 +23,17 @@ static class WinApi
     public static extern bool ReadProcessMemory(nint hProcess, nint lpBaseAddress, byte[] lpBuffer, int nSize, out int lpNumberOfBytesRead);
 
     [DllImport("kernel32.dll")]
+    public static extern bool WriteProcessMemory(nint hProcess, nint lpBaseAddress, byte[] lpBuffer, int nSize, out int lpNumberOfBytesWritten);
+
+    [DllImport("kernel32.dll")]
     public static extern bool CloseHandle(nint hObject);
 
     [DllImport("kernel32.dll")]
     public static extern nint VirtualQueryEx(nint hProcess, nint lpAddress, out MemoryBasicInformation lpBuffer, nint dwLength);
 
     public const uint PROCESS_VM_READ           = 0x0010;
+    public const uint PROCESS_VM_WRITE          = 0x0020;
+    public const uint PROCESS_VM_OPERATION      = 0x0008;
     public const uint PROCESS_QUERY_INFORMATION = 0x0400;
     public const uint MEM_COMMIT               = 0x1000;
     public const uint PAGE_NOACCESS            = 0x01;

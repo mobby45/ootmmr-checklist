@@ -52,14 +52,44 @@ sealed class MemoryPoller
     DateTime _comboConfigFirstEmit = DateTime.MinValue;
     byte[]? _ootNpcFlagsBaseline = null; // first poll discard: skip until data changes (detects bzero flush)
     int     _ootNpcFlagsStablePolls = 0;
-    byte[]? _ootXflagsBaseline = null;
-    int     _ootXflagsStablePolls = 0;
-    byte[]? _mmXflagsBaseline = null;
-    int     _mmXflagsStablePolls = 0;
-    int     _xflagSkipPolls = 0;
-    bool    _xflagSkipDone = false;
-    const int XflagSkipPolls = 40; // ~10s skip for cache flush + Save_CreateMM
-    const int StableTimeoutPolls = 10; // used by NPC flags and xflag polling
+
+    // Two-consecutive + session baseline for xflag polling
+    byte[]? _ootXflagsPrevBuf         = null;
+    byte[]? _ootXflagsCommitted       = null;
+    byte[]? _ootXflagsSessionBaseline = null;
+    int     _ootXflagsStablePolls     = 0;
+    int     _ootXflagLastScene        = -1;
+    int     _ootXflagAbsorbPolls      = 0;
+    byte[]? _mmXflagsPrevBuf          = null;
+    byte[]? _mmXflagsCommitted        = null;
+    byte[]? _mmXflagsSessionBaseline  = null;
+    int     _mmXflagsStablePolls      = 0;
+    int     _mmXflagLastScene         = -1;
+    int     _mmXflagAbsorbPolls       = 0;
+    const int XflagBaselineStablePolls = 10;  // ~2.5s stable → freeze session baseline
+    const int XflagSceneAbsorbPolls    = 4;   // ~1s after scene transitions (GI_NOTHING actor spawn)
+    const int StableTimeoutPolls       = 10;  // NPC flags only
+
+    // Valid xflag bit positions — only bits from sComboOverrides entries (shuffled checks).
+    // GI_NOTHING actors set bits outside this set; those are filtered before emission.
+    HashSet<int>? _validOotXflagBits = null;  // null = filter not yet built (emit all)
+    HashSet<int>? _validMmXflagBits  = null;
+    // Xflag lookup tables (static files: xflag_table_{game}_{scenes/setups/rooms}.bin).
+    byte[]? _ootXflagScenesTbl = null;
+    byte[]? _ootXflagSetupsTbl = null;
+    byte[]? _ootXflagRoomsTbl  = null;
+    byte[]? _mmXflagScenesTbl  = null;
+    byte[]? _mmXflagSetupsTbl  = null;
+    byte[]? _mmXflagRoomsTbl   = null;
+
+    // MIPS PC hook — fires when comboXflagsSet{Oot,Mm} is entered in PJ64-EM's interpreter.
+    // Addresses are found by scanning the OoT/MM combo payload for the EnItem00_DropCustom function
+    // (prologue 27 BD FF D0, JAL at +0x54 → comboXflagsSet target).
+    uint? _mipsOotXflagPc  = null;  // comboXflagsSetOot MIPS entry address
+    uint? _mipsMmXflagPc   = null;  // comboXflagsSetMm MIPS entry address
+    bool  _mipsPcHookArmed = false; // hook installed and targets sent to pjmembridge
+    long  _lastOotPcEvents  = 0;    // last processed oot counter (for delta detection)
+    long  _lastMmPcEvents   = 0;    // last processed mm counter
 
     public MemoryPoller(Action<object> emit)
     {
@@ -281,7 +311,11 @@ sealed class MemoryPoller
         CheckPayloadMmSaveStillValid(); // detect RDRAM relocation before scanning
         if      (_state.PayloadMmSaveCandidateAddr is null) TryScanOotPayload();
         else if (_state.PayloadMmSaveAddr          is null) TryValidatePayloadMmSave();
-        if (_state.PayloadOotSaveAddr is null) TryScanMmPayload();
+        // Only scan the MM payload (gOotSave copy inside MM's BSS) when actually playing MM.
+        // In a pure OoT session this BSS retains a STALE "ZELDAZ" from a prior MM session
+        // (PJ64-EM does not zero RDRAM), which would produce a garbage MmPayloadSharedCustomSaveAddr
+        // and let the xflag merge OR that garbage into the OOT bitmap (false checks).
+        if (_state.Game == ActiveGame.Mm && _state.PayloadOotSaveAddr is null) TryScanMmPayload();
         if (_state.ComboConfigAddr is null) TryLocateComboConfig();
 
         // Fallback: if OoT payload scan never found gMmSave (e.g. game started in MM, or PJ64
@@ -402,26 +436,32 @@ sealed class MemoryPoller
         }
     }
 
-    // Resets the xflag skip timer and all xflag/NPC baselines when a new game session is detected.
-    // Called whenever PayloadMmSaveAddr is newly validated — ensures the 10s skip re-runs for the
-    // new session so comboCreateSave has time to run before xflag data is read via the pipe.
-    // Without this reset, _xflagSkipDone=true persists across PJ64 ROM reloads: stale RDRAM data
-    // (previous session's xflags, still at the same BSS addresses since PJ64 doesn't zero RDRAM)
-    // gets emitted immediately, causing false-positive auto-checks.
+    // Resets all xflag/NPC baselines when a new game session is detected.
     void ResetXflagSession()
     {
-        _xflagSkipDone          = false;
-        _xflagSkipPolls         = 0;
-        _ootXflagsBaseline      = null;
-        _mmXflagsBaseline       = null;
-        _ootNpcFlagsBaseline    = null;
-        _ootXflagsStablePolls   = 0;
-        _mmXflagsStablePolls    = 0;
-        _ootNpcFlagsStablePolls = 0;
+        _ootXflagsPrevBuf         = null;
+        _ootXflagsCommitted       = null;
+        _ootXflagsSessionBaseline = null;
+        _ootXflagsStablePolls     = 0;
+        _ootXflagLastScene        = -1;
+        _ootXflagAbsorbPolls      = 0;
+        _mmXflagsPrevBuf          = null;
+        _mmXflagsCommitted        = null;
+        _mmXflagsSessionBaseline  = null;
+        _mmXflagsStablePolls      = 0;
+        _mmXflagLastScene         = -1;
+        _mmXflagAbsorbPolls       = 0;
+        _ootNpcFlagsBaseline      = null;
+        _ootNpcFlagsStablePolls   = 0;
         _state.OotXflagsSnapshot   = null;
         _state.MmXflagsSnapshot    = null;
         _state.OotNpcFlagsSnapshot = null;
-        Console.WriteLine("[autotracker] xflag session reset — waiting for comboCreateSave to run");
+        _mipsOotXflagPc  = null;
+        _mipsMmXflagPc   = null;
+        _mipsPcHookArmed = false;
+        _lastOotPcEvents  = 0;
+        _lastMmPcEvents   = 0;
+        Console.WriteLine("[autotracker] xflag session reset");
     }
 
     // Phase 2 — validate gMmSave candidate against two criteria, tried in order:
@@ -644,12 +684,11 @@ sealed class MemoryPoller
         _state.CoinsMaxSnapshot             = null;
         _state.OotXflagsSnapshot            = null;
         _state.MmXflagsSnapshot             = null;
-        _ootNpcFlagsBaseline                = null;
-        _ootNpcFlagsStablePolls             = 0;
-        _ootXflagsBaseline                  = null;
-        _ootXflagsStablePolls               = 0;
-        _mmXflagsBaseline                   = null;
-        _mmXflagsStablePolls                = 0;
+        _ootNpcFlagsBaseline    = null;
+        _ootNpcFlagsStablePolls = 0;
+        // On reconnect: clear prev buffers so two-consecutive restarts; committed + baseline preserved.
+        _ootXflagsPrevBuf = null;
+        _mmXflagsPrevBuf  = null;
             _state.GossipHintsOotSnapshot        = null;
         _state.GossipHintsMmSnapshot         = null;
         _gossipScanCooldown                  = 0;
@@ -789,6 +828,7 @@ sealed class MemoryPoller
         PollOotNpcFlags();
         PollOotXflags();
         PollMmXflags();
+        PollMipsPcHookEvents();
         PollSoulsData();
         PollRustyKeys();
         PollCoins();
@@ -1078,6 +1118,33 @@ sealed class MemoryPoller
         _emit(new { type = "oot_npc_flags", data = Convert.ToBase64String(buf) });
     }
 
+    // Returns a compact string listing set xflag bit indices, e.g. "3,17,42,..." (capped at maxBits).
+    // BITMAP8 convention: byte b, bit p → xflag index b*8+p.
+    static string FormatSetBits(byte[] buf, int maxBits = 32)
+    {
+        var sb = new System.Text.StringBuilder();
+        int count = 0;
+        for (int b = 0; b < buf.Length && count < maxBits; b++)
+        {
+            if (buf[b] == 0) continue;
+            for (int p = 0; p < 8 && count < maxBits; p++)
+            {
+                if ((buf[b] & (1 << p)) != 0)
+                {
+                    if (sb.Length > 0) sb.Append(',');
+                    sb.Append(b * 8 + p);
+                    count++;
+                }
+            }
+        }
+        int total = 0;
+        for (int b = 0; b < buf.Length; b++)
+            for (int p = 0; p < 8; p++)
+                if ((buf[b] & (1 << p)) != 0) total++;
+        if (total > maxBits) sb.Append($"... (+{total - maxBits} more)");
+        return sb.Length == 0 ? "(none)" : sb.ToString();
+    }
+
     // Read N64 memory exclusively through the pjmembridge pipe (no ReadProcessMemory fallback).
     byte[]? ReadXflagSafe(uint n64Address, int size)
     {
@@ -1085,11 +1152,8 @@ sealed class MemoryPoller
         return _pipeMem.ReadN64(n64Address, size, _mem.RdramBase, _mem.UpperRdramBase, _mem.IsSwapped);
     }
 
-    // Polls gSharedCustomSave.oot.xflags[762] — bitmap set by comboXflagsSetOot for pots, grass, crates, etc.
-    // Gated on PayloadMmSaveAddr validation: uninitialised RDRAM (garbage pointers, floats) in the xflag
-    // region causes false-positive check detections. IsSharedCustomSaveTrustworthy is NOT used here
-    // because it accepts 0x0000 (zero-initialised garbage) and 0xFFFF (old session), letting garbage
-    // through. The PayloadMmSaveAddr guard is the authoritative filter.
+    // Polls gSharedCustomSave.oot.xflags[762] — bitmap set by comboXflagsSetOot.
+    // Two-consecutive + session baseline eliminate save-load false positives.
     void PollOotXflags()
     {
         if (_state.SharedCustomSaveAddr is null) return;
@@ -1097,31 +1161,28 @@ sealed class MemoryPoller
             && _state.SharedCustomSaveAddr != _state.MmPayloadSharedCustomSaveAddr)
             return;
 
-        // Skip first ~10s to let Save_CreateMM + N64 cache flush complete.
-        // Persists across reattaches (not reset by ResetSnapshotsForReconnect).
-        if (!_xflagSkipDone)
+        // Detect scene change BEFORE reading RDRAM so the absorb window is armed this same poll.
+        // PollOotSceneFlags (which emits player_entrance) runs after PollOotXflags in PollSaveContext.
+        if (_ootXflagsSessionBaseline is not null && _state.Game == ActiveGame.Oot && _mem is not null)
         {
-            if (++_xflagSkipPolls < XflagSkipPolls) return;
-            _xflagSkipDone = true;
-            _ootXflagsBaseline = null; // re-capture baseline after skip
+            var scRaw = _mem.Read(N64Addresses.OotPlayStateAddr + (uint)N64Addresses.PlayStateSceneOff, 2);
+            int curScene = scRaw is { Length: >= 2 } ? (scRaw[0] << 8 | scRaw[1]) : -1;
+            if (curScene is >= 0 and < 124 && curScene != _ootXflagLastScene)
+            {
+                // First scene after baseline: no absorb needed — the baseline already captured actor init.
+                // On real transitions, absorb for 1s to swallow GI_NOTHING actors that spawn on room load.
+                bool isFirst = _ootXflagLastScene == -1;
+                _ootXflagLastScene   = curScene;
+                _ootXflagAbsorbPolls = isFirst ? 0 : XflagSceneAbsorbPolls;
+                Console.Error.WriteLine($"[autotrack] oot_xflags scene → {curScene} absorbPolls={_ootXflagAbsorbPolls}");
+            }
         }
 
         var xflagAddr = _state.SharedCustomSaveAddr.Value + (uint)N64Addresses.SharedCustomSaveOotXflagsOff;
         var buf = ReadXflagSafe(xflagAddr, N64Addresses.SharedCustomSaveOotXflagsSize);
-        if (buf is null)
-        {
-            if (_ootXflagsBaseline is null)
-                Console.Error.WriteLine($"[autotrack] PollOotXflags: pipe read null (pipe {(_pipeMem is null ? "not injected" : "injected but read failed")}) at 0x{xflagAddr:X8}");
-            return;
-        }
-        if (_ootXflagsBaseline is null)
-        {
-            int nonZero = 0; for (int i = 0; i < buf.Length; i++) if (buf[i] != 0) nonZero++;
-            Console.Error.WriteLine($"[autotrack] PollOotXflags: first read at 0x{xflagAddr:X8}: {nonZero}/{buf.Length} non-zero bytes, sample=[{BitConverter.ToString(buf, 0, Math.Min(8, buf.Length))}]");
-        }
+        if (buf is null) { Console.Error.WriteLine($"[autotrack] PollOotXflags: pipe read null at 0x{xflagAddr:X8}"); return; }
 
-        // Merge MM-payload copy only when ZELDAZ is still present (guards RDRAM relocation) AND
-        // the ocarina mask is trustworthy (0x0000 or 0xFFFF — rejects partial garbage from transitions).
+        // Merge MM-payload copy (same guard as before).
         if (ValidateMmPayloadForMerge()
             && _state.MmPayloadSharedCustomSaveAddr != _state.SharedCustomSaveAddr)
         {
@@ -1131,29 +1192,84 @@ sealed class MemoryPoller
                 for (int i = 0; i < buf.Length; i++) buf[i] |= mmBuf[i];
         }
 
-        // Stabilisation: must be stable for StableTimeoutPolls before emission.
-        if (_ootXflagsBaseline is null) { _ootXflagsBaseline = [..buf]; _ootXflagsStablePolls = 0; return; }
-        if (buf.AsSpan().SequenceEqual(_ootXflagsBaseline))
+        // First read: initialize prevBuf.
+        if (_ootXflagsPrevBuf is null)
         {
-            if (++_ootXflagsStablePolls < StableTimeoutPolls) return;
-        }
-        else
-        {
-            _ootXflagsBaseline = [..buf];
-            _ootXflagsStablePolls = 0;
+            _ootXflagsPrevBuf   = [..buf];
+            _ootXflagsCommitted ??= new byte[buf.Length];
             return;
         }
 
-        // Snapshot diff: emit only when data changes from the last-sent state.
-        if (_state.OotXflagsSnapshot is not null && buf.SequenceEqual(_state.OotXflagsSnapshot)) return;
-        _state.OotXflagsSnapshot = buf;
-        _ootXflagsBaseline = [..buf];
-        _ootXflagsStablePolls = 0;
-        _emit(new { type = "oot_xflags", data = Convert.ToBase64String(buf) });
+        // Two-consecutive: bit commits when present in both current and previous read.
+        bool newlyCommitted = false;
+        for (int i = 0; i < buf.Length; i++)
+        {
+            byte newBits = (byte)((buf[i] & _ootXflagsPrevBuf[i]) & ~_ootXflagsCommitted![i]);
+            if (newBits != 0) { _ootXflagsCommitted[i] |= newBits; newlyCommitted = true; }
+        }
+        _ootXflagsPrevBuf = [..buf];
+
+        // Baseline not yet set: count stable polls (no new committed bits) to freeze it.
+        if (_ootXflagsSessionBaseline is null)
+        {
+            if (newlyCommitted)
+                _ootXflagsStablePolls = 0;
+            else if (++_ootXflagsStablePolls >= XflagBaselineStablePolls)
+            {
+                _ootXflagsSessionBaseline = [..(_ootXflagsCommitted ?? new byte[N64Addresses.SharedCustomSaveOotXflagsSize])];
+                Console.Error.WriteLine($"[autotrack] oot_xflags baseline frozen — {FormatSetBits(_ootXflagsSessionBaseline)}");
+                TryArmMipsPcHook();
+            }
+            return;
+        }
+
+        // Scene-entry absorb: GI_NOTHING auto-sets appear in RDRAM when the player first enters a
+        // scene. Only absorb bits not yet emitted (not in OotXflagsSnapshot) so confirmed player
+        // checks from earlier in the session are never silently swallowed.
+        if (_ootXflagAbsorbPolls > 0)
+        {
+            _ootXflagAbsorbPolls--;
+            if (newlyCommitted)
+            {
+                for (int i = 0; i < _ootXflagsSessionBaseline!.Length; i++)
+                    _ootXflagsSessionBaseline[i] |= (byte)(_ootXflagsCommitted![i] & ~(_state.OotXflagsSnapshot?[i] ?? 0));
+                Console.Error.WriteLine($"[autotrack] oot_xflags absorbed scene-entry bits (scene {_ootXflagLastScene})");
+                newlyCommitted = false;
+            }
+        }
+
+        byte[] emitBuf = new byte[_ootXflagsCommitted!.Length];
+        for (int i = 0; i < emitBuf.Length; i++)
+            emitBuf[i] = (byte)(_ootXflagsCommitted[i] & ~_ootXflagsSessionBaseline![i]);
+
+        // Suppress bits not in sComboOverrides (gi>0 shuffled checks only).
+        // GI_NOTHING actors auto-set bits on spawn; those are excluded from _validOotXflagBits.
+        if (_validOotXflagBits is not null)
+        {
+            for (int i = 0; i < emitBuf.Length; i++)
+            {
+                if (emitBuf[i] == 0) continue;
+                byte filtered = 0;
+                for (int bit = 0; bit < 8; bit++)
+                {
+                    if (((emitBuf[i] >> bit) & 1) != 0 && _validOotXflagBits.Contains(i * 8 + bit))
+                        filtered |= (byte)(1 << bit);
+                }
+                emitBuf[i] = filtered;
+            }
+        }
+
+        if (!newlyCommitted && _state.OotXflagsSnapshot is not null) return;
+        if (_state.OotXflagsSnapshot is not null && emitBuf.SequenceEqual(_state.OotXflagsSnapshot)) return;
+        byte[] diff = _state.OotXflagsSnapshot is not null
+            ? emitBuf.Select((b, i) => (byte)(b & ~_state.OotXflagsSnapshot[i])).ToArray()
+            : emitBuf;
+        Console.Error.WriteLine($"[autotrack] oot_xflags emit — new bits: {FormatSetBits(diff)}, total: {FormatSetBits(emitBuf)}");
+        _state.OotXflagsSnapshot = emitBuf;
+        _emit(new { type = "oot_xflags", data = Convert.ToBase64String(emitBuf) });
     }
 
-    // Polls gSharedCustomSave.mm.xflags[848] — bitmap set by comboXflagsSetMm for pots, grass, crates, etc.
-    // Same PayloadMmSaveAddr guard as PollOotXflags — see comment there for rationale.
+    // Polls gSharedCustomSave.mm.xflags[848] — bitmap set by comboXflagsSetMm.
     void PollMmXflags()
     {
         if (_state.SharedCustomSaveAddr is null) return;
@@ -1161,24 +1277,24 @@ sealed class MemoryPoller
             && _state.SharedCustomSaveAddr != _state.MmPayloadSharedCustomSaveAddr)
             return;
 
-        // Same initial skip as PollOotXflags (global counter, persists across reattaches)
-        if (!_xflagSkipDone) return;
+        // Detect scene change BEFORE reading RDRAM so the absorb window is armed this same poll.
+        if (_mmXflagsSessionBaseline is not null && _state.Game == ActiveGame.Mm && _mem is not null)
+        {
+            var scRaw = _mem.Read(N64Addresses.MmPlayStateAddr + (uint)N64Addresses.PlayStateSceneOff, 2);
+            int curScene = scRaw is { Length: >= 2 } ? (scRaw[0] << 8 | scRaw[1]) : -1;
+            if (curScene is >= 0 and < 120 && curScene != _mmXflagLastScene)
+            {
+                bool isFirst = _mmXflagLastScene == -1;
+                _mmXflagLastScene   = curScene;
+                _mmXflagAbsorbPolls = isFirst ? 0 : XflagSceneAbsorbPolls;
+                Console.Error.WriteLine($"[autotrack] mm_xflags scene → {curScene} absorbPolls={_mmXflagAbsorbPolls}");
+            }
+        }
 
         var xflagAddr = _state.SharedCustomSaveAddr.Value + (uint)N64Addresses.SharedCustomSaveMmXflagsOff;
         var buf = ReadXflagSafe(xflagAddr, N64Addresses.SharedCustomSaveMmXflagsSize);
-        if (buf is null)
-        {
-            if (_mmXflagsBaseline is null)
-                Console.Error.WriteLine($"[autotrack] PollMmXflags: pipe read null at 0x{xflagAddr:X8}");
-            return;
-        }
-        if (_mmXflagsBaseline is null)
-        {
-            int nonZero = 0; for (int i = 0; i < buf.Length; i++) if (buf[i] != 0) nonZero++;
-            Console.Error.WriteLine($"[autotrack] PollMmXflags: first read at 0x{xflagAddr:X8}: {nonZero}/{buf.Length} non-zero bytes");
-        }
+        if (buf is null) { Console.Error.WriteLine($"[autotrack] PollMmXflags: pipe read null at 0x{xflagAddr:X8}"); return; }
 
-        // Same guard as PollOotXflags — verify ZELDAZ + ocarina mask before merging.
         if (ValidateMmPayloadForMerge()
             && _state.MmPayloadSharedCustomSaveAddr != _state.SharedCustomSaveAddr)
         {
@@ -1188,23 +1304,309 @@ sealed class MemoryPoller
                 for (int i = 0; i < buf.Length; i++) buf[i] |= mmBuf[i];
         }
 
-        if (_mmXflagsBaseline is null) { _mmXflagsBaseline = [..buf]; _mmXflagsStablePolls = 0; return; }
-        if (buf.AsSpan().SequenceEqual(_mmXflagsBaseline))
+        if (_mmXflagsPrevBuf is null)
         {
-            if (++_mmXflagsStablePolls < StableTimeoutPolls) return;
-        }
-        else
-        {
-            _mmXflagsBaseline = [..buf];
-            _mmXflagsStablePolls = 0;
+            _mmXflagsPrevBuf   = [..buf];
+            _mmXflagsCommitted ??= new byte[buf.Length];
             return;
         }
 
-        if (_state.MmXflagsSnapshot is not null && buf.SequenceEqual(_state.MmXflagsSnapshot)) return;
-        _state.MmXflagsSnapshot = buf;
-        _mmXflagsBaseline = [..buf];
-        _mmXflagsStablePolls = 0;
-        _emit(new { type = "mm_xflags", data = Convert.ToBase64String(buf) });
+        bool newlyCommitted = false;
+        for (int i = 0; i < buf.Length; i++)
+        {
+            byte newBits = (byte)((buf[i] & _mmXflagsPrevBuf[i]) & ~_mmXflagsCommitted![i]);
+            if (newBits != 0) { _mmXflagsCommitted[i] |= newBits; newlyCommitted = true; }
+        }
+        _mmXflagsPrevBuf = [..buf];
+
+        if (_mmXflagsSessionBaseline is null)
+        {
+            if (newlyCommitted)
+                _mmXflagsStablePolls = 0;
+            else if (++_mmXflagsStablePolls >= XflagBaselineStablePolls)
+            {
+                _mmXflagsSessionBaseline = [..(_mmXflagsCommitted ?? new byte[N64Addresses.SharedCustomSaveMmXflagsSize])];
+                Console.Error.WriteLine($"[autotrack] mm_xflags baseline frozen — {FormatSetBits(_mmXflagsSessionBaseline)}");
+            }
+            return;
+        }
+
+        // Scene-entry absorb: same rationale as PollOotXflags.
+        if (_mmXflagAbsorbPolls > 0)
+        {
+            _mmXflagAbsorbPolls--;
+            if (newlyCommitted)
+            {
+                for (int i = 0; i < _mmXflagsSessionBaseline!.Length; i++)
+                    _mmXflagsSessionBaseline[i] |= (byte)(_mmXflagsCommitted![i] & ~(_state.MmXflagsSnapshot?[i] ?? 0));
+                Console.Error.WriteLine($"[autotrack] mm_xflags absorbed scene-entry bits (scene {_mmXflagLastScene})");
+                newlyCommitted = false;
+            }
+        }
+
+        byte[] mmEmitBuf = new byte[_mmXflagsCommitted!.Length];
+        for (int i = 0; i < mmEmitBuf.Length; i++)
+            mmEmitBuf[i] = (byte)(_mmXflagsCommitted[i] & ~_mmXflagsSessionBaseline![i]);
+
+        // Suppress bits not in sComboOverrides (gi>0 shuffled checks only).
+        if (_validMmXflagBits is not null)
+        {
+            for (int i = 0; i < mmEmitBuf.Length; i++)
+            {
+                if (mmEmitBuf[i] == 0) continue;
+                byte filtered = 0;
+                for (int bit = 0; bit < 8; bit++)
+                {
+                    if (((mmEmitBuf[i] >> bit) & 1) != 0 && _validMmXflagBits.Contains(i * 8 + bit))
+                        filtered |= (byte)(1 << bit);
+                }
+                mmEmitBuf[i] = filtered;
+            }
+        }
+
+        if (!newlyCommitted && _state.MmXflagsSnapshot is not null) return;
+        if (_state.MmXflagsSnapshot is not null && mmEmitBuf.SequenceEqual(_state.MmXflagsSnapshot)) return;
+        byte[] mmDiff = _state.MmXflagsSnapshot is not null
+            ? mmEmitBuf.Select((b, i) => (byte)(b & ~_state.MmXflagsSnapshot[i])).ToArray()
+            : mmEmitBuf;
+        Console.Error.WriteLine($"[autotrack] mm_xflags emit — new bits: {FormatSetBits(mmDiff)}, total: {FormatSetBits(mmEmitBuf)}");
+        _state.MmXflagsSnapshot = mmEmitBuf;
+        _emit(new { type = "mm_xflags", data = Convert.ToBase64String(mmEmitBuf) });
+    }
+
+    // Scan the OoT or MM combo payload for a function with prologue 27 BD FF D0
+    // (ADDIU $sp,$sp,-0x30) and a JAL at offset +0x54.  The JAL target is comboXflagsSet{Oot,Mm}.
+    // Loupimo uses this same pattern in pj64-EM-multiworld (Patterns.h: EnItem00_DropCustom_Oot/Mm).
+    uint? ScanRdramForXflagFunction(bool isOot)
+    {
+        uint start = isOot ? N64Addresses.PayloadOotStart : N64Addresses.PayloadMmStart;
+        uint end   = isOot ? N64Addresses.PayloadMmStart  : 0x80800000u;
+        const int chunkSize = 0x8000; // 32 KB
+        const int overlap   = 64;     // catch functions that straddle a chunk boundary
+
+        for (uint addr = start; addr < end; addr += (uint)(chunkSize - overlap))
+        {
+            int readSz = (int)Math.Min(chunkSize, end - addr);
+            var chunk = ReadXflagSafe(addr, readSz);
+            if (chunk is null) continue;
+
+            // MIPS instructions are 4-byte aligned
+            for (int i = 0; i + 0x58 <= chunk.Length; i += 4)
+            {
+                // Prologue: ADDIU $sp,$sp,-0x30
+                if (chunk[i]   != 0x27 || chunk[i+1] != 0xBD ||
+                    chunk[i+2] != 0xFF || chunk[i+3] != 0xD0) continue;
+
+                // JAL at +0x54: upper 6 bits = 0b000011 → first byte has bits [31:26]=0x0C>>2
+                // Big-endian MIPS JAL: byte[0] = 0x0C | (target >> 26)
+                if ((chunk[i + 0x54] & 0xFC) != 0x0C) continue;
+
+                // Decode JAL target address (MIPS ISA: target = PC+4[31:28] | instr[25:0]<<2)
+                uint instr  = (uint)((chunk[i+0x54] << 24) | (chunk[i+0x55] << 16)
+                                   | (chunk[i+0x56] <<  8) |  chunk[i+0x57]);
+                uint jalPc  = addr + (uint)i + 0x54;
+                uint target = ((jalPc + 4) & 0xF0000000) | ((instr & 0x03FFFFFF) << 2);
+
+                if (target < 0x80000000u || target >= 0x80800000u) continue;
+
+                string fname = isOot ? "comboXflagsSetOot" : "comboXflagsSetMm";
+                Console.Error.WriteLine(
+                    $"[autotrack] Found {fname} via JAL at 0x{jalPc:X8} → 0x{target:X8}");
+                return target;
+            }
+        }
+        Console.Error.WriteLine($"[autotrack] ScanRdramForXflagFunction({(isOot?"oot":"mm")}): pattern not found");
+        return null;
+    }
+
+    // Scan RDRAM for comboXflagsSet addresses and arm the MIPS PC hook in pjmembridge.
+    // No-op if already armed or pipe is unavailable.
+    // Called once after the OoT session baseline is frozen, then again when entering MM.
+    // Arms with whatever address is found; the missing one uses 0 (never matches any real PC).
+    void TryArmMipsPcHook()
+    {
+        if (_mipsPcHookArmed || _pipeMem is null) return;
+        _mipsOotXflagPc ??= ScanRdramForXflagFunction(true);
+        _mipsMmXflagPc  ??= ScanRdramForXflagFunction(false);
+        // Arm as soon as at least one address is found; the other uses 0 (sentinel = never fires).
+        if (_mipsOotXflagPc is null && _mipsMmXflagPc is null) return;
+        uint ootPc = _mipsOotXflagPc ?? 0u;
+        uint mmPc  = _mipsMmXflagPc  ?? 0u;
+        int status = _pipeMem.SetMipsPcHook(ootPc, mmPc);
+        _mipsPcHookArmed = status == 1;
+        if (_mipsPcHookArmed)
+        {
+            Console.Error.WriteLine(
+                $"[autotrack] MIPS PC hook armed: ootPc=0x{ootPc:X8} mmPc=0x{mmPc:X8}");
+            // Apply MIPS RDRAM patch on top of the PC hook — this stores $a0 to
+            // uncached memory so we can read it even if DynaRec is active.
+            if (ootPc != 0) ApplyMipsPatch(ootPc);
+            if (mmPc  != 0) ApplyMipsPatch(mmPc);
+        }
+        else
+        {
+            Console.Error.WriteLine("[autotrack] MIPS PC hook: SetMipsPcHook returned 0 (interpreter site not found)");
+        }
+    }
+
+    // Apply a MIPS patch to comboXflagsSetOot that stores $a0 (the Xflag* pointer)
+    // to an uncached RDRAM address (0xA07FFF00) where our C# code can read it.
+    // The patch replaces the first 4 instructions (16 bytes) at the function entry:
+    //   LUI $t0, 0xA07F    ; 0x3C08A07F
+    //   SW  $a0, 0xFF00($t0) ; 0xAD04FF00  → store to 0xA07FFF00 (uncached)
+    //   J   entry+0x10     ; jump to original 5th instruction
+    //   <original 1st instr> ; in branch delay slot
+    void ApplyMipsPatch(uint ootPc)
+    {
+        if (_mem is null) return;
+        if (ootPc == 0) return;
+        var orig = _mem.Read(ootPc, 4);
+        if (orig is null || orig.Length < 4) return;
+        uint origInstr = (uint)(orig[0] << 24 | orig[1] << 16 | orig[2] << 8 | orig[3]);
+
+        uint jumpTarget = ootPc + 0x10;
+        uint jInstr = 0x08000000 | ((jumpTarget >> 2) & 0x03FFFFFF);
+
+        var patch = new byte[16];
+        void Enc(uint instr, int off)
+        {
+            patch[off + 0] = (byte)(instr >> 24);
+            patch[off + 1] = (byte)(instr >> 16);
+            patch[off + 2] = (byte)(instr >> 8);
+            patch[off + 3] = (byte)(instr);
+        }
+        Enc(0x3C08A07F, 0);   // LUI $t0, 0xA07F
+        Enc(0xAD04FF00, 4);   // SW  $a0, 0xFF00($t0)  → at 0xA07FFF00
+        Enc(jInstr,      8);   // J   ootPc+0x10
+        Enc(origInstr,   12);  // original first instr (delay slot)
+
+        _mem.Write(ootPc, patch);
+        Console.Error.WriteLine($"[autotrack] MIPS patch at 0x{ootPc:X8} → capture at 0xA07FFF00");
+    }
+
+    // Poll MIPS PC hook event counters and captured Xflag* address.
+    // When a new comboXflagsSetOot call is detected, reads the 5-byte Xflag struct from
+    // RDRAM at the captured address (which should have the correct data since the ~4KB
+    // N64 data cache is almost certainly evicted by the time the player collects the check).
+    void PollMipsPcHookEvents()
+    {
+        if (!_mipsPcHookArmed || _pipeMem is null) return;
+
+        // Check the MIPS RDRAM patch capture address (0xA07FFF00).
+        // The MIPS patch stores $a0 here via an uncached SW, so it bypasses
+        // the N64 data cache and is immediately visible via ReadProcessMemory.
+        if (_mem is not null && _mipsOotXflagPc.HasValue)
+        {
+            var cap = _mem.ReadU32(0xA07FFF00);
+            if (cap.HasValue && cap.Value != 0)
+            {
+                // Clear the capture for next time
+                _mem.Write(0xA07FFF00, [0,0,0,0]);
+                uint xflagAddr = cap.Value;
+                if (xflagAddr >= 0x80000000 && xflagAddr <= 0x807FFFFF)
+                {
+                    var xfBuf = _mem.Read(xflagAddr, 5);
+                    if (xfBuf is not null && xfBuf.Length == 5)
+                    {
+                        bool allZero = true;
+                        for (int i = 0; i < 5; i++) { if (xfBuf[i] != 0) { allZero = false; break; } }
+                        if (!allZero)
+                        {
+                            byte sceneId = xfBuf[0];
+                            byte setupId = xfBuf[1];
+                            byte roomId  = xfBuf[2];
+                            byte sliceId = xfBuf[3];
+                            byte localId = xfBuf[4];
+                            EnsureXflagTablesLoaded();
+                            if (_ootXflagScenesTbl is not null)
+                            {
+                                var bitPos = ComputeXflagBitPos(sceneId, setupId, roomId, sliceId, localId,
+                                                                _ootXflagScenesTbl, _ootXflagSetupsTbl!, _ootXflagRoomsTbl!);
+                                if (bitPos.HasValue)
+                                {
+                                    uint key32 = (uint)(((0x10 + sliceId) << 24) | (sceneId << 16) |
+                                                        ((setupId << 6 | roomId) << 8) | localId);
+                                    Console.Error.WriteLine(
+                                        $"[autotrack] MIPS_patch: xflag_collected bit={bitPos.Value} addr=0x{xflagAddr:X8} " +
+                                        $"scene={sceneId} setup={setupId} room={roomId} slice={sliceId} id={localId} key=0x{key32:X8}");
+                                    _emit(new { type = "xflag_collected", game = "oot", bit = bitPos.Value, key = key32 });
+                                }
+                            }
+                        }
+                        else
+                        {
+                            Console.Error.WriteLine(
+                                $"[autotrack] MIPS_patch: all-zero Xflag at 0x{xflagAddr:X8}");
+                        }
+                    }
+                }
+                else
+                {
+                    Console.Error.WriteLine(
+                        $"[autotrack] MIPS_patch: cap=0x{xflagAddr:X8} out of RDRAM range");
+                }
+            }
+        }
+
+        var (ootEv, mmEv, xflagAddr) = _pipeMem.PollMipsPcEvents();
+
+        if (ootEv > 0 && ootEv > _lastOotPcEvents)
+        {
+            int deltaOot = ootEv - (int)_lastOotPcEvents;
+            _lastOotPcEvents = ootEv;
+
+            if (xflagAddr != 0 && _mem is not null)
+            {
+                var xfBuf = _mem.Read(xflagAddr, 5);
+                if (xfBuf is not null && xfBuf.Length == 5)
+                {
+                    bool allZero = true;
+                    for (int i = 0; i < 5; i++) { if (xfBuf[i] != 0) { allZero = false; break; } }
+                    if (!allZero)
+                    {
+                        byte sceneId  = xfBuf[0];
+                        byte setupId  = xfBuf[1];
+                        byte roomId   = xfBuf[2];
+                        byte sliceId  = xfBuf[3];
+                        byte localId  = xfBuf[4];
+
+                        EnsureXflagTablesLoaded();
+                        if (_ootXflagScenesTbl is not null)
+                        {
+                            var bitPos = ComputeXflagBitPos(sceneId, setupId, roomId, sliceId, localId,
+                                                            _ootXflagScenesTbl, _ootXflagSetupsTbl!, _ootXflagRoomsTbl!);
+                            if (bitPos.HasValue)
+                            {
+                                uint key32 = (uint)(((0x10 + sliceId) << 24) | (sceneId << 16) |
+                                                     ((setupId << 6 | roomId) << 8) | localId);
+                                Console.Error.WriteLine(
+                                    $"[autotrack] xflag_collected bit={bitPos.Value} addr=0x{xflagAddr:X8} " +
+                                    $"scene={sceneId} setup={setupId} room={roomId} slice={sliceId} id={localId} key=0x{key32:X8}");
+                                _emit(new { type = "xflag_collected", game = "oot", bit = bitPos.Value, key = key32 });
+                            }
+                        }
+                    }
+                    else
+                    {
+                        Console.Error.WriteLine(
+                            $"[autotrack] xflag RDRAM all-zero (stale cache?) at 0x{xflagAddr:X8}");
+                    }
+                }
+            }
+            else
+            {
+                Console.Error.WriteLine(
+                    $"[autotrack] PC hook: oot×{deltaOot}");
+            }
+        }
+
+        if (mmEv > 0 && mmEv > _lastMmPcEvents)
+        {
+            int deltaMm = mmEv - (int)_lastMmPcEvents;
+            Console.Error.WriteLine(
+                $"[autotrack] PC hook: Mm×{deltaMm}");
+            _lastMmPcEvents = mmEv;
+        }
     }
 
     // Polls all souls arrays from SharedCustomSave (41 bytes at offset 0x7DC).
@@ -2275,6 +2677,116 @@ sealed class MemoryPoller
         }
     }
 
+    // Read a big-endian unsigned 16-bit integer from buf at byte offset off.
+    static int ReadU16BE(byte[] buf, int off) => (buf[off] << 8) | buf[off + 1];
+    // Read a big-endian signed 16-bit integer from buf at byte offset off.
+    static int ReadI16BE(byte[] buf, int off) => (short)((buf[off] << 8) | buf[off + 1]);
+
+    // Compute the xflag bit position for one check using the three binary lookup tables.
+    // Formula (mirrors xflags.c bitPosLookup):
+    //   setupIndex = scenes[sceneId]        + setupId
+    //   roomIndex  = setups[setupIndex]     + roomId * 12 + sliceId
+    //   bitPos     = rooms[roomIndex]       + localId       (i16, can be negative)
+    static int? ComputeXflagBitPos(int sceneId, int setupId, int roomId, int sliceId, int localId,
+                                   byte[] scenes, byte[] setups, byte[] rooms)
+    {
+        try
+        {
+            int setupIndex = ReadU16BE(scenes, sceneId * 2) + setupId;
+            int roomIndex  = ReadU16BE(setups, setupIndex * 2) + roomId * 12 + sliceId;
+            int bitPos     = ReadI16BE(rooms,  roomIndex * 2) + localId;
+            return bitPos >= 0 ? bitPos : null;
+        }
+        catch { return null; }
+    }
+
+    // Try to load one of the six xflag binary table files from the filesystem.
+    static byte[]? LoadXflagTableFile(string filename)
+    {
+        var baseDir = AppContext.BaseDirectory;
+        string[] candidates = [
+            Path.Combine(baseDir, filename),
+            Path.Combine(baseDir, "OoTMM", "packages", "generator", "data", "static", filename),
+            Path.Combine(baseDir, "..", "OoTMM", "packages", "generator", "data", "static", filename),
+            Path.Combine(baseDir, "..", "..", "OoTMM", "packages", "generator", "data", "static", filename),
+            Path.Combine(baseDir, "..", "..", "..", "..", "OoTMM", "packages", "generator", "data", "static", filename),
+        ];
+        var path = candidates.FirstOrDefault(File.Exists);
+        if (path is null) return null;
+        try { return File.ReadAllBytes(path); }
+        catch { return null; }
+    }
+
+    // Ensure all six xflag table files are loaded (called lazily before first filter use).
+    void EnsureXflagTablesLoaded()
+    {
+        if (_ootXflagScenesTbl is not null) return;
+        _ootXflagScenesTbl = LoadXflagTableFile("xflag_table_oot_scenes.bin");
+        _ootXflagSetupsTbl = LoadXflagTableFile("xflag_table_oot_setups.bin");
+        _ootXflagRoomsTbl  = LoadXflagTableFile("xflag_table_oot_rooms.bin");
+        _mmXflagScenesTbl  = LoadXflagTableFile("xflag_table_mm_scenes.bin");
+        _mmXflagSetupsTbl  = LoadXflagTableFile("xflag_table_mm_setups.bin");
+        _mmXflagRoomsTbl   = LoadXflagTableFile("xflag_table_mm_rooms.bin");
+        bool ok = _ootXflagScenesTbl is not null && _ootXflagSetupsTbl is not null && _ootXflagRoomsTbl is not null
+               && _mmXflagScenesTbl  is not null && _mmXflagSetupsTbl  is not null && _mmXflagRoomsTbl  is not null;
+        Console.Error.WriteLine(ok
+            ? "[autotrack] xflag tables loaded — GI_NOTHING filter active"
+            : "[autotrack] xflag tables incomplete — GI_NOTHING filter disabled");
+    }
+
+    // Build the valid-bitpos sets from the sComboOverrides buffer.
+    // Only entries with xflag ovType (0x10-0x1F) are processed.
+    // The game (oot/mm) is determined via the xflag-type-index loaded earlier.
+    void BuildValidXflagBits(byte[] buf, int count)
+    {
+        EnsureXflagTablesLoaded();
+        if (_ootXflagScenesTbl is null) return; // tables unavailable
+
+        var oot = new HashSet<int>();
+        var mm  = new HashSet<int>();
+
+        for (int i = 0; i < count; i++)
+        {
+            int off    = i * N64Addresses.OverrideEntrySize;
+            byte ovType = buf[off];
+            if (ovType < N64Addresses.OvXflagMin || ovType > N64Addresses.OvXflagMax) continue;
+
+            byte sceneId      = buf[off + 1];
+            byte roomEncoded  = buf[off + 2];
+            byte localId      = buf[off + 3];
+            // gi is at buf[off+6..off+7] (big-endian u16, after key(4) + player(2))
+            int gi = (buf[off + 6] << 8) | buf[off + 7];
+            if (gi == 0) continue; // GI_NONE → not a real shuffled check
+
+            int sliceId     = ovType - N64Addresses.OvXflagMin;
+            int setupId     = (roomEncoded >> 6) & 3;
+            int actualRoomId = roomEncoded & 0x3f;
+
+            // Determine game via xflag-type-index
+            uint key = (uint)((ovType << 24) | (sceneId << 16) | (roomEncoded << 8) | localId);
+            string? game = null;
+            if (_xflagIndex is not null && _xflagIndex.TryGetValue(key, out var tag))
+                game = tag.StartsWith("oot") ? "oot" : tag.StartsWith("mm") ? "mm" : null;
+
+            if (game == "oot" && _ootXflagSetupsTbl is not null && _ootXflagRoomsTbl is not null)
+            {
+                var bitPos = ComputeXflagBitPos(sceneId, setupId, actualRoomId, sliceId, localId,
+                                                _ootXflagScenesTbl, _ootXflagSetupsTbl, _ootXflagRoomsTbl);
+                if (bitPos.HasValue) oot.Add(bitPos.Value);
+            }
+            else if (game == "mm" && _mmXflagScenesTbl is not null && _mmXflagSetupsTbl is not null && _mmXflagRoomsTbl is not null)
+            {
+                var bitPos = ComputeXflagBitPos(sceneId, setupId, actualRoomId, sliceId, localId,
+                                                _mmXflagScenesTbl, _mmXflagSetupsTbl, _mmXflagRoomsTbl);
+                if (bitPos.HasValue) mm.Add(bitPos.Value);
+            }
+        }
+
+        _validOotXflagBits = oot;
+        _validMmXflagBits  = mm;
+        Console.Error.WriteLine($"[autotrack] xflag valid bits: oot={oot.Count} mm={mm.Count}");
+    }
+
     // Searches several paths relative to the exe for xflag-type-index.json (built by process-data).
     // Returns a dictionary mapping override key32 → "game:csvtype:layout" (e.g. "oot:pot:dungeon").
     // Returns null and logs a warning if the file is not found; per-type detection is skipped gracefully.
@@ -2459,6 +2971,10 @@ sealed class MemoryPoller
         _state.FishShuffle   = fish;
         _state.XflagShuffle  = xflag;
         _state.OverrideTableScanned = true;
+
+        // Build the valid xflag bit-position sets from the override table.
+        // This filters out GI_NOTHING auto-sets (actors that spawn and self-destruct).
+        if (xflag) BuildValidXflagBits(buf, _state.OverrideTableCount);
 
         // Helper: null = not detected, value otherwise.
         string? Sel(string gameType) =>

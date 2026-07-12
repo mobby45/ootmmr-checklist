@@ -3,11 +3,82 @@ import type { Map as YMap } from 'yjs';
 import { loadWorld } from '../logic/world';
 import { buildLogicState } from '../logic/state';
 import { buildItemsMap } from '../logic/itemMapping';
-import { computeReachabilityOotmm } from '../logic/ootmm-engine';
-import type { ReachabilityResult } from '../logic/types';
+import type { ReachabilityResult, LogicState } from '../logic/types';
+import type { WorkerRequest, WorkerResponse } from '../logic/logic.worker';
+import LogicWorkerCtor from '../logic/logic.worker?worker';
 import { defaultLogicSettings } from '../data/logicSettingsDef';
 import type { SpecialConditionsMap } from '../util/spoilerParser';
 import { TRICKS_DEFS } from '../data/tricksDef';
+import { autotrackStatus } from './autotrackStore';
+
+// ─── Logic Web Worker proxy ───────────────────────────────────────────────────
+// BFS (PathfinderState) runs in a Worker so its hundreds-of-MB heap stays
+// isolated from the main thread — prevents the tab from OOMing under autotracker.
+
+let _worker: Worker | null = null;
+let _workerMsgId = 0;
+const _workerCallbacks = new Map<number, {
+  resolve: (r: ReachabilityResult) => void;
+  reject:  (e: Error) => void;
+}>();
+
+function getWorker(): Worker {
+  if (_worker) return _worker;
+  _worker = new LogicWorkerCtor();
+  _worker.onmessage = (e: MessageEvent<WorkerResponse>) => {
+    const { id, result, error } = e.data;
+    const cb = _workerCallbacks.get(id);
+    if (!cb) return;
+    _workerCallbacks.delete(id);
+    if (error || !result) {
+      cb.reject(new Error(error ?? 'empty result'));
+    } else {
+      cb.resolve({
+        regions:              new Set(result.regions),
+        childRegions:         new Set(result.childRegions),
+        adultRegions:         new Set(result.adultRegions),
+        childChecks:          new Set(result.childChecks),
+        adultChecks:          new Set(result.adultChecks),
+        disabledChecks:       new Set(result.disabledChecks),
+        events:               new Set(result.events),
+        entranceReachability: new Map(result.entranceReachability),
+      });
+    }
+  };
+  _worker.onerror = (e) => {
+    console.error('[logic worker]', e.message);
+    for (const cb of _workerCallbacks.values()) cb.reject(new Error('Logic worker crashed'));
+    _workerCallbacks.clear();
+    _worker = null; // recreated on next request
+  };
+  return _worker;
+}
+
+function computeViaWorker(state: LogicState): Promise<ReachabilityResult> {
+  const id = ++_workerMsgId;
+  return new Promise((resolve, reject) => {
+    _workerCallbacks.set(id, { resolve, reject });
+    const req: WorkerRequest = {
+      id,
+      items:           [...state.items],
+      settings:        [...state.settings],
+      erOverrides:     [...state.erOverrides],
+      tricks:          [...state.tricks],
+      flags:           [...state.flags],
+      events:          [...state.events],
+      resolvedSpecial: [...state.resolvedSpecial],
+      songEvents:      [...state.songEvents],
+      shopPrices:      [...state.shopPrices],
+      rawSpecialConds: state.rawSpecialConds ?? null,
+      erMode:          state.erMode,
+      mmTime:          state.mmTime,
+      mmTime2:         state.mmTime2,
+      age:             state.age,
+      currentGame:     state.currentGame,
+    };
+    getWorker().postMessage(req);
+  });
+}
 
 // ─── Shared world data (loaded once) ─────────────────────────────────────────
 
@@ -218,7 +289,7 @@ export function initLogicStore(
       : new Map<string, number>();
     const state = buildLogicState(itemsSnap, settingsSnap, erSnap, tricks, erMode, resolvedSpecial, undefined, songEventsSnap, shopPricesSnap, specials ?? null);
     try {
-      const result = await computeReachabilityOotmm(state);
+      const result = await computeViaWorker(state);
       logicResult.set(result);
     } catch (e) {
       console.error('[logic] reachability error:', e);
@@ -228,8 +299,12 @@ export function initLogicStore(
   }
 
   function scheduleRecompute(delay = 150) {
+    // When the autotracker is live, use a much longer minimum delay to reduce BFS rebuild
+    // frequency. PathfinderState is hundreds of MB; if GC can't reclaim the previous one
+    // before the next BFS starts, memory spikes and the tab OOMs.
+    const minDelay = get(autotrackStatus) === 'connected' ? 3000 : delay;
     if (debounceTimer) clearTimeout(debounceTimer);
-    pendingDelay = Math.max(pendingDelay, delay);
+    pendingDelay = Math.max(pendingDelay, minDelay);
     debounceTimer = setTimeout(() => {
       debounceTimer = null;
       pendingDelay = 150;

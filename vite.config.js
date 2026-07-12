@@ -26,6 +26,11 @@ export default defineConfig({
         include: ['lodash-es'],
         exclude: ['@ootmm/core', '@ootmm/logic'],
     },
+    server: {
+        fs: {
+            allow: ['.', './OoTMM'],
+        },
+    },
     base: '/ootmmr-checklist/',
     build: {
         rollupOptions: {

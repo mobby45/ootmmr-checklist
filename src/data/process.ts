@@ -213,3 +213,58 @@ for (let game in T.Game) {
 
 writeFileSync(join(__dirname, 'dist', 'structured-checks.json'), JSON.stringify(structuredChecks));
 writeFileSync(join(__dirname, 'dist', 'structured-checks-lite.json'), JSON.stringify(liteChecks));
+
+// --- xflag type index: key32 → "game:csvtype:layout" ---
+// Built from OoTMM generator CSVs (same source as the override table) so key32 values match.
+// key32 = ((0x10 + sliceId) << 24) | (sceneId << 16) | (id & 0xffff), matching checks.ts formula.
+// Type names are the generator's own names (hive/soil/wonder/boulder-red/fairy/redice).
+// layout = "dungeon"|"overworld" from a hardcoded scene set; lets C# emit overworld vs anywhere.
+const XFLAG_TYPES = new Set([
+    'pot', 'crate', 'barrel', 'hive', 'rock', 'grass', 'tree', 'soil',
+    'rupee', 'heart', 'wonder', 'snowball', 'butterfly', 'boulder-red',
+    'icicle', 'fairy_spot', 'fairy', 'bush', 'redice',
+]);
+const OOT_DUNGEON_SCENES = new Set([
+    'DEKU_TREE', 'DODONGO_CAVERN', 'INSIDE_JABU_JABU',
+    'TEMPLE_FOREST', 'TEMPLE_FIRE', 'TEMPLE_WATER', 'TEMPLE_SPIRIT', 'TEMPLE_SHADOW',
+    'BOTTOM_OF_THE_WELL', 'ICE_CAVERN', 'GERUDO_TRAINING_GROUND',
+    'INSIDE_GANON_CASTLE', 'GANON_TOWER',
+    'LAIR_GOHMA', 'LAIR_KING_DODONGO', 'LAIR_BARINADE', 'LAIR_PHANTOM_GANON',
+    'LAIR_VOLVAGIA', 'LAIR_MORPHA', 'LAIR_BONGO_BONGO', 'LAIR_TWINROVA',
+]);
+const MM_DUNGEON_SCENES = new Set([
+    'TEMPLE_WOODFALL', 'TEMPLE_SNOWHEAD', 'TEMPLE_GREAT_BAY',
+    'TEMPLE_STONE_TOWER', 'TEMPLE_STONE_TOWER_INVERTED',
+    'BENEATH_THE_WELL', 'BENEATH_THE_GRAVEYARD', 'CASTLE_IKANA', 'SAKON_HIDEOUT', 'SECRET_SHRINE',
+    'LAIR_ODOLWA', 'LAIR_GOHT', 'LAIR_GYORG', 'LAIR_TWINMOLD', 'LAIR_IKANA', 'LAIR_MAJORA',
+]);
+const scenesRaw: Record<string, number> = JSON.parse(
+    readFileSync(join(__dirname, '../../OoTMM/packages/core/dist/data-scenes.json'), 'utf-8')
+);
+const xflagTypeIndex: Record<number, string> = {};
+
+function buildXflagIndex(csvPath: string, game: string, dungeonScenes: Set<string>) {
+    const content = readFileSync(csvPath, 'utf-8');
+    const recs = parseCsv(content, { columns: true, skip_empty_lines: true, trim: true, delimiter: ',' }) as Record<string, string>[];
+    for (const rec of recs) {
+        if (!XFLAG_TYPES.has(rec.type)) continue;
+        const rawId = rec.id;
+        if (!rawId) continue;
+        const id = Number(rawId);
+        if (!Number.isFinite(id) || !Number.isInteger(id)) continue;
+        // Generator CSV uses bare scene names (e.g. LINK_HOUSE); data-scenes.json has OOT_LINK_HOUSE.
+        const sceneKey = `${game.toUpperCase()}_${rec.scene}`;
+        const sceneId = scenesRaw[sceneKey];
+        if (sceneId === undefined) continue;
+        const sliceId = (id >> 16) & 0xf;
+        const key32 = (((0x10 + sliceId) << 24) | (sceneId << 16) | (id & 0xffff)) >>> 0;
+        const layout = dungeonScenes.has(rec.scene) ? 'dungeon' : 'overworld';
+        xflagTypeIndex[key32] = `${game}:${rec.type}:${layout}`;
+    }
+}
+
+const genPool = join(__dirname, '../../OoTMM/data/pool');
+buildXflagIndex(join(genPool, 'pool_oot.csv'), 'oot', OOT_DUNGEON_SCENES);
+buildXflagIndex(join(genPool, 'pool_mm.csv'), 'mm', MM_DUNGEON_SCENES);
+writeFileSync(join(__dirname, 'dist', 'xflag-type-index.json'), JSON.stringify(xflagTypeIndex));
+console.log(`[process] xflag-type-index: ${Object.keys(xflagTypeIndex).length} entries`);

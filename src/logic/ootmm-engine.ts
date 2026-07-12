@@ -37,11 +37,16 @@ const OOTMM_AREA_LABEL_OVERRIDES: Record<string, string> = {
   'MM Clock Town East Stock Pot Inn Roof':  'MM Stock Pot Inn Roof',
   'MM Great Bay Coast Near Cow Grotto':     'MM GBC Near Cow Grotto',
   'MM Mountain Village Winter':             'MM Mountain Village',
+  // Spawn areas use all-uppercase names in the world graph (from YAML) but
+  // title-case in entrance display names — the mismatch silently breaks ER overrides.
+  'OOT Spawn Child':                        'OOT SPAWN CHILD',
+  'OOT Spawn Adult':                        'OOT SPAWN ADULT',
 };
 
-// Build a map from entrance ID → [srcArea, vanillaDestArea] in OoTMM area name format.
+// Build maps from entrance ID → [srcArea, vanillaDestArea] and entrance ID → erType.
 // Computed once at module load since entranceData is static.
 const _entranceAreaMap = new Map<string, [string, string]>();
+const _entranceErTypeMap = new Map<string, string>();
 for (const e of allEntrances) {
   const split = splitEntName(e.name);
   if (!split) continue;
@@ -49,6 +54,7 @@ for (const e of allEntrances) {
   const src = OOTMM_AREA_LABEL_OVERRIDES[rawSrc] ?? rawSrc;
   const dst = OOTMM_AREA_LABEL_OVERRIDES[rawDst] ?? rawDst;
   _entranceAreaMap.set(e.id, [src, dst]);
+  _entranceErTypeMap.set(e.id, e.erType);
 }
 
 // ─── Shop price slot mapping ──────────────────────────────────────────────────
@@ -115,12 +121,13 @@ function settingsKey(ootmmSettings: Settings): string {
   return JSON.stringify(Object.entries(ootmmSettings as unknown as Record<string, unknown>).sort((a, b) => a[0].localeCompare(b[0])));
 }
 
-export function toOotmmSettings(settings: Map<string, any>, rawSpecialConds?: Record<string, any> | null): Settings {
+export function toOotmmSettings(settings: Map<string, any>, rawSpecialConds?: Record<string, any> | null, tricks?: Set<string>): Settings {
   const partial: Record<string, any> = {};
   for (const [k, v] of settings) {
     partial[k] = v;
   }
   if (rawSpecialConds) partial.specialConds = rawSpecialConds;
+  if (tricks) partial.tricks = [...tricks];
   // Force single-player ootmm mode
   partial.mode = 'single';
   partial.players = 1;
@@ -159,8 +166,12 @@ function makePfKey(
   rawSpecialConds: Record<string, any> | null | undefined,
 ): string {
   const iKey = JSON.stringify([...items.entries()].sort((a, b) => a[0].localeCompare(b[0])));
-  const erPart = erMode && erOverrides.size > 0
-    ? JSON.stringify([...erOverrides.entries()].sort((a, b) => a[0].localeCompare(b[0])))
+  // Include erMode in the key even with empty overrides: blocked exits produce a different
+  // world graph than vanilla, so erMode=true/no-overrides ≠ erMode=false.
+  const erPart = erMode
+    ? (erOverrides.size > 0
+        ? JSON.stringify([...erOverrides.entries()].sort((a, b) => a[0].localeCompare(b[0])))
+        : '\x01')
     : '';
   const pricesPart = shopPrices && shopPrices.size > 0
     ? JSON.stringify([...shopPrices.entries()].sort((a, b) => a[0].localeCompare(b[0])))
@@ -227,15 +238,43 @@ function toPlayerItems(items: Map<string, number>): PlayerItems {
 
 // Returns shallow-copied worlds with ER overrides applied without mutating the cache.
 // Expr objects are shared (read-only), only the container objects are copied.
-function applyErOverrides(baseWorlds: World[], erOverrides: Map<string, string>): World[] {
-  if (erOverrides.size === 0) return baseWorlds;
+function applyErOverrides(
+  baseWorlds: World[],
+  erOverrides: Map<string, string>,
+  settings: Map<string, any>,
+): World[] {
+  const isActive = (erType: string): boolean => {
+    const v = settings.get(erType);
+    return !!v && v !== 'none';
+  };
 
-  // Shallow-copy worlds and their areas maps (we only deep-copy exits we modify)
-  const worlds = baseWorlds.map(world => ({
-    ...world,
-    areas: { ...world.areas },
-  }));
+  // Entrances whose ER type is active but haven't been mapped yet → block the vanilla exit.
+  const toBlock: Array<[string, string]> = [];
+  for (const [id, erType] of _entranceErTypeMap) {
+    if (isActive(erType) && !erOverrides.has(id)) {
+      const parts = _entranceAreaMap.get(id);
+      if (parts) toBlock.push(parts);
+    }
+  }
 
+  if (toBlock.length === 0 && erOverrides.size === 0) return baseWorlds;
+
+  // Shallow-copy worlds and their areas maps (we only deep-copy exits we modify).
+  const worlds = baseWorlds.map(world => ({ ...world, areas: { ...world.areas } }));
+
+  // Block all unmapped exits so the Pathfinder can't traverse them.
+  for (const [srcArea, vanillaDestArea] of toBlock) {
+    for (const world of worlds) {
+      const area = world.areas[srcArea];
+      if (!area || !area.exits[vanillaDestArea]) continue;
+      const newExits = { ...area.exits };
+      delete newExits[vanillaDestArea];
+      world.areas[srcArea] = { ...area, exits: newExits };
+    }
+  }
+
+  // Apply mapped overrides — always read the expression from baseWorlds so we aren't
+  // affected by the blocking step above (blocked exits already have no vanilla expr).
   for (const [entranceId, destEntranceName] of erOverrides) {
     const parts = _entranceAreaMap.get(entranceId);
     if (!parts) continue;
@@ -246,16 +285,16 @@ function applyErOverrides(baseWorlds: World[], erOverrides: Map<string, string>)
     const rawNewDest = destEntranceName.slice(idx + 4);
     const newDestArea = OOTMM_AREA_LABEL_OVERRIDES[rawNewDest] ?? rawNewDest;
 
-    for (const world of worlds) {
-      const area = world.areas[srcArea];
-      if (!area) continue;
-      const expr = area.exits[vanillaDestArea];
+    for (let wi = 0; wi < worlds.length; wi++) {
+      const baseArea = baseWorlds[wi].areas[srcArea];
+      if (!baseArea) continue;
+      const expr = baseArea.exits[vanillaDestArea];
       if (!expr) continue;
-      // Shallow-copy this area's exits so we don't mutate the cached base world
+      const area = worlds[wi].areas[srcArea];
       const newExits = { ...area.exits };
       delete newExits[vanillaDestArea];
       newExits[newDestArea] = expr;
-      world.areas[srcArea] = { ...area, exits: newExits };
+      worlds[wi].areas[srcArea] = { ...area, exits: newExits };
     }
   }
 
@@ -275,7 +314,7 @@ function applyErOverrides(baseWorlds: World[], erOverrides: Map<string, string>)
 // 2. OOT GLOBAL → MM SOARING: the cross-game bridge requires can_play_soaring
 //    (= OOT_SONG_SOARING). The old BFS engine seeded MM directly; we replicate
 //    that by making this exit unconditional so MM is always reachable.
-function patchTrackerWorld(baseWorlds: World[]): World[] {
+function patchTrackerWorld(baseWorlds: World[], settings?: Map<string, any>): World[] {
   const worlds = baseWorlds.map(world => ({
     ...world,
     areas: { ...world.areas },
@@ -296,13 +335,18 @@ function patchTrackerWorld(baseWorlds: World[]): World[] {
 
     const global = world.areas['OOT GLOBAL'];
     if (global) {
+      // erSpawns is a boolean in tracker settings (true = active) or 'both'/'mm' string in OoTMM settings.
+      const erSpawns = settings?.get('erSpawns');
+      const mmSpawnRandomized = !!erSpawns && erSpawns !== 'none' && erSpawns !== 'oot';
       world.areas['OOT GLOBAL'] = {
         ...global,
         exits: {
           ...global.exits,
           'MM SOARING': exprTrue(),
-          // Seed MM Clock Town South directly — mirrors the old BFS engine.
-          'MM Clock Town South': exprTrue(),
+          // Only unconditionally seed South Clock Town when the MM spawn is vanilla.
+          // With erSpawns active the MM spawn may not land in Clock Town at all, so
+          // granting free access here produces false positives.
+          ...(!mmSpawnRandomized ? { 'MM Clock Town South': exprTrue() } : {}),
         },
       };
     }
@@ -324,14 +368,14 @@ function ootmmLocToTracker(ootmmLoc: string): string {
 export async function computeReachabilityOotmm(
   logicState: LogicState,
 ): Promise<ReachabilityResult> {
-  const ootmmSettings = toOotmmSettings(logicState.settings);
+  const ootmmSettings = toOotmmSettings(logicState.settings, null, logicState.tricks);
   const sKey = settingsKey(ootmmSettings);
   const baseWorlds = await buildOotmmWorld(ootmmSettings, sKey);
 
   // Apply tracker world patches (SPAWN exits + MM bridge), then ER overrides on top.
-  const patched = patchTrackerWorld(baseWorlds);
+  const patched = patchTrackerWorld(baseWorlds, logicState.settings);
   const erWorlds = logicState.erMode
-    ? applyErOverrides(patched, logicState.erOverrides)
+    ? applyErOverrides(patched, logicState.erOverrides, logicState.settings)
     : patched;
 
   // Inject custom shop prices from the spoiler log into world.prices so the Pathfinder
@@ -342,7 +386,7 @@ export async function computeReachabilityOotmm(
 
   // Use separate settings for the Pathfinder so specialConds don't pollute the world cache key.
   const pfSettings = logicState.rawSpecialConds
-    ? toOotmmSettings(logicState.settings, logicState.rawSpecialConds)
+    ? toOotmmSettings(logicState.settings, logicState.rawSpecialConds, logicState.tricks)
     : ootmmSettings;
 
   const cacheKey = makePfKey(sKey, logicState.items, logicState.erOverrides, logicState.erMode, logicState.shopPrices, logicState.rawSpecialConds);
@@ -350,6 +394,10 @@ export async function computeReachabilityOotmm(
   if (_pfCache?.key === cacheKey) {
     pfState = _pfCache.state;
   } else {
+    // Drop the cached state BEFORE allocating the new one.
+    // PathfinderState is very large (hundreds of MB of dependency maps); holding both
+    // simultaneously while building would double peak memory and risk OOM.
+    _pfCache = null;
     const playerItems = toPlayerItems(logicState.items);
     const pathfinder = new Pathfinder(worlds, pfSettings, new Map());
     pfState = pathfinder.run(null, { assumedItems: playerItems, recursive: true });

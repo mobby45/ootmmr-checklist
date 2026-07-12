@@ -544,6 +544,17 @@ export function trackerItemToLogic(id: string, level: number, notesMode = false)
         const raw = id.slice('mm_'.length).toUpperCase().replace('DINALFOS', 'DINOLFOS');
         return [[raw, 1]];
       }
+      // Uppercase OoTMM soul IDs set by the autotracker (OOT_SOUL_* / MM_SOUL_*):
+      // strip game prefix → SOUL_* so they map identically to the manual-tracker path above.
+      if (id.startsWith('OOT_SOUL_')) return [[id.slice('OOT_'.length), 1]];
+      if (id.startsWith('MM_SOUL_'))  return [[id.slice('MM_'.length), 1]];
+      // All other uppercase OoTMM item IDs set by the autotracker (OOT_* / MM_* / SHARED_*):
+      // dungeon keys, boss keys, maps, compasses, GS tokens, triforce, silver rupees,
+      // stray fairies, big poe, etc. — pass through with their exact ID and count so
+      // toPlayerItems / the OoTMM engine can resolve them via Items.* directly.
+      if (id.startsWith('OOT_') || id.startsWith('MM_') || id.startsWith('SHARED_')) {
+        return [[id, level]];
+      }
       return [];
     }
   }

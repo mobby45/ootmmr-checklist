@@ -240,6 +240,7 @@ const KEY_MAP: Record<string, string> = {
   sharedTriforce:       'sharedTriforce',
   triforceSharedMulti:  'sharedTriforce',
   coins:                'coins',
+  crossAge:             'crossAge',
   triforceGoal:         'triforceGoal',
   triforcePieces:       'triforcePieces',
   // Individual song pool extensions (MM songs in OoT)
@@ -325,24 +326,30 @@ const KEY_MAP: Record<string, string> = {
   erRegions:            'erRegions',
   erRegionsExtra:       'erRegionsExtra',
   erRegionsShortcuts:   'erRegionsShortcuts',
-  erPiratesWorld:       'erPiratesWorld',
+  erOverworld:          'erOverworld',
+  erPiratesWorld:       'erPirateFortress',  // OoTMM key erPiratesWorld → app key erPirateFortress
   erMixed:              'erMixed',
   erMixedDungeons:      'erMixedDungeons',
   erMixedGrottos:       'erMixedGrottos',
   erMixedIndoors:       'erMixedIndoors',
   erMixedRegions:       'erMixedRegions',
+  erMixedOverworld:     'erMixedOverworld',
   erSpawns:             'erSpawns',
   erWallmasters:        'erWallmasters',
   erWarps:              'erWarps',
   erOneWays:            'erOneWays',
   erOneWaysMajor:       'erOneWaysMajor',
   erOneWaysIkana:       'erOneWaysIkana',
+  erOneWaysSongs:       'erOneWaysSongs',
+  erOneWaysStatues:     'erOneWaysStatues',
+  erOneWaysWoods:       'erOneWaysWoods',
   erOneWaysOwls:        'erOneWaysOwls',
   erOneWaysWaterVoids:  'erOneWaysWaterVoids',
   erOneWaysAnywhere:    'erOneWaysAnywhere',
   // Stray fairy count per dungeon (OoTMM key is strayFairyRewardCount, tracker uses STRAY_FAIRY_COUNT)
   strayFairyRewardCount: 'STRAY_FAIRY_COUNT',
-  // Song shuffle mode
+  // Song shuffle mode (OoTMM hash key is 'songs', 'songShuffle' kept for legacy)
+  songs:             'songShuffle',
   songShuffle:       'songShuffle',
   // Price settings
   priceOotShops:     'priceOotShops',
@@ -663,7 +670,7 @@ function makeCond(type: string, count: number): SpecialCondition | null {
   return { ...emptyCond(), count, ...condTypeFlags(type) };
 }
 
-export function deriveSpecialConditions(raw: Record<string, unknown>): Record<string, SpecialCondition> {
+function deriveSpecialConditions(raw: Record<string, unknown>): Record<string, SpecialCondition> {
   const out: Record<string, SpecialCondition> = {};
 
   const bridge = raw['rainbowBridge'] as string ?? '';
@@ -759,11 +766,25 @@ export async function decodeRandomizerSettings(str: string): Promise<Record<stri
 const KNOWN_UNTRACKED = new Set([
   'mapCompassShuffle', 'smallKeyShuffleHideout',
   'dungeonRewardShuffle',
-  'csmcCow', 'openMaskShop', 'ocarinaButtonsShuffleOot', 'ocarinaButtonsShuffleMm',
+  'csmcCow', 'csmcSkulltula', 'openMaskShop', 'ocarinaButtonsShuffleOot', 'ocarinaButtonsShuffleMm',
+  // MM mask extensions not yet tracked
+  'gerudoMaskMm', 'skullMaskMm', 'spookyMaskMm',
+  // Cross-game fairy warp (no tracker key)
+  'crossGameFw',
+  // MQ dungeon selection (random at seed time; tracker reads from spoiler, not hash)
+  'mqDungeons',
+  // Coin hunt goal counts (extracted separately as coinCounts, not via KEY_MAP)
+  'coinsRed', 'coinsGreen', 'coinsBlue', 'coinsYellow',
+  // Skulltula final reward shuffle (no tracker check key)
+  'shuffleSkulltulaFinalReward',
+  // Game-feel / difficulty settings with no tracker impact
+  'blastMaskCooldown', 'fillWallets', 'rupeeScaling', 'shadowFastBoat',
+  'keepItemsReset', 'trapRupoor', 'extraHintRegions', 'hintImportance',
 ]);
 
-// Returns {appSettings, clearedKeys, startingItems, unmapped, junkLocations}
+// Returns {appSettings, clearedKeys, startingItems, unmapped, junkLocations, coinCounts}
 // clearedKeys = mapped tracker keys absent from the hash → should be deleted (reset to default)
+// coinCounts  = coinsRed/Green/Blue/Yellow target counts for the coin-hunt goal display
 export async function importRandomizerSettings(str: string): Promise<{
   appSettings: Record<string, unknown>;
   clearedKeys: string[];
@@ -772,6 +793,7 @@ export async function importRandomizerSettings(str: string): Promise<{
   unmapped: string[];
   junkLocations: string[];
   derivedConditions: Record<string, SpecialCondition>;
+  coinCounts: Record<string, number>;
 }> {
   const raw = await decodeRandomizerSettings(str);
   const appSettings: Record<string, unknown> = {};
@@ -855,5 +877,10 @@ export async function importRandomizerSettings(str: string): Promise<{
       }
     }
   }
-  return { appSettings, clearedKeys, startingItems, tricks, unmapped, junkLocations, derivedConditions };
+  const coinCounts: Record<string, number> = {};
+  for (const k of ['coinsRed', 'coinsGreen', 'coinsBlue', 'coinsYellow'] as const) {
+    const v = raw[k];
+    if (typeof v === 'number' && v > 0) coinCounts[k] = v;
+  }
+  return { appSettings, clearedKeys, startingItems, tricks, unmapped, junkLocations, derivedConditions, coinCounts };
 }

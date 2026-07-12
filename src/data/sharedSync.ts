@@ -118,7 +118,7 @@ export const sharedToMm: Record<string, string[]> = {
 };
 
 // Direct OoT↔MM sync pairs for items with no sh_* intermediary (souls, ocarina buttons)
-export const directSyncPairs: [string, string, string][] = [
+const directSyncPairs: [string, string, string][] = [
   // Deku Sticks / Nuts (sharedNutsSticks bundles them but they track separately)
   ['sticks_oot', 'mm_stick', 'sharedNutsSticks'],
   ['nuts_oot',   'mm_nuts',  'sharedNutsSticks'],

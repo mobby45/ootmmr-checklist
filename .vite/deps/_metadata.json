@@ -1,0 +1,15 @@
+{
+  "hash": "b42e2f24",
+  "configHash": "5d165d01",
+  "lockfileHash": "87e88b2e",
+  "browserHash": "26a31e9a",
+  "optimized": {
+    "plausible-tracker": {
+      "src": "../../node_modules/plausible-tracker/build/module/index.js",
+      "file": "plausible-tracker.js",
+      "fileHash": "033b8388",
+      "needsInterop": false
+    }
+  },
+  "chunks": {}
+}

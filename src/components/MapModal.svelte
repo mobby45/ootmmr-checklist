@@ -473,12 +473,15 @@ import type { EntranceInfo } from '../data/entranceData';
     return checkNameMappingReverse[check.name] ?? check.name;
   }
 
+  function getShopDisplayKey(key: string): string { return key; }
+
+
   function handleMarkerContextMenu(e: MouseEvent, check: MapCheck) {
     e.preventDefault();
     e.stopPropagation();
     if (hasDragged) return;
     if (isShopOrScrub(check)) {
-      dispatch('shopEdit', { checkName: getCheckKey(check) });
+      dispatch('shopEdit', { checkName: getShopDisplayKey(getCheckKey(check)) });
     } else {
       const xPct = (check.x / imageWidth) * 100;
       const yPct = (check.y / imageHeight) * 100;
@@ -1117,8 +1120,8 @@ import type { EntranceInfo } from '../data/entranceData';
             {@const left = adjX}
             {@const top = adjY}
             {@const zIndex = check.z || 10}
-            {@const shopItem = shopItems.get(checkKey) ?? ''}
-            {@const shopPrice = shopPrices.get(checkKey) ?? null}
+            {@const shopItem = shopItems.get(getShopDisplayKey(checkKey)) ?? ''}
+            {@const shopPrice = shopPrices.get(getShopDisplayKey(checkKey)) ?? null}
             {@const showPrice = !itemOnlyIds.has(check.id)}
             {@const hasShopInfo = isShopOrScrub(check) && (shopItem || (shopPrice !== null && showPrice))}
             {@const inLogic = isCheckInLogic(checkKey)}
@@ -1147,7 +1150,7 @@ import type { EntranceInfo } from '../data/entranceData';
             >
               {#if hasShopInfo}
                 <span class="marker-label">
-                  {#if shopItem}<span class="marker-item">{shopItem.length > 8 ? shopItem.slice(0, 8) + '…' : shopItem}</span>{/if}
+                  {#if shopItem}<span class="marker-item" title={shopItem.length > 8 ? shopItem : ''}>{shopItem.length > 8 ? shopItem.slice(0, 8) + '…' : shopItem}</span>{/if}
                   {#if shopPrice !== null && showPrice}<span class="marker-price">({shopPrice}◆)</span>{/if}
                 </span>
               {/if}

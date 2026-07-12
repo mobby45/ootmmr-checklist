@@ -217,6 +217,8 @@ const POT_RE      = /\bPot\b/;
 const CRATE_RE    = /\bCrate\b/;
 const GRASS_RE    = /\bGrass\b/;
 const TCG_ROOM_RE = /^Treasure Chest Game (Room \d|HP)/;
+const SHOP_ITEM_RE = /\bShop Item\b/;
+const BAZAAR_ITEM_RE = /\bBazaar Item\b/;
 
 const OOT_BOOL_FILTERS: [RegExp, string][] = [
   [/\bRock \d/,            'RockShuffleOOT'],
@@ -251,9 +253,11 @@ const MM_BOOL_FILTERS: [RegExp, string][] = [
 
 export function isLocationEnabled(locName: string, game: 'oot' | 'mm' | undefined, state: LogicState): boolean {
   const sfx = game === 'mm' ? 'MM' : 'OOT';
-  if (POT_RE.test(locName))   return state.settings.get(`PotShuffle${sfx}`)   !== 'none';
-  if (CRATE_RE.test(locName)) return state.settings.get(`CrateShuffle${sfx}`) !== 'none';
-  if (GRASS_RE.test(locName)) return state.settings.get(`GrassShuffle${sfx}`) !== 'none';
+  if (POT_RE.test(locName))     return state.settings.get(`PotShuffle${sfx}`)   !== 'none';
+  if (CRATE_RE.test(locName))   return state.settings.get(`CrateShuffle${sfx}`) !== 'none';
+  if (GRASS_RE.test(locName))   return state.settings.get(`GrassShuffle${sfx}`) !== 'none';
+  if (SHOP_ITEM_RE.test(locName) || BAZAAR_ITEM_RE.test(locName))
+    return state.settings.get(`ShopShuffle${sfx}`) !== 'none';
   if (game === 'oot' && TCG_ROOM_RE.test(locName)) {
     return !!state.settings.get('TreasureChestShuffleOOT');
   }

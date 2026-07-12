@@ -40,7 +40,7 @@
 
 <!-- svelte-ignore a11y-click-events-have-key-events -->
 <!-- svelte-ignore a11y-no-static-element-interactions -->
-<div class="check-group">
+<div class="check-group" data-group={groupName}>
   <h3 class="header" style="border-image: linear-gradient(to right, {allChecked ? '#2e7d32' : woth ? '#3a7bd5' : '#3a7bd5'} {pct}%, var(--color-border) {pct}%) 1;">
     <span
       class="ping-zone"

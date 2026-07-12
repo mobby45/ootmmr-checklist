@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.WebSockets;
 using System.Text;
@@ -11,9 +12,10 @@ sealed class WsServer
     readonly List<System.Net.WebSockets.WebSocket> _clients = [];
     readonly SemaphoreSlim _lock = new(1, 1);
 
-    // Called on the WebSocket accept task each time a new client connects.
+    // Called on the WebSocket accept task each time a new client connects or sends {"type":"resync"}.
     // Used to trigger a snapshot reset in MemoryPoller so all current state is re-broadcast.
     public Action? OnClientConnected { get; set; }
+    public Action? OnResyncRequested { get; set; }
 
     public WsServer(int port = 8338)
     {
@@ -66,6 +68,17 @@ sealed class WsServer
                 var result = await ws.ReceiveAsync(buf, ct);
                 if (result.MessageType == WebSocketMessageType.Close)
                     break;
+                if (result.MessageType == WebSocketMessageType.Text)
+                {
+                    var text = Encoding.UTF8.GetString(buf, 0, result.Count);
+                    try
+                    {
+                        using var doc = JsonDocument.Parse(text);
+                        if (doc.RootElement.TryGetProperty("type", out var t) && t.GetString() == "resync")
+                            OnResyncRequested?.Invoke();
+                    }
+                    catch { }
+                }
             }
         }
         catch { }
@@ -78,6 +91,8 @@ sealed class WsServer
         }
     }
 
+    [UnconditionalSuppressMessage("Trimming", "IL2026",
+        Justification = "JsonSerializerIsReflectionEnabledByDefault=true preserves reflection at runtime.")]
     public async Task BroadcastAsync(object message)
     {
         var json = JsonSerializer.Serialize(message);

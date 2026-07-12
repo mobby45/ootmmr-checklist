@@ -63,7 +63,7 @@ export const LOGIC_SETTINGS_DEFS: LogicSettingDef[] = [
   { group: 'Shuffle', key: 'housesSkulltulaTokens', label: 'House Skulltula Tokens Shuffle', type: 'select', default: 'none',
     options: [{ value: 'none', label: 'No Shuffle' }, { value: 'dungeons', label: 'Dungeons' }, { value: 'overworld', label: 'Overworld' }, { value: 'anywhere', label: 'Anywhere' }] },
   { group: 'Shuffle', key: 'TingleMapShuffleMM', label: 'Tingle Maps Shuffle', type: 'select', default: 'vanilla',
-    options: [{ value: 'vanilla', label: 'Vanilla' }, { value: 'overworld', label: 'Overworld' }, { value: 'anywhere', label: 'Anywhere' }] },
+    options: [{ value: 'vanilla', label: 'Vanilla' }, { value: 'starting', label: 'Starting Items' }, { value: 'overworld', label: 'Overworld' }, { value: 'anywhere', label: 'Anywhere' }] },
   { group: 'Shuffle', key: 'smallKeyShuffleOot', label: 'Small Key Shuffle (OoT)', type: 'select', default: 'vanilla',
     options: [{ value: 'vanilla', label: 'Vanilla' }, { value: 'removed', label: 'Removed' }, { value: 'dungeon', label: 'Own Dungeon' }, { value: 'overworld', label: 'Overworld' }, { value: 'anywhere', label: 'Anywhere' }] },
   { group: 'Shuffle', key: 'smallKeyShuffleMm', label: 'Small Key Shuffle (MM)', type: 'select', default: 'vanilla',
@@ -396,7 +396,6 @@ export const LOGIC_SETTINGS_DEFS: LogicSettingDef[] = [
   { group: 'Shared Items', key: 'sharedOcarinaButtons',  label: 'Ocarina Buttons',     type: 'bool', default: false },
 ];
 
-export const SETTING_GROUPS = [...new Set(LOGIC_SETTINGS_DEFS.map(s => s.group))];
 
 export function defaultLogicSettings(): Record<string, any> {
   const out: Record<string, any> = {};

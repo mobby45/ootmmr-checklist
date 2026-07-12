@@ -1789,7 +1789,7 @@ function applySceneFlags(
         if (!((flags >>> bit) & 1)) continue;
         const globalBit = u32Idx * 32 + bit;
         const raw = lookup.get(`${game}:${sceneId}:${globalBit}`);
-        if (!raw) continue;
+      if (!raw) { console.log('[autotrack] scene_flags: unmapped', `${game}:${sceneId}:${globalBit}`); continue; }
         // Value format: "age|name" — parse and filter by age
         const pipe = raw.indexOf('|');
         const checkAge = raw.slice(0, pipe);
@@ -2018,7 +2018,7 @@ function applyXflags(
       if (!((byteVal >>> bit) & 1)) continue;
       const bitPos = byteIdx * 8 + bit;
       const raw = lookup.get(bitPos);
-      if (!raw) continue;
+      if (!raw) { console.log('[autotrack] xflags: unmapped bit', bitPos); continue; }
       const pipe = raw.indexOf('|');
       const checkAge = raw.slice(0, pipe);
       const checkName = raw.slice(pipe + 1);
@@ -2661,7 +2661,7 @@ export function initAutotrack(yItems: YMap<number>, ySettings: YMap<unknown>, yE
     };
 
     ws.onmessage = (ev: MessageEvent) => {
-      let msg: { type: string; data?: string; game?: string; age?: string; value?: number; b0?: number; b1?: number; sceneId?: number; swamp?: number; ocean?: number; key?: number; slots?: Array<{ shopId: number; gi: number; player: number; price: number }>; trackerKey?: string; songIdx?: number; max?: string; romVersion?: string; saveEntrance?: number; cowShuffle?: boolean; scrubShuffle?: boolean; shopShuffle?: boolean; gsShuffle?: boolean; sfShuffle?: boolean; fishShuffle?: boolean; xflagShuffle?: boolean; potShuffleOot?: string|null; potShuffleMm?: string|null; crateShuffleOot?: string|null; crateShuffleMm?: string|null; barrelsShuffleMm?: string|null; grassShuffleOot?: string|null; grassShuffleMm?: string|null; treeShuffleMm?: string|null; soilShuffleMm?: string|null; rupeeShuffleOot?: string|null; rupeeShuffleMm?: string|null; heartsShuffleOot?: string|null; snowballShuffleMm?: string|null; bushShuffleMm?: string|null; wonderShuffleOot?: string|null; rockShuffleMm?: string|null; hivesShuffleOot?: boolean; hivesShuffleMm?: boolean; rockShuffleOot?: boolean; treeShuffleOot?: boolean; soilShuffleOot?: boolean; heartShuffleMm?: boolean; wonderShuffleMm?: boolean; butterflyShuffleOot?: boolean; butterflyShuffleMm?: boolean; redBoulderShuffleOot?: boolean; redBoulderShuffleMm?: boolean; iciclesShuffleOot?: boolean; iciclesShuffleMm?: boolean; fairySpotShuffleOot?: boolean; fairyFountainShuffleOot?: boolean; fairyFountainShuffleMm?: boolean; bushShuffleOot?: boolean; redIceShuffleOot?: boolean };
+      let msg: { type: string; data?: string; game?: string; age?: string; value?: number; b0?: number; b1?: number; sceneId?: number; swamp?: number; ocean?: number; key?: number; bit?: number; slots?: Array<{ shopId: number; gi: number; player: number; price: number }>; trackerKey?: string; songIdx?: number; max?: string; romVersion?: string; saveEntrance?: number; cowShuffle?: boolean; scrubShuffle?: boolean; shopShuffle?: boolean; gsShuffle?: boolean; sfShuffle?: boolean; fishShuffle?: boolean; xflagShuffle?: boolean; potShuffleOot?: string|null; potShuffleMm?: string|null; crateShuffleOot?: string|null; crateShuffleMm?: string|null; barrelsShuffleMm?: string|null; grassShuffleOot?: string|null; grassShuffleMm?: string|null; treeShuffleMm?: string|null; soilShuffleMm?: string|null; rupeeShuffleOot?: string|null; rupeeShuffleMm?: string|null; heartsShuffleOot?: string|null; snowballShuffleMm?: string|null; bushShuffleMm?: string|null; wonderShuffleOot?: string|null; rockShuffleMm?: string|null; hivesShuffleOot?: boolean; hivesShuffleMm?: boolean; rockShuffleOot?: boolean; treeShuffleOot?: boolean; soilShuffleOot?: boolean; heartShuffleMm?: boolean; wonderShuffleMm?: boolean; butterflyShuffleOot?: boolean; butterflyShuffleMm?: boolean; redBoulderShuffleOot?: boolean; redBoulderShuffleMm?: boolean; iciclesShuffleOot?: boolean; iciclesShuffleMm?: boolean; fairySpotShuffleOot?: boolean; fairyFountainShuffleOot?: boolean; fairyFountainShuffleMm?: boolean; bushShuffleOot?: boolean; redIceShuffleOot?: boolean };
       try { msg = JSON.parse(ev.data as string); } catch { return; }
       if (!msg.type) { console.warn('[autotrack] message has no type:', ev.data?.toString().slice(0, 120)); return; }
       if (msg.type === 'coins_data' || msg.type === 'oot_npc_flags' || msg.type === 'combo_config') console.log('[autotrack] rx', msg.type, msg);
@@ -3234,6 +3234,26 @@ export function initAutotrack(yItems: YMap<number>, ySettings: YMap<unknown>, yE
             .then(({ oot }) => applyXflags(buf, oot, yChecks))
             .catch(err => console.error('[autotrack] oot xflags failed:', err));
         }
+      } else if (msg.type === 'xflag_collected' && typeof msg.bit === 'number' && msg.game && msg.bit !== undefined) {
+        if (activeGame === null || mqBitmask === null) return;
+        const mq = mqBitmask;
+        const bit = msg.bit;
+        getXflagLookup(mq)
+          .then(({ oot, mm }) => {
+            const lookup = msg.game === 'oot' ? oot : mm;
+            const raw = lookup.get(bit);
+            if (!raw) { console.log('[autotrack] xflag_collected: unmapped bit', msg.bit); return; }
+            const pipe = raw.indexOf('|');
+            const checkAge = raw.slice(0, pipe);
+            const checkName = raw.slice(pipe + 1);
+            const ageFilter = typeof localStorage !== 'undefined'
+              ? (localStorage.getItem('logicAgeFilter') ?? 'both') : 'both';
+            if (ageFilter !== 'both' && checkAge !== 'both' && checkAge !== ageFilter) return;
+            if ((yChecks.get(checkName) ?? 0) < 2) {
+              yChecks.doc!.transact(() => yChecks.set(checkName, 2));
+            }
+          })
+          .catch(err => console.error('[autotrack] xflag_collected lookup failed:', err));
       } else if (msg.type === 'mm_xflags' && msg.data) {
         const buf = decode(msg.data);
         if (!hasVisitedMm || activeGame === null || mqBitmask === null) { pendingMmXflags = buf; }

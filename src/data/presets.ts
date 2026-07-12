@@ -86,7 +86,7 @@ const base: Record<string, any> = {
   dekuTree: 'vanilla',      // 'vanilla' | 'open'
   housesSkulltulaTokens: 'none',
   shuffleMasterSword: true,
-  shuffleGerudoCard: true,
+  shuffleGerudoCard: false,
   shuffleOcarinasOot: true,
 };
 
@@ -94,9 +94,8 @@ export const presetBaseSettings = base;
 
 /** Open-world logic settings common to Blitz-style presets */
 const blitzLogic: Record<string, any> = {
-  dekuTree:       'open',
   doorOfTime:     'open',
-  gerudoFortress: 'open',
+  gerudoFortress: 'single',
   kakarikoGate:   'open',
   rainbowBridge:  'medallions',
   skipZelda:      true,
@@ -163,6 +162,7 @@ const allsanityPool: Record<string, any> = {
   MerchantShuffleMM: true,
   FairyFountainShuffleMM: true,
   BrokenActorsOOT: true,
+  shuffleGerudoCard: true,
 };
 
 export const defaultPresets: Record<string, PresetData> = {
@@ -177,7 +177,7 @@ export const defaultPresets: Record<string, PresetData> = {
       ...base,
       ...blitzLogic,
       DungeonChestSFShuffleMM: 'starting',
-      TingleMapShuffleMM: 'starting_items',
+      TingleMapShuffleMM: 'starting',
     },
     OOTMM: 'both',
     OOTMMDungeons: 'both',
@@ -199,7 +199,7 @@ export const defaultPresets: Record<string, PresetData> = {
       ...base,
       ...blitzLogic,
       DungeonChestSFShuffleMM: 'starting',
-      TingleMapShuffleMM: 'starting_items',
+      TingleMapShuffleMM: 'starting',
     },
     OOTMM: 'both',
     OOTMMDungeons: 'both',
@@ -221,7 +221,7 @@ export const defaultPresets: Record<string, PresetData> = {
       ...base,
       ...blitzLogic,
       DungeonChestSFShuffleMM: 'starting',
-      TingleMapShuffleMM: 'starting_items',
+      TingleMapShuffleMM: 'starting',
     },
     OOTMM: 'both',
     OOTMMDungeons: 'both',
@@ -242,9 +242,9 @@ export const defaultPresets: Record<string, PresetData> = {
     settings: {
       ...base,
       ...blitzLogic,
-      goal: 'triforce',
+      goal: 'triforce3',
       DungeonChestSFShuffleMM: 'starting',
-      TingleMapShuffleMM: 'starting_items',
+      TingleMapShuffleMM: 'starting',
     },
     OOTMM: 'both',
     OOTMMDungeons: 'both',
@@ -267,8 +267,9 @@ export const defaultPresets: Record<string, PresetData> = {
       ...blitzLogic,
       BrokenActorsOOT: true,
       GanonBKShuffleOOT: 'anywhere',
+      zoraKing: 'open',
       DungeonChestSFShuffleMM: 'starting',
-      TingleMapShuffleMM: 'starting_items',
+      TingleMapShuffleMM: 'starting',
       DungeonFreeSFShuffleMM: 'starting',
     },
     OOTMM: 'both',
@@ -318,6 +319,8 @@ export const defaultPresets: Record<string, PresetData> = {
       ...base,
       ...blitzLogic,
       goal: 'ganon',
+      gerudoFortress: 'normal',
+      shuffleMasterSword: false,
     },
     OOTMM: 'oot',
     OOTMMDungeons: 'ootdungeons',
@@ -335,7 +338,7 @@ export const defaultPresets: Record<string, PresetData> = {
       ...base,
       goal: 'majora',
       DungeonChestSFShuffleMM: 'starting',
-      TingleMapShuffleMM: 'starting_items',
+      TingleMapShuffleMM: 'starting',
     },
     OOTMM: 'mm',
     OOTMMDungeons: 'mmdungeons',

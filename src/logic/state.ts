@@ -29,14 +29,76 @@ export function buildLogicState(
   // world.json setting() rules still use the OoTMM key names, so we bridge them here
   // before applying HIDDEN_DEFAULTS (so the user's actual value wins over the default).
   const TRACKER_TO_OOTMM: [string, string][] = [
-    ['BrokenActorsOOT',         'restoreBrokenActors'],
-    ['SkipChildZeldaOOT',       'skipZelda'],
-    ['GanonBKShuffleOOT',       'ganonBossKey'],
-    ['TreasureChestShuffleOOT', 'smallKeyShuffleChestGame'],
-    ['PotShuffleMM',            'shufflePotsMm'],
+    // Already bridged (kept for reference)
+    ['BrokenActorsOOT',             'restoreBrokenActors'],
+    ['SkipChildZeldaOOT',           'skipZelda'],
+    ['GanonBKShuffleOOT',           'ganonBossKey'],
+    ['TreasureChestShuffleOOT',     'smallKeyShuffleChestGame'],
+    ['PotShuffleMM',                'shufflePotsMm'],
+    // OoT shuffles
+    ['goldSkulltulaShuffleOOT',     'goldSkulltulaTokens'],
+    ['SilverRupeeShuffleOOT',       'silverRupeeShuffle'],
+    ['ScrubsOOT',                   'scrubShuffleOot'],
+    ['CowShuffleOOT',               'cowShuffleOot'],
+    ['ShopShuffleOOT',              'shopShuffleOot'],
+    ['PotShuffleOOT',               'shufflePotsOot'],
+    ['CrateShuffleOOT',             'shuffleCratesOot'],
+    ['HivesShuffleOOT',             'shuffleHivesOot'],
+    ['GrassShuffleOOT',             'shuffleGrassOot'],
+    ['RockShuffleOOT',              'shuffleRocksOot'],
+    ['TreeShuffleOOT',              'shuffleTreesOot'],
+    ['BushShuffleOOT',              'shuffleBushOot'],
+    ['SoilShuffleOOT',              'shuffleSoilOot'],
+    ['RupeeShuffleOOT',             'shuffleFreeRupeesOot'],
+    ['HeartsShuffleOOT',            'shuffleFreeHeartsOot'],
+    ['WonderShuffleOOT',            'shuffleWonderItemsOot'],
+    ['ButterflyShuffleOOT',         'shuffleButterfliesOot'],
+    ['RedBoulderShuffleOOT',        'shuffleRedBouldersOot'],
+    ['FrogRupeesShuffleOOT',        'shuffleFrogsRupeesOot'],
+    ['IciclesShuffleOOT',           'shuffleIciclesOot'],
+    ['RedIceShuffleOOT',            'shuffleRedIceOot'],
+    ['MaskTradeShuffleOOT',         'shuffleMaskTrades'],
+    ['MerchantShuffleOOT',          'shuffleMerchantsOot'],
+    ['FishPondShuffleOOT',          'pondFishShuffle'],
+    ['DiveGameShuffleOOT',          'divingGameRupeeShuffle'],
+    ['FairyFountainShuffleOOT',     'fairyFountainFairyShuffleOot'],
+    ['FairySpotShuffleOOT',         'fairySpotShuffleOot'],
+    ['WeirdPocketEggShuffle',       'eggShuffle'],
+    // MM shuffles
+    ['TingleMapShuffleMM',          'tingleShuffle'],
+    ['TownSFShuffleMM',             'townFairyShuffle'],
+    ['DungeonChestSFShuffleMM',     'strayFairyChestShuffle'],
+    ['DungeonFreeSFShuffleMM',      'strayFairyOtherShuffle'],
+    ['ScrubsMM',                    'scrubShuffleMm'],
+    ['CowShuffleMM',                'cowShuffleMm'],
+    ['ShopShuffleMM',               'shopShuffleMm'],
+    ['OwlStatueShuffleMM',          'owlShuffle'],
+    ['CrateShuffleMM',              'shuffleCratesMm'],
+    ['BarrelsShuffleMM',            'shuffleBarrelsMm'],
+    ['HivesShuffleMM',              'shuffleHivesMm'],
+    ['GrassShuffleMM',              'shuffleGrassMm'],
+    ['TerminaGrassShuffleMM',       'shuffleTFGrassMm'],
+    ['RockShuffleMM',               'shuffleRocksMm'],
+    ['TreeShuffleMM',               'shuffleTreesMm'],
+    ['BushShuffleMM',               'shuffleBushMm'],
+    ['SoilShuffleMM',               'shuffleSoilMm'],
+    ['RupeeShuffleMM',              'shuffleFreeRupeesMm'],
+    ['HeartsShuffleMM',             'shuffleFreeHeartsMm'],
+    ['WonderShuffleMM',             'shuffleWonderItemsMm'],
+    ['SnowballShuffleMM',           'shuffleSnowballsMm'],
+    ['ButterflyShuffleMM',          'shuffleButterfliesMm'],
+    ['RedBoulderShuffleMM',         'shuffleRedBouldersMm'],
+    ['LotteryShuffleMM',            'shuffleLotteryMm'],
+    ['IciclesShuffleMM',            'shuffleIciclesMm'],
+    ['MerchantShuffleMM',           'shuffleMerchantsMm'],
+    ['FairyFountainShuffleMM',      'fairyFountainFairyShuffleMm'],
   ];
   for (const [trackerKey, ootmmKey] of TRACKER_TO_OOTMM) {
     if (settings.has(trackerKey)) settings.set(ootmmKey, settings.get(trackerKey)!);
+  }
+  // STRAY_FAIRY_COUNT is stored as a string in ySettings but OoTMM expects strayFairyRewardCount as a number.
+  if (settings.has('STRAY_FAIRY_COUNT')) {
+    settings.set('strayFairyRewardCount', Number(settings.get('STRAY_FAIRY_COUNT')));
   }
 
   // Vanilla defaults for settings used in logic but absent from ySettings when at default.
