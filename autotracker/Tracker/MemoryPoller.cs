@@ -28,6 +28,7 @@ sealed class MemoryPoller
     int _gossipScanCooldown    = 0;  // polls remaining before next RDRAM gossip scan
     int _entranceScanCooldown  = 0;  // polls remaining before next RDRAM entrance scan
     int _overrideScanCooldown  = 0;  // polls remaining before next RDRAM override table scan
+    byte[]? _overrideTableBuf = null; // cached sComboOverrides ROM data (for GI lookup)
     Dictionary<uint, string>? _xflagIndex;      // key32 → "game:csvtype:layout", null until loaded
     bool _xflagIndexLoaded = false;
 
@@ -44,6 +45,7 @@ sealed class MemoryPoller
     readonly HashSet<(string game, string age)> _seenAltarFlags = new();
     bool _reemitSeenAltarNextPoll  = false; // set by ResetSnapshotsForReconnect, consumed by PollAltarRead
     int _pollCount = 0; // poll counter (unused, kept for future use)
+    int _comboCtxFailCount = 0; // rate-limiter for combo context missing log
     int  _healthCheckFails   = 0;      // consecutive failed health checks
     int  _nullAddrLogSkip    = 0;      // rate-limiter for "SharedCustomSaveAddr null" log spam
     bool _isRdramRelocation = false; // true when health check triggered silent reattach (OoT↔MM)
@@ -67,13 +69,16 @@ sealed class MemoryPoller
     int     _mmXflagLastScene         = -1;
     int     _mmXflagAbsorbPolls       = 0;
     const int XflagBaselineStablePolls = 10;  // ~2.5s stable → freeze session baseline
-    const int XflagSceneAbsorbPolls    = 4;   // ~1s after scene transitions (GI_NOTHING actor spawn)
+    const int XflagSceneAbsorbPolls    = 12;  // ~3s after scene transitions (GI_NOTHING actor spawn)
     const int StableTimeoutPolls       = 10;  // NPC flags only
 
     // Valid xflag bit positions — only bits from sComboOverrides entries (shuffled checks).
     // GI_NOTHING actors set bits outside this set; those are filtered before emission.
     HashSet<int>? _validOotXflagBits = null;  // null = filter not yet built (emit all)
     HashSet<int>? _validMmXflagBits  = null;
+    // Bit-to-GI maps: populated in BuildValidXflagBits from sComboOverrides.
+    Dictionary<int, int>? _ootXflagBitToGi = null;
+    Dictionary<int, int>? _mmXflagBitToGi  = null;
     // Xflag lookup tables (static files: xflag_table_{game}_{scenes/setups/rooms}.bin).
     byte[]? _ootXflagScenesTbl = null;
     byte[]? _ootXflagSetupsTbl = null;
@@ -461,6 +466,9 @@ sealed class MemoryPoller
         _mipsPcHookArmed = false;
         _lastOotPcEvents  = 0;
         _lastMmPcEvents   = 0;
+        _overrideTableBuf = null;
+        _ootXflagBitToGi  = null;
+        _mmXflagBitToGi   = null;
         Console.WriteLine("[autotracker] xflag session reset");
     }
 
@@ -734,20 +742,45 @@ sealed class MemoryPoller
 
     bool TryFindComboContext()
     {
-        // gComboCtx address was located during RDRAM detection — no extra scan needed.
-        var addr = _mem!.ComboCtxN64Addr;
-        var magic = _mem.ReadString(addr, 8);
-        if (magic != "OoT+MM<3")
+        // Check known static addresses first (the real combo context locations).
+        foreach (var candidate in new[] { N64Addresses.ComboContextOot, N64Addresses.ComboContextMm })
         {
-            // Magic gone: game may have reset. Re-attach on next cycle.
-            Console.WriteLine($"[autotracker] ComboContext magic missing at 0x{addr:X8} — game may have reset.");
-            return false;
+            var magic = _mem!.ReadString(candidate, 8);
+            if (magic == "OoT+MM<3")
+            {
+                _state.ComboContextAddress = candidate;
+                Console.WriteLine($"[autotracker] ComboContext confirmed at 0x{candidate:X8} (swapped={_mem.IsSwapped})");
+                _emit(new { type = "connected" });
+                return true;
+            }
         }
 
-        _state.ComboContextAddress = addr;
-        Console.WriteLine($"[autotracker] ComboContext confirmed at 0x{addr:X8} (swapped={_mem.IsSwapped})");
-        _emit(new { type = "connected" });
-        return true;
+        // If the previously detected address is different from the static ones, check it as fallback.
+        var prevAddr = _mem!.ComboCtxN64Addr;
+        if (prevAddr != N64Addresses.ComboContextOot && prevAddr != N64Addresses.ComboContextMm)
+        {
+            var magic = _mem.ReadString(prevAddr, 8);
+            if (magic == "OoT+MM<3")
+            {
+                _state.ComboContextAddress = prevAddr;
+                Console.WriteLine($"[autotracker] ComboContext confirmed at non-static 0x{prevAddr:X8} (swapped={_mem.IsSwapped})");
+                _emit(new { type = "connected" });
+                return true;
+            }
+        }
+
+        // Debug: dump raw bytes at the static addresses every 60 polls.
+        if (++_comboCtxFailCount == 1 || _comboCtxFailCount % 60 == 0)
+        {
+            foreach (var a in new[] { N64Addresses.ComboContextOot, N64Addresses.ComboContextMm, prevAddr })
+            {
+                var raw = _mem!.ReadRaw(a, 8);
+                string hex = raw is null ? "null" : BitConverter.ToString(raw);
+                Console.WriteLine($"[autotracker] ComboContext magic missing at 0x{a:X8}: bytes={hex}");
+            }
+            Console.WriteLine($"[autotracker] ComboContext magic missing — game may have reset");
+        }
+        return false;
     }
 
     // Returns true when OoT's msgCtx.talkActor is a valid En_Gs actor (id=0x1B9).
@@ -1169,11 +1202,8 @@ sealed class MemoryPoller
             int curScene = scRaw is { Length: >= 2 } ? (scRaw[0] << 8 | scRaw[1]) : -1;
             if (curScene is >= 0 and < 124 && curScene != _ootXflagLastScene)
             {
-                // First scene after baseline: no absorb needed — the baseline already captured actor init.
-                // On real transitions, absorb for 1s to swallow GI_NOTHING actors that spawn on room load.
-                bool isFirst = _ootXflagLastScene == -1;
                 _ootXflagLastScene   = curScene;
-                _ootXflagAbsorbPolls = isFirst ? 0 : XflagSceneAbsorbPolls;
+                _ootXflagAbsorbPolls = XflagSceneAbsorbPolls;
                 Console.Error.WriteLine($"[autotrack] oot_xflags scene → {curScene} absorbPolls={_ootXflagAbsorbPolls}");
             }
         }
@@ -1267,6 +1297,33 @@ sealed class MemoryPoller
         Console.Error.WriteLine($"[autotrack] oot_xflags emit — new bits: {FormatSetBits(diff)}, total: {FormatSetBits(emitBuf)}");
         _state.OotXflagsSnapshot = emitBuf;
         _emit(new { type = "oot_xflags", data = Convert.ToBase64String(emitBuf) });
+
+        // Emit xflag_collected with GI for each newly committed bit.
+        if (_ootXflagBitToGi is not null)
+        {
+            for (int i = 0; i < diff.Length; i++)
+            {
+                if (diff[i] == 0) continue;
+                for (int bit = 0; bit < 8; bit++)
+                {
+                    if (((diff[i] >> bit) & 1) == 0) continue;
+                    int bitPos = i * 8 + bit;
+                    if (_ootXflagBitToGi.TryGetValue(bitPos, out int gi))
+                    {
+                        Console.Error.WriteLine($"[autotrack] xflag_collected oot bit={bitPos} gi={gi}");
+                        _emit(new { type = "xflag_collected", game = "oot", bit = bitPos, gi = gi });
+                    }
+                    else
+                    {
+                        Console.Error.WriteLine($"[autotrack] xflag_collected oot bit={bitPos} NOT IN MAP (gi=?)");
+                    }
+                }
+            }
+        }
+        else
+        {
+            Console.Error.WriteLine("[autotrack] xflag_collected: _ootXflagBitToGi is NULL");
+        }
     }
 
     // Polls gSharedCustomSave.mm.xflags[848] — bitmap set by comboXflagsSetMm.
@@ -1284,9 +1341,8 @@ sealed class MemoryPoller
             int curScene = scRaw is { Length: >= 2 } ? (scRaw[0] << 8 | scRaw[1]) : -1;
             if (curScene is >= 0 and < 120 && curScene != _mmXflagLastScene)
             {
-                bool isFirst = _mmXflagLastScene == -1;
                 _mmXflagLastScene   = curScene;
-                _mmXflagAbsorbPolls = isFirst ? 0 : XflagSceneAbsorbPolls;
+                _mmXflagAbsorbPolls = XflagSceneAbsorbPolls;
                 Console.Error.WriteLine($"[autotrack] mm_xflags scene → {curScene} absorbPolls={_mmXflagAbsorbPolls}");
             }
         }
@@ -1372,6 +1428,21 @@ sealed class MemoryPoller
         Console.Error.WriteLine($"[autotrack] mm_xflags emit — new bits: {FormatSetBits(mmDiff)}, total: {FormatSetBits(mmEmitBuf)}");
         _state.MmXflagsSnapshot = mmEmitBuf;
         _emit(new { type = "mm_xflags", data = Convert.ToBase64String(mmEmitBuf) });
+
+        if (_mmXflagBitToGi is not null)
+        {
+            for (int i = 0; i < mmDiff.Length; i++)
+            {
+                if (mmDiff[i] == 0) continue;
+                for (int bit = 0; bit < 8; bit++)
+                {
+                    if (((mmDiff[i] >> bit) & 1) == 0) continue;
+                    int bitPos = i * 8 + bit;
+                    if (_mmXflagBitToGi.TryGetValue(bitPos, out int gi))
+                        _emit(new { type = "xflag_collected", game = "mm", bit = bitPos, gi = gi });
+                }
+            }
+        }
     }
 
     // Scan the OoT or MM combo payload for a function with prologue 27 BD FF D0
@@ -1438,10 +1509,9 @@ sealed class MemoryPoller
         {
             Console.Error.WriteLine(
                 $"[autotrack] MIPS PC hook armed: ootPc=0x{ootPc:X8} mmPc=0x{mmPc:X8}");
-            // Apply MIPS RDRAM patch on top of the PC hook — this stores $a0 to
-            // uncached memory so we can read it even if DynaRec is active.
-            if (ootPc != 0) ApplyMipsPatch(ootPc);
-            if (mmPc  != 0) ApplyMipsPatch(mmPc);
+            // NOTE: Do NOT patch comboXflagsSetOot/comboXflagsSetMm — doing so corrupts
+            // the function (instructions 2-4 are lost), breaking xflag writes entirely.
+            // Bitmap polling is the correct detection path.
         }
         else
         {
@@ -1449,39 +1519,29 @@ sealed class MemoryPoller
         }
     }
 
-    // Apply a MIPS patch to comboXflagsSetOot that stores $a0 (the Xflag* pointer)
-    // to an uncached RDRAM address (0xA07FFF00) where our C# code can read it.
-    // The patch replaces the first 4 instructions (16 bytes) at the function entry:
-    //   LUI $t0, 0xA07F    ; 0x3C08A07F
-    //   SW  $a0, 0xFF00($t0) ; 0xAD04FF00  → store to 0xA07FFF00 (uncached)
-    //   J   entry+0x10     ; jump to original 5th instruction
-    //   <original 1st instr> ; in branch delay slot
-    void ApplyMipsPatch(uint ootPc)
+    // (ApplyMipsPatch removed — it corrupted comboXflagsSetOot/SetMm by overwriting
+    // instructions 2-4 with a jump, preventing xflag bits from ever being set.)
+
+    // Look up the GI value for a given xflag key32 from the cached override table.
+    int? GetGiFromXflag(uint key32)
     {
-        if (_mem is null) return;
-        if (ootPc == 0) return;
-        var orig = _mem.Read(ootPc, 4);
-        if (orig is null || orig.Length < 4) return;
-        uint origInstr = (uint)(orig[0] << 24 | orig[1] << 16 | orig[2] << 8 | orig[3]);
-
-        uint jumpTarget = ootPc + 0x10;
-        uint jInstr = 0x08000000 | ((jumpTarget >> 2) & 0x03FFFFFF);
-
-        var patch = new byte[16];
-        void Enc(uint instr, int off)
+        if (_overrideTableBuf is null || _state.OverrideTableCount == 0) return null;
+        int entrySize = N64Addresses.OverrideEntrySize;
+        int count = _state.OverrideTableCount;
+        int lo = 0, hi = count - 1;
+        while (lo <= hi)
         {
-            patch[off + 0] = (byte)(instr >> 24);
-            patch[off + 1] = (byte)(instr >> 16);
-            patch[off + 2] = (byte)(instr >> 8);
-            patch[off + 3] = (byte)(instr);
+            int mid = (lo + hi) >> 1;
+            int off = mid * entrySize;
+            uint k = (uint)((_overrideTableBuf[off] << 24) | (_overrideTableBuf[off + 1] << 16)
+                          | (_overrideTableBuf[off + 2] << 8) | _overrideTableBuf[off + 3]);
+            if (k == key32)
+                return (_overrideTableBuf[off + N64Addresses.OverrideGiOffset] << 8)
+                     | _overrideTableBuf[off + N64Addresses.OverrideGiOffset + 1];
+            if (k < key32) lo = mid + 1;
+            else hi = mid - 1;
         }
-        Enc(0x3C08A07F, 0);   // LUI $t0, 0xA07F
-        Enc(0xAD04FF00, 4);   // SW  $a0, 0xFF00($t0)  → at 0xA07FFF00
-        Enc(jInstr,      8);   // J   ootPc+0x10
-        Enc(origInstr,   12);  // original first instr (delay slot)
-
-        _mem.Write(ootPc, patch);
-        Console.Error.WriteLine($"[autotrack] MIPS patch at 0x{ootPc:X8} → capture at 0xA07FFF00");
+        return null;
     }
 
     // Poll MIPS PC hook event counters and captured Xflag* address.
@@ -1502,10 +1562,10 @@ sealed class MemoryPoller
             {
                 // Clear the capture for next time
                 _mem.Write(0xA07FFF00, [0,0,0,0]);
-                uint xflagAddr = cap.Value;
-                if (xflagAddr >= 0x80000000 && xflagAddr <= 0x807FFFFF)
+                uint capAddr = cap.Value;
+                if (capAddr >= 0x80000000 && capAddr <= 0x807FFFFF)
                 {
-                    var xfBuf = _mem.Read(xflagAddr, 5);
+                    var xfBuf = _mem.Read(capAddr, 5);
                     if (xfBuf is not null && xfBuf.Length == 5)
                     {
                         bool allZero = true;
@@ -1526,24 +1586,25 @@ sealed class MemoryPoller
                                 {
                                     uint key32 = (uint)(((0x10 + sliceId) << 24) | (sceneId << 16) |
                                                         ((setupId << 6 | roomId) << 8) | localId);
+                                    int? gi = GetGiFromXflag(key32);
                                     Console.Error.WriteLine(
-                                        $"[autotrack] MIPS_patch: xflag_collected bit={bitPos.Value} addr=0x{xflagAddr:X8} " +
+                                        $"[autotrack] MIPS_patch: xflag_collected bit={bitPos.Value} gi={gi} addr=0x{capAddr:X8} " +
                                         $"scene={sceneId} setup={setupId} room={roomId} slice={sliceId} id={localId} key=0x{key32:X8}");
-                                    _emit(new { type = "xflag_collected", game = "oot", bit = bitPos.Value, key = key32 });
+                                    _emit(new { type = "xflag_collected", game = "oot", bit = bitPos.Value, gi = gi, key = key32 });
                                 }
                             }
                         }
                         else
                         {
                             Console.Error.WriteLine(
-                                $"[autotrack] MIPS_patch: all-zero Xflag at 0x{xflagAddr:X8}");
+                                $"[autotrack] MIPS_patch: all-zero Xflag at 0x{capAddr:X8}");
                         }
                     }
                 }
                 else
                 {
                     Console.Error.WriteLine(
-                        $"[autotrack] MIPS_patch: cap=0x{xflagAddr:X8} out of RDRAM range");
+                        $"[autotrack] MIPS_patch: cap=0x{capAddr:X8} out of RDRAM range");
                 }
             }
         }
@@ -1579,10 +1640,11 @@ sealed class MemoryPoller
                             {
                                 uint key32 = (uint)(((0x10 + sliceId) << 24) | (sceneId << 16) |
                                                      ((setupId << 6 | roomId) << 8) | localId);
+                                int? gi = GetGiFromXflag(key32);
                                 Console.Error.WriteLine(
-                                    $"[autotrack] xflag_collected bit={bitPos.Value} addr=0x{xflagAddr:X8} " +
+                                    $"[autotrack] xflag_collected bit={bitPos.Value} gi={gi} addr=0x{xflagAddr:X8} " +
                                     $"scene={sceneId} setup={setupId} room={roomId} slice={sliceId} id={localId} key=0x{key32:X8}");
-                                _emit(new { type = "xflag_collected", game = "oot", bit = bitPos.Value, key = key32 });
+                                _emit(new { type = "xflag_collected", game = "oot", bit = bitPos.Value, gi = gi, key = key32 });
                             }
                         }
                     }
@@ -2744,6 +2806,8 @@ sealed class MemoryPoller
 
         var oot = new HashSet<int>();
         var mm  = new HashSet<int>();
+        _ootXflagBitToGi = new Dictionary<int, int>();
+        _mmXflagBitToGi  = new Dictionary<int, int>();
 
         for (int i = 0; i < count; i++)
         {
@@ -2772,13 +2836,13 @@ sealed class MemoryPoller
             {
                 var bitPos = ComputeXflagBitPos(sceneId, setupId, actualRoomId, sliceId, localId,
                                                 _ootXflagScenesTbl, _ootXflagSetupsTbl, _ootXflagRoomsTbl);
-                if (bitPos.HasValue) oot.Add(bitPos.Value);
+                if (bitPos.HasValue) { oot.Add(bitPos.Value); _ootXflagBitToGi[bitPos.Value] = gi; }
             }
             else if (game == "mm" && _mmXflagScenesTbl is not null && _mmXflagSetupsTbl is not null && _mmXflagRoomsTbl is not null)
             {
                 var bitPos = ComputeXflagBitPos(sceneId, setupId, actualRoomId, sliceId, localId,
                                                 _mmXflagScenesTbl, _mmXflagSetupsTbl, _mmXflagRoomsTbl);
-                if (bitPos.HasValue) mm.Add(bitPos.Value);
+                if (bitPos.HasValue) { mm.Add(bitPos.Value); _mmXflagBitToGi[bitPos.Value] = gi; }
             }
         }
 
@@ -2919,6 +2983,7 @@ sealed class MemoryPoller
         int byteCount = _state.OverrideTableCount * N64Addresses.OverrideEntrySize;
         var buf = _mem!.ReadRom(_state.OverrideTableAddr!.Value, byteCount);
         if (buf is null) return;
+        _overrideTableBuf = buf;
 
         bool scrub = false, cow = false, shop = false;
         bool gs    = false, sf  = false, fish = false, xflag = false;

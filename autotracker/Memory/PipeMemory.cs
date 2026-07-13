@@ -157,24 +157,41 @@ sealed class PipeMemory : IDisposable
                 return false;
             }
             nint loadLibAddr = FindExport(hProcess, k32Base, "LoadLibraryA");
-            if (loadLibAddr == 0) return false;
+            if (loadLibAddr == 0)
+            {
+                Console.WriteLine("[pjmembridge] Failed to find LoadLibraryA export");
+                return false;
+            }
 
             byte[] pathBytes = System.Text.Encoding.ASCII.GetBytes(dllPath + "\0");
             nint remoteMem = Native.VirtualAllocEx(hProcess, 0, (nuint)pathBytes.Length, 0x1000 | 0x2000, 0x04);
-            if (remoteMem == 0) return false;
+            if (remoteMem == 0)
+            {
+                Console.WriteLine($"[pjmembridge] VirtualAllocEx failed (err={Marshal.GetLastPInvokeError()})");
+                return false;
+            }
 
             try
             {
                 if (!Native.WriteProcessMemory(hProcess, remoteMem, pathBytes, (nuint)pathBytes.Length, out _))
+                {
+                    Console.WriteLine($"[pjmembridge] WriteProcessMemory failed (err={Marshal.GetLastPInvokeError()})");
                     return false;
+                }
 
                 nint hThread = Native.CreateRemoteThread(hProcess, 0, 0, loadLibAddr, remoteMem, 0, out _);
-                if (hThread == 0) return false;
+                if (hThread == 0)
+                {
+                    Console.WriteLine($"[pjmembridge] CreateRemoteThread failed (err={Marshal.GetLastPInvokeError()})");
+                    return false;
+                }
 
-                Native.WaitForSingleObject(hThread, 10000);
+                uint waitResult = Native.WaitForSingleObject(hThread, 10000);
                 Native.GetExitCodeThread(hThread, out uint exitCode);
                 Native.CloseHandle(hThread);
 
+                if (exitCode == 0)
+                    Console.WriteLine($"[pjmembridge] LoadLibraryA returned NULL in remote process (waitResult={waitResult}, dllPath={dllPath})");
                 return exitCode != 0;
             }
             finally { Native.VirtualFreeEx(hProcess, remoteMem, 0, 0x8000); }

@@ -370,8 +370,8 @@ sealed class ProcessMemory : IDisposable
 
         for (int i = 0; i < raw.Length; i += 4)
         {
-            (raw[i + 0], raw[i + 3]) = (raw[i + 3], raw[i + 0]);
-            (raw[i + 1], raw[i + 2]) = (raw[i + 2], raw[i + 1]);
+            if (i + 3 < raw.Length)
+                Array.Reverse(raw, i, 4);
         }
 
         var result = new byte[length];
@@ -387,7 +387,7 @@ sealed class ProcessMemory : IDisposable
     //   upper (N64 0x80400000-0x807FFFFF) → UpperRdramBase (if found)
     // Each chunk in the 64KB fallback loop is routed independently so cross-boundary
     // reads (e.g. ReadAllRdram) work correctly.
-    byte[]? ReadRaw(uint n64Address, int length)
+    public byte[]? ReadRaw(uint n64Address, int length)
     {
         var buf = new byte[length];
 
@@ -443,8 +443,8 @@ sealed class ProcessMemory : IDisposable
 
         for (int i = 0; i < raw.Length; i += 4)
         {
-            (raw[i + 0], raw[i + 3]) = (raw[i + 3], raw[i + 0]);
-            (raw[i + 1], raw[i + 2]) = (raw[i + 2], raw[i + 1]);
+            if (i + 3 < raw.Length)
+                Array.Reverse(raw, i, 4);
         }
 
         var result = new byte[length];
@@ -487,7 +487,14 @@ sealed class ProcessMemory : IDisposable
         // they are big-endian (N64 native) and need reversal for BitConverter.
         var raw = ReadRaw(n64Address, 4);
         if (raw is null) return null;
-        if (!IsSwapped) Array.Reverse(raw);
+        if (IsSwapped)
+        {
+            Array.Reverse(raw);
+        }
+        else
+        {
+            Array.Reverse(raw);
+        }
         return BitConverter.ToUInt32(raw);
     }
 
