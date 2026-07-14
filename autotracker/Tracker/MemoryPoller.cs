@@ -428,6 +428,12 @@ sealed class MemoryPoller
         _lastOotPcEvents  = 0;
         _lastMmPcEvents   = 0;
         _overrideTableBuf = null;
+        _ootXflagBaselineFrozen  = false;
+        _ootXflagPrevBuf         = null;
+        _ootXflagSessionBaseline = null;
+        _mmXflagBaselineFrozen   = false;
+        _mmXflagPrevBuf          = null;
+        _mmXflagSessionBaseline  = null;
         Console.WriteLine("[autotracker] xflag session reset");
     }
 
