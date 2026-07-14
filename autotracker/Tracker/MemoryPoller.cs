@@ -1300,19 +1300,27 @@ sealed class MemoryPoller
 
     void TryArmComboAddItemHook()
     {
-        if (_mipsHookArmed) return;
         if (_pipeMem is null) return;
         if (_mem is null || _mem.RdramBase == 0) return;
+        if (_mipsOotPc is not null && _mipsMmPc is not null) return; // both resolved
 
         if (_hookScanCooldown > 0) { _hookScanCooldown--; return; }
         _hookScanCooldown = 10; // retry scan every ~2.5s
 
+        bool foundNew = false;
         if (_mipsOotPc is null)
+        {
             _mipsOotPc = ScanRdramForComboAddItemRawEx(true);
+            if (_mipsOotPc is not null) foundNew = true;
+        }
         if (_mipsMmPc is null)
+        {
             _mipsMmPc = ScanRdramForComboAddItemRawEx(false);
+            if (_mipsMmPc is not null) foundNew = true;
+        }
 
         if (_mipsOotPc is null && _mipsMmPc is null) return;
+        if (_mipsHookArmed && !foundNew) return; // already armed, nothing new this poll
 
         int result = _pipeMem.SetMipsPcHook(_mipsOotPc ?? 0, _mipsMmPc ?? 0);
         if (result > 0)
