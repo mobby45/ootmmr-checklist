@@ -1121,114 +1121,64 @@ sealed class MemoryPoller
         _emit(new { type = "oot_npc_flags", data = Convert.ToBase64String(buf) });
     }
 
-    // Poll OoT xflags bitmap (762 bits) — diff-only: emit only bits that newly became 1.
-    // Two-consecutive-read guard prevents oscillation from stale N64 data cache.
-    // Session baseline absorbs bits already set at attach (from a previous session).
+    // Poll OoT xflags bitmap (762 bits) — one-shot baseline sync only.
+    // Real-time tracking is handled exclusively by the comboAddItemRawEx MIPS hook
+    // (ProcessComboAddItemCapture). This function only captures "already collected before
+    // attach" state once per session via the full-buffer oot_xflags message.
     void PollOotXflags()
     {
         if (_state.SharedCustomSaveAddr is null) return;
         if (_state.PayloadMmSaveAddr is null && _state.SharedCustomSaveAddr != _state.MmPayloadSharedCustomSaveAddr) return;
+        if (_ootXflagBaselineFrozen) return;
 
         var addr = _state.SharedCustomSaveAddr.Value + (uint)N64Addresses.SharedCustomSaveOotXflagsOff;
         var buf = ReadXflagSafe(addr, N64Addresses.SharedCustomSaveOotXflagsSize);
         if (buf is null) return;
 
-        // Session baseline: first read captures all pre-existing set bits.
-        // Also initialize snapshot = baseline so the first diff is clean.
-        if (!_ootXflagBaselineFrozen)
-        {
-            _ootXflagSessionBaseline = [..buf];
-            _ootXflagSnapshot = [..buf];       // prevent first emit from dumping all baseline bits
-            _ootXflagBaselineFrozen = true;
-            _ootXflagPrevBuf = [..buf];
-            Console.Error.WriteLine($"[autotrack] PollOotXflags: baseline frozen ({buf.Count(b => b != 0)} non-zero bytes)");
-            return;
-        }
-
-        // Two-consecutive-read guard: a bit must survive two polls before being emitted.
-        if (!buf.AsSpan().SequenceEqual(_ootXflagPrevBuf))
+        // Two-consecutive-read guard before freezing baseline (avoid freezing on garbage).
+        if (_ootXflagPrevBuf is null || !buf.AsSpan().SequenceEqual(_ootXflagPrevBuf))
         {
             _ootXflagPrevBuf = [..buf];
             return;
         }
 
-        if (_ootXflagSnapshot is not null && buf.AsSpan().SequenceEqual(_ootXflagSnapshot))
-            return;
-
-        // Emit individual bits that are newly 1 — compare against LAST EMITTED snapshot.
-        var newBits = new List<int>();
-        int snapLen = _ootXflagSnapshot?.Length ?? 0;
-        for (int i = 0; i < buf.Length; i++)
-        {
-            byte cur  = buf[i];
-            byte prev = (i < snapLen) ? _ootXflagSnapshot![i] : (byte)0;
-            byte delta = (byte)(cur & ~prev);
-            if (delta == 0) continue;
-            for (int p = 0; p < 8; p++)
-                if ((delta & (1 << p)) != 0)
-                    newBits.Add(i * 8 + p);
-        }
-
-        if (newBits.Count > 0)
-        {
-            foreach (var bit in newBits)
-                _emit(new { type = "xflag_collected", game = "oot", bit });
-            Console.Error.WriteLine($"[autotrack] PollOotXflags: {newBits.Count} new bits: {string.Join(",", newBits.Take(20))}{(newBits.Count > 20 ? "..." : "")}");
-        }
-
+        _ootXflagSessionBaseline = [..buf];
         _ootXflagSnapshot = [..buf];
+        _ootXflagBaselineFrozen = true;
+
+        int nonZero = buf.Count(b => b != 0);
+        Console.Error.WriteLine($"[autotrack] PollOotXflags: baseline frozen ({nonZero} non-zero bytes) — sending one-shot full sync");
+
+        _emit(new { type = "oot_xflags", data = Convert.ToBase64String(buf) });
     }
 
-    // Poll MM xflags bitmap (848 bits) — diff-only, same logic as PollOotXflags.
+    // Poll MM xflags bitmap (848 bits) — one-shot baseline sync only.
+    // Real-time tracking is handled exclusively by the comboAddItemRawEx MIPS hook
+    // (ProcessComboAddItemCapture). See PollOotXflags for rationale.
     void PollMmXflags()
     {
         if (_state.SharedCustomSaveAddr is null) return;
         if (_state.PayloadMmSaveAddr is null && _state.SharedCustomSaveAddr != _state.MmPayloadSharedCustomSaveAddr) return;
+        if (_mmXflagBaselineFrozen) return;
 
         var addr = _state.SharedCustomSaveAddr.Value + (uint)N64Addresses.SharedCustomSaveMmXflagsOff;
         var buf = ReadXflagSafe(addr, N64Addresses.SharedCustomSaveMmXflagsSize);
         if (buf is null) return;
 
-        if (!_mmXflagBaselineFrozen)
-        {
-            _mmXflagSessionBaseline = [..buf];
-            _mmXflagSnapshot = [..buf];
-            _mmXflagBaselineFrozen = true;
-            _mmXflagPrevBuf = [..buf];
-            Console.Error.WriteLine($"[autotrack] PollMmXflags: baseline frozen ({buf.Count(b => b != 0)} non-zero bytes)");
-            return;
-        }
-
-        if (!buf.AsSpan().SequenceEqual(_mmXflagPrevBuf))
+        if (_mmXflagPrevBuf is null || !buf.AsSpan().SequenceEqual(_mmXflagPrevBuf))
         {
             _mmXflagPrevBuf = [..buf];
             return;
         }
 
-        if (_mmXflagSnapshot is not null && buf.AsSpan().SequenceEqual(_mmXflagSnapshot))
-            return;
-
-        var newBits = new List<int>();
-        int snapLen = _mmXflagSnapshot?.Length ?? 0;
-        for (int i = 0; i < buf.Length; i++)
-        {
-            byte cur  = buf[i];
-            byte prev = (i < snapLen) ? _mmXflagSnapshot![i] : (byte)0;
-            byte delta = (byte)(cur & ~prev);
-            if (delta == 0) continue;
-            for (int p = 0; p < 8; p++)
-                if ((delta & (1 << p)) != 0)
-                    newBits.Add(i * 8 + p);
-        }
-
-        if (newBits.Count > 0)
-        {
-            foreach (var bit in newBits)
-                _emit(new { type = "xflag_collected", game = "mm", bit });
-            Console.Error.WriteLine($"[autotrack] PollMmXflags: {newBits.Count} new bits: {string.Join(",", newBits.Take(20))}{(newBits.Count > 20 ? "..." : "")}");
-        }
-
+        _mmXflagSessionBaseline = [..buf];
         _mmXflagSnapshot = [..buf];
+        _mmXflagBaselineFrozen = true;
+
+        int nonZero = buf.Count(b => b != 0);
+        Console.Error.WriteLine($"[autotrack] PollMmXflags: baseline frozen ({nonZero} non-zero bytes) — sending one-shot full sync");
+
+        _emit(new { type = "mm_xflags", data = Convert.ToBase64String(buf) });
     }
 
     // Returns a compact string listing set xflag bit indices, e.g. "3,17,42,..." (capped at maxBits).
@@ -1349,7 +1299,7 @@ sealed class MemoryPoller
         if (_mem is null || _mem.RdramBase == 0) return;
 
         if (_hookScanCooldown > 0) { _hookScanCooldown--; return; }
-        _hookScanCooldown = 50; // retry scan every ~12.5s
+        _hookScanCooldown = 10; // retry scan every ~2.5s
 
         if (_mipsOotPc is null)
             _mipsOotPc = ScanRdramForComboAddItemRawEx(true);
@@ -1442,7 +1392,8 @@ sealed class MemoryPoller
             _emit(new { type = "xflag_collected", game, bit = bitPos.Value, gi = actualGi, tag });
         }
     }
-    // ── (old xflag bitmap polling removed — replaced by comboAddItemRawEx hook above) ──
+    // ── PollOotXflags/PollMmXflags are now one-shot baseline sync only (see above) ──
+    // Real-time xflag_collected events come exclusively from ProcessComboAddItemCapture.
 
     // Look up the GI value for a given xflag key32 from the cached override table.
     int? GetGiFromXflag(uint key32)
