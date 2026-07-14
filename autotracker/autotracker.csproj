@@ -15,7 +15,22 @@
 
   <!-- Embed pjmembridge.dll for extraction at runtime (single-file publish) -->
   <ItemGroup>
-    <EmbeddedResource Include="$(ProjectDir)pjmembridge\pjmembridge.dll" Condition="Exists('$(ProjectDir)pjmembridge\pjmembridge.dll')" />
+    <None Include="$(ProjectDir)pjmembridge\pjmembridge.dll" Condition="Exists('$(ProjectDir)pjmembridge\pjmembridge.dll')" CopyToOutputDirectory="PreserveNewest" Link="pjmembridge.dll" />
+  </ItemGroup>
+
+  <!-- Copy xflag binary tables so MemoryPoller can compute bit positions at runtime -->
+  <ItemGroup>
+    <None Include="..\OoTMM\packages\generator\data\static\xflag_table_oot_scenes.bin" CopyToOutputDirectory="PreserveNewest" Link="xflag_table_oot_scenes.bin" />
+    <None Include="..\OoTMM\packages\generator\data\static\xflag_table_oot_setups.bin" CopyToOutputDirectory="PreserveNewest" Link="xflag_table_oot_setups.bin" />
+    <None Include="..\OoTMM\packages\generator\data\static\xflag_table_oot_rooms.bin" CopyToOutputDirectory="PreserveNewest" Link="xflag_table_oot_rooms.bin" />
+    <None Include="..\OoTMM\packages\generator\data\static\xflag_table_mm_scenes.bin" CopyToOutputDirectory="PreserveNewest" Link="xflag_table_mm_scenes.bin" />
+    <None Include="..\OoTMM\packages\generator\data\static\xflag_table_mm_setups.bin" CopyToOutputDirectory="PreserveNewest" Link="xflag_table_mm_setups.bin" />
+    <None Include="..\OoTMM\packages\generator\data\static\xflag_table_mm_rooms.bin" CopyToOutputDirectory="PreserveNewest" Link="xflag_table_mm_rooms.bin" />
+  </ItemGroup>
+
+  <!-- Copy xflag-type-index.json so MemoryPoller can detect per-type xflag fields (pot, crate, grass...) -->
+  <ItemGroup>
+    <None Include="..\src\data\dist\xflag-type-index.json" CopyToOutputDirectory="PreserveNewest" Link="src\data\dist\xflag-type-index.json" />
   </ItemGroup>
 
 </Project>

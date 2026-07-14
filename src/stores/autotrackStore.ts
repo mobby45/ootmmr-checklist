@@ -3246,6 +3246,7 @@ export function initAutotrack(yItems: YMap<number>, ySettings: YMap<unknown>, yE
             const pipe = raw.indexOf('|');
             const checkAge = raw.slice(0, pipe);
             const checkName = raw.slice(pipe + 1);
+            console.log(`[autotrack] xflag_collected: ${checkName} (bit ${bit})`);
             const ageFilter = typeof localStorage !== 'undefined'
               ? (localStorage.getItem('logicAgeFilter') ?? 'both') : 'both';
             if (ageFilter !== 'both' && checkAge !== 'both' && checkAge !== ageFilter) return;

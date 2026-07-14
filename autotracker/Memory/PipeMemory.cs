@@ -358,13 +358,13 @@ sealed class PipeMemory : IDisposable
     long  _virtualOotCumulative = 0;
     long  _virtualMmCumulative  = 0;
 
-    // CMD 0x04: poll MIPS PC hook event counters and last captured Xflag* virtual address.
+    // CMD 0x04: poll MIPS PC hook event counters and last captured ComboItemQuery* virtual address.
     // New DLL (12-byte reply): counters are cumulative (not cleared).
     // Old DLL  (8-byte reply): counters clear after read (InterlockedExchange) — we
     //   accumulate them locally into _virtualOot/MmCumulative so the caller always
     //   sees a monotonic cumulative value.
     // Returns (-1, -1, 0) on pipe error.
-    public (int oot, int mm, uint xflagAddr) PollMipsPcEvents()
+    public (int oot, int mm, uint queryAddr) PollMipsPcEvents()
     {
         if (_pipe is null || !_connected) return (-1, -1, 0);
         try
@@ -385,9 +385,9 @@ sealed class PipeMemory : IDisposable
             if (got < replyLen) return (-1, -1, 0);
             int rawOot = data[0] | (data[1] << 8) | (data[2] << 16) | (data[3] << 24);
             int rawMm  = data[4] | (data[5] << 8) | (data[6] << 16) | (data[7] << 24);
-            uint xflagAddr = 0;
+            uint queryAddr = 0;
             if (replyLen >= 12)
-                xflagAddr = (uint)(data[8] | (data[9] << 8) | (data[10] << 16) | (data[11] << 24));
+                queryAddr = (uint)(data[8] | (data[9] << 8) | (data[10] << 16) | (data[11] << 24));
 
             if (replyLen < 12)
             {
@@ -401,7 +401,7 @@ sealed class PipeMemory : IDisposable
                 // New DLL: cumulative counter
                 _virtualOotCumulative = rawOot;
                 _virtualMmCumulative  = rawMm;
-                return (rawOot, rawMm, xflagAddr);
+                return (rawOot, rawMm, queryAddr);
             }
         }
         catch { _connected = false; return (-1, -1, 0); }

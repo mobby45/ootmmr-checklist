@@ -1,12 +1,12 @@
-// pjmembridge.dll — injected into PJ64-EM process.
+// pjmembridge.dll - injected into PJ64-EM process.
 // Fully CRT-free. Protocol: client sends [addr:8][size:4], server replies [data].
-// Special command: addr=0xFFFFFFFFFFFFFFFF → [size bytes payload] then [reply_len:4][reply]
+// Special command: addr=0xFFFFFFFFFFFFFFFF -> [size bytes payload] then [reply_len:4][reply]
 //   CMD 0x01 (any):  reserved / no-op; reply=[1 byte: 0]
 //   CMD 0x02 (1 byte): reserved / no-op; reply=[1 byte: 0]
 //   CMD 0x03 (9 bytes): arm MIPS PC hook; payload=[cmd:1][oot_pc:4][mm_pc:4]
 //     reply=[status:1]  1=hook installed OK, 0=interpreter site not found
-//   CMD 0x04 (1 byte): poll MIPS PC hook events + last xflag addr; reply=[oot:4][mm:4][xflag_vaddr:4]
-//     oot/mm are raw counters (not cleared); xflag_vaddr is MIPS virtual addr of Xflag* from $a0.
+//   CMD 0x04 (1 byte): poll MIPS PC hook events + last query addr; reply=[oot:4][mm:4][query_vaddr:4]
+//     oot/mm are raw counters (not cleared); query_vaddr is MIPS virtual addr of ComboItemQuery* from $a1.
 //
 // Build: cl.exe /nologo /O1 /LD /GS- /Zl pjmembridge.c /Fe:pjmembridge.dll /link /NODEFAULTLIB /ENTRY:EntryPoint kernel32.lib
 #include <windows.h>
@@ -91,11 +91,11 @@ static int is_readable(const void* addr, SIZE_T size)
 
 static const BYTE k_interp[7] = { 0x8B, 0x0E, 0x8D, 0x41, 0x04, 0x89, 0x06 };
 
-static DWORD            g_mips_oot_pc  = 0;  // comboXflagsSetOot MIPS entry address
-static DWORD            g_mips_mm_pc   = 0;  // comboXflagsSetMm  MIPS entry address
-static volatile LONG    g_oot_events      = 0;  // event counter: comboXflagsSetOot calls
-static volatile LONG    g_mm_events       = 0;  // event counter: comboXflagsSetMm calls
-static volatile DWORD   g_last_xflag_addr = 0;  // $a0 (Xflag*) from last comboXflagsSetOot call
+static DWORD            g_mips_oot_pc  = 0;  // comboAddItemRawEx MIPS entry address (OoT)
+static DWORD            g_mips_mm_pc   = 0;  // comboAddItemRawEx MIPS entry address (MM)
+static volatile LONG    g_oot_events      = 0;  // event counter: comboAddItemRawEx OoT calls
+static volatile LONG    g_mm_events       = 0;  // event counter: comboAddItemRawEx MM calls
+static volatile DWORD   g_last_query_addr = 0;  // $a1 (ComboItemQuery*) from last OoT call
 static BYTE             g_hook_orig[7];      // saved original bytes at hook site
 static BYTE*            g_hook_site    = NULL;
 static BYTE*            g_hook_gw      = NULL; // gateway page (trampoline code)
@@ -128,14 +128,14 @@ static BYTE* find_interp_site(void)
 
 // Install x86 trampoline at site, firing when [ESI] == oot_pc or mm_pc.
 // ESI points to the MIPS PC field in PJ64-EM's CPU state.
-// MIPS GPRs are at ESI+4: GPR[0] at +4, GPR[1] at +8, ..., GPR[4]($a0) at +0x14.
+// MIPS GPRs are at ESI+4: GPR[0] at +4, GPR[1] at +8, ..., GPR[4]($a0) at +0x14, GPR[5]($a1) at +0x18.
 // Trampoline layout (53 bytes):
 //   8B 06               MOV EAX,[ESI]           read MIPS PC
 //   3B 05 [g_oot_pc]    CMP EAX,[g_mips_oot_pc]
 //   75 10               JNE skip_oot            (skip 16 bytes)
 //   F0 FF 05 [g_oot]    LOCK INC [g_oot_events]
-//   8B 56 14            MOV EDX,[ESI+0x14]      capture $a0 (Xflag*)
-//   89 15 [g_xflag]     MOV [g_last_xflag_addr],EDX
+//   8B 56 18            MOV EDX,[ESI+0x18]      capture $a1 (ComboItemQuery*)
+//   89 15 [g_query]     MOV [g_last_query_addr],EDX
 //   skip_oot:
 //   3B 05 [g_mm_pc]     CMP EAX,[g_mips_mm_pc]
 //   75 07               JNE skip_mm
@@ -151,7 +151,7 @@ static int install_hook_at(BYTE* site, DWORD oot_pc, DWORD mm_pc)
     {
         // Hook already installed; update targets in-place.
         // The trampoline reads g_mips_oot_pc/g_mips_mm_pc by address at run time,
-        // so a 32-bit aligned store is sufficient — no reinstall needed.
+        // so a 32-bit aligned store is sufficient - no reinstall needed.
         g_mips_oot_pc = oot_pc;
         g_mips_mm_pc  = mm_pc;
         return 1;
@@ -177,12 +177,12 @@ static int install_hook_at(BYTE* site, DWORD oot_pc, DWORD mm_pc)
     *p++ = 0xF0; *p++ = 0xFF; *p++ = 0x05;
     *(DWORD*)p = (DWORD)(ULONG_PTR)&g_oot_events; p += 4;
 
-    // MOV EDX, [ESI+0x14]  — capture $a0 (Xflag*)
-    *p++ = 0x8B; *p++ = 0x56; *p++ = 0x14;
+    // MOV EDX, [ESI+0x18]  - capture $a1 (ComboItemQuery*)
+    *p++ = 0x8B; *p++ = 0x56; *p++ = 0x18;
 
-    // MOV [g_last_xflag_addr], EDX
+    // MOV [g_last_query_addr], EDX
     *p++ = 0x89; *p++ = 0x15;
-    *(DWORD*)p = (DWORD)(ULONG_PTR)&g_last_xflag_addr; p += 4;
+    *(DWORD*)p = (DWORD)(ULONG_PTR)&g_last_query_addr; p += 4;
 
     // CMP EAX, [g_mips_mm_pc]
     *p++ = 0x3B; *p++ = 0x05;
@@ -203,7 +203,7 @@ static int install_hook_at(BYTE* site, DWORD oot_pc, DWORD mm_pc)
     *p++ = 0xE9;
     *(DWORD*)p = (DWORD)((ULONG_PTR)jmp_tgt - (ULONG_PTR)(p + 4));
     p += 4;
-    // Total gateway: 53 bytes — fits within our 64-byte allocation.
+    // Total gateway: 53 bytes - fits within our 64-byte allocation.
 
     // Save originals
     mem_copy(g_hook_orig, site, 7);
@@ -232,7 +232,7 @@ static int install_hook_at(BYTE* site, DWORD oot_pc, DWORD mm_pc)
 
     // Register the PC hook with PJ64-EM's EVIL API so the emulator will check
     // the program counter through the interpreter dispatch even when DynaRec is
-    // active, giving our trampoline a chance to fire.
+    // active, giving our trampoline a chance to not fire.
     if (evil_SetMipsPcHook)
     {
         if (oot_pc) evil_SetMipsPcHook(oot_pc, 1, 0);
@@ -289,7 +289,7 @@ DWORD WINAPI PipeThread(LPVOID param)
             mem_copy(&addr, header, 8);
             mem_copy(&size, header + 8, 4);
 
-            // ─── Command packet ─────────────────────────────────────────────────
+            // --- Command packet -------------------------------------------------
             if (addr == 0xFFFFFFFFFFFFFFFFULL)
             {
                 if (size == 0 || size > 128) break;
@@ -298,7 +298,7 @@ DWORD WINAPI PipeThread(LPVOID param)
 
                 BYTE cmd = payload[0];
                 DWORD writ;
-                BYTE reply[20]; // up to 4 (len) + 16 bytes data
+                BYTE reply[20]; // up to 4 (strlen) + 16 bytes data
 
                 if (cmd == 0x03 && size >= 9)
                 {
@@ -313,12 +313,12 @@ DWORD WINAPI PipeThread(LPVOID param)
                     // Read (do NOT clear) so C# can retry on stale RDRAM cache.
                     LONG oot       = g_oot_events;
                     LONG mm        = g_mm_events;
-                    DWORD xflag_vaddr = g_last_xflag_addr;
+                    DWORD query_vaddr = g_last_query_addr;
                     DWORD rlen = 12;
                     mem_copy(reply,         &rlen, 4);
                     mem_copy(reply + 4,     &oot,  4);
                     mem_copy(reply + 8,     &mm,   4);
-                    mem_copy(reply + 12, &xflag_vaddr, 4);
+                    mem_copy(reply + 12, &query_vaddr, 4);
                     WriteFile(hPipe, reply, 16, &writ, NULL);
                 }
                 else
@@ -332,7 +332,7 @@ DWORD WINAPI PipeThread(LPVOID param)
                 continue;
             }
 
-            // ─── Memory read [addr:8][size:4] → [data:size] ─────────────────────
+            // --- Memory read [addr:8][size:4] -> [data:size] --------------------
             if (size == 0 || size > 65536) break;
             void* buf = HeapAlloc(heap, 0, size);
             if (!buf) break;
