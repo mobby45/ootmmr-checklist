@@ -1184,7 +1184,8 @@ sealed class MemoryPoller
         int nonZero = buf.Count(b => b != 0);
         Console.Error.WriteLine($"[autotrack] PollMmXflags: baseline frozen ({nonZero} non-zero bytes) — sending one-shot full sync");
 
-        _emit(new { type = "mm_xflags", data = Convert.ToBase64String(buf) });
+        if (nonZero > 0)
+            _emit(new { type = "mm_xflags", data = Convert.ToBase64String(buf) });
     }
 
     // Returns a compact string listing set xflag bit indices, e.g. "3,17,42,..." (capped at maxBits).
@@ -1234,27 +1235,22 @@ sealed class MemoryPoller
         const int chunkSize = 0x8000;
         const int overlap   = 64;
 
-        // comboAddItemRawEx prologue (28 bytes):
-        // 27 BD FF C8  ADDIU SP, SP, -0x38
-        // AF B3 00 30  SW S3, 0x30(SP)
-        // 00 80 98 25  OR S3, A0, R0
-        // 27 A4 00 18  ADDIU A0, SP, 0x18
-        // AF B2 00 2C  SW S2, 0x2C(SP)
-        // AF B0 00 24  SW S0, 0x24(SP)
-        // AF BF 00 34  SW RA, 0x34(SP)
         byte[] patExact = [0x27,0xBD,0xFF,0xC8, 0xAF,0xB3,0x00,0x30, 0x00,0x80,0x98,0x25,
                            0x27,0xA4,0x00,0x18, 0xAF,0xB2,0x00,0x2C, 0xAF,0xB0,0x00,0x24,
                            0xAF,0xBF,0x00,0x34];
 
-        // Fallback pattern: ADDIU SP, -0x38 + SW S3 at +4 + OR S3,A0 + ADDIU A0,SP,0x18 (16 bytes)
         byte[] patFallback = [0x27,0xBD,0xFF,0xC8, 0xAF,0xB3,0x00,0x30,
                               0x00,0x80,0x98,0x25, 0x27,0xA4,0x00,0x18];
 
+        int totalChunks = 0, nullChunks = 0;
+
+        // Exact pattern scan
         for (uint addr = start; addr < end; addr += (uint)(chunkSize - overlap))
         {
+            totalChunks++;
             int readSz = (int)Math.Min(chunkSize, end - addr);
             var chunk = ReadXflagSafe(addr, readSz);
-            if (chunk is null) continue;
+            if (chunk is null) { nullChunks++; continue; }
 
             for (int i = 0; i + patExact.Length <= chunk.Length; i += 4)
             {
@@ -1278,7 +1274,6 @@ sealed class MemoryPoller
             for (int i = 0; i + 8 <= chunk.Length; i += 4)
             {
                 if (chunk[i+0]!=0x27||chunk[i+1]!=0xBD||chunk[i+2]!=0xFF||chunk[i+3]!=0xC8) continue;
-                // Look for ADDIU A0, SP, 0x18 within next 40 bytes
                 int endJ = Math.Min(i + 40, chunk.Length - 4);
                 bool foundA0 = false;
                 for (int j = i + 4; j <= endJ; j += 4)
@@ -1292,7 +1287,9 @@ sealed class MemoryPoller
             }
         }
 
-        Console.Error.WriteLine($"[autotrack] ScanRdramForComboAddItemRawEx({isOot}): not found");
+        Console.Error.WriteLine(
+            $"[autotrack] ScanRdramForComboAddItemRawEx({isOot}): not found " +
+            $"({nullChunks}/{totalChunks} chunk reads failed)");
         return null;
     }
 
@@ -1305,7 +1302,7 @@ sealed class MemoryPoller
         if (_mipsOotPc is not null && _mipsMmPc is not null) return; // both resolved
 
         if (_hookScanCooldown > 0) { _hookScanCooldown--; return; }
-        _hookScanCooldown = 10; // retry scan every ~2.5s
+            _hookScanCooldown = 5; // retry scan every ~1.25s
 
         bool foundNew = false;
         if (_mipsOotPc is null)

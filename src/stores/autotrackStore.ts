@@ -2018,7 +2018,7 @@ function applyXflags(
       if (!((byteVal >>> bit) & 1)) continue;
       const bitPos = byteIdx * 8 + bit;
       const raw = lookup.get(bitPos);
-      if (!raw) { console.log('[autotrack] xflags: unmapped bit', bitPos); continue; }
+      if (!raw) { console.debug('[autotrack] xflags: unmapped bit', bitPos); continue; }
       const pipe = raw.indexOf('|');
       const checkAge = raw.slice(0, pipe);
       const checkName = raw.slice(pipe + 1);
